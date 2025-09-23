@@ -1,0 +1,97 @@
+# Created by .ignore support plugin (hsz.mobi)
+### Spring Maven template
+target/
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+pom.xml.next
+release.properties
+dependency-reduced-pom.xml
+buildNumber.properties
+.mvn/timing.properties
+
+# Avoid ignoring Maven wrapper jar file (.jar files are usually ignored)
+!/.mvn/wrapper/maven-wrapper.jar
+### Java template
+# Compiled class file
+*.class
+
+# Log file
+*.log
+
+# BlueJ files
+*.ctxt
+
+# Mobile Tools for Java (J2ME)
+.mtj.tmp/
+
+# Package Files #
+*.jar
+*.war
+*.nar
+*.ear
+*.zip
+*.tar.gz
+*.rar
+
+# virtual machine crash logs, see http://www.java.com/en/download/help/error_hotspot.xml
+hs_err_pid*
+.idea/
+src/test/
+*.iml
+
+
+# Cpp, CMake
+# C++ compiled object files
+*.o
+*.obj
+
+# C++ compiled dynamic libraries
+*.so
+*.dll
+*.dylib
+
+# C++ compiled static libraries
+*.a
+*.lib
+
+# Executable files
+*.exe
+*.out
+
+# Debug files
+*.dSYM/
+*.pdb
+
+# Log files
+*.log
+
+# Temporary files
+*.tmp
+*.temp
+
+# IDE specific files
+.idea/
+*.iml
+
+# Ignore build directories
+build/
+bin/
+target/
+
+# Ignore Maven related files (if applicable)
+target/
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+pom.xml.next
+release.properties
+dependency-reduced-pom.xml
+buildNumber.properties
+.mvn/timing.properties
+
+# Avoid ignoring Maven wrapper jar file
+!/.mvn/wrapper/maven-wrapper.jar
+
+# Ignore virtual machine crash logs (Java specific)
+hs_err_pid*
