@@ -1,0 +1,8 @@
+# 通用配置（所有环境共享）
+server:
+  port: 48888
+
+spring:
+  application:
+    name: open-api
+
