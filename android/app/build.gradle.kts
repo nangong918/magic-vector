@@ -77,7 +77,25 @@ dependencies {
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
 
-    // 自定义模块
-    implementation(project(":core:appcore"))
+    /**
+     * 自定义Module
+     * 基本依赖关系：
+     * 1.baseutil       通用依赖
+     *      无
+     * 2.appcore         核心框架 + 核心逻辑
+     *      baseutil
+     * 3.domain：               Domain数据层
+     *      baseutil
+     * 4.appview：     UI层
+     *      baseutil，appcore，Dal
+     * 5.dao：           Mapper层：DataBase + Network
+     *      baseutil，appcore，domain
+     * 6.app：               Application
+     *      baseutil，appcore，dao，appview，domain
+     */
     implementation(project(":core:baseutil"))
+    implementation(project(":data:domain"))
+    implementation(project(":core:appcore"))
+    implementation(project(":data:dao"))
+    implementation(project(":view:appview"))
 }
