@@ -47,4 +47,5 @@ dependencyResolutionManagement {
 
 rootProject.name = "MagicVector"
 include(":app")
- 
+include(":core:appcore")
+include(":core:baseutil")
