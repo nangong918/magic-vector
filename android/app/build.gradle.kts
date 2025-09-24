@@ -2,6 +2,7 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
+    kotlin("kapt")
 }
 
 android {
@@ -25,7 +26,18 @@ android {
 
     buildTypes {
         release {
-            isMinifyEnabled = false
+            // 混淆
+            isMinifyEnabled = true
+            // 兼容多Dex
+            multiDexEnabled = true
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro"
+            )
+        }
+        debug {
+            isMinifyEnabled = true
+            multiDexEnabled = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
@@ -47,6 +59,7 @@ android {
     }
     buildFeatures {
         viewBinding = true
+        dataBinding = true
         compose = true
     }
 }
@@ -87,7 +100,7 @@ dependencies {
      * 3.domain：               Domain数据层
      *      baseutil
      * 4.appview：     UI层
-     *      baseutil，appcore，Dal
+     *      baseutil，appcore，domain
      * 5.dao：           Mapper层：DataBase + Network
      *      baseutil，appcore，domain
      * 6.app：               Application

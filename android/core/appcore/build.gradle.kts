@@ -16,7 +16,18 @@ android {
 
     buildTypes {
         release {
-            isMinifyEnabled = false
+            // 混淆
+            isMinifyEnabled = true
+            // 兼容多Dex
+            multiDexEnabled = true
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro"
+            )
+        }
+        debug {
+            isMinifyEnabled = true
+            multiDexEnabled = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
