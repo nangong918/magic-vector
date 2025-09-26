@@ -19,3 +19,8 @@
 # If you keep the line number information, uncomment this to
 # hide the original source file name.
 #-renamesourcefileattribute SourceFile
+
+# 保留 ActivityLaunchUtils 类及其内部类 (不写的话会出现混淆问题：R8会自动删除其觉得不适用的类)
+-keep class com.core.baseutil.ActivityLaunchUtils { *; }
+# 保留 IntentConfig 内部类
+-keep class com.core.baseutil.ActivityLaunchUtils$* { *; }
