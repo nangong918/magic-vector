@@ -42,9 +42,15 @@ abstract class BaseAppCompatActivity<VB : ViewBinding>(
         this.binding = initBinding()
         setContentView(binding.root)
 
+        initViewModel()
+
         initView()
 
         setListener()
+    }
+
+    protected open fun initViewModel(){
+
     }
 
     protected open fun initView(){
