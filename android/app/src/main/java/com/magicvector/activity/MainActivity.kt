@@ -1,17 +1,18 @@
 package com.magicvector.activity
 
 import android.os.Bundle
-import androidx.appcompat.app.AppCompatActivity
+import com.core.baseutil.BaseAppCompatActivity
 import com.magicvector.databinding.ActivityMainBinding
 
-class MainActivity : AppCompatActivity() {
-    private lateinit var binding: ActivityMainBinding
+class MainActivity : BaseAppCompatActivity<ActivityMainBinding>(
+    MainActivity::class
+) {
+    override fun initBinding(): ActivityMainBinding {
+        return ActivityMainBinding.inflate(layoutInflater)
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
-        binding = ActivityMainBinding.inflate(layoutInflater)
-        setContentView(binding.root)
 
         // Example of a call to a native method
         binding.tvHello.text = stringFromJNI()

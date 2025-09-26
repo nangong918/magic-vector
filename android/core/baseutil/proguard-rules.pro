@@ -24,3 +24,13 @@
 -keep class com.core.baseutil.ActivityLaunchUtils { *; }
 # 保留 IntentConfig 内部类
 -keep class com.core.baseutil.ActivityLaunchUtils$* { *; }
+# 干脆全部保留
+-keep class com.core.baseutil.*
+
+
+# 保留所有的 Kotlin 数据类和反射相关的类
+-keep class kotlin.Metadata { *; }
+-keep class kotlin.reflect.** { *; }
+-keepclassmembers class * {
+    public <init>(...);
+}
