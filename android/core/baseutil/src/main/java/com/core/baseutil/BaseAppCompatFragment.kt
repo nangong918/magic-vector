@@ -31,10 +31,17 @@ abstract class BaseAppCompatFragment<VB : ViewBinding>(
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+
+        initViewModel()
+
         // 此处binding才生效
         initView()
 
         setListener()
+    }
+
+    protected open fun initViewModel(){
+
     }
 
     protected open fun initView(){
