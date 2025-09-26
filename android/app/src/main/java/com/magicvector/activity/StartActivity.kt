@@ -1,4 +1,4 @@
-package com.magicvector
+package com.magicvector.activity
 
 import android.content.Intent
 import android.os.Bundle
