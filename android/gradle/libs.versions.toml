@@ -13,6 +13,8 @@ activityCompose = "1.10.1"
 composeBom = "2024.09.00"
 ui = "1.9.2"
 activity = "1.8.0"
+circleimageview = "3.1.0"
+roundedimageview = "2.3.0"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -34,6 +36,8 @@ androidx-ui-test-junit4 = { group = "androidx.compose.ui", name = "ui-test-junit
 androidx-material3 = { group = "androidx.compose.material3", name = "material3" }
 androidx-compose-ui = { group = "androidx.compose.ui", name = "ui", version.ref = "ui" }
 androidx-activity = { group = "androidx.activity", name = "activity", version.ref = "activity" }
+circleimageview = { module = "de.hdodenhof:circleimageview", version.ref = "circleimageview" }
+roundedimageview = { module = "com.makeramen:roundedimageview", version.ref = "roundedimageview" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

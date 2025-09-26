@@ -91,6 +91,10 @@ dependencies {
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
 
+    // 圆形的 ImageView 组件
+    implementation(libs.circleimageview)
+    implementation(libs.roundedimageview)
+
     /**
      * 自定义Module
      * 基本依赖关系：

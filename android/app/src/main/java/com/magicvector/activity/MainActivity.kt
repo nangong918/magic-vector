@@ -15,7 +15,7 @@ class MainActivity : BaseAppCompatActivity<ActivityMainBinding>(
         super.onCreate(savedInstanceState)
 
         // Example of a call to a native method
-        binding.tvHello.text = stringFromJNI()
+//        binding.tvHello.text = stringFromJNI()
     }
 
     override fun initView() {

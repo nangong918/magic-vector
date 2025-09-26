@@ -1,19 +1,57 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.drawerlayout.widget.DrawerLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
-    android:id="@+id/main"
     android:layout_width="match_parent"
+    android:background="@color/green_0"
     android:layout_height="match_parent"
+    android:id="@+id/main_drawerLayout"
     tools:context=".activity.MainActivity">
 
-    <TextView
-        android:id="@+id/tv_hello"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"/>
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
 
-</androidx.constraintlayout.widget.ConstraintLayout>
+        <!--  home, medicine, message, mine  -->
+
+        <FrameLayout
+            android:id="@+id/fragment_container"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintBottom_toTopOf="@+id/main_bottom_bar"/>
+
+        <com.view.appview.MainBottomBar
+            android:id="@+id/main_bottom_bar"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent" />
+
+        <!-- 他妈的傻逼Android, 非要设置一些傻逼属性, 他妈的自己设定的时候这些属性找他妈的都找不到, 操你妈的傻逼Android, 操你妈的傻逼Google -->
+        <com.google.android.material.bottomnavigation.BottomNavigationView
+            android:id="@+id/bottomNavigation"
+            android:visibility="gone"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="-20dp"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:itemBackground="@color/green_90"
+            app:itemRippleColor="@color/green_90"
+            app:itemTextColor="@color/green_500"
+            app:itemIconTint="@color/green_500"
+            app:menu="@menu/bottom_nav_menu" />
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+    <com.google.android.material.navigation.NavigationView
+        android:id="@+id/main_navigationView"
+        android:layout_width="wrap_content"
+        android:layout_height="match_parent"
+        android:layout_gravity="start"
+        style="@style/MyNavigationViewStyle"
+        app:headerLayout="@layout/layout_navi_header"
+        app:menu="@menu/navi_menu" />
+
+</androidx.drawerlayout.widget.DrawerLayout>
