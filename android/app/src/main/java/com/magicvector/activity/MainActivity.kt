@@ -18,6 +18,14 @@ class MainActivity : BaseAppCompatActivity<ActivityMainBinding>(
         binding.tvHello.text = stringFromJNI()
     }
 
+    override fun initView() {
+        super.initView()
+
+        setStatusBarColor(
+            android.R.color.white
+        )
+    }
+
     /**
      * A native method that is implemented by the 'magicvector' native library,
      * which is packaged with this application.
