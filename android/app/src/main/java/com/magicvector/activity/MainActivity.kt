@@ -1,32 +1,20 @@
 package com.magicvector.activity
 
 import android.os.Bundle
-import androidx.activity.ComponentActivity
-import androidx.activity.compose.setContent
-import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
-import com.magicvector.ui.theme.MagicVectorTheme
+import androidx.appcompat.app.AppCompatActivity
+import com.magicvector.databinding.ActivityMainBinding
 
-class MainActivity : ComponentActivity() {
+class MainActivity : AppCompatActivity() {
+    private lateinit var binding: ActivityMainBinding
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
-        setContent {
-            MagicVectorTheme {
-                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    Greeting2(
-                        name = stringFromJNI(),
-                        modifier = Modifier.padding(innerPadding)
-                    )
-                }
-            }
-        }
+
+        binding = ActivityMainBinding.inflate(layoutInflater)
+        setContentView(binding.root)
+
+        // Example of a call to a native method
+        binding.tvHello.text = stringFromJNI()
     }
 
     /**
@@ -40,21 +28,5 @@ class MainActivity : ComponentActivity() {
         init {
             System.loadLibrary("magicvector")
         }
-    }
-}
-
-@Composable
-fun Greeting2(name: String, modifier: Modifier = Modifier) {
-    Text(
-        text = "Hello $name!",
-        modifier = modifier
-    )
-}
-
-@Preview(showBackground = true)
-@Composable
-fun GreetingPreview2() {
-    MagicVectorTheme {
-        Greeting2("Android")
     }
 }

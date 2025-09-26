@@ -70,6 +70,8 @@ dependencies {
     implementation(libs.androidx.appcompat)
     implementation(libs.material)
     implementation(libs.androidx.constraintlayout)
+    implementation(libs.androidx.compose.ui)
+    implementation(libs.androidx.activity)
 
     // 测试
     testImplementation(libs.junit)
