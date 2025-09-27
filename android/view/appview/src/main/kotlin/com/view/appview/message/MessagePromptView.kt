@@ -1,19 +1,20 @@
-package com.view.appview
+package com.view.appview.message
 
 import android.content.Context
+import android.util.AttributeSet
 import android.view.LayoutInflater
 import androidx.constraintlayout.widget.ConstraintLayout
-import com.magicvector.appview.databinding.ViewMessagePromptBinding
+import com.view.appview.databinding.ViewMessagePromptBinding
 
 class MessagePromptView : ConstraintLayout {
 
     constructor(context: Context) : super(context) {
         init(context)
     }
-    constructor(context: Context, attrs: android.util.AttributeSet) : super(context, attrs) {
+    constructor(context: Context, attrs: AttributeSet) : super(context, attrs) {
         init(context)
     }
-    constructor(context: Context, attrs: android.util.AttributeSet, defStyleAttr: Int) : super(context, attrs, defStyleAttr) {
+    constructor(context: Context, attrs: AttributeSet, defStyleAttr: Int) : super(context, attrs, defStyleAttr) {
         init(context)
     }
 

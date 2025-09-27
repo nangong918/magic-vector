@@ -4,8 +4,8 @@ package com.czy.smartmedicine.utils
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModel
 import androidx.viewbinding.ViewBinding
-import com.core.baseutil.BaseAppCompatFragment
-import com.core.baseutil.ViewModelUtil
+import com.core.baseutil.fragmentActivity.BaseAppCompatFragment
+import com.core.baseutil.viewModel.ViewModelUtil
 import com.magicvector.viewModel.base.ApiViewModelFactory
 import kotlin.reflect.KClass
 

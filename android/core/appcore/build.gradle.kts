@@ -4,7 +4,7 @@ plugins {
 }
 
 android {
-    namespace = "com.magicvector.appcore"
+    namespace = "com.core.appcore"
     compileSdk = 35
 
     defaultConfig {

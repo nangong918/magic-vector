@@ -47,7 +47,7 @@
                     android:textColor="@color/green_900"
                     android:textSize="16sp" />
 
-                <com.view.appview.MessagePromptView
+                <com.view.appview.message.MessagePromptView
                     android:id="@+id/v_messagePrompt"
                     app:layout_constraintEnd_toEndOf="parent"
                     app:layout_constraintTop_toTopOf="parent"

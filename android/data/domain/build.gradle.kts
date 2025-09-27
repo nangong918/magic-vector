@@ -4,7 +4,7 @@ plugins {
 }
 
 android {
-    namespace = "com.magicvector.domain"
+    namespace = "com.data.domain"
     compileSdk = 35
 
     defaultConfig {
@@ -17,7 +17,7 @@ android {
     buildTypes {
         release {
             // 混淆
-            isMinifyEnabled = true
+            isMinifyEnabled = false
             // 兼容多Dex
             multiDexEnabled = true
             proguardFiles(
@@ -26,7 +26,7 @@ android {
             )
         }
         debug {
-            isMinifyEnabled = true
+            isMinifyEnabled = false
             multiDexEnabled = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),

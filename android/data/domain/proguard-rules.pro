@@ -19,3 +19,14 @@
 # If you keep the line number information, uncomment this to
 # hide the original source file name.
 #-renamesourcefileattribute SourceFile
+
+-keep class com.data.domain.** { *; }
+
+
+
+# 保留所有的 Kotlin 数据类和反射相关的类
+-keep class kotlin.Metadata { *; }
+-keep class kotlin.reflect.** { *; }
+-keepclassmembers class * {
+    public <init>(...);
+}

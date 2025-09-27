@@ -15,7 +15,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
-import com.core.baseutil.ActivityLaunchUtils
+import com.core.baseutil.fragmentActivity.ActivityLaunchUtils
 import com.data.domain.constant.BaseConstant
 import com.magicvector.ui.theme.MagicVectorTheme
 import com.magicvector.ui.theme.Purple80

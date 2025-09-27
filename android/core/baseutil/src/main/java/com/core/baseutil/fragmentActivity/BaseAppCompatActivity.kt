@@ -1,6 +1,7 @@
-package com.core.baseutil
+package com.core.baseutil.fragmentActivity
 
 
+import android.R
 import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.Context
@@ -16,6 +17,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.size
 import androidx.fragment.app.FragmentActivity
 import androidx.viewbinding.ViewBinding
+import com.core.baseutil.StatusBarView
 import java.util.Optional
 import java.util.function.Consumer
 import kotlin.reflect.KClass
@@ -61,7 +63,7 @@ abstract class BaseAppCompatActivity<VB : ViewBinding>(
 
     }
 
-    private var statusBarColorId = android.R.color.transparent
+    private var statusBarColorId = R.color.transparent
 
     private fun initWindow() {
         //去除标题导航栏
@@ -86,7 +88,7 @@ abstract class BaseAppCompatActivity<VB : ViewBinding>(
         }
 
         // 获取根视图并设置窗口插图
-        val rootView = (findViewById<View>(android.R.id.content) as ViewGroup).getChildAt(0) as ViewGroup
+        val rootView = (findViewById<View>(R.id.content) as ViewGroup).getChildAt(0) as ViewGroup
         rootView.setOnApplyWindowInsetsListener { v: View, insets: WindowInsets ->
             val statusBarHeight = insets.getSystemWindowInsetTop()
             v.setPadding(0, statusBarHeight, 0, 0) // 设置顶部填充以适应状态栏

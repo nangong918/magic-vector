@@ -1,4 +1,4 @@
-package com.core.baseutil
+package com.core.baseutil.fragmentActivity
 
 import android.app.Activity
 import android.content.Context

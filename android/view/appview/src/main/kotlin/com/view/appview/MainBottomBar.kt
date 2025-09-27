@@ -8,7 +8,7 @@ import android.widget.LinearLayout
 import androidx.annotation.ColorRes
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.content.ContextCompat
-import com.magicvector.appview.databinding.ViewMainBottomBarBinding
+import com.view.appview.databinding.ViewMainBottomBarBinding
 
 class MainBottomBar : ConstraintLayout {
 
@@ -50,8 +50,8 @@ class MainBottomBar : ConstraintLayout {
         for (i in imageViews.indices) {
 
             val color: Int = if (isClick[i])
-                com.magicvector.appview.R.color.green_300 else
-                com.magicvector.appview.R.color.green_900
+                R.color.green_300 else
+                R.color.green_900
             imageViews[i].setColorFilter(
                 ContextCompat.getColor(context, color),
                 PorterDuff.Mode.SRC_IN

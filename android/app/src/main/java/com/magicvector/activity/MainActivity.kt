@@ -7,7 +7,7 @@ import androidx.annotation.ColorRes
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentManager
 import androidx.fragment.app.FragmentTransaction
-import com.core.baseutil.BaseAppCompatActivity
+import com.core.baseutil.fragmentActivity.BaseAppCompatActivity
 import com.magicvector.databinding.ActivityMainBinding
 import com.magicvector.fragment.MessageListFragment
 import com.view.appview.MainSelectItemEnum
@@ -47,6 +47,9 @@ class MainActivity : BaseAppCompatActivity<ActivityMainBinding>(
     private var currentSelected: MainSelectItemEnum = MainSelectItemEnum.HOME
     private var lastSelected: MainSelectItemEnum? = null
 
+    /**
+     * 初始化Fragment
+     */
     private fun initFragment() {
         fragmentManager = supportFragmentManager
 
@@ -63,6 +66,9 @@ class MainActivity : BaseAppCompatActivity<ActivityMainBinding>(
         changeFragment()
     }
 
+    /**
+     * 切换Fragment
+     */
     private fun changeFragment() {
         if (currentSelected === lastSelected) {
             return
@@ -70,9 +76,9 @@ class MainActivity : BaseAppCompatActivity<ActivityMainBinding>(
         when (currentSelected) {
             MainSelectItemEnum.HOME -> {
                 setStatusBarColor(
-                    com.magicvector.appview.R.color.green_90
+                    com.view.appview.R.color.green_90
                 )
-                this.setBaseBarColorRes(com.magicvector.appview.R.color.green_0)
+                this.setBaseBarColorRes(com.view.appview.R.color.green_0)
                 turnToTargetFragment(MainSelectItemEnum.HOME, MessageListFragment::class.java, null)
             }
             MainSelectItemEnum.APPLY -> {}
@@ -80,6 +86,9 @@ class MainActivity : BaseAppCompatActivity<ActivityMainBinding>(
         }
     }
 
+    /**
+     * 切换目标fragment
+     */
     fun turnToTargetFragment(
         fragmentType: MainSelectItemEnum,
         clazz: Class<out Fragment?>,
@@ -116,17 +125,22 @@ class MainActivity : BaseAppCompatActivity<ActivityMainBinding>(
         }
     }
 
+    /**
+     * 设置底栏颜色
+     */
     fun setBaseBarColorRes(@ColorRes colorResId: Int) {
         binding.mainBottomBar.setBaseBarColor(colorResId)
     }
 
 
     /**
-     * A native method that is implemented by the 'magicvector' native library,
-     * which is packaged with this application.
+     * 调用Cpp的JNI方法
      */
     external fun stringFromJNI(): String
 
+    /**
+     * 初始化，加载JNI的Cpp库
+     */
     companion object {
         // Used to load the 'magicvector' library on application startup.
         init {

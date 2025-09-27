@@ -4,7 +4,7 @@ plugins {
 }
 
 android {
-    namespace = "com.magicvector.appview"
+    namespace = "com.view.appview"
     compileSdk = 35
 
     defaultConfig {

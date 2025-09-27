@@ -4,7 +4,7 @@ plugins {
 }
 
 android {
-    namespace = "com.magicvector.dao"
+    namespace = "com.data.dao"
     compileSdk = 35
 
     defaultConfig {

@@ -3,8 +3,8 @@ package com.magicvector.utils
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.ViewModel
 import androidx.viewbinding.ViewBinding
-import com.core.baseutil.BaseAppCompatActivity
-import com.core.baseutil.ViewModelUtil
+import com.core.baseutil.fragmentActivity.BaseAppCompatActivity
+import com.core.baseutil.viewModel.ViewModelUtil
 import com.magicvector.viewModel.base.ApiViewModelFactory
 import kotlin.reflect.KClass
 

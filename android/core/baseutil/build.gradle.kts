@@ -4,7 +4,7 @@ plugins {
 }
 
 android {
-    namespace = "com.magicvector.baseutil"
+    namespace = "com.core.baseutil"
     compileSdk = 35
 
     defaultConfig {
@@ -54,4 +54,7 @@ dependencies {
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
+
+    implementation(libs.glide)
+    annotationProcessor(libs.compiler)
 }
