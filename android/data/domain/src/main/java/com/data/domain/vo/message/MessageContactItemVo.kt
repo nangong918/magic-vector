@@ -1,8 +1,8 @@
-package com.data.domain.constant.vo
+package com.data.domain.vo.message
 
 import java.io.Serializable
 
-class MessageContactItemVo : Serializable{
+class MessageContactItemVo : Serializable {
     // 头像
     var avatarUrl: String? = ""
     // 名称

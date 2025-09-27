@@ -4,8 +4,8 @@ package com.magicvector.activity
 import android.os.Bundle
 import android.util.Log
 import android.view.View
-import com.data.domain.constant.ao.MessageContactItemAo
-import com.data.domain.constant.fragmentActivity.intentAo.ChatIntentAo
+import com.data.domain.ao.message.MessageContactItemAo
+import com.data.domain.fragmentActivity.intentAo.ChatIntentAo
 import com.magicvector.databinding.ActivityChatBinding
 import com.magicvector.utils.BaseAppCompatVmActivity
 import com.magicvector.viewModel.activity.ChatVm
@@ -37,6 +37,12 @@ class ChatActivity : BaseAppCompatVmActivity<ActivityChatBinding, ChatVm>(
 
         vm.initAAo(ao)
 
+        // adapter
+
+        // 监听设置
+        binding.smSendMessage.getEditText().addTextChangedListener(
+            vm.getTextWatcher()
+        )
 
         observeData()
     }

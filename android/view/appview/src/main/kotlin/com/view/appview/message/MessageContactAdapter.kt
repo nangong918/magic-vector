@@ -3,8 +3,8 @@ package com.view.appview.message
 import android.view.LayoutInflater
 import android.view.ViewGroup
 import androidx.recyclerview.widget.RecyclerView
-import com.data.domain.constant.OnPositionItemClick
-import com.data.domain.constant.ao.MessageContactItemAo
+import com.data.domain.OnPositionItemClick
+import com.data.domain.ao.message.MessageContactItemAo
 import com.view.appview.databinding.ViewMessageCardItemBinding
 import java.util.Optional
 

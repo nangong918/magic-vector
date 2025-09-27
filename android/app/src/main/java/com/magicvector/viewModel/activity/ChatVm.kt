@@ -1,8 +1,11 @@
 package com.magicvector.viewModel.activity
 
+import android.text.Editable
+import android.text.TextWatcher
 import androidx.lifecycle.ViewModel
-import com.data.domain.constant.ao.MessageContactItemAo
-import com.data.domain.constant.fragmentActivity.aao.ChatAAo
+import com.data.domain.ao.message.MessageContactItemAo
+import com.data.domain.fragmentActivity.aao.ChatAAo
+
 
 class ChatVm(
 
@@ -23,5 +26,21 @@ class ChatVm(
     //---------------------------NetWork---------------------------
 
     //---------------------------Logic---------------------------
+
+    fun getTextWatcher(): TextWatcher {
+        return object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {
+            }
+
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+                if (s?.isNotEmpty() == true) {
+                    aao.inputTextLd.value = s.toString()
+                }
+            }
+
+            override fun afterTextChanged(s: Editable?) {
+            }
+        }
+    }
 
 }

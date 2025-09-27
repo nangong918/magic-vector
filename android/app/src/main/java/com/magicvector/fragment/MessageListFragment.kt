@@ -8,8 +8,8 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import com.czy.smartmedicine.utils.BaseAppCompatVmFragment
-import com.data.domain.constant.OnPositionItemClick
-import com.data.domain.constant.fragmentActivity.intentAo.ChatIntentAo
+import com.data.domain.OnPositionItemClick
+import com.data.domain.fragmentActivity.intentAo.ChatIntentAo
 import com.magicvector.activity.ChatActivity
 import com.magicvector.databinding.FragmentMessageListBinding
 import com.magicvector.viewModel.fragment.MessageVm

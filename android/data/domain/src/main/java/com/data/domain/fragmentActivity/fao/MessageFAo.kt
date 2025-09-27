@@ -1,7 +1,7 @@
-package com.data.domain.constant.fragmentActivity.fao
+package com.data.domain.fragmentActivity.fao
 
 import androidx.lifecycle.MutableLiveData
-import com.data.domain.constant.ao.MessageContactItemAo
+import com.data.domain.ao.message.MessageContactItemAo
 
 class MessageFAo {
 
