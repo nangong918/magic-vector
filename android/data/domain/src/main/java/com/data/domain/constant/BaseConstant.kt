@@ -1,10 +1,38 @@
 package com.data.domain.constant
 
+import android.Manifest
+
 class BaseConstant {
 
     // 常量
     object Constant {
         const val START_DELAY_TIME = 1500L
+
+        const val PACKAGE_NAME: String = "com.magicvector"
+
+        // 请求是否加认证token前缀 最后要在拦截器检查去掉; 定义一些不像url的命名避免出现与后端路由重合
+        const val AUTH_TOKEN_PREFIX: String = "/has-0!0-token"
     }
 
+    // url
+    object ConstantUrl {
+        private const val LOCAL_ADDRESS = "192.168.1.2:12000"
+        private const val TEST_ADDRESS = "192.168.1.2:12000"
+
+
+        const val LOCAL_URL = "http://$LOCAL_ADDRESS";
+        const val TEST_URL = "http://$TEST_ADDRESS";
+        const val PROD_URL = "https://api.github.com";
+    }
+
+    object PermissionConstant {
+        // permission
+        val MUST_PERMISSIONS: Array<String> = arrayOf(
+            Manifest.permission.CAMERA,
+        )
+        val NOT_MUST_PERMISSIONS: Array<String> = arrayOf(
+            Manifest.permission.WRITE_EXTERNAL_STORAGE,
+            Manifest.permission.READ_EXTERNAL_STORAGE,
+        )
+    }
 }

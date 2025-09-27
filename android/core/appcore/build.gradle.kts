@@ -17,7 +17,7 @@ android {
     buildTypes {
         release {
             // 混淆
-            isMinifyEnabled = true
+            isMinifyEnabled = false
             // 兼容多Dex
             multiDexEnabled = true
             proguardFiles(
@@ -26,7 +26,7 @@ android {
             )
         }
         debug {
-            isMinifyEnabled = true
+            isMinifyEnabled = false
             multiDexEnabled = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
@@ -55,5 +55,28 @@ dependencies {
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
 
+    // glide
+    implementation(libs.glide)
+    annotationProcessor(libs.compiler)
+
+    // permissionX
+    implementation(libs.permissionx)
+
+    // OkHttp3
+    implementation(libs.okhttp)
+    // OkHttp的日志
+    implementation(libs.logging.interceptor)
+
+    // Retrofit
+    implementation(libs.retrofit)
+    implementation(libs.converter.gson)
+
+    // Gson
+    implementation(libs.gson)
+
+    // multidex
+    implementation(libs.multidex)
+
     implementation(project(":data:domain"))
+    implementation(project(":core:baseutil"))
 }
