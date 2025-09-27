@@ -1,0 +1,106 @@
+package com.core.baseutil.network.networkLoad;
+
+import android.app.Activity;
+import android.content.Context;
+import android.content.DialogInterface;
+import android.os.Handler;
+import android.util.Log;
+
+import androidx.annotation.StyleRes;
+import androidx.multidex.MultiDexApplication;
+
+import org.jetbrains.annotations.NotNull;
+
+
+public class NetworkLoadUtils extends MultiDexApplication {
+
+    private static SimpleLoanDialog sProcessDialog = null;
+
+    protected static final String TAG = NetworkLoadUtils.class.getSimpleName();
+
+    public static void showDialog(Context context) {
+        if (context instanceof Activity){
+            showDialogSafety((Activity) context);
+        }
+        else {
+            Handler handler = new Handler(context.getMainLooper());
+            handler.post(() -> showDialog(context, null));
+        }
+    }
+
+    public static void showDialogSafety(Activity activity){
+        activity.runOnUiThread(() -> showDialog(activity, null));
+    }
+
+    public static void showDialog(Context context, String msg) {
+        showDialog(context, msg, true);
+    }
+
+    public static void showDialog(Context context, String msg, boolean cancelable) {
+        showDialog(context,msg,cancelable,null);
+    }
+
+    public static void showDialog(Context context, String msg, boolean cancelable, int bgResId) {
+        showDialog(context,msg,cancelable, bgResId, 0, null);
+    }
+
+    public static void showDialog(Context context, String msg, boolean cancelable, DialogInterface.OnDismissListener listener){
+        showDialog(context, msg, cancelable, 0, 0, listener);
+    }
+
+    public static void showDialog(Context context, String msg, boolean cancelable, int bgResId, DialogInterface.OnDismissListener listener){
+        showDialog(context, msg, cancelable, bgResId, 0, listener);
+    }
+
+    public static void showDialog(
+            final Context context,
+            String msg,
+            boolean cancelable,
+            int bgResId,
+            @StyleRes int styleResId,
+            DialogInterface.OnDismissListener listener){
+        if (sProcessDialog == null || !sProcessDialog.mDialog.isShowing()) {
+            sProcessDialog = new SimpleLoanDialog(context, msg, false, bgResId, styleResId);
+            try {
+                sProcessDialog.show();
+            } catch (Exception e) {
+                Log.e(TAG, "显示对话框时发生异常: " + e.getMessage(), e);
+            }
+
+            if(listener != null){
+                sProcessDialog.getDialog().setOnDismissListener(listener);
+            }
+            // 取消的操作
+            sProcessDialog.getDialog().setOnCancelListener(dialog -> {
+                // UtilsApplication.getInstance().disposable();
+            });
+        }
+    }
+
+
+
+    public static void dismissDialog() {
+        if (sProcessDialog != null) {
+            try {
+                if(sProcessDialog.mDialog != null){
+                    sProcessDialog.mDialog.dismiss();
+                }
+            }
+            catch (Throwable ex) {
+                Log.e(TAG, "关闭对话框时发生异常: " + ex.getMessage(), ex);
+            }
+            sProcessDialog = null;
+        }
+    }
+
+    public static void dismissDialogSafety(@NotNull Context context){
+        if (context instanceof Activity){
+            ((Activity) context).runOnUiThread(NetworkLoadUtils::dismissDialog);
+        }
+        else {
+            Log.w(TAG, "dismissDialogSafety: context is not an Activity");
+            dismissDialog();
+        }
+    }
+
+}
