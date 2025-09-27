@@ -45,6 +45,7 @@
                 android:id="@+id/imgv_apply"
                 android:layout_width="24dp"
                 android:layout_height="24dp"
+                android:src="@xml/settings_24px"
                 android:layout_marginBottom="4dp"
                 tools:tint="@color/black"/>
 

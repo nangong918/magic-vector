@@ -23,9 +23,10 @@
 
 # 全部保留
 # 保留 com.view.appview 包下的所有类，但允许其成员混淆
--keep class com.view.appview.** {
-    <init>(); # 保留构造函数
-}
+#-keep class com.view.appview.** {
+#    <init>(); # 保留构造函数
+#}
+-keep class com.view.appview.** { *; }
 
 
 # 保留所有的 Kotlin 数据类和反射相关的类
