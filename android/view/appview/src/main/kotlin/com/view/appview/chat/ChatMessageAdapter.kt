@@ -70,6 +70,7 @@ class ChatMessageAdapter(
             }
             SendMessageTypeEnum.VIEW_TYPE_RECEIVER.value -> {
                 (holder as ReceiverViewHolder).bindAo(ao)
+                holder.bindAvatar(currentAvatarUrl)
                 holder.setChatMessageClick(onChatMessageClick)
             }
             else -> {

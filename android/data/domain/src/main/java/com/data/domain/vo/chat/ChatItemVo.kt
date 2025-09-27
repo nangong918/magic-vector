@@ -5,8 +5,8 @@ import com.data.domain.constant.chat.SendMessageTypeEnum
 import java.io.Serializable
 
 class ChatItemVo : Serializable{
-    // 头像
-    var avatarUrl: String = ""
+    // 图片资源
+    var imgUrl: String = ""
     // 消息概览
     var content: String = ""
     // 时间

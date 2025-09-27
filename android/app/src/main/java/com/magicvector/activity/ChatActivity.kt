@@ -1,7 +1,9 @@
 package com.magicvector.activity
 
 
+import android.annotation.SuppressLint
 import android.os.Bundle
+import android.text.TextUtils
 import android.util.Log
 import android.view.View
 import com.data.domain.ao.message.MessageContactItemAo
@@ -9,6 +11,7 @@ import com.data.domain.fragmentActivity.intentAo.ChatIntentAo
 import com.magicvector.databinding.ActivityChatBinding
 import com.magicvector.utils.BaseAppCompatVmActivity
 import com.magicvector.viewModel.activity.ChatVm
+import com.view.appview.chat.OnChatMessageClick
 
 class ChatActivity : BaseAppCompatVmActivity<ActivityChatBinding, ChatVm>(
     ChatActivity::class,
@@ -38,15 +41,36 @@ class ChatActivity : BaseAppCompatVmActivity<ActivityChatBinding, ChatVm>(
         vm.initAAo(ao)
 
         // adapter
+        vm.initAdapter(
+            object : OnChatMessageClick{
+                override fun onMessageClick(position: Int) {
+                    // todo
+                }
+
+                override fun onAvatarClick(position: Int) {
+                    // todo
+                }
+
+                override fun onQuoteClick(position: Int) {
+                    // todo
+                }
+            }
+        )
+
+        binding.rclvMessage.adapter = vm.adapter
 
         // 监听设置
         binding.smSendMessage.getEditText().addTextChangedListener(
             vm.getTextWatcher()
         )
 
+        // 图片选择器
+        vm.initPictureSelectorLauncher(this)
+
         observeData()
     }
 
+    @SuppressLint("NotifyDataSetChanged")
     fun observeData(){
         vm.aao.isLoadingLd.observe(this){
             isLoading ->
@@ -57,6 +81,33 @@ class ChatActivity : BaseAppCompatVmActivity<ActivityChatBinding, ChatVm>(
                 View.GONE
             }
         }
+
+        vm.aao.chatMessageCountLd.observe(this){
+            count ->
+            if (count <= 0){
+                binding.rclvMessage.visibility = View.GONE
+            }
+            else {
+                binding.rclvMessage.visibility = View.VISIBLE
+                vm.adapter.notifyDataSetChanged()
+            }
+        }
+
+        // 标题
+        vm.aao.nameLd.observe(this, { newName ->
+            if (TextUtils.isEmpty(newName)) {
+                return@observe
+            }
+            binding.tvTitle.text = newName
+        })
+
+        // 头像
+        vm.aao.avatarUrlLd.observe(this, { newAvatarUrl ->
+            if (TextUtils.isEmpty(newAvatarUrl)) {
+                return@observe
+            }
+            vm.adapter.setCurrentAvatarUrl(newAvatarUrl)
+        })
     }
 
     override fun initView() {
@@ -65,6 +116,19 @@ class ChatActivity : BaseAppCompatVmActivity<ActivityChatBinding, ChatVm>(
 
     override fun setListener() {
         super.setListener()
+
+        binding.imgvBack.setOnClickListener { v -> finish() }
+
+        // 发送消息
+        binding.smSendMessage.setSendClickListener({ v ->
+            vm.sendMessage()
+            binding.smSendMessage.setEditMessage("")
+        })
+
+        // 图片消息：1. 选择图片
+        binding.smSendMessage.setImgClickListener {
+            v -> vm.beginSelectPicture(this)
+        }
     }
 
 }
