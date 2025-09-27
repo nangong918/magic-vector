@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-parent</artifactId>
+        <version>3.4.0</version> <!-- Spring Boot 3 -->
+        <relativePath /> <!-- lookup parent from repository -->
+    </parent>
+
+    <name>starters</name>
+    <groupId>com.starters</groupId>
+    <artifactId>starters</artifactId>
+    <version>1.0.0-SNAPSHOT</version>
+
+    <!--Maven 会将其视为 jar 类型，但对于父 POM，应该将其设置为 pom-->
+    <packaging>pom</packaging>
+
+    <modules>
+        <module>ai-starter</module>
+    </modules>
+
+    <!--JDK版本：21-->
+    <properties>
+        <java.version>21</java.version>
+        <spring.version>3.4.0</spring.version>
+    </properties>
+
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-starter-web</artifactId>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
+
+</project>
