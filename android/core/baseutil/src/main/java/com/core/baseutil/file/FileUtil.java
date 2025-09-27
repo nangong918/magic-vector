@@ -34,10 +34,10 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-//import okhttp3.MediaType;
-//import okhttp3.MultipartBody;
-//import okhttp3.RequestBody;
-//import okhttp3.ResponseBody;
+import okhttp3.MediaType;
+import okhttp3.MultipartBody;
+import okhttp3.RequestBody;
+import okhttp3.ResponseBody;
 
 
 public class FileUtil {
@@ -64,33 +64,33 @@ public class FileUtil {
      * @param context   上下文，用于显示Toast
      * @return  保存是否成功
      */
-//    public static boolean saveFileByEnvironment(ResponseBody response, Context context){
-//        try {
-//            // 获取文件保存路径
-//            File file = new File(Environment.getExternalStorageDirectory(), "fileName");
-//
-//            // 写入文件
-//            InputStream inputStream = response.byteStream();
-//            OutputStream outputStream = Files.newOutputStream(file.toPath());
-//
-//            byte[] buffer = new byte[1024];
-//            int len;
-//            while ((len = inputStream.read(buffer)) != -1) {
-//                outputStream.write(buffer, 0, len);
-//            }
-//
-//            outputStream.flush();
-//            outputStream.close();
-//            inputStream.close();
-//
-//            // 提示文件保存成功
-//            Toast.makeText(context, "文件已保存至: " + file.getAbsolutePath(), Toast.LENGTH_SHORT).show();
-//            return true;
-//        }catch (IOException e){
-//            Toast.makeText(context, "文件保存失败", Toast.LENGTH_SHORT).show();
-//            return false;
-//        }
-//    }
+    public static boolean saveFileByEnvironment(ResponseBody response, Context context){
+        try {
+            // 获取文件保存路径
+            File file = new File(Environment.getExternalStorageDirectory(), "fileName");
+
+            // 写入文件
+            InputStream inputStream = response.byteStream();
+            OutputStream outputStream = Files.newOutputStream(file.toPath());
+
+            byte[] buffer = new byte[1024];
+            int len;
+            while ((len = inputStream.read(buffer)) != -1) {
+                outputStream.write(buffer, 0, len);
+            }
+
+            outputStream.flush();
+            outputStream.close();
+            inputStream.close();
+
+            // 提示文件保存成功
+            Toast.makeText(context, "文件已保存至: " + file.getAbsolutePath(), Toast.LENGTH_SHORT).show();
+            return true;
+        }catch (IOException e){
+            Toast.makeText(context, "文件保存失败", Toast.LENGTH_SHORT).show();
+            return false;
+        }
+    }
 
     /**
      * 保存到相册
@@ -100,39 +100,39 @@ public class FileUtil {
      * @return  保存是否成功
      */
     // 保存到相册 String galleryPath = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES).getAbsolutePath();
-//    public static boolean saveFileToGallery(ResponseBody response, Context context, String galleryPath) {
-//        try {
-//            // 获取相册保存路径
-//            File file = new File(galleryPath, "fileName");
-//
-//            // 写入文件
-//            InputStream inputStream = response.byteStream();
-//            OutputStream outputStream = Files.newOutputStream(file.toPath());
-//
-//            byte[] buffer = new byte[1024];
-//            int len;
-//            while ((len = inputStream.read(buffer)) != -1) {
-//                outputStream.write(buffer, 0, len);
-//            }
-//
-//            outputStream.flush();
-//            outputStream.close();
-//            inputStream.close();
-//
-//            // 通知系统更新相册
-//            ContentValues values = new ContentValues();
-//            values.put(MediaStore.Images.Media.DATA, file.getAbsolutePath());
-//            values.put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg");
-//            context.getContentResolver().insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values);
-//
-//            // 提示文件保存成功
-//            Toast.makeText(context, "文件已保存至相册: " + file.getAbsolutePath(), Toast.LENGTH_SHORT).show();
-//            return true;
-//        } catch (IOException e) {
-//            Toast.makeText(context, "文件保存失败", Toast.LENGTH_SHORT).show();
-//            return false;
-//        }
-//    }
+    public static boolean saveFileToGallery(ResponseBody response, Context context, String galleryPath) {
+        try {
+            // 获取相册保存路径
+            File file = new File(galleryPath, "fileName");
+
+            // 写入文件
+            InputStream inputStream = response.byteStream();
+            OutputStream outputStream = Files.newOutputStream(file.toPath());
+
+            byte[] buffer = new byte[1024];
+            int len;
+            while ((len = inputStream.read(buffer)) != -1) {
+                outputStream.write(buffer, 0, len);
+            }
+
+            outputStream.flush();
+            outputStream.close();
+            inputStream.close();
+
+            // 通知系统更新相册
+            ContentValues values = new ContentValues();
+            values.put(MediaStore.Images.Media.DATA, file.getAbsolutePath());
+            values.put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg");
+            context.getContentResolver().insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values);
+
+            // 提示文件保存成功
+            Toast.makeText(context, "文件已保存至相册: " + file.getAbsolutePath(), Toast.LENGTH_SHORT).show();
+            return true;
+        } catch (IOException e) {
+            Toast.makeText(context, "文件保存失败", Toast.LENGTH_SHORT).show();
+            return false;
+        }
+    }
 
     /**
      * 判断文件是否为图片文件
@@ -321,99 +321,98 @@ public class FileUtil {
      * @param parameterMap      参数Map
      * @return                  包含图片数据的RequestBody
      */
-//    public static RequestBody getUploadRequestBody(File file, String fileParamName, Map<String, String> parameterMap) {
-//        if (file == null){
-//            Log.e(TAG, "File is null");
-//            return null;
-//        }
-//
-//        // 创建一个MultipartBody.Builder
-//        MultipartBody.Builder builder = new MultipartBody.Builder()
-//                // 设置请求类型为表单类型(FORM-DATA)
-//                .setType(MultipartBody.FORM);
-//
-//        // 添加文件部分
-//        if (file.exists()) {
-//            RequestBody fileBody = RequestBody.create(MediaType.parse("image/jpeg"), file); // 根据文件类型设置MediaType
-//            builder.addFormDataPart(fileParamName, file.getName(), fileBody); // "file" 是服务器接收文件的字段名
-//        }
-//
-//        // 添加其他参数
-//        if (parameterMap != null) {
-//            for (Map.Entry<String, String> entry : parameterMap.entrySet()) {
-//                builder.addFormDataPart(entry.getKey(), entry.getValue());
-//            }
-//        }
-//
-//        // 构建并返回RequestBody
-//        return builder.build();
-//    }
-//
-//    /**
-//     * 使用Glide加载图片并生成OkHttp3的RequestBody，用于上传
-//     * @param context           上下文
-//     * @param imageFile         图片文件
-//     * @param parameterMap      参数Map
-//     * @param fileParamName     文件参数名
-//     * @return                  包含图片数据的RequestBody
-//     */
-//    public static RequestBody getUploadRequestBody(Context context, File imageFile, Map<String, String> parameterMap, String fileParamName) {
-//        if (imageFile == null){
-//            Log.e(TAG, "imageFile is null");
-//            return null;
-//        }
-//
-//        try {
-//            // 使用Glide加载文件
-//            File file = Glide.with(context)
-//                    .asFile()
-//                    .load(imageFile)
-//                    .submit()
-//                    .get();
-//
-//            // 创建MultipartBody.Builder
-//            MultipartBody.Builder builder = new MultipartBody.Builder()
-//                    .setType(MultipartBody.FORM); // 设置请求类型为表单类型
-//
-//            // 添加文件部分
-//            if (file != null && file.exists()) {
-//                RequestBody fileBody = RequestBody.create(MediaType.parse("image/jpeg"), file); // 根据实际文件类型设置MediaType
-//                builder.addFormDataPart(fileParamName, file.getName(), fileBody); // 添加文件到请求体
-//            }
-//
-//            // 添加其他参数
-//            if (parameterMap != null) {
-//                for (Map.Entry<String, String> entry : parameterMap.entrySet()) {
-//                    builder.addFormDataPart(entry.getKey(), entry.getValue());
-//                }
-//            }
-//
-//            // 构建并返回RequestBody
-//            return builder.build();
-//        } catch (Exception e) {
-//            Log.e(TAG, "Glide加载上传图片异常 : " , e);
-//            return null; // 处理异常，返回null
-//        }
-//    }
-//
-//    public static List<MultipartBody.Part> getMultipartBodyByUri(Context context, List<Uri> uris){
-//        List<MultipartBody.Part> parts = new ArrayList<>();
-//        for (Uri uri : uris) {
-//            File file = new File(getRealPathFromURI(context, uri));
-//            RequestBody requestFile = RequestBody.create(
-//                    MediaType.parse("multipart/form-data"),
-//                    file
-//            );
-//            MultipartBody.Part body = MultipartBody.Part.createFormData(
-//                    "files", file.getName(), requestFile
-//            );
-//            parts.add(body);
-//        }
-//        return parts;
-//    }
+    public static RequestBody getUploadRequestBody(File file, String fileParamName, Map<String, String> parameterMap) {
+        if (file == null){
+            Log.e(TAG, "File is null");
+            return null;
+        }
+
+        // 创建一个MultipartBody.Builder
+        MultipartBody.Builder builder = new MultipartBody.Builder()
+                // 设置请求类型为表单类型(FORM-DATA)
+                .setType(MultipartBody.FORM);
+
+        // 添加文件部分
+        if (file.exists()) {
+            RequestBody fileBody = RequestBody.create(MediaType.parse("image/jpeg"), file); // 根据文件类型设置MediaType
+            builder.addFormDataPart(fileParamName, file.getName(), fileBody); // "file" 是服务器接收文件的字段名
+        }
+
+        // 添加其他参数
+        if (parameterMap != null) {
+            for (Map.Entry<String, String> entry : parameterMap.entrySet()) {
+                builder.addFormDataPart(entry.getKey(), entry.getValue());
+            }
+        }
+
+        // 构建并返回RequestBody
+        return builder.build();
+    }
+
+    /**
+     * 使用Glide加载图片并生成OkHttp3的RequestBody，用于上传
+     * @param context           上下文
+     * @param imageFile         图片文件
+     * @param parameterMap      参数Map
+     * @param fileParamName     文件参数名
+     * @return                  包含图片数据的RequestBody
+     */
+    public static RequestBody getUploadRequestBody(Context context, File imageFile, Map<String, String> parameterMap, String fileParamName) {
+        if (imageFile == null){
+            Log.e(TAG, "imageFile is null");
+            return null;
+        }
+
+        try {
+            // 使用Glide加载文件
+            File file = Glide.with(context)
+                    .asFile()
+                    .load(imageFile)
+                    .submit()
+                    .get();
+
+            // 创建MultipartBody.Builder
+            MultipartBody.Builder builder = new MultipartBody.Builder()
+                    .setType(MultipartBody.FORM); // 设置请求类型为表单类型
+
+            // 添加文件部分
+            if (file != null && file.exists()) {
+                RequestBody fileBody = RequestBody.create(MediaType.parse("image/jpeg"), file); // 根据实际文件类型设置MediaType
+                builder.addFormDataPart(fileParamName, file.getName(), fileBody); // 添加文件到请求体
+            }
+
+            // 添加其他参数
+            if (parameterMap != null) {
+                for (Map.Entry<String, String> entry : parameterMap.entrySet()) {
+                    builder.addFormDataPart(entry.getKey(), entry.getValue());
+                }
+            }
+
+            // 构建并返回RequestBody
+            return builder.build();
+        } catch (Exception e) {
+            Log.e(TAG, "Glide加载上传图片异常 : " , e);
+            return null; // 处理异常，返回null
+        }
+    }
+
+    public static List<MultipartBody.Part> getMultipartBodyByUri(Context context, List<Uri> uris){
+        List<MultipartBody.Part> parts = new ArrayList<>();
+        for (Uri uri : uris) {
+            File file = new File(getRealPathFromURI(context, uri));
+            RequestBody requestFile = RequestBody.create(
+                    MediaType.parse("multipart/form-data"),
+                    file
+            );
+            MultipartBody.Part body = MultipartBody.Part.createFormData(
+                    "files", file.getName(), requestFile
+            );
+            parts.add(body);
+        }
+        return parts;
+    }
 
     // 辅助方法：获取文件路径
-// 辅助方法：获取文件路径
     private static String getRealPathFromURI(Context context, Uri contentUri) {
         String[] proj;
 
