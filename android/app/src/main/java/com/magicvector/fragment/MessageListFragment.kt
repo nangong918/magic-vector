@@ -56,7 +56,7 @@ class MessageListFragment : BaseAppCompatVmFragment<
                         intentAo.ao = it[position]
 
                         val intent = Intent(activity, ChatActivity::class.java)
-                        intent.putExtra(ChatActivity::class.simpleName, intentAo)
+                        intent.putExtra(ChatIntentAo::class.simpleName, intentAo)
                         startActivity(intent)
                     }
             }

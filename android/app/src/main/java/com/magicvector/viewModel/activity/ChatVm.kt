@@ -1,6 +1,7 @@
 package com.magicvector.viewModel.activity
 
 import androidx.lifecycle.ViewModel
+import com.data.domain.constant.ao.MessageContactItemAo
 import com.data.domain.constant.fragmentActivity.aao.ChatAAo
 
 class ChatVm(
@@ -15,8 +16,8 @@ class ChatVm(
 
     val aao = ChatAAo()
 
-    fun initAAo(){
-        // 缓存的数据会加载到此处
+    fun initAAo(messageContactItemAo : MessageContactItemAo?){
+        aao.messageContactItemAo = messageContactItemAo
     }
 
     //---------------------------NetWork---------------------------
