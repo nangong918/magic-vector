@@ -66,4 +66,14 @@ dependencies {
     implementation(libs.okhttp)
     // OkHttp的日志
     implementation(libs.logging.interceptor)
+
+    // Retrofit
+    implementation(libs.retrofit)
+    implementation(libs.converter.gson)
+
+    // Gson
+    implementation(libs.gson)
+
+    // multidex
+    implementation(libs.multidex)
 }
