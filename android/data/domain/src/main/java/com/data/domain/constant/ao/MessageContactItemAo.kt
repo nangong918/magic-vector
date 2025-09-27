@@ -1,8 +1,9 @@
 package com.data.domain.constant.ao
 
 import com.data.domain.constant.vo.MessageContactItemVo
+import java.io.Serializable
 
-class MessageContactItemAo {
+class MessageContactItemAo : Serializable{
 
     // view
     // 单个联系人Vo信息

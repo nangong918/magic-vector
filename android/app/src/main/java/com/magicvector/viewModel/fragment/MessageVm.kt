@@ -1,6 +1,9 @@
 package com.magicvector.viewModel.fragment
 
 import androidx.lifecycle.ViewModel
+import com.data.domain.constant.OnPositionItemClick
+import com.data.domain.constant.fragmentActivity.fao.MessageFAo
+import com.view.appview.message.MessageContactAdapter
 
 
 open class MessageVm(
@@ -11,6 +14,21 @@ open class MessageVm(
     }
 
     //---------------------------FAo Ld---------------------------
+
+    lateinit var adapter : MessageContactAdapter
+
+    val fao = MessageFAo()
+
+    fun initFAo(){
+        // 后续缓存的数据会加载到此处
+    }
+
+    fun initAdapter(onPositionItemClick : OnPositionItemClick){
+        adapter = MessageContactAdapter(
+            fao.messageContactList,
+            onPositionItemClick
+        )
+    }
 
     //---------------------------NetWork---------------------------
 
