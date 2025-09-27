@@ -20,12 +20,9 @@
 # hide the original source file name.
 #-renamesourcefileattribute SourceFile
 
-# 保留 ActivityLaunchUtils 类及其内部类 (不写的话会出现混淆问题：R8会自动删除其觉得不适用的类)
--keep class com.core.baseutil.ActivityLaunchUtils { *; }
-# 保留 IntentConfig 内部类
--keep class com.core.baseutil.ActivityLaunchUtils$* { *; }
-# 干脆全部保留
--keep class com.core.baseutil.*
+# 工具类，无核心代码不需要混淆
+# ** 表示包括所有子包和类，{ *; } 表示保留所有成员
+-keep class com.core.baseutil.** { *; }
 
 
 # 保留所有的 Kotlin 数据类和反射相关的类

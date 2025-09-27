@@ -14,7 +14,7 @@ abstract class BaseAppCompatFragment<VB : ViewBinding>(
 
     protected lateinit var binding: VB
     abstract fun initBinding(): VB
-    protected val tag = fragmentClassType.simpleName
+    protected val TAG = fragmentClassType.simpleName
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)

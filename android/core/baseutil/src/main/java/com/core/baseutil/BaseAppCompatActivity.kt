@@ -35,7 +35,7 @@ abstract class BaseAppCompatActivity<VB : ViewBinding>(
     protected lateinit var binding: VB
 
     abstract fun initBinding(): VB
-    protected val tag = activityClassType.simpleName
+    protected val TAG = activityClassType.simpleName
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
