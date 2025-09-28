@@ -5,4 +5,17 @@ server:
 spring:
   application:
     name: open-api
-
+  ai:
+    dashscope:
+      api-key: ${ALI_API_KEY}
+      agent:
+        deepseek-id: "deepseek-r1"
+      embedding:
+        options:
+          model: "text-embedding-v3"
+    openai:
+      api-key: ${ALI_API_KEY}
+      base-url: https://dashscope.aliyuncs.com/compatible-mode
+      chat:
+        options:
+          model: qwen-max
