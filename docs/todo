@@ -1,4 +1,16 @@
 
 
-Spring 项目部署在Docker -> 上传到阿里云服务器
-App 加密混淆
+
+## 当前任务
+
+Spring 项目部署在Docker -> 上传到阿里云服务器 todo Docker，Nginx -> 内网穿透(部署ES，Minlvus对服务器要求太高了)
+简单的SpringAI智能体部署服务器
+Android接收流式Http
+语音tts和stt模块
+
+最后升级Flutter, 打通IOS用户
+
+## 已完成
+
+App 加密混淆 (2025/9/24)
+Android MessageList + ChatActivity迁移 (2025/9/27)
