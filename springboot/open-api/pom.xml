@@ -27,7 +27,16 @@
     </properties>
 
     <dependencies>
+        <!-- Model -->
+        <!-- Spring AI -->
+        <dependency>
+            <groupId>com.starters</groupId>
+            <artifactId>ai-starter</artifactId>
+            <version>1.0.0-SNAPSHOT</version>
+            <scope>compile</scope>
+        </dependency>
 
+        <!-- model -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>
@@ -38,12 +47,16 @@
             <artifactId>lombok</artifactId>
         </dependency>
 
-        <!-- Spring AI -->
+        <!-- Test -->
         <dependency>
-            <groupId>com.starters</groupId>
-            <artifactId>ai-starter</artifactId>
-            <version>1.0.0-SNAPSHOT</version>
-            <scope>compile</scope>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-test</artifactId>
+            <scope>test</scope>
         </dependency>
     </dependencies>
 
