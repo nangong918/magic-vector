@@ -1,6 +1,7 @@
 package com.magicvector.viewModel.activity
 
 import android.util.Log
+import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.data.domain.constant.BaseConstant
@@ -29,11 +30,8 @@ class TestVm(
     private val customQuestion = "你好啊，你是谁？"
 
     //---------------------------UI State---------------------------
-    private val _currentMessage = MutableStateFlow("")
-    val currentMessage: StateFlow<String> = _currentMessage.asStateFlow()
-
-    private val _chatState = MutableStateFlow<ChatState>(ChatState.Idle)
-    val chatState: StateFlow<ChatState> = _chatState.asStateFlow()
+    val currentMessage: MutableLiveData<String> = MutableLiveData("")
+    val chatState: MutableLiveData<ChatState> = MutableLiveData(ChatState.Idle)
 
     //---------------------------NetWork---------------------------
 
@@ -50,17 +48,17 @@ class TestVm(
 
     fun sendQuestion() {
         viewModelScope.launch {
-            _chatState.value = ChatState.Loading
-            _currentMessage.value = ""
+            chatState.value = ChatState.Loading
+            currentMessage.value = ""
 
             sseClient.streamChat(customQuestion)
                 .collect { data ->
-                    _currentMessage.value += data
-                    _chatState.value = ChatState.Streaming
+                    currentMessage.value += data
+                    chatState.value = ChatState.Streaming
                     Log.i(TAG, "收到消息: $data")
                 }
 
-            _chatState.value = ChatState.Success
+            chatState.value = ChatState.Success
         }
     }
 

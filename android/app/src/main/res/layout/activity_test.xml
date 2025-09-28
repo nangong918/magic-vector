@@ -18,6 +18,11 @@
             android:layout_height="wrap_content"
             android:text="发送消息"/>
         <TextView
+            android:id="@+id/tv_sse_status"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="未连接"/>
+        <TextView
             android:id="@+id/tv_AIResponse"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
