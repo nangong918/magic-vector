@@ -11,6 +11,7 @@ import com.czy.smartmedicine.utils.BaseAppCompatVmFragment
 import com.data.domain.OnPositionItemClick
 import com.data.domain.fragmentActivity.intentAo.ChatIntentAo
 import com.magicvector.activity.ChatActivity
+import com.magicvector.activity.TestActivity
 import com.magicvector.databinding.FragmentMessageListBinding
 import com.magicvector.viewModel.fragment.MessageVm
 import java.util.Optional
@@ -80,6 +81,15 @@ class MessageListFragment : BaseAppCompatVmFragment<
                 binding.lyHaveNoMessage.visibility = View.GONE
                 vm.adapter.notifyDataSetChanged()
             }
+        }
+    }
+
+    override fun setListener() {
+        super.setListener()
+
+        binding.lyHaveNoMessage.setOnClickListener {
+            val intent = Intent(activity, TestActivity::class.java)
+            startActivity(intent)
         }
     }
 

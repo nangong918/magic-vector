@@ -95,6 +95,23 @@ dependencies {
     implementation(libs.circleimageview)
     implementation(libs.roundedimageview)
 
+    // OkHttp3
+    implementation(libs.okhttp)
+    // OkHttp的日志
+    implementation(libs.logging.interceptor)
+    // SSE支持
+    implementation("com.squareup.okhttp3:okhttp-sse:5.1.0")
+
+    // Retrofit
+    implementation(libs.retrofit)
+    implementation(libs.converter.gson)
+
+    // Gson
+    implementation(libs.gson)
+
+    // multidex
+    implementation(libs.multidex)
+
     /**
      * 自定义Module
      * 基本依赖关系：
