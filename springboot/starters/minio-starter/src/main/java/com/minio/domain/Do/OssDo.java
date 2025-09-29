@@ -1,4 +1,4 @@
-package com.openapi.domain.Do;
+package com.minio.domain.Do;
 
 import lombok.Data;
 import org.springframework.data.annotation.Id;
@@ -15,7 +15,4 @@ public class OssDo {
     private String id;
     private String bucketName;
     private String objectName;
-
-    private LocalDateTime createdDate;
-    private LocalDateTime lastModifiedDate;
 }
