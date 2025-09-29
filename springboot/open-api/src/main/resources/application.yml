@@ -19,3 +19,8 @@ spring:
       chat:
         options:
           model: qwen-max
+  # 数据库
+  jpa:
+    hibernate:
+      ddl-auto: none  # 不自动创建数据库表，初始时可设置为 none
+    show-sql: true  # 显示 SQL 语句

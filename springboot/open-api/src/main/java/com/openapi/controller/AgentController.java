@@ -3,7 +3,6 @@ package com.openapi.controller;
 import com.openapi.domain.constant.error.CommonExceptions;
 import com.openapi.domain.dto.BaseResponse;
 import com.openapi.domain.dto.resonse.CreateAgentResponse;
-import com.openapi.domain.exception.AppException;
 import com.openapi.domain.vo.AgentVo;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

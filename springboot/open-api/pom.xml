@@ -24,6 +24,7 @@
         <spring.version>3.4.0</spring.version>
 
         <lombok.version>1.18.36</lombok.version>
+        <hutool.version>5.8.0</hutool.version>
     </properties>
 
     <dependencies>
@@ -51,7 +52,17 @@
             <artifactId>lombok</artifactId>
         </dependency>
 
-        <!-- jpa -->
+        <!-- Spring Boot Starter Data JPA -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-jpa</artifactId>
+        </dependency>
+
+        <!-- Hutool -->
+        <dependency>
+            <groupId>cn.hutool</groupId>
+            <artifactId>hutool-core</artifactId>
+        </dependency>
 
         <!-- Test -->
         <dependency>
@@ -73,6 +84,11 @@
                 <groupId>org.projectlombok</groupId>
                 <artifactId>lombok</artifactId>
                 <version>${lombok.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>cn.hutool</groupId>
+                <artifactId>hutool-core</artifactId>
+                <version>${hutool.version}</version>
             </dependency>
         </dependencies>
     </dependencyManagement>
