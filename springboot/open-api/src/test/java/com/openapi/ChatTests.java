@@ -3,7 +3,7 @@ package com.openapi;
 
 import com.alibaba.cloud.ai.dashscope.chat.DashScopeChatModel;
 import com.alibaba.cloud.ai.dashscope.embedding.DashScopeEmbeddingModel;
-import com.openapi.domain.dto.ChatRequest;
+import com.openapi.domain.dto.request.ChatRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.Test;
 import org.springframework.ai.chat.client.ChatClient;

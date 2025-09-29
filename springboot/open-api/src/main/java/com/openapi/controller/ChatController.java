@@ -2,7 +2,7 @@ package com.openapi.controller;
 
 
 import com.alibaba.cloud.ai.dashscope.chat.DashScopeChatModel;
-import com.openapi.domain.dto.ChatRequest;
+import com.openapi.domain.dto.request.ChatRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;

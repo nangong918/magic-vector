@@ -1,6 +1,7 @@
 package com.openapi.domain.dto;
 
 
+import com.openapi.domain.constant.ExceptionEnums;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -107,5 +108,8 @@ public class BaseResponse<T> implements Serializable {
         return new BaseResponse<>(errorCode, errorMessage, null);
     }
 
+    public static <T> BaseResponse<T> LogBackError(ExceptionEnums exceptionEnums) {
+        return new BaseResponse<>(exceptionEnums.getCode(), exceptionEnums.getMessage(), null);
+    }
 
 }
