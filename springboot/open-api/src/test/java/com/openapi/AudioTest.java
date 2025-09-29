@@ -1,12 +1,17 @@
 package com.openapi;
 
 
-import com.alibaba.cloud.ai.dashscope.api.DashScopeAudioSpeechApi;
 import com.alibaba.cloud.ai.dashscope.audio.DashScopeAudioSpeechModel;
-import com.alibaba.cloud.ai.dashscope.audio.DashScopeAudioSpeechOptions;
 import com.alibaba.cloud.ai.dashscope.audio.synthesis.SpeechSynthesisModel;
 import com.alibaba.cloud.ai.dashscope.audio.synthesis.SpeechSynthesisPrompt;
 import com.alibaba.cloud.ai.dashscope.audio.synthesis.SpeechSynthesisResponse;
+import com.alibaba.dashscope.aigc.multimodalconversation.AudioParameters;
+import com.alibaba.dashscope.aigc.multimodalconversation.MultiModalConversation;
+import com.alibaba.dashscope.aigc.multimodalconversation.MultiModalConversationParam;
+import com.alibaba.dashscope.aigc.multimodalconversation.MultiModalConversationResult;
+import com.alibaba.dashscope.audio.ttsv2.SpeechSynthesisParam;
+import com.alibaba.dashscope.utils.JsonUtils;
+import com.openapi.config.ChatConfig;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -75,5 +80,31 @@ public class AudioTest {
         } catch (IOException e) {
             log.error("调用 simpleTTS 保存到文件异常 -->  userInputPrompt ={}, e", text, e);
         }
+    }
+
+    @Autowired
+    private ChatConfig config;
+
+    private static final String MODEL = "qwen3-tts-flash";
+    @Test
+    public void dashScopeTtsTest() throws Exception{
+        System.out.println("ali_key = " + config.getApiKey());
+
+        MultiModalConversation conv = new MultiModalConversation();
+        MultiModalConversationParam param = MultiModalConversationParam.builder()
+                // 仅支持qwen-tts系列模型，请勿使用除此之外的其他模型
+                .model(MODEL)
+//                .apiKey(System.getenv("DASHSCOPE_API_KEY"))
+                .apiKey(config.getApiKey())
+                .text("你好啊，我是小小lemon酱")
+                .voice(AudioParameters.Voice.CHERRY)
+                .languageType("Chinese")
+                .build();
+
+        MultiModalConversationResult result = conv.call(param);
+
+        System.out.println(JsonUtils.toJson(result));
+
+        result.getOutput().getAudio();
     }
 }

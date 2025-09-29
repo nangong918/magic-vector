@@ -2,6 +2,8 @@
 server:
   port: 48888
 
+alikey: ${ALI_API_KEY}
+
 spring:
   application:
     name: open-api
