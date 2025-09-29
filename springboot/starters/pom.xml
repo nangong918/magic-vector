@@ -31,7 +31,7 @@
         <spring.version>3.4.0</spring.version>
         <lombok.version>1.18.36</lombok.version>
         <minio.version>8.2.2</minio.version>
-        <mybatis-plus.version>3.5.3.2</mybatis-plus.version>
+        <mybatis-plus.version>3.5.9</mybatis-plus.version>
         <hutool.version>5.8.0</hutool.version>
     </properties>
 
