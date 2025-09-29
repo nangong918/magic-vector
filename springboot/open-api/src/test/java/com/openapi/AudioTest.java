@@ -10,6 +10,7 @@ import com.alibaba.dashscope.aigc.multimodalconversation.MultiModalConversation;
 import com.alibaba.dashscope.aigc.multimodalconversation.MultiModalConversationParam;
 import com.alibaba.dashscope.aigc.multimodalconversation.MultiModalConversationResult;
 import com.alibaba.dashscope.audio.ttsv2.SpeechSynthesisParam;
+import com.alibaba.dashscope.common.ResultCallback;
 import com.alibaba.dashscope.utils.JsonUtils;
 import com.openapi.config.ChatConfig;
 import lombok.extern.slf4j.Slf4j;
@@ -104,7 +105,59 @@ public class AudioTest {
         MultiModalConversationResult result = conv.call(param);
 
         System.out.println(JsonUtils.toJson(result));
+    }
 
-        result.getOutput().getAudio();
+    @Test
+    public void streamTtsTest() throws Exception{
+        // 创建 TTS 流式请求
+        MultiModalConversationParam param = MultiModalConversationParam.builder()
+                // 仅支持qwen-tts系列模型，请勿使用除此之外的其他模型
+                .model(MODEL)
+//                .apiKey(System.getenv("DASHSCOPE_API_KEY"))
+                .apiKey(config.getApiKey())
+                .text("你好啊，我是小小lemon酱")
+                .voice(AudioParameters.Voice.CHERRY)
+                .languageType("Chinese")
+                .build();
+
+        MultiModalConversation conv = new MultiModalConversation();
+
+        conv.streamCall(param, new ResultCallback<>() {
+            @Override
+            public void onEvent(MultiModalConversationResult result) {
+                // 处理流式返回的音频数据
+                if (result != null && result.getOutput() != null
+                        && result.getOutput().getAudio() != null) {
+
+                    String audioUrl = result.getOutput().getAudio().getUrl();
+                    String audioData = result.getOutput().getAudio().getData();
+
+                    System.out.println("收到音频事件:");
+                    System.out.println("Audio URL: " + audioUrl);
+                    System.out.println("Audio Data length: " +
+                            audioData);
+
+                    // 如果有音频数据，可以实时播放或处理
+                    if (!audioData.isEmpty()) {
+                        // 实时播放音频数据
+//                        playAudioData(audioData);
+                        System.out.println("播放音频数据中...: audioData.length: " + audioData);
+                    }
+                }
+            }
+
+            @Override
+            public void onComplete() {
+                System.out.println("TTS 流式转换完成");
+            }
+
+            @Override
+            public void onError(Exception e) {
+                System.err.println("TTS 流式转换出错: " + e.getMessage());
+            }
+        });
+
+        // 等待流式处理完成
+        Thread.sleep(10000L);
     }
 }
