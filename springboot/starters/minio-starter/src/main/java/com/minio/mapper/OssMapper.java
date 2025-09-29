@@ -21,14 +21,14 @@ public interface OssMapper {
 
     /// 删
     // 删
-    void delete(Long id);
+    void delete(String id);
     // 根据 fileStorageName + bucketName 删除
     void deleteByObjectNameAndBucketName(
             @Param("objectName")String objectName,
             @Param("bucketName")String bucketName
     );
     // 批量删
-    void deleteBatch(@Param("list") List<Long> ids);
+    void deleteBatch(@Param("list") List<String> ids);
 
     /// 改
     // 单个改
@@ -38,11 +38,11 @@ public interface OssMapper {
 
     /// 查
     // 根据id 查询
-    OssDo getById(Long id);
+    OssDo getById(String id);
     // 根据fileStorageName + bucketName查询
     OssDo getByObjectNameAndBucketName(
             @Param("objectName")String objectName,
             @Param("bucketName")String bucketName
     );
-    List<OssDo> getByIds(@Param("list") List<Long> ids);
+    List<OssDo> getByIds(@Param("list") List<String> ids);
 }
