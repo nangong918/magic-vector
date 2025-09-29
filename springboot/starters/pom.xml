@@ -22,12 +22,15 @@
 
     <modules>
         <module>ai-starter</module>
+        <module>minio-starter</module>
     </modules>
 
     <!--JDK版本：21-->
     <properties>
         <java.version>21</java.version>
         <spring.version>3.4.0</spring.version>
+        <lombok.version>1.18.36</lombok.version>
+        <minio.version>8.2.2</minio.version>
     </properties>
 
     <dependencyManagement>
@@ -35,6 +38,19 @@
             <dependency>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-starter-web</artifactId>
+                <version>${spring.version}</version>
+            </dependency>
+            <!-- lombok -->
+            <dependency>
+                <groupId>org.projectlombok</groupId>
+                <artifactId>lombok</artifactId>
+                <version>${lombok.version}</version>
+            </dependency>
+            <!-- MinIO 客户端 -->
+            <dependency>
+                <groupId>io.minio</groupId>
+                <artifactId>minio</artifactId>
+                <version>${minio.version}</version>
             </dependency>
         </dependencies>
     </dependencyManagement>
