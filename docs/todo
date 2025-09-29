@@ -4,13 +4,14 @@
 ## 当前任务
 
 Spring 项目部署在Docker -> 上传到阿里云服务器 todo Docker，Nginx -> 内网穿透(部署ES，Minlvus对服务器要求太高了)
-简单的SpringAI智能体部署服务器
-Android接收流式Http
+简单的SpringAI智能体部署Docker + 内网穿透
 语音tts和stt模块
 
+部分View改用Jetpack compose
 最后升级Flutter, 打通IOS用户
 
 ## 已完成
 
 App 加密混淆 (2025/9/24)
 Android MessageList + ChatActivity迁移 (2025/9/27)
+Spring 使用webflux + sse 传输流式数据, Android 用okhttp-sse 接收流式数据 (2025/9/28)
