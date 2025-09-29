@@ -21,6 +21,7 @@
         <!-- Spring AI Alibaba -->
         <!-- Install Spring AI Alibaba in your local. -->
         <spring-ai-alibaba.version>1.0.0.3</spring-ai-alibaba.version>
+        <spring-ai-alibaba.dashscope.version>2.21.11</spring-ai-alibaba.dashscope.version>
     </properties>
 
     <dependencyManagement>
@@ -39,6 +40,12 @@
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
+            <!-- https://mvnrepository.com/artifact/com.alibaba/dashscope-sdk-java -->
+            <dependency>
+                <groupId>com.alibaba</groupId>
+                <artifactId>dashscope-sdk-java</artifactId>
+                <version>${spring-ai-alibaba.dashscope.version}</version>
+            </dependency>
         </dependencies>
     </dependencyManagement>
 
@@ -51,6 +58,10 @@
         <dependency>
             <groupId>org.springframework.ai</groupId>
             <artifactId>spring-ai-autoconfigure-model-chat-client</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.alibaba</groupId>
+            <artifactId>dashscope-sdk-java</artifactId>
         </dependency>
 
         <!-- Mcp: Server/Client -->

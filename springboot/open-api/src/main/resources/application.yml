@@ -13,6 +13,15 @@ spring:
       embedding:
         options:
           model: "text-embedding-v3"
+      tts:
+        model: "qwen3-tts-flash"  # 模型名称（必填）
+        voice: "CHERRY"  # 声音名称（对应 SDK 的 voice 字段，必填）
+        language: "Chinese"  # 语言类型（对应 languageType）
+        speed: 1.0  # 语速（0.5~2.0，对应 SDK 的 speed 字段）
+        volume: 50  # 音量（0~100，默认50）
+        pitch: 1.0  # 音调（0.5~2.0，默认1.0）
+        sample-rate: 48000  # 采样率（默认48000）
+        response-format: "MP3"  # 音频格式（默认MP3）
     openai:
       api-key: ${ALI_API_KEY}
       base-url: https://dashscope.aliyuncs.com/compatible-mode
