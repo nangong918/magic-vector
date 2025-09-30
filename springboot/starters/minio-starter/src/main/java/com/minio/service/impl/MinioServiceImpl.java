@@ -87,7 +87,7 @@ public class MinioServiceImpl implements MinioService {
     }
 
     @Override
-    public FileOptionResult uploadFiles(List<MultipartFile> files, Long userId, String bucketName) {
+    public FileOptionResult uploadFiles(List<MultipartFile> files, String userId, String bucketName) {
         // 内部包含检查是否已经存在的逻辑
         FileOptionResult fileOptionResult = new FileOptionResult();
         List<SuccessFile> successFiles = new ArrayList<>();
@@ -128,7 +128,7 @@ public class MinioServiceImpl implements MinioService {
     }
 
     @Override
-    public FileOptionResult uploadImages(List<MultipartFile> files, Long userId, String bucketName) {
+    public FileOptionResult uploadImages(List<MultipartFile> files, String userId, String bucketName) {
         // 内部包含检查是否已经存在的逻辑
         FileOptionResult fileOptionResult = new FileOptionResult();
         List<SuccessFile> successFiles = new ArrayList<>();
@@ -174,7 +174,7 @@ public class MinioServiceImpl implements MinioService {
     }
 
     @Override
-    public String getObjectNameB(Long id, String fileName) {
+    public String getObjectNameB(String id, String fileName) {
         // id + fileName + 时间戳
         // 保留 fileName 的前 15 个字符
         String shortFileName = fileName.length() > 15 ? fileName.substring(0, 15) : fileName;
@@ -221,7 +221,7 @@ public class MinioServiceImpl implements MinioService {
                         fileName,
                         inputStream
                 );
-                String fileStorageName = getObjectNameB(-1L, fileName);
+                String fileStorageName = getObjectNameB("-1L", fileName);
                 if (response != null){
                     String fileId = String.valueOf(IdUtil.getSnowflakeNextId());
                     successFiles.add(new SuccessFile(fileName, fileStorageName, file.length(), fileId));
@@ -264,7 +264,7 @@ public class MinioServiceImpl implements MinioService {
             String fileName = IdUtil.getSnowflakeNextId() + "_" + file.getName();
             log.info("上传文件fileName：{}", fileName);
             try {
-                String fileStorageName = getObjectNameB(-1L, fileName);
+                String fileStorageName = getObjectNameB("-1L", fileName);
                 ObjectWriteResponse response = minioUtils.uploadFile(bucketName, file, fileStorageName, file.getContentType());
                 log.info("上传文件fileStorageName：{}", fileStorageName);
                 if (response != null){
@@ -305,7 +305,7 @@ public class MinioServiceImpl implements MinioService {
             String fileName = IdUtil.getSnowflakeNextId() + "_" + file.getOriginalFilename();
             log.info("上传文件fileName：{}", fileName);
             try {
-                String fileStorageName = getObjectNameB(-1L, fileName);
+                String fileStorageName = getObjectNameB("-1L", fileName);
                 ObjectWriteResponse response = minioUtils.uploadFile(
                         bucketName, file,
                         fileStorageName,

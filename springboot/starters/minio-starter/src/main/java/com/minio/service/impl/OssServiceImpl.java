@@ -7,6 +7,7 @@ import com.minio.domain.Do.OssDo;
 import com.minio.domain.ao.FileIsExistAo;
 import com.minio.domain.ao.FileIsExistResult;
 import com.minio.domain.ao.FileNameAo;
+import com.minio.domain.ao.FileOptionResult;
 import com.minio.domain.ao.SuccessFile;
 import com.minio.mapper.OssMapper;
 import com.minio.service.MinioService;
@@ -18,6 +19,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -72,6 +74,19 @@ public class OssServiceImpl implements OssService {
             }
             result.add(fileIsExistResult);
         }
+        return result;
+    }
+
+    @Override
+    public FileOptionResult uploadFiles(List<MultipartFile> files, String userId, String bucketName) {
+        if (CollectionUtils.isEmpty(files)){
+            return new FileOptionResult();
+        }
+        FileOptionResult result = minioService.uploadFiles(files, userId, bucketName);
+        // 成功的存储到数据库
+        uploadFilesRecord(result.getSuccessFiles(), userId, bucketName);
+//        // 失败的加入到list
+//        result.getErrorFiles().addAll(errorFileList);
         return result;
     }
 

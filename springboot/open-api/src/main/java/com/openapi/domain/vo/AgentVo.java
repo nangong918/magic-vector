@@ -1,6 +1,7 @@
 package com.openapi.domain.vo;
 
 import lombok.Data;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * @author 13225
@@ -13,5 +14,6 @@ public class AgentVo {
     // agent description
     public String description;
     // agent avatarUrl
-    public String avatarUrl;
+    @Nullable
+    public String avatarUrl = null;
 }

@@ -1,6 +1,6 @@
 package com.openapi.domain.dto.resonse;
 
-import com.openapi.domain.vo.AgentVo;
+import com.openapi.domain.ao.AgentAo;
 import lombok.Data;
 
 /**
@@ -9,8 +9,5 @@ import lombok.Data;
  */
 @Data
 public class CreateAgentResponse {
-    // 创建的Agent id (也是session id)
-    public String agentId;
-    // 创建的Agent vo
-    public AgentVo agentVo;
+    private AgentAo agentAo;
 }

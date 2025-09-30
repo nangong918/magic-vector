@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.openapi.mapper.AgentMapper">
+
+    <sql id="table">
+        agent
+    </sql>
+
+    <sql id="columns">
+        id, name, description, oss_id
+    </sql>
+    <insert id="insert">
+        insert into
+        <include refid="table"/>
+        (
+        <include refid="columns"/>
+        )
+        values(
+        #{agentDo.id}, #{agentDo.name}, #{agentDo.description}, #{agentDo.ossId}
+        )
+    </insert>
+    <insert id="insertBatch">
+        <if test="list != null and list.size() > 0">
+            insert into
+            <include refid="table"/>
+            (
+            <include refid="columns"/>
+            )
+            values
+            <foreach item="item" index="index" collection="list" separator="," open="(" close=")">
+                (
+                #{item.id}, #{item.name}, #{item.description}, #{item.ossId}
+                )
+            </foreach>
+        </if>
+    </insert>
+
+    <update id="update">
+        update
+        <include refid="table"/>
+        set
+        <if test="agentDo.id != null">
+            id = #{agentDo.id},
+        </if>
+        <if test="agentDo.name != null">
+            name = #{agentDo.name},
+        </if>
+        <if test="agentDo.description != null">
+            description = #{agentDo.description},
+        </if>
+        <if test="agentDo.ossId != null">
+            oss_id = #{agentDo.ossId}
+        </if>
+        where id = #{agentDo.id}
+    </update>
+    <update id="updateBatch">
+        <if test="list != null and list.size() > 0">
+            <foreach collection="list" item="agentDo" separator=";" open="(" close=")">
+                update
+                <include refid="table"/>
+                set
+                <if test="agentDo.id != null">
+                    id = #{agentDo.id},
+                </if>
+                <if test="agentDo.name != null">
+                    name = #{agentDo.name},
+                </if>
+                <if test="agentDo.description != null">
+                    description = #{agentDo.description},
+                </if>
+                <if test="agentDo.ossId != null">
+                    oss_id = #{agentDo.ossId}
+                </if>
+            </foreach>
+        </if>
+    </update>
+
+    <delete id="deleteById">
+        delete from
+        <include refid="table"/>
+        where id = #{id}
+    </delete>
+    <delete id="deleteByIds">
+        <if test="list != null and list.size() > 0">
+            delete from
+            <include refid="table"/>
+            where id in
+            <foreach item="item" index="index" collection="list" separator="," open="(" close=")">
+                #{item}
+            </foreach>
+        </if>
+    </delete>
+
+    <select id="selectById" resultType="com.openapi.domain.Do.AgentDo">
+        select
+        <include refid="columns"/>
+        from
+        <include refid="table"/>
+        where id = #{id}
+    </select>
+    <select id="selectByIds" resultType="com.openapi.domain.Do.AgentDo">
+        <if test="list != null and list.size() > 0">
+            select
+            <include refid="columns"/>
+            from
+            <include refid="table"/>
+            where id in
+            <foreach item="item" index="index" collection="list" separator="," open="(" close=")">
+                #{item}
+            </foreach>
+        </if>
+    </select>
+
+</mapper>

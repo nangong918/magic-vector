@@ -22,12 +22,12 @@ public interface MinioService {
      * @param bucketName        bucketName
      * @return                  ErrorFileList
      */
-    FileOptionResult uploadFiles(List<MultipartFile> files, Long userId, String bucketName);
+    FileOptionResult uploadFiles(List<MultipartFile> files, String userId, String bucketName);
 
-    FileOptionResult uploadImages(List<MultipartFile> files, Long userId, String bucketName);
+    FileOptionResult uploadImages(List<MultipartFile> files, String userId, String bucketName);
 
     // fileName + id 生成 fileStorageName
-    String getObjectNameB(Long id, String fileName);
+    String getObjectNameB(String id, String fileName);
 
     /**
      *  上传文件List

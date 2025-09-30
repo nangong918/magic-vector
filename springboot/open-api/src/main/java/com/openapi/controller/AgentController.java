@@ -1,9 +1,10 @@
 package com.openapi.controller;
 
+import com.openapi.domain.ao.AgentAo;
 import com.openapi.domain.constant.error.CommonExceptions;
 import com.openapi.domain.dto.BaseResponse;
 import com.openapi.domain.dto.resonse.CreateAgentResponse;
-import com.openapi.domain.vo.AgentVo;
+import com.openapi.service.AgentService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.util.StringUtils;
@@ -26,6 +27,8 @@ import org.springframework.web.multipart.MultipartFile;
 @RequestMapping("/agent")
 public class AgentController {
 
+    private final AgentService agentService;
+
     // 创建Agent
     @PostMapping("/create")
     public BaseResponse<CreateAgentResponse> createAgent(
@@ -42,13 +45,10 @@ public class AgentController {
             return BaseResponse.LogBackError(CommonExceptions.PARAM_ERROR);
         }
 
+        AgentAo agentAo = agentService.createAgent(avatar, name, description);
+
         CreateAgentResponse response = new CreateAgentResponse();
-        response.setAgentId("1");
-        AgentVo agentVo = new AgentVo();
-        agentVo.setName(name);
-        agentVo.setDescription(description);
-        agentVo.setAvatarUrl("https://example.com/avatar.png");
-        response.setAgentVo(agentVo);
+        response.setAgentAo(agentAo);
 
         return BaseResponse.getResponseEntitySuccess(response);
     }

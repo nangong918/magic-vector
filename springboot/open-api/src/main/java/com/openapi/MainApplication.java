@@ -10,6 +10,8 @@ import org.springframework.cache.annotation.EnableCaching;
 @MapperScan({
         // minio
         "com.minio.mapper",
+        // open-api
+        "com.openapi.mapper",
 })
 @EnableCaching
 @SpringBootApplication(

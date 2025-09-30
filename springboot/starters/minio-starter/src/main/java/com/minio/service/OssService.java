@@ -23,15 +23,23 @@ public interface OssService {
 
     /**
      * userId + bucketName + fileName -> OssDo
-     * @param userId            用户id
      * @param bucketName        bucketName
-     * @param fileName          文件名
+     * @param objectName        objectName
      * @return                  OssFile
      */
     OssDo getFileInfoByBucketNameAndFileName(String bucketName, String objectName);
 
 
     List<FileIsExistResult> checkFilesExistForResult(List<FileIsExistAo> fileIsExistAos);
+
+    /**
+     * 上传文件List
+     * @param files             文件List
+     * @param userId            用户id
+     * @param bucketName        bucketName
+     * @return                  ErrorFileList
+     */
+    FileOptionResult uploadFiles(List<MultipartFile> files, String userId, String bucketName);
 
     /**
      * 成功的存储到数据库
