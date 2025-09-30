@@ -8,6 +8,6 @@ import lombok.Data;
  * @date 2025/9/29 13:37
  */
 @Data
-public class CreateAgentResponse {
+public class AgentResponse {
     private AgentAo agentAo;
 }

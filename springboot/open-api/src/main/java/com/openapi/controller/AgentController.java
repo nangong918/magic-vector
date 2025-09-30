@@ -3,12 +3,13 @@ package com.openapi.controller;
 import com.openapi.domain.ao.AgentAo;
 import com.openapi.domain.constant.error.CommonExceptions;
 import com.openapi.domain.dto.BaseResponse;
-import com.openapi.domain.dto.resonse.CreateAgentResponse;
+import com.openapi.domain.dto.resonse.AgentResponse;
 import com.openapi.service.AgentService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -31,7 +32,7 @@ public class AgentController {
 
     // 创建Agent
     @PostMapping("/create")
-    public BaseResponse<CreateAgentResponse> createAgent(
+    public BaseResponse<AgentResponse> createAgent(
             @RequestParam("avatar") MultipartFile avatar,
             @RequestParam("name") String name,
             @RequestParam("description") String description
@@ -47,9 +48,24 @@ public class AgentController {
 
         AgentAo agentAo = agentService.createAgent(avatar, name, description);
 
-        CreateAgentResponse response = new CreateAgentResponse();
+        AgentResponse response = new AgentResponse();
         response.setAgentAo(agentAo);
 
+        return BaseResponse.getResponseEntitySuccess(response);
+    }
+
+    // 获取AgentAo
+    @GetMapping("/getInfo")
+    public BaseResponse<AgentResponse> getAgentAo(
+            @RequestParam("agentId") String agentId
+    ) {
+        // 参数校验
+        if (!StringUtils.hasText(agentId)){
+            return BaseResponse.LogBackError(CommonExceptions.PARAM_ERROR);
+        }
+        AgentAo agentAo = agentService.getAgentById(agentId);
+        AgentResponse response = new AgentResponse();
+        response.setAgentAo(agentAo);
         return BaseResponse.getResponseEntitySuccess(response);
     }
 

@@ -11,4 +11,6 @@ import org.springframework.web.multipart.MultipartFile;
  */
 public interface AgentService {
     AgentAo createAgent(@Nullable MultipartFile avatar, @NotNull String name, @NotNull String description);
+
+    AgentAo getAgentById(String id);
 }
