@@ -17,7 +17,7 @@
         <include refid="columns"/>
         )
         values(
-        #{agentDo.id}, #{agentDo.name}, #{agentDo.description}, #{agentDo.ossId}
+        #{id}, #{name}, #{description}, #{ossId}
         )
     </insert>
     <insert id="insertBatch">
@@ -40,19 +40,19 @@
         update
         <include refid="table"/>
         set
-        <if test="agentDo.id != null">
-            id = #{agentDo.id},
+        <if test="id != null">
+            id = #{id},
         </if>
-        <if test="agentDo.name != null">
-            name = #{agentDo.name},
+        <if test="name != null">
+            name = #{name},
         </if>
-        <if test="agentDo.description != null">
-            description = #{agentDo.description},
+        <if test="description != null">
+            description = #{description},
         </if>
-        <if test="agentDo.ossId != null">
-            oss_id = #{agentDo.ossId}
+        <if test="ossId != null">
+            oss_id = #{ossId}
         </if>
-        where id = #{agentDo.id}
+        where id = #{id}
     </update>
     <update id="updateBatch">
         <if test="list != null and list.size() > 0">

@@ -18,7 +18,7 @@
         <include refid="columns"/>
         )
         values(
-        #{ossDo.id}, #{ossDo.bucketName}, #{ossDo.objectName}
+        #{id}, #{bucketName}, #{objectName}
         )
     </insert>
     <insert id="insertBatch">
@@ -41,16 +41,16 @@
         update
         <include refid="table"/>
         set
-        <if test="ossDo.id != null">
-            id = #{ossDo.id},
+        <if test="id != null">
+            id = #{id},
         </if>
-        <if test="ossDo.bucketName != null">
-            bucket_name = #{ossDo.bucketName},
+        <if test="bucketName != null">
+            bucket_name = #{bucketName},
         </if>
-        <if test="ossDo.objectName != null">
-            object_name = #{ossDo.objectName},
+        <if test="objectName != null">
+            object_name = #{objectName},
         </if>
-        where id = #{ossDo.id}
+        where id = #{id}
     </update>
     <update id="updateBatch">
         <if test="list != null and list.size() > 0">
