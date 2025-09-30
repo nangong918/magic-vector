@@ -11,5 +11,5 @@ import java.util.List;
  */
 @Data
 public class ChatMessageResponse {
-    private List<ChatMessageDo> chatMessageDos;
+    private List<ChatMessageDo> chatMessages;
 }

@@ -17,7 +17,6 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Flux;
 
-import java.text.SimpleDateFormat;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.UUID;
@@ -86,7 +85,7 @@ public class ChatController {
         }
         val chatMessageDos = chatMessageService.getLast20Messages(agentId);
         ChatMessageResponse response = new ChatMessageResponse();
-        response.setChatMessageDos(chatMessageDos);
+        response.setChatMessages(chatMessageDos);
 
         return BaseResponse.getResponseEntitySuccess(response);
     }
@@ -121,7 +120,7 @@ public class ChatController {
 
         val chatMessageDos = chatMessageService.getMessagesByAgentIdDeadlineLimit(agentId, time, limit);
         ChatMessageResponse response = new ChatMessageResponse();
-        response.setChatMessageDos(chatMessageDos);
+        response.setChatMessages(chatMessageDos);
 
         return BaseResponse.getResponseEntitySuccess(response);
     }
