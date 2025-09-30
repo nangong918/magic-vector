@@ -200,10 +200,10 @@ public class FileUtil {
      * @param file  文件
      * @return MultipartBody.Part
      */
-//    public static MultipartBody.Part createMultipartBodyPart(File file, @NonNull String fileRequestParamName) {
-//        RequestBody requestFile = RequestBody.create(MediaType.parse("multipart/form-data"), file);
-//        return MultipartBody.Part.createFormData(fileRequestParamName, file.getName(), requestFile);
-//    }
+    public static MultipartBody.Part createMultipartBodyPart(File file, @NonNull String fileRequestParamName) {
+        RequestBody requestFile = RequestBody.create(MediaType.parse("multipart/form-data"), file);
+        return MultipartBody.Part.createFormData(fileRequestParamName, file.getName(), requestFile);
+    }
 
     /**
      * 从ContentResolver中获取文件路径

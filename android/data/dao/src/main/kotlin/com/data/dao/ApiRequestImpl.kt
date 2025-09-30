@@ -8,6 +8,7 @@ import com.core.baseutil.network.OnThrowableCallback
 import com.data.domain.dto.response.AgentResponse
 import com.data.domain.dto.response.ChatMessageResponse
 import okhttp3.MultipartBody
+import okhttp3.RequestBody
 
 open class ApiRequestImpl(apiRequest: ApiRequest) : BaseApiRequestImpl() {
 
@@ -23,8 +24,8 @@ open class ApiRequestImpl(apiRequest: ApiRequest) : BaseApiRequestImpl() {
     //    ): BaseResponse<AgentResponse>
     fun createAgent(
         avatar: MultipartBody.Part,
-        name: String,
-        description: String,
+        name: RequestBody,
+        description: RequestBody,
         onSuccessCallback: OnSuccessCallback<BaseResponse<AgentResponse>>?,
         throwableCallback: OnThrowableCallback?
     ) {

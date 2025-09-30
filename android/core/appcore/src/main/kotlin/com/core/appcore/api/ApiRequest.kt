@@ -4,6 +4,7 @@ import com.core.baseutil.network.BaseResponse
 import com.data.domain.dto.response.AgentResponse
 import com.data.domain.dto.response.ChatMessageResponse
 import okhttp3.MultipartBody
+import okhttp3.RequestBody
 import retrofit2.http.GET
 import retrofit2.http.Multipart
 import retrofit2.http.POST
@@ -23,8 +24,8 @@ interface ApiRequest {
     @POST("/agent/create")
     suspend fun createAgent(
         @Part avatar: MultipartBody.Part,
-        @Part("name") name: String,
-        @Part("description") description: String
+        @Part("name") name: RequestBody,
+        @Part("description") description: RequestBody
     ): BaseResponse<AgentResponse>
 
     /**

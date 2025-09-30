@@ -1,6 +1,11 @@
 package com.magicvector
 
 import android.app.Application
+import android.util.Log
+import com.core.appcore.api.ApiRequest
+import com.core.appcore.api.ApiRequestProvider
+import com.core.baseutil.image.ImageManager
+import com.data.dao.ApiRequestImpl
 
 class MainApplication : Application() {
 
@@ -19,7 +24,47 @@ class MainApplication : Application() {
     //----------------------------global----------------------------
 
     private fun initGlobal() {
+        apiRequestInstance = getApiRequestInstance()
     }
+
+    companion object {
+        //==========ApiRequest
+
+        private var apiRequestInstance: ApiRequest? = null
+
+        // 请求接口
+        @Synchronized
+        private fun getApiRequestInstance(): ApiRequest? {
+            if (apiRequestInstance == null) {
+                apiRequestInstance = ApiRequestProvider.getApiRequest()
+            }
+            return apiRequestInstance
+        }
+
+        private var imageManager: ImageManager? = null
+
+        @Synchronized
+        fun getImageManager(): ImageManager? {
+            if (imageManager == null) {
+                imageManager = ImageManager()
+            }
+            return imageManager
+        }
+
+        // 请求接口实现
+        private var apiRequestImplInstance: ApiRequestImpl? = null
+
+        @Synchronized
+        fun getApiRequestImplInstance(): ApiRequestImpl {
+            if (apiRequestImplInstance == null) {
+                apiRequestImplInstance = ApiRequestImpl(getApiRequestInstance()!!)
+            }
+
+            return apiRequestImplInstance!!
+        }
+    }
+
+
 
     //----------------------------utils----------------------------
 

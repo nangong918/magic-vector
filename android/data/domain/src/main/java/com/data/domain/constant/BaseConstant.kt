@@ -7,7 +7,8 @@ class BaseConstant {
     // 常量
     object Constant {
         const val START_DELAY_TIME = 1500L
-
+        // 头像最大大小 200 * 200 = 160 KB
+        const val BITMAP_MAX_SIZE_AVATAR: Int = 200
         const val PACKAGE_NAME: String = "com.magicvector"
 
         // 请求是否加认证token前缀 最后要在拦截器检查去掉; 定义一些不像url的命名避免出现与后端路由重合
