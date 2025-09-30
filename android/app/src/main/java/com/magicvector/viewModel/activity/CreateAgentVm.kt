@@ -5,7 +5,7 @@ import android.graphics.Bitmap
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import com.core.appcore.api.handler.SyncRequestCallback
-import com.core.appcore.utils.ResponseTool
+import com.core.appcore.utils.AppResponseUtil
 import com.core.baseutil.file.FileUtil
 import com.core.baseutil.network.BaseResponse
 import com.core.baseutil.network.OnSuccessCallback
@@ -14,7 +14,6 @@ import com.data.domain.constant.BaseConstant
 import com.data.domain.dto.response.AgentResponse
 import com.data.domain.fragmentActivity.aao.CreateAgentAAo
 import com.magicvector.MainApplication
-import okhttp3.MediaType
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
 import okhttp3.RequestBody
@@ -36,6 +35,7 @@ class CreateAgentVm(
 
     val api = MainApplication.getApiRequestImplInstance()
 
+    // 创建Agent
     fun doCreateAgent(context: Context, callback: SyncRequestCallback){
         var bitmap: Bitmap? = MainApplication.getImageManager()!!.
         uriToBitmapMediaStore(context, aao.atomicUrl.get())
@@ -69,34 +69,57 @@ class CreateAgentVm(
             aao.descriptionLd.value!!
         )
 
-        val successCallback: OnSuccessCallback<BaseResponse<AgentResponse>> = object : OnSuccessCallback<BaseResponse<AgentResponse>> {
-            override fun onResponse(response: BaseResponse<AgentResponse>?) {
-                ResponseTool.handleSyncResponseEx<AgentResponse>(
-                    response,
-                    context,
-                    callback,
-                    ::handleCreateAgent
-                )
-            }
-        }
-
-        val throwableCallback: OnThrowableCallback = object : OnThrowableCallback {
-            override fun callback(throwable: Throwable?) {
-                callback(throwable)
-            }
-
-        }
-
         api.createAgent(
             filePart,
             nameBody,
             descriptionBody,
-            successCallback,
-            throwableCallback
+            object : OnSuccessCallback<BaseResponse<AgentResponse>> {
+                override fun onResponse(response: BaseResponse<AgentResponse>?) {
+                    AppResponseUtil.handleSyncResponseEx(
+                        response,
+                        context,
+                        callback,
+                        ::handleCreateAgent
+                    )
+                }
+            },
+            object : OnThrowableCallback {
+                override fun callback(throwable: Throwable?) {
+                    callback(throwable)
+                }
+            }
         )
     }
 
-    private fun handleCreateAgent(response: BaseResponse<AgentResponse>,
+    private fun handleCreateAgent(response: BaseResponse<AgentResponse>?,
+                                  context: Context,
+                                  callback: SyncRequestCallback) {
+
+    }
+
+    // 查询Agent
+    fun doGetAgentInfo(context: Context, agentId: String, callback: SyncRequestCallback){
+        api.getAgentInfo(
+            agentId,
+            object : OnSuccessCallback<BaseResponse<AgentResponse>> {
+                override fun onResponse(response: BaseResponse<AgentResponse>?) {
+                    AppResponseUtil.handleSyncResponseEx(
+                        response,
+                        context,
+                        callback,
+                        ::handleGetAgentInfo
+                    )
+                }
+            },
+            object : OnThrowableCallback {
+                override fun callback(throwable: Throwable?) {
+                    callback(throwable)
+                }
+            }
+        )
+    }
+
+    private fun handleGetAgentInfo(response: BaseResponse<AgentResponse>?,
                                   context: Context,
                                   callback: SyncRequestCallback) {
 

@@ -5,7 +5,7 @@ import android.util.Log
 import com.core.appcore.api.ApiRequest
 import com.core.appcore.api.ApiRequestProvider
 import com.core.baseutil.image.ImageManager
-import com.data.dao.ApiRequestImpl
+import com.data.dao.api.ApiRequestImpl
 
 class MainApplication : Application() {
 

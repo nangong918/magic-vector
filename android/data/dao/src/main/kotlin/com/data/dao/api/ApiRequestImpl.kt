@@ -1,4 +1,4 @@
-package com.data.dao
+package com.data.dao.api
 
 import com.core.appcore.api.ApiRequest
 import com.core.baseutil.network.BaseApiRequestImpl
@@ -66,7 +66,7 @@ open class ApiRequestImpl(apiRequest: ApiRequest) : BaseApiRequestImpl() {
     //    ): BaseResponse<ChatMessageResponse>
     fun <T> getLastChat(
         agentId: String,
-        onSuccessCallback: OnSuccessCallback<BaseResponse<ChatMessageResponse>>? ,
+        onSuccessCallback: OnSuccessCallback<BaseResponse<ChatMessageResponse>>?,
         throwableCallback: OnThrowableCallback?
     ) {
         sendRequestCallback(
@@ -90,7 +90,7 @@ open class ApiRequestImpl(apiRequest: ApiRequest) : BaseApiRequestImpl() {
         deadline: String,
         // max 50
         limit: Int,
-        onSuccessCallback: OnSuccessCallback<BaseResponse<ChatMessageResponse>>? ,
+        onSuccessCallback: OnSuccessCallback<BaseResponse<ChatMessageResponse>>?,
         throwableCallback: OnThrowableCallback?
     ){
         sendRequestCallback(

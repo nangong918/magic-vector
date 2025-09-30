@@ -1,44 +1,64 @@
-package com.core.baseutil.network;
+package com.core.baseutil.network
 
-import android.content.Context;
+import android.content.Context
+import com.core.baseutil.ui.ToastUtils
 
-import com.core.baseutil.ui.ToastUtils;
+open class ResponseUtil {
 
+    companion object {
+        val SUCCESS_CODE = 200
+        val SUCCESS_CODE_STRING = "200"
 
-public class ResponseUtil {
-
-    public static final String SUCCESS_CODE_STRING = "200";
-    public static final Integer SUCCESS_CODE = 200;
-
-    public static <T> boolean handleResponse(BaseResponse<T> response, Context context){
-        if(response != null && response.getCode() != null){
-            if (SUCCESS_CODE_STRING.equals(response.getCode())){
-                return true;
+        /**
+         * 基础响应处理
+         * @param response   响应
+         * @param context   上下文
+         * @return          处理结果
+         * @param <T>       响应数据类型
+         */
+        fun <T> handleResponse(response: BaseResponse<T>?, context: Context): Boolean {
+            if (response != null && response.code != null) {
+                if (response.code == SUCCESS_CODE_STRING){
+                    return true
+                }
+                else {
+                    ToastUtils.showToastActivity(context, response.message)
+                }
             }
             else {
-                ToastUtils.INSTANCE.showToastActivity(context, response.getMessage());
-                return false;
+                ToastUtils.showToastActivity(context, "服务器异常")
             }
+            return false
         }
-        else {
-            ToastUtils.INSTANCE.showToastActivity(context, "Internet Error");
-            return false;
+
+        /**
+         * 带异常回调的响应处理
+         * @param response   响应
+         * @param context   上下文
+         * @param onThrowableCallback   异常回调
+         * @return          处理结果
+         * @param <T>       响应数据类型
+         */
+        fun <T> handleResponse(
+            response: BaseResponse<T>?,
+            context: Context,
+            onThrowableCallback: OnThrowableCallback
+        ): Boolean {
+            if (response != null && response.code != null) {
+                if (response.code == SUCCESS_CODE_STRING){
+                    return true
+                }
+                else {
+                    ToastUtils.showToastActivity(context, response.message)
+                    onThrowableCallback.callback(Throwable(response.message))
+                }
+            }
+            else {
+                ToastUtils.showToastActivity(context, "服务器异常")
+                onThrowableCallback.callback(Throwable("服务器异常"))
+            }
+            return false
         }
     }
 
-    public static <T> boolean handleResponse(BaseResponse<T> response, OnThrowableCallback onThrowableCallback){
-        if(response != null && response.getCode() != null){
-            if (SUCCESS_CODE_STRING.equals(response.getCode())){
-                return true;
-            }
-            else {
-                onThrowableCallback.callback(new Throwable(response.getMessage()));
-                return false;
-            }
-        }
-        else {
-            onThrowableCallback.callback(new Throwable("Internet Error"));
-            return false;
-        }
-    }
 }

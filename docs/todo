@@ -10,6 +10,8 @@ Spring 项目部署在Docker -> 上传到阿里云服务器 todo Docker，Nginx 
 部分View改用Jetpack compose
 最后升级Flutter, 打通IOS用户
 
+人格 = 记忆 + 算法（意图产生，态度倾向）
+
 ## 已完成
 
 App 加密混淆 (2025/9/24)
