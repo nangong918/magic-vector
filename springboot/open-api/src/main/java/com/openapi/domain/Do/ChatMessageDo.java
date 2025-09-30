@@ -16,6 +16,6 @@ public class ChatMessageDo {
     private String content;
     // 时间
     private LocalDateTime chatTime;
-    // 发送方: 0: agent, 1: user
+    // 发送方: 0: agent, 1: user (相当于isUser ? 0 : 1)
     private Integer role = 0;
 }
