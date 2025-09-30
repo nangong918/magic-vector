@@ -35,4 +35,9 @@ class BaseConstant {
             Manifest.permission.READ_EXTERNAL_STORAGE,
         )
     }
+
+    object NetworkCode {
+        const val SUCCESS = 200
+        const val SUCCESS_CODE: String = "200"
+    }
 }
