@@ -54,9 +54,9 @@ public class AgentController {
         return BaseResponse.getResponseEntitySuccess(response);
     }
 
-    // 获取AgentAo
+    // 获取AgentInfo
     @GetMapping("/getInfo")
-    public BaseResponse<AgentResponse> getAgentAo(
+    public BaseResponse<AgentResponse> getAgentInfo(
             @RequestParam("agentId") String agentId
     ) {
         // 参数校验

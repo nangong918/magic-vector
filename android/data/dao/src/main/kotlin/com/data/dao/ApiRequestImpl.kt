@@ -5,12 +5,59 @@ import com.core.baseutil.network.BaseApiRequestImpl
 import com.core.baseutil.network.BaseResponse
 import com.core.baseutil.network.OnSuccessCallback
 import com.core.baseutil.network.OnThrowableCallback
+import com.data.domain.dto.response.AgentResponse
 import com.data.domain.dto.response.ChatMessageResponse
+import okhttp3.MultipartBody
 
 open class ApiRequestImpl(apiRequest: ApiRequest) : BaseApiRequestImpl() {
 
     // mApi 可以直接使用构造函数参数
     private val mApi: ApiRequest = apiRequest
+
+    //    @Multipart
+    //    @POST("/agent/create")
+    //    suspend fun createAgent(
+    //        @Part avatar: MultipartBody.Part,
+    //        @Part("name") name: String,
+    //        @Part("description") description: String
+    //    ): BaseResponse<AgentResponse>
+    fun createAgent(
+        avatar: MultipartBody.Part,
+        name: String,
+        description: String,
+        onSuccessCallback: OnSuccessCallback<BaseResponse<AgentResponse>>?,
+        throwableCallback: OnThrowableCallback?
+    ) {
+        sendRequestCallback(
+            apiCall = {
+                mApi.createAgent(
+                    avatar,
+                    name,
+                    description
+                )
+            },
+            successCallback = onSuccessCallback,
+            throwableCallback = throwableCallback
+        )
+    }
+
+    //    @GET("/agent/getInfo")
+    //    suspend fun getAgentInfo(
+    //        @Query("agentId") agentId: String
+    //    ): BaseResponse<AgentResponse>
+    fun getAgentInfo(
+        agentId: String,
+        onSuccessCallback: OnSuccessCallback<BaseResponse<AgentResponse>>?,
+        throwableCallback: OnThrowableCallback?
+    ){
+        sendRequestCallback(
+            apiCall = {
+                mApi.getAgentInfo(agentId)
+            },
+            successCallback = onSuccessCallback,
+            throwableCallback = throwableCallback
+        )
+    }
 
     //    @GET("/chat/getLastChat")
     //    suspend fun getLastChat(

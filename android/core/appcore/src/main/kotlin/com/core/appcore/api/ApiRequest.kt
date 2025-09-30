@@ -1,11 +1,41 @@
 package com.core.appcore.api
 
 import com.core.baseutil.network.BaseResponse
+import com.data.domain.dto.response.AgentResponse
 import com.data.domain.dto.response.ChatMessageResponse
+import okhttp3.MultipartBody
 import retrofit2.http.GET
+import retrofit2.http.Multipart
+import retrofit2.http.POST
+import retrofit2.http.Part
 import retrofit2.http.Query
 
 interface ApiRequest {
+
+    /**
+     * 创建Agent
+     * @param avatar        头像
+     * @param name          昵称
+     * @param description   提示词设定
+     * @return  创建结果
+     */
+    @Multipart
+    @POST("/agent/create")
+    suspend fun createAgent(
+        @Part avatar: MultipartBody.Part,
+        @Part("name") name: String,
+        @Part("description") description: String
+    ): BaseResponse<AgentResponse>
+
+    /**
+     * 获取Agent信息
+     * @param agentId   AgentId
+     * @return  Agent信息
+     */
+    @GET("/agent/getInfo")
+    suspend fun getAgentInfo(
+        @Query("agentId") agentId: String
+    ): BaseResponse<AgentResponse>
 
     /**
      * 获取最新的20条消息
