@@ -7,17 +7,17 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.cache.annotation.EnableCaching;
 
 // mybatis-plus
-//@MapperScan({
-//        // minio
-//        "com.minio.mapper",
-//})
+@MapperScan({
+        // minio
+        "com.minio.mapper",
+})
 @EnableCaching
 @SpringBootApplication(
         scanBasePackages = {
                 // 本地
                 "com.openapi",
                 // minio
-//                "com.minio",
+                "com.minio",
         }
 )
 public class MainApplication {
