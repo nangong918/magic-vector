@@ -13,6 +13,7 @@ import com.alibaba.dashscope.audio.ttsv2.SpeechSynthesisParam;
 import com.alibaba.dashscope.common.ResultCallback;
 import com.alibaba.dashscope.utils.JsonUtils;
 import com.openapi.config.ChatConfig;
+import io.reactivex.Flowable;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -22,6 +23,7 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
@@ -166,6 +168,29 @@ public class AudioTest {
         Thread.sleep(10000L);
     }
 
+    @Test
+    public void streamTtsTest2() throws Exception{
+        // 创建 TTS 流式请求
+        MultiModalConversationParam param = MultiModalConversationParam.builder()
+                // 仅支持qwen-tts系列模型，请勿使用除此之外的其他模型
+                .model(MODEL)
+//                .apiKey(System.getenv("DASHSCOPE_API_KEY"))
+                .apiKey(config.getApiKey())
+                .text("你好啊，我是小小lemon酱")
+                .voice(AudioParameters.Voice.CHERRY)
+                .languageType("Chinese")
+                .build();
+
+        MultiModalConversation conv = new MultiModalConversation();
+
+        Flowable<MultiModalConversationResult> result = conv.streamCall(param);
+
+        result.blockingForEach(r -> {System.out.println(JsonUtils.toJson(r));
+        });
+
+        // 等待流式处理完成
+        Thread.sleep(10000L);
+    }
 
     @Test
     public void streamTtsToFileTest() throws Exception {
@@ -184,7 +209,7 @@ public class AudioTest {
         List<String> audioDataChunks = new ArrayList<>();
         final String[] outputFileName = {null};
 
-        conv.streamCall(param, new ResultCallback<MultiModalConversationResult>() {
+        conv.streamCall(param, new ResultCallback<>() {
             @Override
             public void onEvent(MultiModalConversationResult result) {
                 if (result != null && result.getOutput() != null
