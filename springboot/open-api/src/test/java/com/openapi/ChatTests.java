@@ -118,7 +118,7 @@ public class ChatTests {
         CountDownLatch latch = new CountDownLatch(1);
 
         webClient.post()
-                .uri("/chat/stream")
+                .uri("/test/stream")
                 .contentType(MediaType.APPLICATION_JSON)
                 .bodyValue(request)
                 .accept(MediaType.TEXT_EVENT_STREAM)

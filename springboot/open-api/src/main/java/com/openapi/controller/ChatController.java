@@ -32,48 +32,6 @@ public class ChatController {
     private final DashScopeChatModel dashScopeChatModel;
     private final ChatMessageService chatMessageService;
 
-    /**
-     * 流式聊天测试
-     * @param request   请求体
-     * @return          AI流式响应
-     */
-    @PostMapping(value = "/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
-    public Flux<String> streamChat(@RequestBody ChatRequest request) {
-        ChatClient chatClient = ChatClient.builder(dashScopeChatModel).build();
-
-        // 异步处理流
-        return chatClient.prompt()
-                .user(request.getQuestion())
-                .stream()
-                .content();
-    }
-
-    /**
-     * SSE流式聊天测试
-     * @param request   请求体
-     * @return          AI SSE流式响应
-     */
-    @PostMapping(value = "/stream-sse", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
-    public Flux<ServerSentEvent<String>> sseStreamChat(@RequestBody ChatRequest request) {
-        log.info("收到流式聊天请求: {}", request.getQuestion());
-
-        ChatClient chatClient = ChatClient.builder(dashScopeChatModel).build();
-
-        return chatClient.prompt()
-                .user(request.getQuestion())
-                .stream()
-                .content()
-                .map(data -> {
-                    log.info("发送SSE数据: {}", data);
-                    return ServerSentEvent.builder(data)
-                            .id(UUID.randomUUID().toString())
-                            .event("message")
-                            .build();
-                })
-                .doOnSubscribe(subscription -> log.info("SSE连接建立"))
-                .doOnComplete(() -> log.info("SSE流完成"))
-                .doOnError(error -> log.error("SSE流错误", error));
-    }
 
     @GetMapping("/getLastChat")
     public BaseResponse<ChatMessageResponse> getLastChat(

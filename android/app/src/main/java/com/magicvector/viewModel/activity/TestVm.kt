@@ -22,7 +22,7 @@ class TestVm(
     companion object {
         val TAG: String = TestVm::class.java.name
         val GSON = Gson()
-        const val baseUrl = BaseConstant.ConstantUrl.LOCAL_URL + "/chat/stream-sse"
+        const val baseUrl = BaseConstant.ConstantUrl.LOCAL_URL + "/test/stream-sse"
     }
 
     //---------------------------AAo Ld---------------------------
