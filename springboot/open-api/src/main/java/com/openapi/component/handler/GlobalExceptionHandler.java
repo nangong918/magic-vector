@@ -1,4 +1,4 @@
-package com.openapi.component;
+package com.openapi.component.handler;
 
 
 import com.openapi.domain.constant.error.CommonExceptions;

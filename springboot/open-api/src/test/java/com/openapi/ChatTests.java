@@ -6,6 +6,7 @@ import com.alibaba.cloud.ai.dashscope.embedding.DashScopeEmbeddingModel;
 import com.hankcs.hanlp.HanLP;
 import com.hankcs.hanlp.corpus.tag.Nature;
 import com.hankcs.hanlp.seg.common.Term;
+import com.openapi.component.manager.OptimizedSentenceDetector;
 import com.openapi.domain.dto.request.ChatRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.Test;
@@ -255,4 +256,64 @@ public class ChatTests {
         System.out.println("处理后缓冲区：" + textBuffer); // 输出：测试结束
     }
 
+
+    @Autowired
+    OptimizedSentenceDetector optimizedSentenceDetector;
+
+    // 流式句子输出
+    @Test
+    public void chatStreamSeqTest(){
+        ChatClient chatClient = ChatClient.builder(dashScopeChatModel)
+                .build();
+
+        String systemPrompt = "你只能输出自然语言，不要输出表情等特殊符号，在输出完一句话之后需加上如下标点符号之一：" + OptimizedSentenceDetector.END_PUNCTUATION;
+        String userQuestion = "你好啊，你是谁？";
+
+        // 获取流式响应
+        Flux<String> responseFlux = chatClient.prompt(systemPrompt)
+                .user(userQuestion)
+                .stream()
+                .content();
+
+        StringBuffer textBuffer = new StringBuffer();
+
+        // 订阅流式响应并处理
+        responseFlux.subscribe(
+                // 处理每个流片段
+                fragment -> {
+                    // 将新片段添加到缓冲区
+                    textBuffer.append(fragment);
+                    System.out.println("\n[接收到片段]: " + fragment);
+
+                    // 尝试从缓冲区提取完整句子并输出
+                    String completeSentence;
+                    while ((completeSentence = optimizedSentenceDetector.detectAndExtractFirstSentence(textBuffer)) != null) {
+                        System.out.println("\n[提取到完整句子]: " + completeSentence);
+                        // 在这里可以调用TTS服务生成音频
+                        // generateAudio(completeSentence);
+                    }
+
+                    // 显示当前缓冲区剩余内容
+                    if (!textBuffer.isEmpty()) {
+                        System.out.println("[缓冲区剩余]: " + textBuffer);
+                    }
+                },
+                // 处理错误
+                error -> System.err.println("流式处理错误: " + error.getMessage()),
+                // 处理完成
+                () -> {
+                    System.out.println("\n[流式响应结束]");
+                    // 处理缓冲区中可能剩余的不完整内容
+                    if (!textBuffer.isEmpty()) {
+                        System.out.println("[最终剩余未完成内容]: " + textBuffer);
+                    }
+                }
+        );
+
+        try {
+            Thread.sleep(5000);
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
+    }
 }
