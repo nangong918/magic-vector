@@ -351,4 +351,70 @@ public class AudioTest {
             System.out.println(" - " + mixer.getName() + " : " + mixer.getDescription());
         }
     }
+
+    @Test
+    public void streamTtsTest5() throws Exception {
+        MultiModalConversationParam param = MultiModalConversationParam.builder()
+                .model(MODEL)
+                .apiKey(config.getApiKey())
+                .text("你好啊，我是小小lemon酱")
+                .voice(AudioParameters.Voice.CHERRY)
+                .languageType("Chinese")
+                .build();
+
+        MultiModalConversation conv = new MultiModalConversation();
+        Flowable<MultiModalConversationResult> result = conv.streamCall(param);
+
+        // 在循环外初始化音频线路
+        AudioFormat format = new AudioFormat(
+                AudioFormat.Encoding.PCM_SIGNED,
+                24000,
+                16,
+                1,
+                2,
+                16000,
+                false
+        );
+
+        DataLine.Info info = new DataLine.Info(SourceDataLine.class, format);
+
+        if (!AudioSystem.isLineSupported(info)) {
+            System.err.println("音频线路不支持，尝试其他格式...");
+            format = new AudioFormat(24000, 16, 1, true, false);
+            info = new DataLine.Info(SourceDataLine.class, format);
+        }
+
+        // 创建并打开音频线路（只执行一次）
+        SourceDataLine line = (SourceDataLine) AudioSystem.getLine(info);
+        line.open(format);
+        line.start();
+
+        try {
+            result.blockingForEach(r -> {
+                try {
+                    String base64Data = r.getOutput().getAudio().getData();
+                    if (base64Data != null && !base64Data.isEmpty()) {
+                        byte[] audioBytes = Base64.getDecoder().decode(base64Data);
+
+                        // 添加调试信息
+                        System.out.println("收到音频数据: " + audioBytes.length + " 字节");
+
+                        // 直接写入数据，不关闭线路
+                        line.write(audioBytes, 0, audioBytes.length);
+                        System.out.println("音频数据已写入");
+                    }
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            });
+
+            // 所有数据发送完成后等待播放完毕
+            line.drain();
+
+        } finally {
+            // 最终关闭音频线路
+            line.stop();
+            line.close();
+        }
+    }
 }
