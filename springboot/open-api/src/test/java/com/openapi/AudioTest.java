@@ -19,6 +19,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 
+import javax.sound.sampled.*;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
@@ -278,4 +279,76 @@ public class AudioTest {
         System.out.println("处理完成，共处理 " + chunkCount[0] + " 个音频数据块");
     }
 
+    // 成功，因为模型生成的不是Wav的Base64，而是PCM
+    @Test
+    public void streamTtsTest4() throws Exception {
+        MultiModalConversationParam param = MultiModalConversationParam.builder()
+                .model(MODEL)
+                .apiKey(config.getApiKey())
+                .text("你好啊，我是小小lemon酱")
+                .voice(AudioParameters.Voice.CHERRY)
+                .languageType("Chinese")
+                .build();
+
+        MultiModalConversation conv = new MultiModalConversation();
+        Flowable<MultiModalConversationResult> result = conv.streamCall(param);
+
+        result.blockingForEach(r -> {
+            try {
+                String base64Data = r.getOutput().getAudio().getData();
+                if (base64Data != null && !base64Data.isEmpty()) {
+                    byte[] audioBytes = Base64.getDecoder().decode(base64Data);
+
+                    // 添加调试信息
+                    System.out.println("收到音频数据: " + audioBytes.length + " 字节");
+
+                    // 音频格式配置（保持官方推荐参数）
+                    AudioFormat format = new AudioFormat(
+                            AudioFormat.Encoding.PCM_SIGNED,
+                            24000,
+                            16,
+                            1,
+                            2,
+                            16000,
+                            false
+                    );
+
+                    DataLine.Info info = new DataLine.Info(SourceDataLine.class, format);
+
+                    // 检查音频线路是否可用
+                    if (!AudioSystem.isLineSupported(info)) {
+                        System.err.println("音频线路不支持，尝试其他格式...");
+                        // 尝试常见格式
+                        format = new AudioFormat(24000, 16, 1, true, false);
+                    }
+
+                    try (SourceDataLine line = (SourceDataLine) AudioSystem.getLine(info)) {
+                        line.open(format);
+                        line.start();
+                        line.write(audioBytes, 0, audioBytes.length);
+                        line.drain();
+                        line.close();
+                        System.out.println("音频播放完成");
+                    }
+                }
+            } catch (LineUnavailableException e) {
+                System.err.println("音频线路不可用: " + e.getMessage());
+
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        });
+
+        Thread.sleep(10000L);
+    }
+
+    // 简单的测试方法验证音频系统
+    @Test
+    public void testAudioSystem() {
+        Mixer.Info[] mixers = AudioSystem.getMixerInfo();
+        System.out.println("可用的音频设备:");
+        for (Mixer.Info mixer : mixers) {
+            System.out.println(" - " + mixer.getName() + " : " + mixer.getDescription());
+        }
+    }
 }
