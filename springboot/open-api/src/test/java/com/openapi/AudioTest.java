@@ -453,9 +453,6 @@ public class AudioTest {
                 System.out.println("音频数据已写入");
             }
         });
-
-        // 所有数据发送完成后等待播放完毕
-        line.drain();
     }
 
 
@@ -498,7 +495,7 @@ public class AudioTest {
         ChatClient chatClient = ChatClient.builder(dashScopeChatModel)
                 .build();
 
-        String systemPrompt = "你只能输出自然语言，不要输出表情等特殊符号。你聊天需要按照正常的中文标准在结尾输出结束标点符号，例如：" + OptimizedSentenceDetector.END_PUNCTUATION;
+        String systemPrompt = "你只能输出自然语言，不要输出表情等特殊符号。";
         String userQuestion = "你好啊，你是谁？介绍一下自己";
 
         // 获取流式响应
@@ -547,10 +544,12 @@ public class AudioTest {
         );
 
         try {
-            Thread.sleep(5000);
+            Thread.sleep(15000);
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
         } finally {
+            // 所有数据发送完成后等待播放完毕
+            line.drain();
             // 最终关闭音频线路
             line.stop();
             line.close();
