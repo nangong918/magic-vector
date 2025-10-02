@@ -5,6 +5,7 @@ import com.alibaba.cloud.ai.dashscope.audio.DashScopeAudioSpeechModel;
 import com.alibaba.cloud.ai.dashscope.audio.synthesis.SpeechSynthesisModel;
 import com.alibaba.cloud.ai.dashscope.audio.synthesis.SpeechSynthesisPrompt;
 import com.alibaba.cloud.ai.dashscope.audio.synthesis.SpeechSynthesisResponse;
+import com.alibaba.cloud.ai.dashscope.chat.DashScopeChatModel;
 import com.alibaba.dashscope.aigc.multimodalconversation.AudioParameters;
 import com.alibaba.dashscope.aigc.multimodalconversation.MultiModalConversation;
 import com.alibaba.dashscope.aigc.multimodalconversation.MultiModalConversationParam;
@@ -12,12 +13,16 @@ import com.alibaba.dashscope.aigc.multimodalconversation.MultiModalConversationR
 import com.alibaba.dashscope.audio.ttsv2.SpeechSynthesisParam;
 import com.alibaba.dashscope.common.ResultCallback;
 import com.alibaba.dashscope.utils.JsonUtils;
+import com.openapi.component.manager.OptimizedSentenceDetector;
 import com.openapi.config.ChatConfig;
 import io.reactivex.Flowable;
 import lombok.extern.slf4j.Slf4j;
+import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.Test;
+import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import reactor.core.publisher.Flux;
 
 import javax.sound.sampled.*;
 import java.io.ByteArrayOutputStream;
@@ -417,4 +422,139 @@ public class AudioTest {
             line.close();
         }
     }
+
+    public void playSoundByText(@NotNull String text,
+                                @NotNull SourceDataLine line,
+                                @NotNull MultiModalConversation conv) throws Exception{
+        if (text.isEmpty()){
+            return;
+        }
+
+        MultiModalConversationParam param = MultiModalConversationParam.builder()
+                .model(MODEL)
+                .apiKey(config.getApiKey())
+                .text(text)
+                .voice(AudioParameters.Voice.CHERRY)
+                .languageType("Chinese")
+                .build();
+
+        var result = conv.streamCall(param);
+
+        result.blockingForEach(r -> {
+            String base64Data = r.getOutput().getAudio().getData();
+            if (base64Data != null && !base64Data.isEmpty()) {
+                byte[] audioBytes = Base64.getDecoder().decode(base64Data);
+
+                // 添加调试信息
+                System.out.println("收到音频数据: " + audioBytes.length + " 字节");
+
+                // 直接写入数据，不关闭线路
+                line.write(audioBytes, 0, audioBytes.length);
+                System.out.println("音频数据已写入");
+            }
+        });
+
+        // 所有数据发送完成后等待播放完毕
+        line.drain();
+    }
+
+
+    @Autowired
+    DashScopeChatModel dashScopeChatModel;
+
+    @Autowired
+    OptimizedSentenceDetector optimizedSentenceDetector;
+
+    @Test
+    public void streamTtsChatTest() throws Exception {
+
+        /// 音频模型
+        MultiModalConversation conv = new MultiModalConversation();
+        // 在循环外初始化音频线路
+        AudioFormat format = new AudioFormat(
+                AudioFormat.Encoding.PCM_SIGNED,
+                24000,
+                16,
+                1,
+                2,
+                16000,
+                false
+        );
+
+        DataLine.Info info = new DataLine.Info(SourceDataLine.class, format);
+
+        if (!AudioSystem.isLineSupported(info)) {
+            System.err.println("音频线路不支持，尝试其他格式...");
+            format = new AudioFormat(24000, 16, 1, true, false);
+            info = new DataLine.Info(SourceDataLine.class, format);
+        }
+
+        // 创建并打开音频线路（只执行一次）
+        SourceDataLine line = (SourceDataLine) AudioSystem.getLine(info);
+        line.open(format);
+        line.start();
+
+        /// 聊天模型
+        ChatClient chatClient = ChatClient.builder(dashScopeChatModel)
+                .build();
+
+        String systemPrompt = "你只能输出自然语言，不要输出表情等特殊符号。你聊天需要按照正常的中文标准在结尾输出结束标点符号，例如：" + OptimizedSentenceDetector.END_PUNCTUATION;
+        String userQuestion = "你好啊，你是谁？介绍一下自己";
+
+        // 获取流式响应
+        Flux<String> responseFlux = chatClient.prompt(systemPrompt)
+                .user(userQuestion)
+                .stream()
+                .content();
+
+        StringBuffer textBuffer = new StringBuffer();
+
+        // 订阅流式响应并处理
+        responseFlux.subscribe(
+                // 处理每个流片段
+                fragment -> {
+                    // 将新片段添加到缓冲区
+                    textBuffer.append(fragment);
+                    System.out.println("\n[接收到片段]: " + fragment);
+
+                    // 尝试从缓冲区提取完整句子并输出
+                    String completeSentence;
+                    while ((completeSentence = optimizedSentenceDetector.detectAndExtractFirstSentence(textBuffer)) != null) {
+                        System.out.println("\n[***提取到完整句子***]: " + completeSentence);
+                        // 在这里可以调用TTS服务生成音频
+                        try {
+                            playSoundByText(completeSentence, line, conv);
+                        } catch (Exception e) {
+                            System.err.println("TTS服务调用错误: " + e.getMessage());
+                        }
+                    }
+
+                    // 显示当前缓冲区剩余内容
+                    if (!textBuffer.isEmpty()) {
+                        System.out.println("[缓冲区剩余]: " + textBuffer);
+                    }
+                },
+                // 处理错误
+                error -> System.err.println("流式处理错误: " + error.getMessage()),
+                // 处理完成
+                () -> {
+                    System.out.println("\n[流式响应结束]");
+                    // 处理缓冲区中可能剩余的不完整内容
+                    if (!textBuffer.isEmpty()) {
+                        System.out.println("[最终剩余未完成内容]: " + textBuffer);
+                    }
+                }
+        );
+
+        try {
+            Thread.sleep(5000);
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        } finally {
+            // 最终关闭音频线路
+            line.stop();
+            line.close();
+        }
+    }
+
 }
