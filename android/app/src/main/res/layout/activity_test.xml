@@ -16,7 +16,12 @@
             android:id="@+id/btn_sendMessage"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="发送消息"/>
+            android:text="发送SSE消息"/>
+        <Button
+            android:id="@+id/btn_sendTTSMessage"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="发送TTS SSE消息"/>
         <TextView
             android:id="@+id/tv_sse_status"
             android:layout_width="wrap_content"

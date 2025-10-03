@@ -26,6 +26,10 @@ class TestActivity : BaseAppCompatVmActivity<ActivityTestBinding, TestVm>(
             vm.sendQuestion()
         }
 
+        binding.btnSendTTSMessage.setOnClickListener {
+            vm.sendTTSQuestion()
+        }
+
         observeData()
     }
 

@@ -32,7 +32,7 @@ class SSEClient(
             .toRequestBody("application/json; charset=utf-8".toMediaType())
 
         val request = Request.Builder()
-            .url("$baseUrl")
+            .url(baseUrl)
             .post(requestBody)
             .addHeader("Accept", "text/event-stream")
             .addHeader("Cache-Control", "no-cache")
