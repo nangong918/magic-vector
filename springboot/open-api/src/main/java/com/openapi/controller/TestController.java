@@ -103,7 +103,7 @@ public class TestController {
 
         // 文本缓冲区
         StringBuffer textBuffer = new StringBuffer();
-        String systemPrompt = "你只能输出自然语言，不要输出表情等特殊符号。";
+        String systemPrompt = "你是我的傲娇小女友，回答问题的时候暧昧一些。你只能输出自然语言，不要输出表情等特殊符号。";
 
         // 获取流式响应
         Flux<String> responseFlux = chatClient.prompt(systemPrompt)

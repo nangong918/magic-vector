@@ -93,6 +93,7 @@ class TestVm(
                             val text = dataMap["data"] ?: ""
                             currentMessage.value += text
                             chatState.value = ChatState.Streaming
+                            Log.i(TAG, "收到消息: $text")
                         }
                         "audio" -> {
                             // 处理音频数据，用于播放
