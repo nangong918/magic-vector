@@ -50,6 +50,7 @@ androidx-compose-ui = { group = "androidx.compose.ui", name = "ui", version.ref 
 androidx-activity = { group = "androidx.activity", name = "activity", version.ref = "activity" }
 circleimageview = { module = "de.hdodenhof:circleimageview", version.ref = "circleimageview" }
 okhttp = { module = "com.squareup.okhttp3:okhttp", version.ref = "okhttp" }
+okhttp-sse = { module = "com.squareup.okhttp3:okhttp-sse", version.ref = "loggingInterceptor" }
 permissionx = { module = "com.guolindev.permissionx:permissionx", version.ref = "permissionx" }
 retrofit = { module = "com.squareup.retrofit2:retrofit", version.ref = "converterGson" }
 multidex = { module = "androidx.multidex:multidex", version.ref = "multidex" }

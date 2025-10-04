@@ -100,7 +100,7 @@ dependencies {
     // OkHttp的日志
     implementation(libs.logging.interceptor)
     // SSE支持
-    implementation("com.squareup.okhttp3:okhttp-sse:5.1.0")
+    implementation(libs.okhttp.sse)
 
     // Retrofit
     implementation(libs.retrofit)

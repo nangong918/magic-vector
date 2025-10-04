@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/main"
@@ -12,26 +12,111 @@
         android:orientation="vertical"
         android:layout_width="match_parent"
         android:layout_height="wrap_content">
-        <Button
-            android:id="@+id/btn_sendMessage"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="发送SSE消息"/>
-        <Button
-            android:id="@+id/btn_sendTTSMessage"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="发送TTS SSE消息"/>
-        <TextView
-            android:id="@+id/tv_sse_status"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="未连接"/>
-        <TextView
-            android:id="@+id/tv_AIResponse"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="暂未收到消息"/>
+
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_marginEnd="10dp"
+            android:layout_marginStart="10dp"
+            android:orientation="vertical"
+            android:layout_marginTop="5dp"
+            android:gravity="center"
+            android:padding="5dp"
+            android:layout_marginBottom="5dp"
+            android:background="@drawable/round_corners_bg_grey"
+            android:layout_height="wrap_content">
+
+            <TextView
+                android:padding="5dp"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/test_stream_sse_title"
+                android:textColor="@color/black"
+                android:textSize="25sp"/>
+
+            <TextView
+                android:padding="5dp"
+                android:layout_marginTop="5dp"
+                android:textColor="@color/n1_500"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/test_stream_sse_desc"
+                android:textSize="14sp"/>
+
+            <Button
+                android:id="@+id/btn_sendMessage"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="发送SSE消息"/>
+
+            <TextView
+                android:id="@+id/tv_sse_status"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="未连接"/>
+            <TextView
+                android:id="@+id/tv_AIResponse"
+                android:layout_marginTop="5dp"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="暂未收到消息"/>
+
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_marginEnd="10dp"
+            android:layout_marginStart="10dp"
+            android:orientation="vertical"
+            android:layout_marginTop="5dp"
+            android:gravity="center"
+            android:padding="5dp"
+            android:layout_marginBottom="5dp"
+            android:background="@drawable/round_corners_bg_grey"
+            android:layout_height="wrap_content">
+
+            <TextView
+                android:padding="5dp"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/test_stream_tts_sse_title"
+                android:textColor="@color/black"
+                android:textSize="25sp"/>
+
+            <TextView
+                android:padding="5dp"
+                android:layout_marginTop="5dp"
+                android:textColor="@color/n1_500"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/test_stream_tts_sse_desc"
+                android:textSize="14sp"/>
+
+            <Button
+                android:id="@+id/btn_initAudioTrack"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="初始化AudioTrack"/>
+            <Button
+                android:id="@+id/btn_sendTTSMessage"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="发送TTS SSE消息"/>
+
+            <TextView
+                android:id="@+id/tv_tts_sse_status"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="未连接"/>
+            <TextView
+                android:id="@+id/tv_tts_AIResponse"
+                android:layout_marginTop="5dp"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="暂未收到消息"/>
+
+        </LinearLayout>
+
     </LinearLayout>
 
-</androidx.constraintlayout.widget.ConstraintLayout>
+</androidx.core.widget.NestedScrollView>

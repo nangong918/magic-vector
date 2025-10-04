@@ -121,4 +121,8 @@
     <string name="agree">同意</string>
     <string name="refuse">拒绝</string>
     <string name="create_agent">创建Agent</string>
+    <string name="test_stream_sse_title">Stream SSE聊天测试</string>
+    <string name="test_stream_sse_desc"><![CDATA[SSE协议接收流式文本数据，springboot采用webflux的Flux<ServerSentEvent<String>>， \n并且标注返回类型为MediaType.TEXT_EVENT_STREAM_VALUE进行流式传输。Android使用Kotlin协程的Flow::callbackFlow实现流式显示。]]></string>
+    <string name="test_stream_tts_sse_title">Stream TTS SSE语音合成聊天测试</string>
+    <string name="test_stream_tts_sse_desc"><![CDATA[SSE协议实现流式接受TTS音频数据合成，springboot传输Map<String, String>。\n其中type=text的是文本数据，type=audio的是音频的base64数据。模型传输的是PCM格式。\nAndroid使用AudioTrack进行音频播放。\n在发送请求之前，需要先调用init方法来初始化AudioTrack接收并播放音频。]]></string>
 </resources>
