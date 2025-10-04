@@ -14,11 +14,17 @@
 
         <!--  home, medicine, message, mine  -->
 
+        <View
+            app:layout_constraintTop_toTopOf="parent"
+            android:id="@+id/statusBar"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"/>
+
         <FrameLayout
             android:id="@+id/fragment_container"
             android:layout_width="match_parent"
             android:layout_height="0dp"
-            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintTop_toBottomOf="@+id/statusBar"
             app:layout_constraintBottom_toTopOf="@+id/main_bottom_bar"/>
 
         <com.view.appview.MainBottomBar

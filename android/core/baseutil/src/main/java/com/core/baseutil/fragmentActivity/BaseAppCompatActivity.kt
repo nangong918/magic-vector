@@ -6,6 +6,7 @@ import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.Context
 import android.os.Bundle
+import android.util.Log
 import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
@@ -65,10 +66,23 @@ abstract class BaseAppCompatActivity<VB : ViewBinding>(
 
     private var statusBarColorId = R.color.transparent
 
-    private fun initWindow() {
+    protected open fun initWindow() {
         //去除标题导航栏
-        Optional.ofNullable<ActionBar>(supportActionBar)
-            .ifPresent(Consumer { obj: ActionBar -> obj.hide() })
+
+
+//        //去除时间和电量等
+//        getWindow().setFlags(
+//                WindowManager.LayoutParams.FLAG_FULLSCREEN,
+//                WindowManager.LayoutParams.FLAG_FULLSCREEN
+//        );
+
+
+        if (supportActionBar != null){
+            supportActionBar?.hide()
+        }
+        else {
+            Log.i(BaseAppCompatActivity::class.simpleName,  "ActionBar is null")
+        }
 
         setStatusBarColor(statusBarColorId)
     }
@@ -81,7 +95,8 @@ abstract class BaseAppCompatActivity<VB : ViewBinding>(
         val count = decorView.size
         if (count > 0 && decorView.getChildAt(count - 1) is StatusBarView) {
             decorView.getChildAt(count - 1).setBackgroundResource(statusBarColorId)
-        } else {
+        }
+        else {
             // 创建并添加 StatusBarView
             val statusBarView = createStatusBarView(this, statusBarColorId)
             decorView.addView(statusBarView)
@@ -90,10 +105,15 @@ abstract class BaseAppCompatActivity<VB : ViewBinding>(
         // 获取根视图并设置窗口插图
         val rootView = (findViewById<View>(R.id.content) as ViewGroup).getChildAt(0) as ViewGroup
         rootView.setOnApplyWindowInsetsListener { v: View, insets: WindowInsets ->
-            val statusBarHeight = insets.getSystemWindowInsetTop()
+//            val statusBarHeight = insets.getSystemWindowInsetTop()
+            val statusBarHeight = getStatusBarHeight()
             v.setPadding(0, statusBarHeight, 0, 0) // 设置顶部填充以适应状态栏
             insets
         }
+    }
+
+    fun getStatusBarHeight() : Int {
+        return getStatusBarHeight(this)
     }
 
 

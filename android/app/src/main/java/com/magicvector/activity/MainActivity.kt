@@ -35,10 +35,19 @@ class MainActivity : BaseAppCompatVmActivity<ActivityMainBinding, MainVm>(
 
     override fun initView() {
         super.initView()
+    }
 
-        setStatusBarColor(
-            android.R.color.white
-        )
+    override fun initWindow() {
+        super.initWindow()
+
+//        setStatusBarColor(
+//            android.R.color.white
+//        )
+
+        val layoutParams = binding.statusBar.layoutParams
+        layoutParams.height = getStatusBarHeight()
+        binding.statusBar.layoutParams = layoutParams
+        Log.i("TAG", "initWindow::statusBarHeight: ${binding.statusBar.layoutParams.height}")
     }
 
     override fun setListener() {
@@ -95,17 +104,17 @@ class MainActivity : BaseAppCompatVmActivity<ActivityMainBinding, MainVm>(
         }
         when (currentSelected) {
             MainSelectItemEnum.HOME -> {
-                setStatusBarColor(
-                    com.view.appview.R.color.green_90
-                )
+//                setStatusBarColor(
+//                    com.view.appview.R.color.green_90
+//                )
                 this.setBaseBarColorRes(com.view.appview.R.color.green_0)
                 turnToTargetFragment(MainSelectItemEnum.HOME, MessageListFragment::class.java, null)
             }
             MainSelectItemEnum.APPLY -> {}
             MainSelectItemEnum.MINE -> {
-                setStatusBarColor(
-                    com.view.appview.R.color.green_90
-                )
+//                setStatusBarColor(
+//                    com.view.appview.R.color.green_90
+//                )
                 this.setBaseBarColorRes(com.view.appview.R.color.green_0)
                 turnToTargetFragment(MainSelectItemEnum.MINE, MineFragment::class.java, null)
             }
