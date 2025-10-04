@@ -67,8 +67,8 @@ abstract class BaseAppCompatActivity<VB : ViewBinding>(
 
     private fun initWindow() {
         //去除标题导航栏
-        Optional.ofNullable<ActionBar?>(supportActionBar)
-            .ifPresent(Consumer { obj: ActionBar? -> obj?.hide() })
+        Optional.ofNullable<ActionBar>(supportActionBar)
+            .ifPresent(Consumer { obj: ActionBar -> obj.hide() })
 
         setStatusBarColor(statusBarColorId)
     }

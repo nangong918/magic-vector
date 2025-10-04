@@ -8,12 +8,17 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentManager
 import androidx.fragment.app.FragmentTransaction
 import com.core.baseutil.fragmentActivity.BaseAppCompatActivity
+import com.data.domain.OnPositionItemClick
 import com.magicvector.databinding.ActivityMainBinding
 import com.magicvector.fragment.MessageListFragment
+import com.magicvector.fragment.MineFragment
+import com.magicvector.utils.BaseAppCompatVmActivity
+import com.magicvector.viewModel.activity.MainVm
 import com.view.appview.MainSelectItemEnum
 
-class MainActivity : BaseAppCompatActivity<ActivityMainBinding>(
-    MainActivity::class
+class MainActivity : BaseAppCompatVmActivity<ActivityMainBinding, MainVm>(
+    MainActivity::class,
+    MainVm::class
 ) {
     override fun initBinding(): ActivityMainBinding {
         return ActivityMainBinding.inflate(layoutInflater)
@@ -34,6 +39,21 @@ class MainActivity : BaseAppCompatActivity<ActivityMainBinding>(
         setStatusBarColor(
             android.R.color.white
         )
+    }
+
+    override fun setListener() {
+        super.setListener()
+
+        binding.mainBottomBar.clickListener(object : OnPositionItemClick {
+            override fun onPositionItemClick(position: Int) {
+                try {
+                    currentSelected = MainSelectItemEnum.getItem(position)?: MainSelectItemEnum.HOME
+                } catch (e: Exception) {
+                    Log.e(TAG, "initFragment::获取intent的初始化数据错误: ", e)
+                }
+                changeFragment()
+            }
+        })
     }
 
     //------------------------Fragment------------------------
@@ -82,7 +102,13 @@ class MainActivity : BaseAppCompatActivity<ActivityMainBinding>(
                 turnToTargetFragment(MainSelectItemEnum.HOME, MessageListFragment::class.java, null)
             }
             MainSelectItemEnum.APPLY -> {}
-            MainSelectItemEnum.MINE -> {}
+            MainSelectItemEnum.MINE -> {
+                setStatusBarColor(
+                    com.view.appview.R.color.green_90
+                )
+                this.setBaseBarColorRes(com.view.appview.R.color.green_0)
+                turnToTargetFragment(MainSelectItemEnum.MINE, MineFragment::class.java, null)
+            }
         }
     }
 

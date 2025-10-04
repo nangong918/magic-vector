@@ -86,11 +86,6 @@ class MessageListFragment : BaseAppCompatVmFragment<
 
     override fun setListener() {
         super.setListener()
-
-        binding.lyHaveNoMessage.setOnClickListener {
-            val intent = Intent(activity, TestActivity::class.java)
-            startActivity(intent)
-        }
     }
 
 }
