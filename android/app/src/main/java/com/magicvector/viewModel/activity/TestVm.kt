@@ -10,6 +10,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.data.domain.constant.BaseConstant
 import com.data.domain.vo.test.ChatState
+import com.data.domain.vo.test.TtsChatState
 import com.google.gson.Gson
 import com.magicvector.utils.test.SSEClient
 import com.magicvector.utils.test.TTS_SSEClient
@@ -29,7 +30,8 @@ class TestVm(
     }
 
     init {
-        initializeAudioTrack()
+        // 测试的时候手动点击初始化
+//        initializeAudioTrack()
         Log.i(TAG, "init finish")
     }
 
@@ -37,12 +39,16 @@ class TestVm(
 
     private val customQuestion = "你好啊，你是谁？介绍一下自己吧！"
 
-    //---------------------------UI State---------------------------
-    val currentMessage: MutableLiveData<String> = MutableLiveData("")
-    val chatState: MutableLiveData<ChatState> = MutableLiveData(ChatState.Idle)
+    //==========UI State
+    val sseChatMessage: MutableLiveData<String> = MutableLiveData("")
+    val sseChatState: MutableLiveData<ChatState> = MutableLiveData(ChatState.Idle)
+
+    val ttsSseChatMessage: MutableLiveData<String> = MutableLiveData("")
+    val ttsSseChatState: MutableLiveData<TtsChatState> = MutableLiveData(TtsChatState.NotInitialized)
 
     //---------------------------NetWork---------------------------
 
+    // sse
     private val sseClient = SSEClient(
         OkHttpClient.Builder()
             .connectTimeout(10, TimeUnit.SECONDS)
@@ -56,20 +62,21 @@ class TestVm(
 
     fun sendQuestion() {
         viewModelScope.launch {
-            chatState.value = ChatState.Loading
-            currentMessage.value = ""
+            sseChatState.value = ChatState.Loading
+            sseChatMessage.value = ""
 
             sseClient.streamChat(customQuestion)
                 .collect { data ->
-                    currentMessage.value += data
-                    chatState.value = ChatState.Streaming
+                    sseChatMessage.value += data
+                    sseChatState.value = ChatState.Streaming
                     Log.i(TAG, "收到消息: $data")
                 }
 
-            chatState.value = ChatState.Success
+            sseChatState.value = ChatState.Success
         }
     }
 
+    // tts sse
     private val ttsSSEClient = TTS_SSEClient(
         OkHttpClient.Builder()
             .connectTimeout(10, TimeUnit.SECONDS)
@@ -82,8 +89,8 @@ class TestVm(
 
     fun sendTTSQuestion() {
         viewModelScope.launch {
-            chatState.value = ChatState.Loading
-            currentMessage.value = ""
+            ttsSseChatState.value = TtsChatState.Loading
+            ttsSseChatMessage.value = ""
 
             ttsSSEClient.streamTTSChat(customQuestion)
                 .collect { dataMap ->
@@ -91,8 +98,8 @@ class TestVm(
                         "text" -> {
                             // 处理文本数据，用于显示
                             val text = dataMap["data"] ?: ""
-                            currentMessage.value += text
-                            chatState.value = ChatState.Streaming
+                            ttsSseChatMessage.value += text
+                            ttsSseChatState.value = TtsChatState.Streaming
                             Log.i(TAG, "收到消息: $text")
                         }
                         "audio" -> {
@@ -103,7 +110,7 @@ class TestVm(
                     }
                 }
 
-            chatState.value = ChatState.Success
+            ttsSseChatState.value = TtsChatState.Success
         }
     }
 
@@ -132,8 +139,20 @@ class TestVm(
 
     private var audioTrack: AudioTrack? = null
 
-    private fun initializeAudioTrack() {
+    fun initializeAudioTrack() {
+        when (ttsSseChatState.value) {
+            is TtsChatState.NotInitialized,
+            is TtsChatState.InitializationFailed -> {
+                // 需要进行初始化
+            }
+            else -> {
+                // 正在、已经初始化了就回滚
+                return
+            }
+        }
+
         try {
+            ttsSseChatState.value = TtsChatState.Initializing
             // 配置音频参数（与后端保持一致）
             val sampleRate = 24000
             val channelConfig = AudioFormat.CHANNEL_OUT_MONO
@@ -156,8 +175,10 @@ class TestVm(
             audioTrack?.play()
             Log.d(TAG, "AudioTrack初始化完成，缓冲区大小: $minBufferSize")
 
+            ttsSseChatState.value = TtsChatState.Idle
         } catch (e: Exception) {
             Log.e(TAG, "AudioTrack初始化失败", e)
+            ttsSseChatState.value = TtsChatState.InitializationFailed(e.message ?: "未知错误")
         }
     }
 
@@ -169,6 +190,7 @@ class TestVm(
             audioTrack = null
             Log.d(TAG, "AudioTrack资源已释放")
         }
+        ttsSseChatState.value = TtsChatState.NotInitialized
     }
 
     override fun onCleared() {

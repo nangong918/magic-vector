@@ -1,8 +1,10 @@
 package com.magicvector.activity
 
 
+import android.annotation.SuppressLint
 import android.util.Log
 import com.data.domain.vo.test.ChatState
+import com.data.domain.vo.test.TtsChatState
 import com.magicvector.databinding.ActivityTestBinding
 import com.magicvector.utils.BaseAppCompatVmActivity
 import com.magicvector.viewModel.activity.TestVm
@@ -13,6 +15,10 @@ class TestActivity : BaseAppCompatVmActivity<ActivityTestBinding, TestVm>(
 ) {
     override fun initBinding(): ActivityTestBinding {
         return ActivityTestBinding.inflate(layoutInflater)
+    }
+
+    override fun initWindow() {
+        binding.statusBar.layoutParams.height = getStatusBarHeight()
     }
 
     override fun initViewModel() {
@@ -30,38 +36,97 @@ class TestActivity : BaseAppCompatVmActivity<ActivityTestBinding, TestVm>(
             vm.sendTTSQuestion()
         }
 
+        binding.btnInitTtsAudio.setOnClickListener {
+            vm.initializeAudioTrack()
+        }
+
         observeData()
     }
 
+    @SuppressLint("SetTextI18n")
     fun observeData(){
-        // 观察消息内容
-        vm.currentMessage.observe(this) { message ->
+        // 观察tts sse消息内容
+        vm.ttsSseChatMessage.observe(this) { message ->
+            binding.tvTtsAIResponse.text = message
+            Log.d(TAG, "更新消息: $message")
+        }
+
+        // 观察tts sse聊天状态
+        vm.ttsSseChatState.observe(this) { state ->
+            when (state) {
+                is TtsChatState.NotInitialized -> {
+                    binding.tvTtsSseStatus.text = "未初始化"
+                    binding.btnSendTTSMessage.isEnabled = false
+                    binding.btnInitTtsAudio.isEnabled = true
+                }
+                is TtsChatState.Initializing -> {
+                    binding.tvTtsSseStatus.text = "初始化中..."
+                    binding.btnSendTTSMessage.isEnabled = false
+                    binding.btnInitTtsAudio.isEnabled = false
+                }
+                is TtsChatState.InitializationFailed -> {
+                    binding.tvTtsSseStatus.text = "初始化失败: ${state.message}"
+                    binding.btnSendTTSMessage.isEnabled = false
+                    binding.btnInitTtsAudio.isEnabled = true
+                }
+                is TtsChatState.Idle -> {
+                    binding.tvTtsSseStatus.text = "Android端就绪"
+                    binding.btnSendTTSMessage.isEnabled = true
+                    binding.btnInitTtsAudio.isEnabled = false
+                }
+                is TtsChatState.Loading -> {
+                    binding.tvTtsSseStatus.text = "连接中..."
+                    binding.btnSendTTSMessage.isEnabled = false
+                    binding.btnInitTtsAudio.isEnabled = false
+                }
+                is TtsChatState.Streaming -> {
+                    binding.tvTtsSseStatus.text = "接收中..."
+                    binding.btnSendTTSMessage.isEnabled = false
+                    binding.btnInitTtsAudio.isEnabled = false
+                }
+                is TtsChatState.Success -> {
+                    binding.tvTtsSseStatus.text = "对话完成"
+                    binding.btnSendTTSMessage.isEnabled = true
+                    binding.btnInitTtsAudio.isEnabled = true
+//                    showToast("对话完成")
+                }
+                is TtsChatState.Error -> {
+                    binding.tvTtsSseStatus.text = "错误: ${state.message}"
+                    binding.btnSendTTSMessage.isEnabled = true
+                    binding.btnInitTtsAudio.isEnabled = true
+//                    showToast("发生错误: ${state.message}")
+                }
+            }
+        }
+
+        // 观察sse消息内容
+        vm.sseChatMessage.observe(this) { message ->
             binding.tvAIResponse.text = message
             Log.d(TAG, "更新消息: $message")
         }
 
-        // 观察聊天状态
-        vm.chatState.observe(this) { state ->
+        // 观察sse聊天状态
+        vm.sseChatState.observe(this) { state ->
             when (state) {
                 is ChatState.Idle -> {
-                    updateUIState("就绪", false)
+                    binding.tvSseStatus.text = "Android端就绪"
                     binding.btnSendMessage.isEnabled = true
                 }
                 is ChatState.Loading -> {
-                    updateUIState("连接中...", true)
+                    binding.tvSseStatus.text = "连接中..."
                     binding.btnSendMessage.isEnabled = false
                 }
                 is ChatState.Streaming -> {
-                    updateUIState("接收中...", false)
+                    binding.tvSseStatus.text = "接收中..."
                     binding.btnSendMessage.isEnabled = false
                 }
                 is ChatState.Success -> {
-                    updateUIState("对话完成", false)
+                    binding.tvSseStatus.text = "对话完成"
                     binding.btnSendMessage.isEnabled = true
 //                    showToast("对话完成")
                 }
                 is ChatState.Error -> {
-                    updateUIState("错误: ${state.message}", false)
+                    binding.tvSseStatus.text = "错误: ${state.message}"
                     binding.btnSendMessage.isEnabled = true
 //                    showToast("发生错误: ${state.message}")
                 }
@@ -69,8 +134,5 @@ class TestActivity : BaseAppCompatVmActivity<ActivityTestBinding, TestVm>(
         }
     }
 
-    private fun updateUIState(status: String, showProgress: Boolean) {
-        binding.tvSseStatus.text = status
-    }
 
 }
