@@ -3,14 +3,28 @@
 
 ## 当前任务
 
+### lv-1(待定)
 Spring 项目部署在Docker -> 上传到阿里云服务器 todo Docker，Nginx -> 内网穿透(部署ES，Minlvus对服务器要求太高了)
 简单的SpringAI智能体部署Docker + 内网穿透
-语音tts和stt模块
 
+### lv0(当前任务)
+Android 实现录音View / Android 的MediaCore进行录音 / FFmpeg
+升级为Websocket进行实时语音通话
+
+### lv1(计划任务)
+chat memory
+图片视觉
+
+### lv2(研究性任务)
+研究FFmpeg并集成在Android
+人格系统：人格 = 记忆 + 算法（意图产生，态度倾向）
+视频视觉 / WebRTC
+VAD 实时打断 + 3D-Speaker声纹识别
+
+### lv3(无关紧要)
 部分View改用Jetpack compose
 最后升级Flutter, 打通IOS用户
 
-人格 = 记忆 + 算法（意图产生，态度倾向）
 
 ## 已完成
 
