@@ -62,7 +62,7 @@ dependencies {
     // permissionX
     implementation(libs.permissionx)
 
-    // OkHttp3
+    // OkHttp3 / WebSocket支持
     implementation(libs.okhttp)
     // OkHttp的日志
     implementation(libs.logging.interceptor)
