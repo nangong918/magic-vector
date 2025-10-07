@@ -2,13 +2,20 @@ package com.magicvector.activity
 
 
 import android.annotation.SuppressLint
+import android.graphics.Color
 import android.util.Log
+import android.view.Gravity
 import com.data.domain.vo.test.ChatState
 import com.data.domain.vo.test.TtsChatState
 import com.data.domain.vo.test.WebsocketState
+import com.magicvector.R
 import com.magicvector.databinding.ActivityTestBinding
 import com.magicvector.utils.BaseAppCompatVmActivity
 import com.magicvector.viewModel.activity.TestVm
+import com.view.appview.voice.LineType
+import com.view.appview.voice.VoiceWaveView
+import com.view.appview.voice.WaveMode
+import androidx.core.graphics.toColorInt
 
 class TestActivity : BaseAppCompatVmActivity<ActivityTestBinding, TestVm>(
     TestActivity::class,
@@ -24,6 +31,8 @@ class TestActivity : BaseAppCompatVmActivity<ActivityTestBinding, TestVm>(
 
     override fun initViewModel() {
         super.initViewModel()
+
+        initVoiceWaveView()
     }
 
     override fun setListener() {
@@ -221,4 +230,40 @@ class TestActivity : BaseAppCompatVmActivity<ActivityTestBinding, TestVm>(
 
     }
 
+
+
+    private fun initVoiceWaveView() {
+        binding.vVoiceWave.apply {
+            duration = 150
+            addHeader(2)
+            addHeader(2)
+            addHeader(2)
+            addHeader(2)
+            addHeader(4)
+            addHeader(14)
+            addBody(27)
+            addBody(17)
+            addBody(38)
+            addBody(91)
+            addBody(38)
+            addBody(24)
+            addBody(8)
+            addBody(60)
+            addBody(38)
+            addBody(14)
+            addBody(8)
+            addFooter(4)
+            addFooter(2)
+            addFooter(2)
+            addFooter(2)
+            addFooter(2)
+            start()
+        }
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        binding.vVoiceWave.stop()
+
+    }
 }
