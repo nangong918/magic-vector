@@ -106,6 +106,9 @@ dependencies {
     implementation(libs.retrofit)
     implementation(libs.converter.gson)
 
+    // event bus
+    implementation(libs.eventbus)
+
     // Gson
     implementation(libs.gson)
 

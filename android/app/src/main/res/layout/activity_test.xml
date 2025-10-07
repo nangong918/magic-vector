@@ -36,6 +36,65 @@
                 android:padding="5dp"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:text="@string/test_websocket_title"
+                android:textColor="@color/black"
+                android:textSize="25sp"/>
+
+            <TextView
+                android:padding="5dp"
+                android:layout_marginTop="5dp"
+                android:textColor="@color/n1_500"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/test_websocket_desc"
+                android:textSize="14sp"/>
+
+            <Button
+                android:id="@+id/btn_initWebsocket"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="初始化 + 连接服务器"/>
+            <Button
+                android:id="@+id/btn_sendWebsocketMessage"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="发送websocket消息"/>
+            <Button
+                android:id="@+id/btn_disconnectWebsocket"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="断开websocket"/>
+
+            <TextView
+                android:id="@+id/tv_Websocket_status"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="未连接"/>
+            <TextView
+                android:id="@+id/tv_Websocket_MessageHistory"
+                android:layout_marginTop="5dp"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="暂未收到消息"/>
+
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_marginEnd="10dp"
+            android:layout_marginStart="10dp"
+            android:orientation="vertical"
+            android:layout_marginTop="5dp"
+            android:gravity="center"
+            android:padding="5dp"
+            android:layout_marginBottom="5dp"
+            android:background="@drawable/round_corners_bg_grey"
+            android:layout_height="wrap_content">
+
+            <TextView
+                android:padding="5dp"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
                 android:text="@string/test_stream_tts_sse_title"
                 android:textColor="@color/black"
                 android:textSize="25sp"/>

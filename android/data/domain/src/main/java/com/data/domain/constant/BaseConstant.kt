@@ -24,6 +24,10 @@ class BaseConstant {
         const val LOCAL_URL = "http://$LOCAL_ADDRESS";
         const val TEST_URL = "http://$TEST_ADDRESS";
         const val PROD_URL = "https://api.github.com";
+
+        const val LOCAL_WS_URL = "ws://$LOCAL_ADDRESS";
+        const val TEST_WS_URL = "ws://$TEST_ADDRESS";
+        const val PROD_WS_URL = "wss://api.github.com";
     }
 
     object PermissionConstant {

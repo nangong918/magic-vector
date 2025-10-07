@@ -9,13 +9,20 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.data.domain.constant.BaseConstant
+import com.data.domain.event.WebSocketMessageEvent
+import com.data.domain.event.WebsocketEventTypeEnum
 import com.data.domain.vo.test.ChatState
 import com.data.domain.vo.test.TtsChatState
+import com.data.domain.vo.test.WebsocketState
 import com.google.gson.Gson
 import com.magicvector.utils.test.SSEClient
 import com.magicvector.utils.test.TTS_SSEClient
+import com.magicvector.utils.test.TestWebSocketClient
 import kotlinx.coroutines.launch
 import okhttp3.OkHttpClient
+import org.greenrobot.eventbus.EventBus
+import org.greenrobot.eventbus.Subscribe
+import org.greenrobot.eventbus.ThreadMode
 import java.util.concurrent.TimeUnit
 
 class TestVm(
@@ -25,8 +32,9 @@ class TestVm(
     companion object {
         val TAG: String = TestVm::class.java.name
         val GSON = Gson()
-        const val baseUrl = BaseConstant.ConstantUrl.LOCAL_URL + "/test/stream-sse"
-        const val baseTTSUrl = BaseConstant.ConstantUrl.LOCAL_URL + "/test/stream-tts-sse"
+        const val baseSseUrl = BaseConstant.ConstantUrl.LOCAL_URL + "/test/stream-sse"
+        const val baseSseTTSUrl = BaseConstant.ConstantUrl.LOCAL_URL + "/test/stream-tts-sse"
+        const val baseWebsocketUrl = BaseConstant.ConstantUrl.LOCAL_WS_URL + "/test-channel"
     }
 
     init {
@@ -46,6 +54,9 @@ class TestVm(
     val ttsSseChatMessage: MutableLiveData<String> = MutableLiveData("")
     val ttsSseChatState: MutableLiveData<TtsChatState> = MutableLiveData(TtsChatState.NotInitialized)
 
+    val websocketAllMessage: MutableLiveData<String> = MutableLiveData("")
+    val websocketState: MutableLiveData<WebsocketState> = MutableLiveData(WebsocketState.NotInitialized)
+
     //---------------------------NetWork---------------------------
 
     // sse
@@ -57,7 +68,7 @@ class TestVm(
             .build()
         ,
         GSON,
-        baseUrl
+        baseSseUrl
     )
 
     fun sendQuestion() {
@@ -84,7 +95,7 @@ class TestVm(
             .writeTimeout(10, TimeUnit.SECONDS)
             .build(),
         GSON,
-        baseTTSUrl
+        baseSseTTSUrl
     )
 
     fun sendTTSQuestion() {
@@ -114,6 +125,34 @@ class TestVm(
         }
     }
 
+    private var testWebSocketClient: TestWebSocketClient? = null
+
+    // websocket
+    fun connectWebsocket(){
+        websocketState.value = WebsocketState.Initializing
+
+        initWebsocketEventBus()
+
+        testWebSocketClient = TestWebSocketClient(
+            GSON,
+            baseWebsocketUrl
+        )
+
+        websocketState.value = WebsocketState.InitializedNotConnected
+
+        testWebSocketClient?.start()
+    }
+
+    fun sendWebsocketMessage(message: String){
+        websocketState.value = WebsocketState.Sending
+        testWebSocketClient?.sendMessage(message)
+    }
+
+    fun disconnectWebsocket(){
+        testWebSocketClient?.close()
+        websocketState.value = WebsocketState.Disconnected
+    }
+
     //---------------------------Logic---------------------------
 
     private fun playAudio(base64Data: String) {
@@ -139,6 +178,7 @@ class TestVm(
 
     private var audioTrack: AudioTrack? = null
 
+    // 初始化AudioTrack
     fun initializeAudioTrack() {
         when (ttsSseChatState.value) {
             is TtsChatState.NotInitialized,
@@ -182,6 +222,53 @@ class TestVm(
         }
     }
 
+    // 初始化websocket的eventbus
+    private fun initWebsocketEventBus() {
+        EventBus.getDefault().register(this)
+    }
+
+    // 订阅
+    @Subscribe(threadMode = ThreadMode.MAIN)
+    fun onWebSocketMessageEvent(event: WebSocketMessageEvent) {
+        // 处理接收到的 WebSocket 消息
+        when (event.eventType) {
+            WebsocketEventTypeEnum.ON_OPEN -> {
+                websocketState.value = WebsocketState.Connected
+
+                websocketAllMessage.value += "\n[${event.eventType.desc}]: ${event.text}"
+            }
+            WebsocketEventTypeEnum.ON_MESSAGE -> {
+                websocketState.value = WebsocketState.Receiving
+                websocketAllMessage.value += "\n[${event.eventType.desc}]: ${event.text}"
+            }
+            WebsocketEventTypeEnum.ON_CLOSING -> {
+                websocketState.value = WebsocketState.Disconnected
+                websocketAllMessage.value += "\n[${event.eventType.desc}]: ${event.text}"
+            }
+            WebsocketEventTypeEnum.ON_FAILURE -> {
+                websocketState.value = WebsocketState.Error(event.text)
+                websocketAllMessage.value += "\n[${event.eventType.desc}]: ${event.text}"
+            }
+            WebsocketEventTypeEnum.ON_MESSAGE_BYTE -> {
+                websocketState.value = WebsocketState.Receiving
+                websocketAllMessage.value += "\n[${event.eventType.desc}]: ${event.text}"
+            }
+            WebsocketEventTypeEnum.ON_CLOSED -> {
+                websocketState.value = WebsocketState.Disconnected
+                websocketAllMessage.value += "\n[${event.eventType.desc}]: ${event.text}"
+            }
+            WebsocketEventTypeEnum.SEND_MESSAGE -> {
+                websocketState.value = WebsocketState.Sending
+                websocketAllMessage.value += "\n[${event.eventType.desc}]: ${event.text}"
+            }
+        }
+    }
+
+    // 销毁
+    private fun unregisterWebsocketEventBus() {
+        EventBus.getDefault().unregister(this)
+    }
+
     // 在适当的时候释放资源
     fun releaseAudioResources() {
         audioTrack?.let {
@@ -196,6 +283,7 @@ class TestVm(
     override fun onCleared() {
         super.onCleared()
         releaseAudioResources()
+        unregisterWebsocketEventBus()
         Log.i(TAG, "onCleared")
     }
 
