@@ -28,6 +28,7 @@
         <druid.version>1.2.8</druid.version>
         <mysql.version>8.0.30</mysql.version>
         <mapstruct.version>1.6.3</mapstruct.version>
+        <fastjson.version>1.2.47</fastjson.version>
     </properties>
 
     <dependencies>
@@ -96,6 +97,11 @@
             <groupId>org.mapstruct</groupId>
             <artifactId>mapstruct-processor</artifactId>
         </dependency>
+        <!-- FastJSON -->
+        <dependency>
+            <groupId>com.alibaba</groupId>
+            <artifactId>fastjson</artifactId>
+        </dependency>
 
         <!-- WebSocket -->
         <dependency>
@@ -153,6 +159,12 @@
                 <groupId>org.mapstruct</groupId>
                 <artifactId>mapstruct-processor</artifactId>
                 <version>${mapstruct.version}</version>
+            </dependency>
+            <!-- FastJSON -->
+            <dependency>
+                <groupId>com.alibaba</groupId>
+                <artifactId>fastjson</artifactId>
+                <version>${fastjson.version}</version>
             </dependency>
         </dependencies>
     </dependencyManagement>

@@ -1,6 +1,5 @@
 package com.openapi.websocket.handler;
 
-import jakarta.servlet.http.HttpSession;
 import jakarta.websocket.*;
 import jakarta.websocket.server.ServerEndpoint;
 import lombok.extern.slf4j.Slf4j;
@@ -8,8 +7,6 @@ import org.springframework.stereotype.Component;
 
 import java.io.IOException;
 import java.time.Instant;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 
 
 @Slf4j
@@ -17,10 +14,6 @@ import java.util.concurrent.ConcurrentHashMap;
 @ServerEndpoint(value = "/test-channel")
 public class TestChannel {
 
-    //模拟储存当前用户的朋友全信息
-    private  static final Map<String, Session> friendGroup = new ConcurrentHashMap<>();
-    //存放当前用户信息
-    private HttpSession httpSession;
     private Session session;
 
     // 收到消息
