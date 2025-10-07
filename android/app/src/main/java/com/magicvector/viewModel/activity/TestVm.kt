@@ -222,9 +222,15 @@ class TestVm(
         }
     }
 
+    private var isWebsocketEventBusInitialized = false
+
     // 初始化websocket的eventbus
     private fun initWebsocketEventBus() {
+        if (isWebsocketEventBusInitialized) {
+            return
+        }
         EventBus.getDefault().register(this)
+        isWebsocketEventBusInitialized = true
     }
 
     // 订阅
@@ -234,7 +240,6 @@ class TestVm(
         when (event.eventType) {
             WebsocketEventTypeEnum.ON_OPEN -> {
                 websocketState.value = WebsocketState.Connected
-
                 websocketAllMessage.value += "\n[${event.eventType.desc}]: ${event.text}"
             }
             WebsocketEventTypeEnum.ON_MESSAGE -> {
@@ -267,6 +272,7 @@ class TestVm(
     // 销毁
     private fun unregisterWebsocketEventBus() {
         EventBus.getDefault().unregister(this)
+        isWebsocketEventBusInitialized = false
     }
 
     // 在适当的时候释放资源

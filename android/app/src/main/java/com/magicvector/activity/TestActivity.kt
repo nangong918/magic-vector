@@ -159,6 +159,10 @@ class TestActivity : BaseAppCompatVmActivity<ActivityTestBinding, TestVm>(
         }}
 
         // 观察websocket聊天状态
+        binding.tvWebsocketStatus.text = "未初始化"
+        binding.btnInitWebsocket.isEnabled = true
+        binding.btnSendWebsocketMessage.isEnabled = false
+        binding.btnDisconnectWebsocket.isEnabled = false
         vm.websocketState.observe(this) { state -> {
             when (state) {
                 is WebsocketState.NotInitialized -> {

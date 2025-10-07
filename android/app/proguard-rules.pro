@@ -91,3 +91,18 @@
 -keepclassmembers class *$Companion {
     *;
 }
+
+# EventBus
+# ProGuard 和它的继承者 R8 都提供了压缩、优化、混淆和预校验四大功能。压缩和优化会移除未使用的类/方法/字段，混淆会使用无意义的简短名称重命名类/方法/字段。
+# @Subscribe 订阅方法是通过反射调用的，在编译时没有直接调用，如果不增加反混淆规则的话，在运行时会出现找不到方法名的情况。因此，EventBus需要配置以下混淆规则：
+-keepattributes *Annotation*
+# keep住所有被Subscribe注解标注的方法
+-keepclassmembers class * {
+    @org.greenrobot.eventbus.Subscribe <methods>;
+}
+-keep enum org.greenrobot.eventbus.ThreadMode { *; }
+
+# 如果使用了AsyncExecutor，还需要配置混淆规则：
+-keepclassmembers class * extends org.greenrobot.eventbus.util.ThrowableFailureEvent {
+    <init>(java.lang.Throwable);
+}
