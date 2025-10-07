@@ -128,4 +128,6 @@
     <string name="test">测试</string>
     <string name="test_websocket_title">Websocket测试</string>
     <string name="test_websocket_desc">使用websocket进行长连接请求，websocket是全双工通信，\n比SSE只能server向client发送消息更优，并且没有每次建立SSE的开销。</string>
+    <string name="test_audio_title">录音播放测试</string>
+    <string name="test_audio_desc">MediaRecorder录音，AudioTrack播放音频。\nViewAudioPlayView展示音频录制、播放强度。</string>
 </resources>

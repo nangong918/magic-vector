@@ -1,13 +1,20 @@
 package com.magicvector.viewModel.activity
 
+import android.Manifest
 import android.media.AudioFormat
 import android.media.AudioManager
 import android.media.AudioTrack
+import android.media.MediaRecorder
+import android.os.Environment
 import android.util.Base64
 import android.util.Log
+import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.core.baseutil.permissions.GainPermissionCallback
+import com.core.baseutil.permissions.PermissionUtil
+import com.core.baseutil.ui.ToastUtils
 import com.data.domain.constant.BaseConstant
 import com.data.domain.event.WebSocketMessageEvent
 import com.data.domain.event.WebsocketEventTypeEnum
@@ -20,9 +27,12 @@ import com.magicvector.utils.test.TTS_SSEClient
 import com.magicvector.utils.test.TestWebSocketClient
 import kotlinx.coroutines.launch
 import okhttp3.OkHttpClient
+import okio.IOException
 import org.greenrobot.eventbus.EventBus
 import org.greenrobot.eventbus.Subscribe
 import org.greenrobot.eventbus.ThreadMode
+import java.io.File
+import java.io.FileInputStream
 import java.util.concurrent.TimeUnit
 
 class TestVm(
@@ -117,7 +127,7 @@ class TestVm(
                         "audio" -> {
                             // 处理音频数据，用于播放
                             val base64Audio = dataMap["data"] ?: ""
-                            playAudio(base64Audio)
+                            ttsPlayAudio(base64Audio)
                         }
                     }
                 }
@@ -156,7 +166,134 @@ class TestVm(
 
     //---------------------------Logic---------------------------
 
-    private fun playAudio(base64Data: String) {
+    // 录音
+    var mediaRecorder: MediaRecorder? = null
+    var recordAudioTrack: AudioTrack? = null
+
+    fun initRecordAudio(activity: FragmentActivity) {
+        PermissionUtil.requestPermissionSelectX(
+            activity,
+            arrayOf(Manifest.permission.RECORD_AUDIO),
+            arrayOf(),
+                object : GainPermissionCallback{
+                    override fun allGranted() {
+                        Log.i(TAG, "获取录音权限成功")
+                        initMediaRecorder(activity)
+                    }
+
+                    override fun notGranted(notGrantedPermissions: Array<String?>?) {
+                        Log.w(TAG, "没有获取录音权限: ${notGrantedPermissions?.contentToString()}")
+                        ToastUtils.showToastActivity(activity, "没有获取录音权限")
+                    }
+
+                    override fun always() {
+                    }
+
+                }
+        )
+    }
+
+    private fun initMediaRecorder(activity: FragmentActivity){
+        // 初始化录音器
+        mediaRecorder = MediaRecorder().apply {
+            // 设置麦克风
+            setAudioSource(MediaRecorder.AudioSource.MIC)
+            /*
+             * ②设置输出文件的格式：THREE_GPP/MPEG-4/RAW_AMR/Default THREE_GPP(3gp格式
+             * H263视频/ARM音频编码)、MPEG-4、RAW_AMR(只支持音频且音频编码要求为AMR_NB)
+             */
+            setOutputFormat(MediaRecorder.OutputFormat.MPEG_4)
+            /* ②设置音频文件的编码：AAC/AMR_NB/AMR_MB/Default 声音的（波形）的采样 */
+            setAudioEncoder(MediaRecorder.AudioEncoder.AAC)
+        }
+        // 初始化播放器
+        val sampleRate = 24000
+        val channelConfig = AudioFormat.CHANNEL_OUT_MONO
+        val audioFormat = AudioFormat.ENCODING_PCM_16BIT
+
+        // 计算最小缓冲区大小
+        val minBufferSize = AudioTrack.getMinBufferSize(sampleRate, channelConfig, audioFormat)
+
+        // 创建 AudioTrack（使用模式为 MODE_STATIC）
+        recordAudioTrack = AudioTrack(
+            AudioManager.STREAM_MUSIC,
+            sampleRate,
+            channelConfig,
+            audioFormat,
+            minBufferSize,
+            AudioTrack.MODE_STATIC
+        )
+        ToastUtils.showToastActivity(activity, "初始化录音成功")
+    }
+
+    private var outputFile: String = ""
+    // 开始录音
+    fun beginRecordAudio(activity: FragmentActivity){
+        // 设置输出文件路径
+        outputFile = "${Environment.getExternalStorageDirectory().absolutePath}/recording.pcm"
+
+        // 文件名称的文件夹不存在就创建文件夹
+        val file = File(outputFile)
+        file.parentFile?.exists()?.let {
+            if (!it) {
+                file.parentFile?.mkdirs()
+            }
+        }
+
+        mediaRecorder?.prepare()
+        mediaRecorder?.start()
+
+        ToastUtils.showToastActivity(activity, "开始录音")
+    }
+
+    // 暂停录音
+    fun pauseRecordAudio(activity: FragmentActivity){
+        mediaRecorder?.pause()
+        ToastUtils.showToastActivity(activity, "暂停录音")
+    }
+
+    // 录音继续
+    fun resumeRecordAudio(activity: FragmentActivity){
+        mediaRecorder?.resume()
+        ToastUtils.showToastActivity(activity, "继续录音")
+    }
+
+    // 停止录音
+    fun stopRecordAudio(activity: FragmentActivity){
+        mediaRecorder?.stop()
+        mediaRecorder?.reset()
+        mediaRecorder?.release()
+        ToastUtils.showToastActivity(activity, "停止录音")
+    }
+
+    // 播放录制的音频
+    fun playRecordAudio(activity: FragmentActivity){
+        // 读取文件并播放
+        val file = File(outputFile)
+        val fis = FileInputStream(file)
+        try {
+
+            val audioData = ByteArray(4096) // 定义缓冲区大小
+
+            recordAudioTrack?.play() // 开始播放
+            var bytesRead: Int
+
+            // 逐块读取文件数据并播放
+            while (fis.read(audioData).also { bytesRead = it } > 0) {
+                recordAudioTrack?.write(audioData, 0, bytesRead)
+            }
+
+            ToastUtils.showToastActivity(activity, "播放录音成功")
+        } catch (e: IOException) {
+            e.printStackTrace()
+            ToastUtils.showToastActivity(activity, "播放录音失败: ${e.message}")
+        } finally {
+            fis.close()
+        }
+    }
+
+    // tts 播放音频
+    private fun ttsPlayAudio(base64Data: String) {
         // 在这里实现音频播放逻辑
         // 例如使用MediaPlayer播放Base64音频
         try {

@@ -35,7 +35,7 @@ public class OmniRealTimeNoVADTestServiceImpl implements OmniRealTimeNoVADTestSe
 
     private final ChatConfig config;
     private final String MODEL = "qwen3-omni-flash-realtime";
-
+// todo 继续完成此处， ** Android 端录音view ** -> spring event 控制 -> websocket实时推流 -> Android 端录音 -> Android 端播放
     /**
      * 音频对话
      * @param b64AudioBuffer        64位编码的音频数据响应
