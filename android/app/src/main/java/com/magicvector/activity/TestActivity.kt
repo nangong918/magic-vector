@@ -61,11 +61,77 @@ class TestActivity : BaseAppCompatVmActivity<ActivityTestBinding, TestVm>(
 
     @SuppressLint("SetTextI18n")
     fun observeData(){
+        /// websocket
+        // 观察websocket聊天记录
+        vm.websocketAllMessage.observe(this){ message ->
+            Log.d(TAG, "websocketAllMessage更新消息: $message")
+            binding.tvWebsocketMessageHistory.text = message
+        }
+        // 观察websocket聊天状态
+        binding.tvWebsocketStatus.text = "未初始化"
+        binding.btnInitWebsocket.isEnabled = true
+        binding.btnSendWebsocketMessage.isEnabled = false
+        binding.btnDisconnectWebsocket.isEnabled = false
+        vm.websocketState.observe(this) { state ->
+            Log.i(TAG, "websocketState更新状态: $state")
+            when (state) {
+                is WebsocketState.NotInitialized -> {
+                    binding.tvWebsocketStatus.text = "未初始化"
+                    binding.btnInitWebsocket.isEnabled = true
+                    binding.btnSendWebsocketMessage.isEnabled = false
+                    binding.btnDisconnectWebsocket.isEnabled = false
+                }
+                is WebsocketState.Initializing -> {
+                    binding.tvWebsocketStatus.text = "初始化中..."
+                    binding.btnInitWebsocket.isEnabled = false
+                    binding.btnSendWebsocketMessage.isEnabled = false
+                    binding.btnDisconnectWebsocket.isEnabled = false
+                }
+                is WebsocketState.InitializedNotConnected -> {
+                    binding.tvWebsocketStatus.text = "未连接"
+                    binding.btnInitWebsocket.isEnabled = false
+                    binding.btnSendWebsocketMessage.isEnabled = true
+                    binding.btnDisconnectWebsocket.isEnabled = false
+                }
+                is WebsocketState.Connected -> {
+                    binding.tvWebsocketStatus.text = "已连接"
+                    binding.btnInitWebsocket.isEnabled = false
+                    binding.btnSendWebsocketMessage.isEnabled = true
+                    binding.btnDisconnectWebsocket.isEnabled = true
+                }
+                is WebsocketState.Sending -> {
+                    binding.tvWebsocketStatus.text = "正在发送消息..."
+                    binding.btnInitWebsocket.isEnabled = false
+                    binding.btnSendWebsocketMessage.isEnabled = false
+                    binding.btnDisconnectWebsocket.isEnabled = true
+                }
+                is WebsocketState.Receiving -> {
+                    binding.tvWebsocketStatus.text = "正在接收消息..."
+                    binding.btnInitWebsocket.isEnabled = false
+                    binding.btnSendWebsocketMessage.isEnabled = true
+                    binding.btnDisconnectWebsocket.isEnabled = true
+                }
+                is WebsocketState.Disconnected -> {
+                    binding.tvWebsocketStatus.text = "已断开连接"
+                    binding.btnInitWebsocket.isEnabled = true
+                    binding.btnSendWebsocketMessage.isEnabled = false
+                    binding.btnDisconnectWebsocket.isEnabled = false
+                }
+                is WebsocketState.Error -> {
+                    binding.tvWebsocketStatus.text = "错误: ${state.message}"
+                    binding.btnInitWebsocket.isEnabled = true
+                    binding.btnSendWebsocketMessage.isEnabled = false
+                    binding.btnDisconnectWebsocket.isEnabled = false
+                }
+            }
+        }
+
+
         /// sse
         // 观察tts sse消息内容
         vm.ttsSseChatMessage.observe(this) { message ->
             binding.tvTtsAIResponse.text = message
-            Log.d(TAG, "更新消息: $message")
+            Log.d(TAG, "ttsSseChatMessage更新消息: $message")
         }
 
         // 观察tts sse聊天状态
@@ -152,70 +218,7 @@ class TestActivity : BaseAppCompatVmActivity<ActivityTestBinding, TestVm>(
             }
         }
 
-        /// websocket
-        // 观察websocket聊天记录
-        vm.websocketAllMessage.observe(this) { message -> {
-            binding.tvWebsocketMessageHistory.text = message
-        }}
 
-        // 观察websocket聊天状态
-        binding.tvWebsocketStatus.text = "未初始化"
-        binding.btnInitWebsocket.isEnabled = true
-        binding.btnSendWebsocketMessage.isEnabled = false
-        binding.btnDisconnectWebsocket.isEnabled = false
-        vm.websocketState.observe(this) { state -> {
-            when (state) {
-                is WebsocketState.NotInitialized -> {
-                    binding.tvWebsocketStatus.text = "未初始化"
-                    binding.btnInitWebsocket.isEnabled = true
-                    binding.btnSendWebsocketMessage.isEnabled = false
-                    binding.btnDisconnectWebsocket.isEnabled = false
-                }
-                is WebsocketState.Initializing -> {
-                    binding.tvWebsocketStatus.text = "初始化中..."
-                    binding.btnInitWebsocket.isEnabled = false
-                    binding.btnSendWebsocketMessage.isEnabled = false
-                    binding.btnDisconnectWebsocket.isEnabled = false
-                }
-                is WebsocketState.InitializedNotConnected -> {
-                    binding.tvWebsocketStatus.text = "未连接"
-                    binding.btnInitWebsocket.isEnabled = false
-                    binding.btnSendWebsocketMessage.isEnabled = true
-                    binding.btnDisconnectWebsocket.isEnabled = false
-                }
-                is WebsocketState.Connected -> {
-                    binding.tvWebsocketStatus.text = "已连接"
-                    binding.btnInitWebsocket.isEnabled = false
-                    binding.btnSendWebsocketMessage.isEnabled = true
-                    binding.btnDisconnectWebsocket.isEnabled = true
-                }
-                is WebsocketState.Sending -> {
-                    binding.tvWebsocketStatus.text = "正在发送消息..."
-                    binding.btnInitWebsocket.isEnabled = false
-                    binding.btnSendWebsocketMessage.isEnabled = false
-                    binding.btnDisconnectWebsocket.isEnabled = true
-                }
-                is WebsocketState.Receiving -> {
-                    binding.tvWebsocketStatus.text = "正在接收消息..."
-                    binding.btnInitWebsocket.isEnabled = false
-                    binding.btnSendWebsocketMessage.isEnabled = true
-                    binding.btnDisconnectWebsocket.isEnabled = true
-                }
-                is WebsocketState.Disconnected -> {
-                    binding.tvWebsocketStatus.text = "已断开连接"
-                    binding.btnInitWebsocket.isEnabled = true
-                    binding.btnSendWebsocketMessage.isEnabled = false
-                    binding.btnDisconnectWebsocket.isEnabled = false
-                }
-                is WebsocketState.Error -> {
-                    binding.tvWebsocketStatus.text = "错误: ${state.message}"
-                    binding.btnInitWebsocket.isEnabled = true
-                    binding.btnSendWebsocketMessage.isEnabled = false
-                    binding.btnDisconnectWebsocket.isEnabled = false
-                }
-            }
-        }}
     }
-
 
 }

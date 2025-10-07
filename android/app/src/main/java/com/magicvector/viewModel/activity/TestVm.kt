@@ -54,6 +54,7 @@ class TestVm(
     val ttsSseChatMessage: MutableLiveData<String> = MutableLiveData("")
     val ttsSseChatState: MutableLiveData<TtsChatState> = MutableLiveData(TtsChatState.NotInitialized)
 
+    // websocket (逆天bug，都出现了量子力学的观察者效应，观察就没bug，不观察就有bug，简直逆天；已经排除了build和混淆)
     val websocketAllMessage: MutableLiveData<String> = MutableLiveData("")
     val websocketState: MutableLiveData<WebsocketState> = MutableLiveData(WebsocketState.NotInitialized)
 
@@ -239,34 +240,36 @@ class TestVm(
         // 处理接收到的 WebSocket 消息
         when (event.eventType) {
             WebsocketEventTypeEnum.ON_OPEN -> {
-                websocketState.value = WebsocketState.Connected
-                websocketAllMessage.value += "\n[${event.eventType.desc}]: ${event.text}"
+                websocketState.postValue(WebsocketState.Connected)
+                websocketAllMessage.postValue(websocketAllMessage.value + "\n[${event.eventType.desc}]: ${event.text}")
             }
             WebsocketEventTypeEnum.ON_MESSAGE -> {
-                websocketState.value = WebsocketState.Receiving
-                websocketAllMessage.value += "\n[${event.eventType.desc}]: ${event.text}"
+                websocketState.postValue(WebsocketState.Receiving)
+                websocketAllMessage.postValue(websocketAllMessage.value + "\n[${event.eventType.desc}]: ${event.text}")
             }
             WebsocketEventTypeEnum.ON_CLOSING -> {
-                websocketState.value = WebsocketState.Disconnected
-                websocketAllMessage.value += "\n[${event.eventType.desc}]: ${event.text}"
+                websocketState.postValue(WebsocketState.Disconnected)
+                websocketAllMessage.postValue(websocketAllMessage.value + "\n[${event.eventType.desc}]: ${event.text}")
             }
             WebsocketEventTypeEnum.ON_FAILURE -> {
-                websocketState.value = WebsocketState.Error(event.text)
-                websocketAllMessage.value += "\n[${event.eventType.desc}]: ${event.text}"
+                websocketState.postValue(WebsocketState.Error(event.text))
+                websocketAllMessage.postValue(websocketAllMessage.value + "\n[${event.eventType.desc}]: ${event.text}")
             }
             WebsocketEventTypeEnum.ON_MESSAGE_BYTE -> {
-                websocketState.value = WebsocketState.Receiving
-                websocketAllMessage.value += "\n[${event.eventType.desc}]: ${event.text}"
+                websocketState.postValue(WebsocketState.Receiving)
+                websocketAllMessage.postValue(websocketAllMessage.value + "\n[${event.eventType.desc}]: ${event.text}")
             }
             WebsocketEventTypeEnum.ON_CLOSED -> {
-                websocketState.value = WebsocketState.Disconnected
-                websocketAllMessage.value += "\n[${event.eventType.desc}]: ${event.text}"
+                websocketState.postValue(WebsocketState.Disconnected)
+                websocketAllMessage.postValue(websocketAllMessage.value + "\n[${event.eventType.desc}]: ${event.text}")
             }
             WebsocketEventTypeEnum.SEND_MESSAGE -> {
-                websocketState.value = WebsocketState.Sending
-                websocketAllMessage.value += "\n[${event.eventType.desc}]: ${event.text}"
+                websocketState.postValue(WebsocketState.Sending)
+                websocketAllMessage.postValue(websocketAllMessage.value + "\n[${event.eventType.desc}]: ${event.text}")
             }
         }
+        Log.i(TAG, "onWebSocketMessageEvent::websocketState: ${websocketState.value}")
+        Log.i(TAG, "onWebSocketMessageEvent::websocketAllMessage: ${websocketAllMessage.value}")
     }
 
     // 销毁
