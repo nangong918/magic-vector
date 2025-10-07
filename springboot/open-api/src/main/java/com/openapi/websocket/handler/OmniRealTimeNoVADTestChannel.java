@@ -27,8 +27,8 @@ import java.util.Map;
 @Slf4j
 @RequiredArgsConstructor
 @Component
-@ServerEndpoint(value = "/omni-realtime-test")
-public class OmniRealTimeTestChannel {
+@ServerEndpoint(value = "/realtime-no-vad-test")
+public class OmniRealTimeNoVADTestChannel {
 
     private Session session;
 
