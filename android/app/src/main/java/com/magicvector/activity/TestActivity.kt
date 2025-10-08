@@ -89,6 +89,7 @@ class TestActivity : BaseAppCompatVmActivity<ActivityTestBinding, TestVm>(
     @SuppressLint("SetTextI18n")
     fun observeData(){
         /// 录音播放
+        // 状态
         vm.audioRecordPlayState.observe(this){ state ->
             Log.d(TAG, "audioRecordPlayState更新状态: $state")
 
@@ -159,6 +160,11 @@ class TestActivity : BaseAppCompatVmActivity<ActivityTestBinding, TestVm>(
                     binding.btnPlayRecord.isEnabled = false
                 }
             }
+        }
+
+        // 音量
+        vm.audioRecordVolume.observe(this){ volume ->
+            Log.i(TAG, "音量: $volume")
         }
 
         /// websocket

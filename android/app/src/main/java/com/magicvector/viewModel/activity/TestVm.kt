@@ -70,6 +70,7 @@ class TestVm(
     val websocketState: MutableLiveData<WebsocketState> = MutableLiveData(WebsocketState.NotInitialized)
 
     val audioRecordPlayState: MutableLiveData<AudioRecordPlayState> = MutableLiveData(AudioRecordPlayState.NotInitialized)
+    val audioRecordVolume = MutableLiveData(0f) // 用于存储音量数据
 
     //---------------------------NetWork---------------------------
 
@@ -256,9 +257,32 @@ class TestVm(
                 if (read > 0) {
                     // 将录制的数据写入缓存
                     recordAudioBuffer!!.write(buffer, 0, read)
+
+                    // 计算音量
+                    val amplitude = calculateAmplitude(buffer, read)
+                    audioRecordVolume.postValue(amplitude) // 更新 LiveData
+                } else {
+                    // 当没有读取到声音时，设置音量为0
+                    audioRecordVolume.postValue(0f)
                 }
             }
         }.start()
+    }
+
+    // 计算音量
+    private fun calculateAmplitude(buffer: ByteArray, read: Int): Float {
+        var sum = 0.0
+        for (i in 0 until read step 2) {
+            // 将字节转换为短整型（16-bit PCM）
+            val sample = (buffer[i].toInt() shl 8 or (buffer[i + 1].toInt() and 0xFF)).toShort()
+            sum += Math.abs(sample.toDouble())
+        }
+        // 计算平均值并归一化
+        return if (read > 0) {
+            (sum / (read / 2)).toFloat() // 归一化处理
+        } else {
+            0f // 如果没有读取到音频数据，返回0
+        }
     }
 
     // 停止录音
