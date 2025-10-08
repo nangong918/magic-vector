@@ -238,19 +238,42 @@ class TestVm(
         // 设置输出文件路径
         outputFile = "${Environment.getExternalStorageDirectory().absolutePath}/recording.pcm"
 
-        // 文件名称的文件夹不存在就创建文件夹
+        // 创建文件对象
         val file = File(outputFile)
-        file.parentFile?.exists()?.let {
-            if (!it) {
-                file.parentFile?.mkdirs()
+
+        // 检查文件夹是否存在，若不存在则创建
+        file.parentFile?.let { parentDir ->
+            if (!parentDir.exists()) {
+                val success = parentDir.mkdirs() // 确保创建目录
+                if (!success) {
+                    val errorMessage = "Failed to create directory for output file."
+                    Log.e(TAG, errorMessage)
+                    audioRecordPlayState.value = AudioRecordPlayState.Error(errorMessage)
+                    return // 退出方法
+                }
             }
+        } ?: run {
+            val errorMessage = "Parent directory is null."
+            audioRecordPlayState.value = AudioRecordPlayState.Error(errorMessage)
+            Log.e(TAG, errorMessage)
+            return // 退出方法
         }
 
-        mediaRecorder?.prepare()
-        mediaRecorder?.start()
+        // 设置输出文件
+        mediaRecorder?.setOutputFile(file.absolutePath) // 设置输出文件路径
 
-        ToastUtils.showToastActivity(activity, "开始录音")
-        audioRecordPlayState.value = AudioRecordPlayState.Recording
+        // 准备和启动录音
+        try {
+            mediaRecorder?.prepare()
+            mediaRecorder?.start()
+            ToastUtils.showToastActivity(activity, "开始录音")
+            audioRecordPlayState.value = AudioRecordPlayState.Recording
+        } catch (e: IOException) {
+            val errorMessage = "Error starting the MediaRecorder: ${e.message}"
+            Log.e(TAG, errorMessage)
+            audioRecordPlayState.value = AudioRecordPlayState.Error(errorMessage)
+            return // 退出方法
+        }
     }
 
     // 暂停录音

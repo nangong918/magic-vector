@@ -75,6 +75,16 @@
                 android:layout_height="wrap_content"
                 android:text="播放录音"/>
 
+            <TextView
+                android:id="@+id/tv_RecordAudioStatus"
+                android:padding="5dp"
+                android:layout_marginTop="5dp"
+                android:textColor="@color/n1_500"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="未初始化"
+                android:textSize="14sp"/>
+
             <com.view.appview.voice.VoiceWaveView
                 android:id="@+id/v_voiceWave"
                 android:layout_width="wrap_content"

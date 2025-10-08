@@ -97,6 +97,99 @@ class TestActivity : BaseAppCompatVmActivity<ActivityTestBinding, TestVm>(
 
     @SuppressLint("SetTextI18n")
     fun observeData(){
+        /// 录音播放
+        vm.audioRecordPlayState.observe(this){ state ->
+            Log.d(TAG, "audioRecordPlayState更新状态: $state")
+
+            when (state) {
+                // 未初始化
+                is AudioRecordPlayState.NotInitialized -> {
+                    binding.tvRecordAudioStatus.text = "未初始化"
+                    binding.btnInitRecordAudio.isEnabled = true
+                    binding.btnBeginRecord.isEnabled = false
+                    binding.btnPauseContinueRecord.isEnabled = false
+                    binding.btnStopRecord.isEnabled = false
+                    binding.btnPlayRecord.isEnabled = false
+                }
+                // 正在初始化
+                is AudioRecordPlayState.Initializing -> {
+                    binding.tvRecordAudioStatus.text = "正在初始化..."
+                    binding.btnInitRecordAudio.isEnabled = false
+                    binding.btnBeginRecord.isEnabled = false
+                    binding.btnPauseContinueRecord.isEnabled = false
+                    binding.btnStopRecord.isEnabled = false
+                    binding.btnPlayRecord.isEnabled = false
+                }
+                // 就绪
+                is AudioRecordPlayState.Ready -> {
+                    binding.tvRecordAudioStatus.text = "就绪"
+                    binding.btnInitRecordAudio.isEnabled = false
+                    binding.btnBeginRecord.isEnabled = true
+                    binding.btnPauseContinueRecord.isEnabled = false
+                    binding.btnStopRecord.isEnabled = false
+                    binding.btnPlayRecord.isEnabled = false
+                }
+                // 正在录音
+                is AudioRecordPlayState.Recording -> {
+                    binding.tvRecordAudioStatus.text = "正在录音..."
+                    binding.btnInitRecordAudio.isEnabled = false
+                    binding.btnBeginRecord.isEnabled = false
+                    binding.btnPauseContinueRecord.isEnabled = true
+                    binding.btnStopRecord.isEnabled = true
+                    binding.btnPlayRecord.isEnabled = false
+
+                    binding.btnPauseContinueRecord.text = "暂停"
+                }
+                // 录音暂停
+                is AudioRecordPlayState.Paused -> {
+                    binding.tvRecordAudioStatus.text = "录音暂停"
+                    binding.btnInitRecordAudio.isEnabled = false
+                    binding.btnBeginRecord.isEnabled = false
+                    binding.btnPauseContinueRecord.isEnabled = true
+                    binding.btnStopRecord.isEnabled = true
+                    binding.btnPlayRecord.isEnabled = false
+
+                    binding.btnPauseContinueRecord.text = "继续"
+                }
+                // 录音结束，可播放
+                is AudioRecordPlayState.RecordedAndPlayable -> {
+                    binding.tvRecordAudioStatus.text = "录音结束，可播放"
+                    binding.btnInitRecordAudio.isEnabled = false
+                    binding.btnBeginRecord.isEnabled = false
+                    binding.btnPauseContinueRecord.isEnabled = false
+                    binding.btnStopRecord.isEnabled = false
+                    binding.btnPlayRecord.isEnabled = true
+                }
+                // 正在播放
+                is AudioRecordPlayState.Playing -> {
+                    binding.tvRecordAudioStatus.text = "正在播放..."
+                    binding.btnInitRecordAudio.isEnabled = false
+                    binding.btnBeginRecord.isEnabled = false
+                    binding.btnPauseContinueRecord.isEnabled = false
+                    binding.btnStopRecord.isEnabled = false
+                    binding.btnPlayRecord.isEnabled = false
+                }
+                // 播放结束
+                is AudioRecordPlayState.PlayedEnd -> {
+                    binding.tvRecordAudioStatus.text = "播放结束"
+                    binding.btnInitRecordAudio.isEnabled = true
+                    binding.btnBeginRecord.isEnabled = false
+                    binding.btnPauseContinueRecord.isEnabled = false
+                    binding.btnStopRecord.isEnabled = false
+                    binding.btnPlayRecord.isEnabled = false
+                }
+                // 错误
+                is AudioRecordPlayState.Error -> {
+                    binding.tvRecordAudioStatus.text = "错误: ${state.message}"
+                    binding.btnInitRecordAudio.isEnabled = true
+                    binding.btnBeginRecord.isEnabled = false
+                    binding.btnPauseContinueRecord.isEnabled = false
+                    binding.btnStopRecord.isEnabled = false
+                    binding.btnPlayRecord.isEnabled = false
+                }
+            }
+        }
+
         /// websocket
         // 观察websocket聊天记录
         vm.websocketAllMessage.observe(this){ message ->
