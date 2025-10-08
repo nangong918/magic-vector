@@ -9,8 +9,6 @@ open class AudioRecordPlayState {
     object Ready : AudioRecordPlayState()
     // 正在录音
     object Recording : AudioRecordPlayState()
-    // 录音暂停
-    object Paused : AudioRecordPlayState()
     // 录音结束，可播放
     data class RecordedAndPlayable(val recordMessage: String) : AudioRecordPlayState()
     // 正在播放

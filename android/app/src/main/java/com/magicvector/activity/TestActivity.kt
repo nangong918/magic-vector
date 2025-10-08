@@ -75,17 +75,8 @@ class TestActivity : BaseAppCompatVmActivity<ActivityTestBinding, TestVm>(
             vm.beginRecordAudio(this)
         }
 
-        binding.btnPauseContinueRecord.setOnClickListener {
-            if (vm.audioRecordPlayState.value == AudioRecordPlayState.Playing){
-                vm.pauseRecordAudio(this)
-            }
-            else {
-                vm.resumeRecordAudio(this)
-            }
-        }
-
         binding.btnStopRecord.setOnClickListener {
-            vm.stopRecordAudio(this)
+            vm.stopRecordAudio()
         }
 
         binding.btnPlayRecord.setOnClickListener {
@@ -107,7 +98,6 @@ class TestActivity : BaseAppCompatVmActivity<ActivityTestBinding, TestVm>(
                     binding.tvRecordAudioStatus.text = "未初始化"
                     binding.btnInitRecordAudio.isEnabled = true
                     binding.btnBeginRecord.isEnabled = false
-                    binding.btnPauseContinueRecord.isEnabled = false
                     binding.btnStopRecord.isEnabled = false
                     binding.btnPlayRecord.isEnabled = false
                 }
@@ -116,7 +106,6 @@ class TestActivity : BaseAppCompatVmActivity<ActivityTestBinding, TestVm>(
                     binding.tvRecordAudioStatus.text = "正在初始化..."
                     binding.btnInitRecordAudio.isEnabled = false
                     binding.btnBeginRecord.isEnabled = false
-                    binding.btnPauseContinueRecord.isEnabled = false
                     binding.btnStopRecord.isEnabled = false
                     binding.btnPlayRecord.isEnabled = false
                 }
@@ -125,7 +114,6 @@ class TestActivity : BaseAppCompatVmActivity<ActivityTestBinding, TestVm>(
                     binding.tvRecordAudioStatus.text = "就绪"
                     binding.btnInitRecordAudio.isEnabled = false
                     binding.btnBeginRecord.isEnabled = true
-                    binding.btnPauseContinueRecord.isEnabled = false
                     binding.btnStopRecord.isEnabled = false
                     binding.btnPlayRecord.isEnabled = false
                 }
@@ -134,29 +122,15 @@ class TestActivity : BaseAppCompatVmActivity<ActivityTestBinding, TestVm>(
                     binding.tvRecordAudioStatus.text = "正在录音..."
                     binding.btnInitRecordAudio.isEnabled = false
                     binding.btnBeginRecord.isEnabled = false
-                    binding.btnPauseContinueRecord.isEnabled = true
                     binding.btnStopRecord.isEnabled = true
                     binding.btnPlayRecord.isEnabled = false
 
-                    binding.btnPauseContinueRecord.text = "暂停"
-                }
-                // 录音暂停
-                is AudioRecordPlayState.Paused -> {
-                    binding.tvRecordAudioStatus.text = "录音暂停"
-                    binding.btnInitRecordAudio.isEnabled = false
-                    binding.btnBeginRecord.isEnabled = false
-                    binding.btnPauseContinueRecord.isEnabled = true
-                    binding.btnStopRecord.isEnabled = true
-                    binding.btnPlayRecord.isEnabled = false
-
-                    binding.btnPauseContinueRecord.text = "继续"
                 }
                 // 录音结束，可播放
                 is AudioRecordPlayState.RecordedAndPlayable -> {
                     binding.tvRecordAudioStatus.text = "录音结束，可播放:\n ${state.recordMessage}"
                     binding.btnInitRecordAudio.isEnabled = false
                     binding.btnBeginRecord.isEnabled = false
-                    binding.btnPauseContinueRecord.isEnabled = false
                     binding.btnStopRecord.isEnabled = false
                     binding.btnPlayRecord.isEnabled = true
                 }
@@ -165,7 +139,6 @@ class TestActivity : BaseAppCompatVmActivity<ActivityTestBinding, TestVm>(
                     binding.tvRecordAudioStatus.text = "正在播放..."
                     binding.btnInitRecordAudio.isEnabled = false
                     binding.btnBeginRecord.isEnabled = false
-                    binding.btnPauseContinueRecord.isEnabled = false
                     binding.btnStopRecord.isEnabled = false
                     binding.btnPlayRecord.isEnabled = false
                 }
@@ -174,7 +147,6 @@ class TestActivity : BaseAppCompatVmActivity<ActivityTestBinding, TestVm>(
                     binding.tvRecordAudioStatus.text = "播放结束"
                     binding.btnInitRecordAudio.isEnabled = true
                     binding.btnBeginRecord.isEnabled = false
-                    binding.btnPauseContinueRecord.isEnabled = false
                     binding.btnStopRecord.isEnabled = false
                     binding.btnPlayRecord.isEnabled = false
                 }
@@ -183,7 +155,6 @@ class TestActivity : BaseAppCompatVmActivity<ActivityTestBinding, TestVm>(
                     binding.tvRecordAudioStatus.text = "错误: ${state.message}"
                     binding.btnInitRecordAudio.isEnabled = true
                     binding.btnBeginRecord.isEnabled = false
-                    binding.btnPauseContinueRecord.isEnabled = false
                     binding.btnStopRecord.isEnabled = false
                     binding.btnPlayRecord.isEnabled = false
                 }
