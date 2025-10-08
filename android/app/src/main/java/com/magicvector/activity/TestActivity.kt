@@ -334,8 +334,6 @@ class TestActivity : BaseAppCompatVmActivity<ActivityTestBinding, TestVm>(
             duration = 150
             addHeader(2)
             addHeader(2)
-            addHeader(2)
-            addHeader(2)
             addHeader(4)
             addHeader(14)
             addBody(27)
@@ -348,8 +346,6 @@ class TestActivity : BaseAppCompatVmActivity<ActivityTestBinding, TestVm>(
             addBody(60)
             addBody(38)
             addBody(14)
-            addBody(8)
-            addFooter(4)
             addFooter(2)
             addFooter(2)
             addFooter(2)
