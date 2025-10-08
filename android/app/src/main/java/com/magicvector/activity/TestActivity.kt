@@ -153,7 +153,7 @@ class TestActivity : BaseAppCompatVmActivity<ActivityTestBinding, TestVm>(
                 }
                 // 录音结束，可播放
                 is AudioRecordPlayState.RecordedAndPlayable -> {
-                    binding.tvRecordAudioStatus.text = "录音结束，可播放"
+                    binding.tvRecordAudioStatus.text = "录音结束，可播放:\n ${state.recordMessage}"
                     binding.btnInitRecordAudio.isEnabled = false
                     binding.btnBeginRecord.isEnabled = false
                     binding.btnPauseContinueRecord.isEnabled = false

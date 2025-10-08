@@ -1,6 +1,8 @@
 package com.magicvector.viewModel.activity
 
 import android.Manifest
+import android.annotation.SuppressLint
+import android.media.AudioAttributes
 import android.media.AudioFormat
 import android.media.AudioManager
 import android.media.AudioTrack
@@ -177,7 +179,10 @@ class TestVm(
         audioRecordPlayState.value = AudioRecordPlayState.Initializing
         PermissionUtil.requestPermissionSelectX(
             activity,
-            arrayOf(Manifest.permission.RECORD_AUDIO),
+            arrayOf(
+                Manifest.permission.RECORD_AUDIO,
+                Manifest.permission.WRITE_EXTERNAL_STORAGE,
+            ),
             arrayOf(),
                 object : GainPermissionCallback{
                     override fun allGranted() {
@@ -219,14 +224,20 @@ class TestVm(
         // 计算最小缓冲区大小
         val minBufferSize = AudioTrack.getMinBufferSize(sampleRate, channelConfig, audioFormat)
 
-        // 创建 AudioTrack（使用模式为 MODE_STATIC）
+        // 创建 AudioTrack（使用 MODE_STREAM 模式）
         recordAudioTrack = AudioTrack(
-            AudioManager.STREAM_MUSIC,
-            sampleRate,
-            channelConfig,
-            audioFormat,
-            minBufferSize,
-            AudioTrack.MODE_STATIC
+            AudioAttributes.Builder()
+                .setUsage(AudioAttributes.USAGE_MEDIA)
+                .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
+                .build(),
+            AudioFormat.Builder()
+                .setSampleRate(sampleRate)
+                .setEncoding(audioFormat)
+                .setChannelMask(channelConfig)
+                .build(),
+            minBufferSize * 2, // 使用两倍缓冲区大小
+            AudioTrack.MODE_STREAM,
+            AudioManager.AUDIO_SESSION_ID_GENERATE
         )
         ToastUtils.showToastActivity(activity, "初始化录音成功")
         audioRecordPlayState.value = AudioRecordPlayState.Ready
@@ -236,7 +247,13 @@ class TestVm(
     // 开始录音
     fun beginRecordAudio(activity: FragmentActivity){
         // 设置输出文件路径
-        outputFile = "${Environment.getExternalStorageDirectory().absolutePath}/recording.pcm"
+//        outputFile = "${Environment.getExternalStorageDirectory().absolutePath}/recording.pcm"
+
+        // 使用应用专属目录，不需要存储权限
+        outputFile = "${activity.getExternalFilesDir(Environment.DIRECTORY_MUSIC)?.absolutePath}/recording.pcm"
+
+        // 或者使用内部存储
+        // outputFile = "${activity.filesDir.absolutePath}/recording.pcm"
 
         // 创建文件对象
         val file = File(outputFile)
@@ -293,41 +310,110 @@ class TestVm(
     }
 
     // 停止录音
+    @SuppressLint("DefaultLocale")
     fun stopRecordAudio(activity: FragmentActivity){
         mediaRecorder?.stop()
         mediaRecorder?.reset()
         mediaRecorder?.release()
         ToastUtils.showToastActivity(activity, "停止录音")
 
-        audioRecordPlayState.value = AudioRecordPlayState.RecordedAndPlayable
+        // 先输出文件信息
+        val file = File(outputFile)
+        var recordMessage = "录音文件信息：\n"
+
+        if (!file.exists()) {
+            val errorMessage = "录音文件不存在: $outputFile"
+            Log.e(TAG, errorMessage)
+            audioRecordPlayState.value = AudioRecordPlayState.Error(errorMessage)
+            return
+        }
+
+        val fileSize = file.length()
+        val fileSizeKB = fileSize / 1024.0
+        val fileSizeMB = fileSizeKB / 1024.0
+
+        // 估算时长（AAC格式，单声道，16kHz采样率）
+        // 根据 AAC 格式和录音参数估算时长
+        // AAC 通常的比特率：64 kbps 到 192 kbps，这里取常用值 128 kbps
+        val bitrate = 128000 // 128 kbps in bits per second
+
+        // 文件大小是字节，比特率是比特/秒，所以需要转换
+        // 时长(秒) = (文件大小(字节) * 8) / 比特率(比特/秒)
+        val duration = (fileSize * 8.0) / bitrate
+
+        // 保留一位小数
+        val formattedFileSizeKB = String.format("%.1f", fileSizeKB)
+        val formattedFileSizeMB = String.format("%.1f", fileSizeMB)
+        val formattedDuration = String.format("%.1f", duration)
+
+        recordMessage += "文件大小：${formattedFileSizeKB}（${formattedFileSizeMB} MB）：\n"
+
+        recordMessage += "时长：${formattedDuration}秒\n"
+
+        audioRecordPlayState.value = AudioRecordPlayState.RecordedAndPlayable(recordMessage)
     }
 
     // 播放录制的音频
     fun playRecordAudio(activity: FragmentActivity){
-        // 读取文件并播放
-        val file = File(outputFile)
-        val fis = FileInputStream(file)
-        try {
+        if (recordAudioTrack?.state != AudioTrack.STATE_INITIALIZED) {
+            Log.e(TAG, "AudioTrack 未正确初始化")
+            ToastUtils.showToastActivity(activity, "播放器未正确初始化")
+            audioRecordPlayState.value = AudioRecordPlayState.Error("播放器未正确初始化")
+            return
+        }
 
+        // 检查文件是否存在
+        val file = File(outputFile)
+        if (!file.exists()) {
+            Log.e(TAG, "录音文件不存在: $outputFile")
+            ToastUtils.showToastActivity(activity, "录音文件不存在")
+            audioRecordPlayState.value = AudioRecordPlayState.Error("录音文件不存在")
+            return
+        }
+
+        try {
+            val fis = FileInputStream(file)
             val audioData = ByteArray(4096) // 定义缓冲区大小
 
-            recordAudioTrack?.play() // 开始播放
-            var bytesRead: Int
+            // 先停止之前的播放（如果有）
+            recordAudioTrack?.stop()
+            recordAudioTrack?.flush()
 
-            audioRecordPlayState.value = AudioRecordPlayState.Playing
-
-            // 逐块读取文件数据并播放
-            while (fis.read(audioData).also { bytesRead = it } > 0) {
-                recordAudioTrack?.write(audioData, 0, bytesRead)
+            // 开始播放
+            recordAudioTrack?.let {
+                it.play()
+                audioRecordPlayState.value = AudioRecordPlayState.Playing
             }
 
+            var bytesRead: Int
+            // 逐块读取文件数据并播放
+            while (fis.read(audioData).also { bytesRead = it } > 0) {
+                var totalWritten = 0
+                while (totalWritten < bytesRead) {
+                    val written = recordAudioTrack?.write(audioData, totalWritten, bytesRead - totalWritten) ?: 0
+                    if (written <= 0) {
+                        break
+                    }
+                    totalWritten += written
+                }
+            }
+
+            // 等待播放完成
+            recordAudioTrack?.stop()
             audioRecordPlayState.value = AudioRecordPlayState.PlayedEnd
+            fis.close()
+
+            Log.i(TAG, "录音播放完成")
+            ToastUtils.showToastActivity(activity, "录音播放完成")
+
         } catch (e: IOException) {
             Log.e(TAG, "播放录音失败", e)
             ToastUtils.showToastActivity(activity, "播放录音失败: ${e.message}")
             audioRecordPlayState.value = AudioRecordPlayState.Error("播放录音失败: ${e.message}")
-        } finally {
-            fis.close()
+        } catch (e: IllegalStateException) {
+            Log.e(TAG, "AudioTrack 状态异常", e)
+            ToastUtils.showToastActivity(activity, "播放器状态异常: ${e.message}")
+            audioRecordPlayState.value = AudioRecordPlayState.Error("播放器状态异常: ${e.message}")
         }
     }
 
