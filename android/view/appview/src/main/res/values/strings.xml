@@ -130,4 +130,6 @@
     <string name="test_websocket_desc">使用websocket进行长连接请求，websocket是全双工通信，\n比SSE只能server向client发送消息更优，并且没有每次建立SSE的开销。</string>
     <string name="test_audio_title">录音播放测试</string>
     <string name="test_audio_desc">MediaRecorder录音，AudioTrack播放音频。\nViewAudioPlayView展示音频录制、播放强度。</string>
+    <string name="test_RealTimeChat_title">多模态实时语音聊天</string>
+    <string name="test_RealTimeChat_desc">使用AudioRecord进行音频录制.\nwebsocket发送PCM格式Base64格式String交给AI,\nAI回复PCM格式Base64格式String和ChatMessage.\nAndroid端展示并用AudioTrack播放音频流数据.\n此测试在Server端未使用VAD时停检测\n(因为需要声纹识别支持, 否则AI会讲自己的声音当作User的发言)</string>
 </resources>

@@ -1,13 +1,11 @@
-package com.openapi.domain.constant.realtime;
+package com.data.domain.constant.test;
 
-import lombok.Getter;
 import org.jetbrains.annotations.NotNull;
 
 /**
  * @author 13225
  * @date 2025/10/7 17:14
  */
-@Getter
 public enum RealtimeDataTypeEnum {
     // start_send/receive
     START("start"),
@@ -23,6 +21,10 @@ public enum RealtimeDataTypeEnum {
     public static final String DATA = "data";
 
     private final String type;
+
+    public String getType() {
+        return type;
+    }
 
     RealtimeDataTypeEnum(String type) {
         this.type = type;

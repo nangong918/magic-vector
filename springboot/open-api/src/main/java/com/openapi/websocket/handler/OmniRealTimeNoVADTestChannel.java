@@ -68,10 +68,10 @@ public class OmniRealTimeNoVADTestChannel {
         }
         RealtimeDataTypeEnum realtimeDataTypeEnum = RealtimeDataTypeEnum.getByType(type);
         switch (realtimeDataTypeEnum){
-            case RealtimeDataTypeEnum.START_RECORDING -> {
+            case RealtimeDataTypeEnum.START -> {
 
             }
-            case RealtimeDataTypeEnum.STOP_RECORDING -> {
+            case RealtimeDataTypeEnum.STOP -> {
 
             }
             case RealtimeDataTypeEnum.AUDIO_CHUNK -> {

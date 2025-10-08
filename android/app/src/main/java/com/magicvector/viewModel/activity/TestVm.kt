@@ -18,6 +18,7 @@ import com.core.baseutil.permissions.GainPermissionCallback
 import com.core.baseutil.permissions.PermissionUtil
 import com.core.baseutil.ui.ToastUtils
 import com.data.domain.constant.BaseConstant
+import com.data.domain.constant.test.RealtimeDataTypeEnum
 import com.data.domain.event.WebSocketMessageEvent
 import com.data.domain.event.WebsocketEventTypeEnum
 import com.data.domain.vo.test.AudioRecordPlayState
@@ -25,11 +26,17 @@ import com.data.domain.vo.test.ChatState
 import com.data.domain.vo.test.TtsChatState
 import com.data.domain.vo.test.WebsocketState
 import com.google.gson.Gson
+import com.google.gson.reflect.TypeToken
 import com.magicvector.utils.test.SSEClient
 import com.magicvector.utils.test.TTS_SSEClient
+import com.magicvector.utils.test.TestRealtimeChatWsClient
 import com.magicvector.utils.test.TestWebSocketClient
 import kotlinx.coroutines.launch
 import okhttp3.OkHttpClient
+import okhttp3.Response
+import okhttp3.WebSocket
+import okhttp3.WebSocketListener
+import okio.ByteString
 import org.greenrobot.eventbus.EventBus
 import org.greenrobot.eventbus.Subscribe
 import org.greenrobot.eventbus.ThreadMode
@@ -46,6 +53,7 @@ class TestVm(
         const val baseSseUrl = BaseConstant.ConstantUrl.LOCAL_URL + "/test/stream-sse"
         const val baseSseTTSUrl = BaseConstant.ConstantUrl.LOCAL_URL + "/test/stream-tts-sse"
         const val baseWebsocketUrl = BaseConstant.ConstantUrl.LOCAL_WS_URL + "/test-channel"
+        const val realtimeChatWsUrl = BaseConstant.ConstantUrl.LOCAL_WS_URL + "/realtime-no-vad-test"
     }
 
     init {
@@ -72,7 +80,100 @@ class TestVm(
     val audioRecordPlayState: MutableLiveData<AudioRecordPlayState> = MutableLiveData(AudioRecordPlayState.NotInitialized)
     val audioRecordVolume = MutableLiveData(0f) // 用于存储音量数据
 
+    // websocket realtime聊天
+    val realtimeChatMessage: MutableLiveData<String> = MutableLiveData("") // 聊天数据，只需要存储text数据，音频数据不要展示是直接播放
+    val realtimeChatState: MutableLiveData<WebsocketState> = MutableLiveData(WebsocketState.NotInitialized)
+
     //---------------------------NetWork---------------------------
+
+    // websocket realtime聊天
+    private var realtimeChatWsClient: TestRealtimeChatWsClient? = null
+
+    // 初始化 + 连接
+    fun initRealtimeChatWsClient() {
+        realtimeChatWsClient = TestRealtimeChatWsClient(
+            GSON,
+            realtimeChatWsUrl
+        )
+        realtimeChatWsClient!!.start(
+            object : WebSocketListener() {
+                override fun onClosed(
+                    webSocket: WebSocket,
+                    code: Int,
+                    reason: String
+                ) {
+                    super.onClosed(webSocket, code, reason)
+                    realtimeChatState.value = WebsocketState.Disconnected
+                    Log.i(TAG, "realtimeChatWsClient::onClosed")
+                }
+
+                override fun onClosing(
+                    webSocket: WebSocket,
+                    code: Int,
+                    reason: String
+                ) {
+                    super.onClosing(webSocket, code, reason)
+                    Log.i(TAG, "realtimeChatWsClient::onClosing")
+                }
+
+                override fun onFailure(
+                    webSocket: WebSocket,
+                    t: Throwable,
+                    response: Response?
+                ) {
+                    super.onFailure(webSocket, t, response)
+                    realtimeChatState.value = WebsocketState.Error(t.message ?: "-")
+                }
+
+                override fun onMessage(webSocket: WebSocket, text: String) {
+                    super.onMessage(webSocket, text)
+                    // 处理text
+                    realtimeChatState.value = WebsocketState.Receiving
+                    handleTextMessage(text)
+                }
+
+                override fun onMessage(webSocket: WebSocket, bytes: ByteString) {
+                    super.onMessage(webSocket, bytes)
+                    realtimeChatState.value = WebsocketState.Receiving
+                    // 处理字节信息
+                    Log.i(TAG, "收到字节信息::长度: ${bytes.size}")
+                }
+
+                override fun onOpen(webSocket: WebSocket, response: Response) {
+                    super.onOpen(webSocket, response)
+                    realtimeChatState.value = WebsocketState.Connected
+                    Log.i(TAG, "realtimeChatWsClient::onOpen; response: $response")
+                }
+            }
+        )
+    }
+
+    private fun handleTextMessage(text: String){
+        // text --GSON--> Map<String, String>
+        val map: Map<String, String> = GSON.fromJson(text, object : TypeToken<Map<String, String>>() {}.type)
+
+        val typeStr = map[RealtimeDataTypeEnum.TYPE]
+        val type = RealtimeDataTypeEnum.getByType(typeStr)
+
+        when(type){
+            RealtimeDataTypeEnum.START -> {
+                // 开始接收数据
+            }
+            RealtimeDataTypeEnum.STOP -> {
+                // 结束接收数据
+            }
+            RealtimeDataTypeEnum.AUDIO_CHUNK -> {
+                // 音频数据
+                val data = map[RealtimeDataTypeEnum.DATA]
+
+            }
+            RealtimeDataTypeEnum.TEXT_MESSAGE -> {
+                // 文本数据
+                val data = map[RealtimeDataTypeEnum.DATA]
+                realtimeChatMessage.postValue(realtimeChatMessage.value + data)
+            }
+        }
+    }
 
     // sse
     private val sseClient = SSEClient(

@@ -19,6 +19,70 @@
             android:layout_height="0dp"/>
 
         <!-- 新的测试用例在上方 -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_marginEnd="10dp"
+            android:layout_marginStart="10dp"
+            android:orientation="vertical"
+            android:layout_marginTop="5dp"
+            android:gravity="center"
+            android:padding="5dp"
+            android:layout_marginBottom="5dp"
+            android:background="@drawable/round_corners_bg_grey"
+            android:layout_height="wrap_content">
+
+            <TextView
+                android:padding="5dp"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/test_RealTimeChat_title"
+                android:textColor="@color/black"
+                android:textSize="25sp"/>
+
+            <TextView
+                android:padding="5dp"
+                android:layout_marginTop="5dp"
+                android:textColor="@color/n1_500"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/test_RealTimeChat_desc"
+                android:textSize="14sp"/>
+
+            <Button
+                android:id="@+id/btn_initRealtimeChat"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="初始Realtime Chat"/>
+            <Button
+                android:id="@+id/btn_recordAndSend"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="录音发送"/>
+            <Button
+                android:id="@+id/btn_stopRealtimeChat"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="停止聊天"/>
+
+            <TextView
+                android:id="@+id/tv_RealTimeChatStatus"
+                android:padding="5dp"
+                android:layout_marginTop="5dp"
+                android:textColor="@color/n1_500"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="未初始化"
+                android:textSize="14sp"/>
+
+            <com.view.appview.voice.VoiceWaveView
+                android:id="@+id/v_RealTimeChat_voiceWave"
+                android:layout_width="wrap_content"
+                android:layout_height="150dp"
+                app:lineColor="@color/colorPrimary"
+                app:waveMode="left_right"
+                android:gravity="center" />
+
+        </LinearLayout>
 
         <LinearLayout
             android:layout_width="match_parent"
