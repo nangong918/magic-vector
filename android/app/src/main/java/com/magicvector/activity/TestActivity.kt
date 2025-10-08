@@ -16,6 +16,7 @@ import com.view.appview.voice.LineType
 import com.view.appview.voice.VoiceWaveView
 import com.view.appview.voice.WaveMode
 import androidx.core.graphics.toColorInt
+import com.data.domain.vo.test.AudioRecordPlayState
 
 class TestActivity : BaseAppCompatVmActivity<ActivityTestBinding, TestVm>(
     TestActivity::class,
@@ -63,6 +64,32 @@ class TestActivity : BaseAppCompatVmActivity<ActivityTestBinding, TestVm>(
 
         binding.btnDisconnectWebsocket.setOnClickListener {
             vm.disconnectWebsocket()
+        }
+
+        // audioRecordPlay
+        binding.btnInitRecordAudio.setOnClickListener {
+            vm.initRecordAudio(this)
+        }
+
+        binding.btnBeginRecord.setOnClickListener {
+            vm.beginRecordAudio(this)
+        }
+
+        binding.btnPauseContinueRecord.setOnClickListener {
+            if (vm.audioRecordPlayState.value == AudioRecordPlayState.Playing){
+                vm.pauseRecordAudio(this)
+            }
+            else {
+                vm.resumeRecordAudio(this)
+            }
+        }
+
+        binding.btnStopRecord.setOnClickListener {
+            vm.stopRecordAudio(this)
+        }
+
+        binding.btnPlayRecord.setOnClickListener {
+            vm.playRecordAudio(this)
         }
 
         observeData()

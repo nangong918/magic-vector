@@ -18,6 +18,7 @@ import com.core.baseutil.ui.ToastUtils
 import com.data.domain.constant.BaseConstant
 import com.data.domain.event.WebSocketMessageEvent
 import com.data.domain.event.WebsocketEventTypeEnum
+import com.data.domain.vo.test.AudioRecordPlayState
 import com.data.domain.vo.test.ChatState
 import com.data.domain.vo.test.TtsChatState
 import com.data.domain.vo.test.WebsocketState
@@ -67,6 +68,8 @@ class TestVm(
     // websocket (逆天bug，都出现了量子力学的观察者效应，观察就没bug，不观察就有bug，简直逆天；已经排除了build和混淆)
     val websocketAllMessage: MutableLiveData<String> = MutableLiveData("")
     val websocketState: MutableLiveData<WebsocketState> = MutableLiveData(WebsocketState.NotInitialized)
+
+    val audioRecordPlayState: MutableLiveData<AudioRecordPlayState> = MutableLiveData(AudioRecordPlayState.NotInitialized)
 
     //---------------------------NetWork---------------------------
 
@@ -171,6 +174,7 @@ class TestVm(
     var recordAudioTrack: AudioTrack? = null
 
     fun initRecordAudio(activity: FragmentActivity) {
+        audioRecordPlayState.value = AudioRecordPlayState.Initializing
         PermissionUtil.requestPermissionSelectX(
             activity,
             arrayOf(Manifest.permission.RECORD_AUDIO),
@@ -184,6 +188,7 @@ class TestVm(
                     override fun notGranted(notGrantedPermissions: Array<String?>?) {
                         Log.w(TAG, "没有获取录音权限: ${notGrantedPermissions?.contentToString()}")
                         ToastUtils.showToastActivity(activity, "没有获取录音权限")
+                        audioRecordPlayState.value = AudioRecordPlayState.Error("没有获取录音权限")
                     }
 
                     override fun always() {
@@ -224,6 +229,7 @@ class TestVm(
             AudioTrack.MODE_STATIC
         )
         ToastUtils.showToastActivity(activity, "初始化录音成功")
+        audioRecordPlayState.value = AudioRecordPlayState.Ready
     }
 
     private var outputFile: String = ""
@@ -244,18 +250,23 @@ class TestVm(
         mediaRecorder?.start()
 
         ToastUtils.showToastActivity(activity, "开始录音")
+        audioRecordPlayState.value = AudioRecordPlayState.Recording
     }
 
     // 暂停录音
     fun pauseRecordAudio(activity: FragmentActivity){
         mediaRecorder?.pause()
         ToastUtils.showToastActivity(activity, "暂停录音")
+
+        audioRecordPlayState.value = AudioRecordPlayState.Paused
     }
 
     // 录音继续
     fun resumeRecordAudio(activity: FragmentActivity){
         mediaRecorder?.resume()
         ToastUtils.showToastActivity(activity, "继续录音")
+
+        audioRecordPlayState.value = AudioRecordPlayState.Recording
     }
 
     // 停止录音
@@ -264,6 +275,8 @@ class TestVm(
         mediaRecorder?.reset()
         mediaRecorder?.release()
         ToastUtils.showToastActivity(activity, "停止录音")
+
+        audioRecordPlayState.value = AudioRecordPlayState.RecordedAndPlayable
     }
 
     // 播放录制的音频
@@ -278,15 +291,18 @@ class TestVm(
             recordAudioTrack?.play() // 开始播放
             var bytesRead: Int
 
+            audioRecordPlayState.value = AudioRecordPlayState.Playing
+
             // 逐块读取文件数据并播放
             while (fis.read(audioData).also { bytesRead = it } > 0) {
                 recordAudioTrack?.write(audioData, 0, bytesRead)
             }
 
-            ToastUtils.showToastActivity(activity, "播放录音成功")
+            audioRecordPlayState.value = AudioRecordPlayState.PlayedEnd
         } catch (e: IOException) {
-            e.printStackTrace()
+            Log.e(TAG, "播放录音失败", e)
             ToastUtils.showToastActivity(activity, "播放录音失败: ${e.message}")
+            audioRecordPlayState.value = AudioRecordPlayState.Error("播放录音失败: ${e.message}")
         } finally {
             fis.close()
         }
