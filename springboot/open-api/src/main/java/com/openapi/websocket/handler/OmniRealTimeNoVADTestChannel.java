@@ -15,8 +15,10 @@ import jakarta.websocket.Session;
 import jakarta.websocket.server.ServerEndpoint;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
+import org.springframework.web.socket.handler.TextWebSocketHandler;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -31,7 +33,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * @date 2025/10/7 16:45
  */
 @Slf4j
-@RequiredArgsConstructor
 @Component
 @ServerEndpoint(value = "/realtime-no-vad-test")
 public class OmniRealTimeNoVADTestChannel {
@@ -42,10 +43,22 @@ public class OmniRealTimeNoVADTestChannel {
 
     private final OmniRealTimeNoVADTestService omniRealTimeNoVADTestService;
 
-    Queue<String> b64AudioBuffer = new ConcurrentLinkedQueue<>();
-    Queue<byte[]> rawAudioBuffer = new ConcurrentLinkedQueue<>();
-    AtomicBoolean stopConversation = new AtomicBoolean(false);
-    AtomicBoolean stopRecording = new AtomicBoolean(true);
+    /**
+     * 使用 @ServerEndpoint 时，WebSocket 容器会尝试使用无参构造函数创建实例，
+     * 因此 @Autowired 注解的依赖项（如 omniRealTimeNoVADTestService）不会被注入，导致其为 null
+     */
+    @Autowired
+    public OmniRealTimeNoVADTestChannel(OmniRealTimeNoVADTestService omniRealTimeNoVADTestService, ChatConfig config) {
+        this.omniRealTimeNoVADTestService = omniRealTimeNoVADTestService;
+        this.config = config;
+
+        log.info("[websocket] 创建初始化成功; service: {}", this.omniRealTimeNoVADTestService);
+    }
+
+    private final Queue<String> b64AudioBuffer = new ConcurrentLinkedQueue<>();
+    private final Queue<byte[]> rawAudioBuffer = new ConcurrentLinkedQueue<>();
+    private final AtomicBoolean stopConversation = new AtomicBoolean(false);
+    private final AtomicBoolean stopRecording = new AtomicBoolean(true);
 
     // 连接打开
     @OnOpen
