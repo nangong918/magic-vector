@@ -591,4 +591,3 @@ class TestVm(
 
 }
 
-private fun AudioTrack?.setPlaybackPositionUpdateListener(listener: Any) {}

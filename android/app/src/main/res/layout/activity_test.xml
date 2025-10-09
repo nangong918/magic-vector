@@ -54,7 +54,7 @@
                 android:layout_height="wrap_content"
                 android:text="初始Realtime Chat"/>
             <Button
-                android:id="@+id/btn_recordAndSend"
+                android:id="@+id/btn_recordAndSendRealtimeChat"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="录音发送"/>
@@ -72,6 +72,16 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="未初始化"
+                android:textSize="14sp"/>
+
+            <TextView
+                android:id="@+id/tv_RealTimeChatMessage"
+                android:padding="5dp"
+                android:layout_marginTop="5dp"
+                android:textColor="@color/n1_500"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="暂无消息"
                 android:textSize="14sp"/>
 
             <com.view.appview.voice.VoiceWaveView
