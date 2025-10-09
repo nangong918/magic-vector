@@ -6,22 +6,18 @@ import com.alibaba.fastjson.TypeReference;
 import com.openapi.config.ChatConfig;
 import com.openapi.domain.constant.realtime.RealtimeDataTypeEnum;
 import com.openapi.service.OmniRealTimeNoVADTestService;
-import jakarta.websocket.CloseReason;
-import jakarta.websocket.OnClose;
-import jakarta.websocket.OnError;
-import jakarta.websocket.OnMessage;
-import jakarta.websocket.OnOpen;
-import jakarta.websocket.Session;
-import jakarta.websocket.server.ServerEndpoint;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
+import org.jetbrains.annotations.NotNull;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
+import org.springframework.web.socket.BinaryMessage;
+import org.springframework.web.socket.CloseStatus;
+import org.springframework.web.socket.TextMessage;
+import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
 
 import java.io.IOException;
-import java.nio.ByteBuffer;
 import java.util.Base64;
 import java.util.Map;
 import java.util.Queue;
@@ -33,37 +29,23 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * @date 2025/10/7 16:45
  */
 @Slf4j
+@RequiredArgsConstructor
 @Component
-@ServerEndpoint(value = "/realtime-no-vad-test")
-public class OmniRealTimeNoVADTestChannel {
-
-    private Session session;
+public class OmniRealTimeNoVADTestChannel extends TextWebSocketHandler {
 
     private final ChatConfig config;
-
     private final OmniRealTimeNoVADTestService omniRealTimeNoVADTestService;
 
-    /**
-     * 使用 @ServerEndpoint 时，WebSocket 容器会尝试使用无参构造函数创建实例，
-     * 因此 @Autowired 注解的依赖项（如 omniRealTimeNoVADTestService）不会被注入，导致其为 null
-     */
-    @Autowired
-    public OmniRealTimeNoVADTestChannel(OmniRealTimeNoVADTestService omniRealTimeNoVADTestService, ChatConfig config) {
-        this.omniRealTimeNoVADTestService = omniRealTimeNoVADTestService;
-        this.config = config;
-
-        log.info("[websocket] 创建初始化成功; service: {}", this.omniRealTimeNoVADTestService);
-    }
 
     private final Queue<String> b64AudioBuffer = new ConcurrentLinkedQueue<>();
     private final Queue<byte[]> rawAudioBuffer = new ConcurrentLinkedQueue<>();
     private final AtomicBoolean stopConversation = new AtomicBoolean(false);
     private final AtomicBoolean stopRecording = new AtomicBoolean(true);
 
-    // 连接打开
-    @OnOpen
-    public void onOpen(Session session) {
-        this.session = session;
+
+    @Override
+    public void afterConnectionEstablished(@NotNull WebSocketSession session) throws Exception {
+        super.afterConnectionEstablished(session);
         log.info("[websocket] 创建连接：id={}", session.getId());
 
         try {
@@ -85,59 +67,47 @@ public class OmniRealTimeNoVADTestChannel {
         stopRecording.set(true);
     }
 
-    // 连接关闭
-    @OnClose
-    public void onClose(CloseReason closeReason){
-        log.info("[websocket] 连接断开：id={}，reason={}", this.session.getId(),closeReason);
-
+    @Override
+    public void afterConnectionClosed(WebSocketSession session, @NotNull CloseStatus status) throws Exception {
+        log.info("[websocket] 连接断开：id={}，reason={}", session.getId(), status);
         stopConversation.set(true);
         stopRecording.set(true);
+        super.afterConnectionClosed(session, status);
     }
 
-    // 连接异常
-    @OnError
-    public void onError(Throwable throwable) throws IOException {
+    @Override
+    public void handleTransportError(WebSocketSession session, Throwable exception) throws Exception {
+        log.info("[websocket] 连接异常：id={}，throwable={}", session.getId(), exception.getMessage());
+        session.close();
         stopConversation.set(true);
         stopRecording.set(true);
-
-        log.info("[websocket] 连接异常：id={}，throwable={}", this.session.getId(), throwable.getMessage());
-
-        // 关闭连接。状态码为 UNEXPECTED_CONDITION（意料之外的异常）
-        this.session.close(new CloseReason(CloseReason.CloseCodes.UNEXPECTED_CONDITION, throwable.getMessage()));
+        super.handleTransportError(session, exception);
     }
 
-    @OnMessage
-    public void onMessage(String message) throws IOException {
-        // fastJson
-        Map<String, String> messageMap = JSON.parseObject(message, new TypeReference<>() {});
+    @Override
+    protected void handleTextMessage(WebSocketSession session, TextMessage message) throws Exception {
+        log.info("[websocket] 收到消息：id={}，message={}", session.getId(), message.getPayload());
+
+        Map<String, String> messageMap = JSON.parseObject(message.getPayload(), new TypeReference<>() {});
         String type = messageMap.get(RealtimeDataTypeEnum.TYPE);
-        if (!StringUtils.hasText(type)){
+        if (!StringUtils.hasText(type)) {
             log.warn("[websocket warn] 收到消息，类型为空");
             return;
         }
+
         RealtimeDataTypeEnum realtimeDataTypeEnum = RealtimeDataTypeEnum.getByType(type);
-        switch (realtimeDataTypeEnum){
-            case RealtimeDataTypeEnum.START -> {
-                stopRecording.set(false);
-            }
-            case RealtimeDataTypeEnum.STOP -> {
-                stopRecording.set(true);
-            }
-            case RealtimeDataTypeEnum.AUDIO_CHUNK -> {
-                handleAudioChunk(messageMap.get(RealtimeDataTypeEnum.DATA));
-            }
-            case RealtimeDataTypeEnum.TEXT_MESSAGE -> {
-                log.info("[websocket] 收到文本消息：{}", messageMap.get(RealtimeDataTypeEnum.DATA));
-            }
-            default -> {
-                log.warn("[websocket warn] 忽略未知类型消息：{}", type);
-            }
+        switch (realtimeDataTypeEnum) {
+            case START -> stopRecording.set(false);
+            case STOP -> stopRecording.set(true);
+            case AUDIO_CHUNK -> handleAudioChunk(messageMap.get(RealtimeDataTypeEnum.DATA));
+            case TEXT_MESSAGE -> log.info("[websocket] 收到文本消息：{}", messageMap.get(RealtimeDataTypeEnum.DATA));
+            default -> log.warn("[websocket warn] 忽略未知类型消息：{}", type);
         }
     }
 
-    @OnMessage
-    public void onMessage(ByteBuffer message) throws IOException {
-        log.info("[websocket] 收到二进制消息，长度：{}", message.remaining());
+    @Override
+    protected void handleBinaryMessage(@NotNull WebSocketSession session, BinaryMessage message) {
+        log.info("[websocket] 收到二进制消息，长度：{}", message.getPayloadLength());
     }
 
     private void handleAudioChunk(String base64Audio) {
