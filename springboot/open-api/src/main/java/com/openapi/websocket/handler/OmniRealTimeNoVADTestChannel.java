@@ -111,7 +111,7 @@ public class OmniRealTimeNoVADTestChannel {
                 stopRecording.set(true);
             }
             case RealtimeDataTypeEnum.AUDIO_CHUNK -> {
-
+                handleAudioChunk(messageMap.get(RealtimeDataTypeEnum.DATA));
             }
             case RealtimeDataTypeEnum.TEXT_MESSAGE -> {
                 log.info("[websocket] 收到文本消息：{}", messageMap.get(RealtimeDataTypeEnum.DATA));
@@ -128,6 +128,9 @@ public class OmniRealTimeNoVADTestChannel {
     }
 
     private void handleAudioChunk(String base64Audio) {
+        if (!StringUtils.hasText(base64Audio)){
+            return;
+        }
         // 解码 Base64 字符串为字节数组
         byte[] audioBytes = Base64.getDecoder().decode(base64Audio);
 
