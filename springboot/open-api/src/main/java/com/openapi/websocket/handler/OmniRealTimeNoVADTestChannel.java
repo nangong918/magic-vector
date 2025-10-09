@@ -97,9 +97,18 @@ public class OmniRealTimeNoVADTestChannel extends TextWebSocketHandler {
 
         RealtimeDataTypeEnum realtimeDataTypeEnum = RealtimeDataTypeEnum.getByType(type);
         switch (realtimeDataTypeEnum) {
-            case START -> stopRecording.set(false);
-            case STOP -> stopRecording.set(true);
-            case AUDIO_CHUNK -> handleAudioChunk(messageMap.get(RealtimeDataTypeEnum.DATA));
+            case START -> {
+                log.info("[websocket] 开始录音");
+                stopRecording.set(false);
+            }
+            case STOP -> {
+                log.info("[websocket] 停止录音");
+                stopRecording.set(true);
+            }
+            case AUDIO_CHUNK -> {
+                log.info("[websocket] 收到音频块");
+                handleAudioChunk(messageMap.get(RealtimeDataTypeEnum.DATA));
+            }
             case TEXT_MESSAGE -> log.info("[websocket] 收到文本消息：{}", messageMap.get(RealtimeDataTypeEnum.DATA));
             default -> log.warn("[websocket warn] 忽略未知类型消息：{}", type);
         }
@@ -116,6 +125,7 @@ public class OmniRealTimeNoVADTestChannel extends TextWebSocketHandler {
         }
         // 解码 Base64 字符串为字节数组
         byte[] audioBytes = Base64.getDecoder().decode(base64Audio);
+        log.info("[websocket] 音频块大小：{}", audioBytes.length);
 
         // 将字节数组放入队列
         rawAudioBuffer.offer(audioBytes);

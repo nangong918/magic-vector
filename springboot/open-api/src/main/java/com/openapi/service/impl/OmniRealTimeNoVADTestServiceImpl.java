@@ -59,9 +59,6 @@ public class OmniRealTimeNoVADTestServiceImpl implements OmniRealTimeNoVADTestSe
                 .apikey(config.getApiKey())
                 .build();
 
-        AtomicReference<CountDownLatch> responseDoneLatch = new AtomicReference<>(null);
-        responseDoneLatch.set(new CountDownLatch(1));
-
         final AtomicReference<OmniRealtimeConversation> conversationRef = new AtomicReference<>(null);
 
         OmniRealtimeConversation conversation = new OmniRealtimeConversation(param, new OmniRealtimeCallback() {
@@ -97,7 +94,6 @@ public class OmniRealTimeNoVADTestServiceImpl implements OmniRealTimeNoVADTestSe
                                     conversationRef.get().getFirstAudioDelay()
                             );
                         }
-                        responseDoneLatch.get().countDown();
                     }
                     default -> {}
                 }

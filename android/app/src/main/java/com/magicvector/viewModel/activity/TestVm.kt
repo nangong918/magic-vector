@@ -85,7 +85,6 @@ class TestVm(
     // realtime websocket 聊天
     val realtimeChatMessage: MutableLiveData<String> = MutableLiveData("") // 聊天数据，只需要存储text数据，音频数据不要展示是直接播放
     val realtimeChatState: MutableLiveData<RealtimeChatState> = MutableLiveData(RealtimeChatState.NotInitialized)
-    var isRecording = false
 
     //---------------------------NetWork---------------------------
 
