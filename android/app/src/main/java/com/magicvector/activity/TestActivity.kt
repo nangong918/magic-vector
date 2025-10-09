@@ -39,31 +39,17 @@ class TestActivity : BaseAppCompatVmActivity<ActivityTestBinding, TestVm>(
     override fun setListener() {
         super.setListener()
 
-        // sse
-        binding.btnSendMessage.setOnClickListener {
-            vm.sendQuestion()
+        // realtime chat
+        binding.btnInitRealtimeChat.setOnClickListener {
+            vm.initRealtimeChatWsClient()
         }
 
-        // tts sse
-        binding.btnSendTTSMessage.setOnClickListener {
-            vm.sendTTSQuestion()
+        binding.btnRecordAndSendRealtimeChat.setOnClickListener {
+            vm.recordAndSendRealtimeChat()
         }
 
-        binding.btnInitTtsAudio.setOnClickListener {
-            vm.initializeAudioTrack()
-        }
-
-        // websocket
-        binding.btnInitWebsocket.setOnClickListener {
-            vm.connectWebsocket()
-        }
-
-        binding.btnSendWebsocketMessage.setOnClickListener {
-            vm.sendWebsocketMessage("你好啊" + System.currentTimeMillis())
-        }
-
-        binding.btnDisconnectWebsocket.setOnClickListener {
-            vm.disconnectWebsocket()
+        binding.btnStopRealtimeChat.setOnClickListener {
+            vm.stopRealtimeChat()
         }
 
         // audioRecordPlay
@@ -81,6 +67,33 @@ class TestActivity : BaseAppCompatVmActivity<ActivityTestBinding, TestVm>(
 
         binding.btnPlayRecord.setOnClickListener {
             vm.playRecordAudio(this)
+        }
+
+        // websocket
+        binding.btnInitWebsocket.setOnClickListener {
+            vm.connectWebsocket()
+        }
+
+        binding.btnSendWebsocketMessage.setOnClickListener {
+            vm.sendWebsocketMessage("你好啊" + System.currentTimeMillis())
+        }
+
+        binding.btnDisconnectWebsocket.setOnClickListener {
+            vm.disconnectWebsocket()
+        }
+
+        // tts sse
+        binding.btnSendTTSMessage.setOnClickListener {
+            vm.sendTTSQuestion()
+        }
+
+        binding.btnInitTtsAudio.setOnClickListener {
+            vm.initializeAudioTrack()
+        }
+
+        // sse
+        binding.btnSendMessage.setOnClickListener {
+            vm.sendQuestion()
         }
 
         observeData()

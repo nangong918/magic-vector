@@ -175,6 +175,14 @@ class TestVm(
         }
     }
 
+    fun recordAndSendRealtimeChat() {
+
+    }
+
+    fun stopRealtimeChat() {
+
+    }
+
     // sse
     private val sseClient = SSEClient(
         OkHttpClient.Builder()
