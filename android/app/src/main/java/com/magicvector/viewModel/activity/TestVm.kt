@@ -138,7 +138,7 @@ class TestVm(
                     reason: String
                 ) {
                     super.onClosed(webSocket, code, reason)
-                    realtimeChatState.value = RealtimeChatState.Disconnected
+                    realtimeChatState.postValue(RealtimeChatState.Disconnected)
                     Log.i(TAG, "realtimeChatWsClient::onClosed")
                 }
 
@@ -157,19 +157,20 @@ class TestVm(
                     response: Response?
                 ) {
                     super.onFailure(webSocket, t, response)
-                    realtimeChatState.value = RealtimeChatState.Error(t.message ?: "-")
+                    Log.e(TAG, "realtimeChatWsClient::onFailure: ${t.message}")
+                    realtimeChatState.postValue(RealtimeChatState.Error(t.message ?: "-"))
                 }
 
                 override fun onMessage(webSocket: WebSocket, text: String) {
                     super.onMessage(webSocket, text)
                     // 处理text
-                    realtimeChatState.value = RealtimeChatState.Receiving
+                    realtimeChatState.postValue(RealtimeChatState.Receiving)
                     handleTextMessage(text)
                 }
 
                 override fun onMessage(webSocket: WebSocket, bytes: ByteString) {
                     super.onMessage(webSocket, bytes)
-                    realtimeChatState.value = RealtimeChatState.Receiving
+                    realtimeChatState.postValue(RealtimeChatState.Receiving)
                     // 处理字节信息
                     Log.i(TAG, "收到字节信息::长度: ${bytes.size}")
                 }
@@ -177,7 +178,7 @@ class TestVm(
                 override fun onOpen(webSocket: WebSocket, response: Response) {
                     super.onOpen(webSocket, response)
                     // 到了此处说明: 授权 && 连接成功
-                    realtimeChatState.value = RealtimeChatState.InitializedConnected
+                    realtimeChatState.postValue(RealtimeChatState.InitializedConnected)
                     Log.i(TAG, "realtimeChatWsClient::onOpen; response: $response")
                 }
             }
@@ -223,7 +224,7 @@ class TestVm(
         when(type){
             RealtimeDataTypeEnum.START -> {
                 // 开始接收数据
-                realtimeChatState.value = RealtimeChatState.Receiving
+                realtimeChatState.postValue(RealtimeChatState.Receiving)
                 // 清空播放缓存
                 recordAudioTrack?.flush()
                 // 开始播放
@@ -231,7 +232,7 @@ class TestVm(
             }
             RealtimeDataTypeEnum.STOP -> {
                 // 结束接收数据
-                realtimeChatState.value = RealtimeChatState.InitializedConnected
+                realtimeChatState.postValue(RealtimeChatState.InitializedConnected)
                 // 停止播放
                 realtimeChatAudioTrack?.stop()
                 // 清空播放缓存
@@ -239,7 +240,7 @@ class TestVm(
             }
             RealtimeDataTypeEnum.AUDIO_CHUNK -> {
                 // 音频数据
-                realtimeChatState.value = RealtimeChatState.Receiving
+                realtimeChatState.postValue(RealtimeChatState.Receiving)
                 val data = map[RealtimeDataTypeEnum.DATA]
                 data?.let {
                     playBase64Audio(data)
@@ -247,7 +248,7 @@ class TestVm(
             }
             RealtimeDataTypeEnum.TEXT_MESSAGE -> {
                 // 文本数据
-                realtimeChatState.value = RealtimeChatState.Receiving
+                realtimeChatState.postValue(RealtimeChatState.Receiving)
                 val data = map[RealtimeDataTypeEnum.DATA]
                 data?.let {
                     realtimeChatMessage.postValue(realtimeChatMessage.value + data)
@@ -311,7 +312,7 @@ class TestVm(
     }
 
     fun stopAndSendRealtimeChatAudio(){
-        realtimeChatState.value = RealtimeChatState.InitializedConnected
+        realtimeChatState.postValue(RealtimeChatState.InitializedConnected)
     }
 
     fun stopRealtimeChat() {
@@ -320,7 +321,7 @@ class TestVm(
         realtimeChatAudioTrack?.stop()
         realtimeChatAudioTrack?.release()
         realtimeChatWsClient?.close()
-        realtimeChatState.value = RealtimeChatState.Disconnected
+        realtimeChatState.postValue(RealtimeChatState.Disconnected)
     }
 
     // sse
