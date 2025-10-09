@@ -88,9 +88,10 @@ class TestVm(
 
     // websocket realtime聊天
     private var realtimeChatWsClient: TestRealtimeChatWsClient? = null
-
+    var realtimeChatAudioRecord: AudioRecord? = null
+    var realtimeChatAudioTrack: AudioTrack? = null
     // 初始化 + 连接
-    fun initRealtimeChatWsClient() {
+    fun initRealtimeChatWsClient(activity: FragmentActivity) {
         realtimeChatWsClient = TestRealtimeChatWsClient(
             GSON,
             realtimeChatWsUrl
@@ -146,6 +147,62 @@ class TestVm(
                 }
             }
         )
+
+        PermissionUtil.requestPermissionSelectX(
+            activity,
+            arrayOf(
+                Manifest.permission.RECORD_AUDIO,
+                Manifest.permission.WRITE_EXTERNAL_STORAGE,
+            ),
+            arrayOf(),
+            object : GainPermissionCallback{
+                @RequiresPermission(Manifest.permission.RECORD_AUDIO)
+                override fun allGranted() {
+                    Log.i(TAG, "获取录音权限成功")
+                    initRealtimeChatRecorderAndPlayer()
+                }
+
+                override fun notGranted(notGrantedPermissions: Array<String?>?) {
+                    Log.w(TAG, "没有获取录音权限: ${notGrantedPermissions?.contentToString()}")
+                    ToastUtils.showToastActivity(activity, "没有获取录音权限")
+                    audioRecordPlayState.value = AudioRecordPlayState.Error("没有获取录音权限")
+                }
+
+                override fun always() {
+                }
+
+            }
+        )
+    }
+
+    @RequiresPermission(Manifest.permission.RECORD_AUDIO)
+    private fun initRealtimeChatRecorderAndPlayer(){
+        // 配置音频参数
+        val sampleRate = 24000
+        val inChannelConfig = AudioFormat.CHANNEL_IN_MONO
+        val outChannelConfig = AudioFormat.CHANNEL_OUT_MONO
+        val audioFormat = AudioFormat.ENCODING_PCM_16BIT
+        val audioRecordBufferSize = AudioRecord.getMinBufferSize(sampleRate, inChannelConfig, audioFormat)
+        val audioTrackBufferSize = AudioTrack.getMinBufferSize(sampleRate, outChannelConfig, audioFormat)
+
+        // 创建AudioRecord
+        realtimeChatAudioRecord = AudioRecord(
+            MediaRecorder.AudioSource.MIC,
+            sampleRate,
+            inChannelConfig,
+            audioFormat,
+            audioRecordBufferSize
+        )
+
+        // 创建AudioTrack
+        realtimeChatAudioTrack = AudioTrack(
+            AudioManager.STREAM_MUSIC,
+            sampleRate,
+            outChannelConfig,
+            audioFormat,
+            audioTrackBufferSize,
+            AudioTrack.MODE_STREAM
+        )
     }
 
     private fun handleTextMessage(text: String){
@@ -175,7 +232,12 @@ class TestVm(
         }
     }
 
-    fun recordAndSendRealtimeChat() {
+    fun recordRealtimeChat() {
+        // 录制音频 -> 音频流bytes实时转为Base64的PCM格式 -> 调用websocket的sendAudioMessage
+    }
+
+    // todo 需要创建一个realTimeChatStatus
+    fun sendRecordRealtimeChatAudio(){
 
     }
 

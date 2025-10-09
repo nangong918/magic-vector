@@ -2,20 +2,13 @@ package com.magicvector.activity
 
 
 import android.annotation.SuppressLint
-import android.graphics.Color
 import android.util.Log
-import android.view.Gravity
 import com.data.domain.vo.test.ChatState
 import com.data.domain.vo.test.TtsChatState
 import com.data.domain.vo.test.WebsocketState
-import com.magicvector.R
 import com.magicvector.databinding.ActivityTestBinding
 import com.magicvector.utils.BaseAppCompatVmActivity
 import com.magicvector.viewModel.activity.TestVm
-import com.view.appview.voice.LineType
-import com.view.appview.voice.VoiceWaveView
-import com.view.appview.voice.WaveMode
-import androidx.core.graphics.toColorInt
 import com.data.domain.vo.test.AudioRecordPlayState
 
 class TestActivity : BaseAppCompatVmActivity<ActivityTestBinding, TestVm>(
@@ -41,11 +34,11 @@ class TestActivity : BaseAppCompatVmActivity<ActivityTestBinding, TestVm>(
 
         // realtime chat
         binding.btnInitRealtimeChat.setOnClickListener {
-            vm.initRealtimeChatWsClient()
+            vm.initRealtimeChatWsClient(this)
         }
 
         binding.btnRecordAndSendRealtimeChat.setOnClickListener {
-            vm.recordAndSendRealtimeChat()
+            vm.recordRealtimeChat()
         }
 
         binding.btnStopRealtimeChat.setOnClickListener {
