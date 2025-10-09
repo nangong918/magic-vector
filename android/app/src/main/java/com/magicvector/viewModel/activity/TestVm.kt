@@ -23,6 +23,7 @@ import com.data.domain.event.WebSocketMessageEvent
 import com.data.domain.event.WebsocketEventTypeEnum
 import com.data.domain.vo.test.AudioRecordPlayState
 import com.data.domain.vo.test.ChatState
+import com.data.domain.vo.test.RealtimeChatState
 import com.data.domain.vo.test.TtsChatState
 import com.data.domain.vo.test.WebsocketState
 import com.google.gson.Gson
@@ -82,7 +83,7 @@ class TestVm(
 
     // websocket realtime聊天
     val realtimeChatMessage: MutableLiveData<String> = MutableLiveData("") // 聊天数据，只需要存储text数据，音频数据不要展示是直接播放
-    val realtimeChatState: MutableLiveData<WebsocketState> = MutableLiveData(WebsocketState.NotInitialized)
+    val realtimeChatState: MutableLiveData<RealtimeChatState> = MutableLiveData(RealtimeChatState.NotInitialized)
 
     //---------------------------NetWork---------------------------
 
@@ -90,12 +91,45 @@ class TestVm(
     private var realtimeChatWsClient: TestRealtimeChatWsClient? = null
     var realtimeChatAudioRecord: AudioRecord? = null
     var realtimeChatAudioTrack: AudioTrack? = null
+
     // 初始化 + 连接
     fun initRealtimeChatWsClient(activity: FragmentActivity) {
         realtimeChatWsClient = TestRealtimeChatWsClient(
             GSON,
             realtimeChatWsUrl
         )
+
+        PermissionUtil.requestPermissionSelectX(
+            activity,
+            arrayOf(
+                Manifest.permission.RECORD_AUDIO,
+                Manifest.permission.WRITE_EXTERNAL_STORAGE,
+            ),
+            arrayOf(),
+            object : GainPermissionCallback{
+                @RequiresPermission(Manifest.permission.RECORD_AUDIO)
+                override fun allGranted() {
+                    Log.i(TAG, "获取录音权限成功")
+
+                    initRealtimeChatRecorderAndPlayer()
+
+                    startRealtimeWs()
+                }
+
+                override fun notGranted(notGrantedPermissions: Array<String?>?) {
+                    Log.w(TAG, "没有获取录音权限: ${notGrantedPermissions?.contentToString()}")
+                    ToastUtils.showToastActivity(activity, "没有获取录音权限")
+                    audioRecordPlayState.value = AudioRecordPlayState.Error("没有获取录音权限")
+                }
+
+                override fun always() {
+                }
+
+            }
+        )
+    }
+
+    private fun startRealtimeWs() {
         realtimeChatWsClient!!.start(
             object : WebSocketListener() {
                 override fun onClosed(
@@ -104,7 +138,7 @@ class TestVm(
                     reason: String
                 ) {
                     super.onClosed(webSocket, code, reason)
-                    realtimeChatState.value = WebsocketState.Disconnected
+                    realtimeChatState.value = RealtimeChatState.Disconnected
                     Log.i(TAG, "realtimeChatWsClient::onClosed")
                 }
 
@@ -123,54 +157,29 @@ class TestVm(
                     response: Response?
                 ) {
                     super.onFailure(webSocket, t, response)
-                    realtimeChatState.value = WebsocketState.Error(t.message ?: "-")
+                    realtimeChatState.value = RealtimeChatState.Error(t.message ?: "-")
                 }
 
                 override fun onMessage(webSocket: WebSocket, text: String) {
                     super.onMessage(webSocket, text)
                     // 处理text
-                    realtimeChatState.value = WebsocketState.Receiving
+                    realtimeChatState.value = RealtimeChatState.Receiving
                     handleTextMessage(text)
                 }
 
                 override fun onMessage(webSocket: WebSocket, bytes: ByteString) {
                     super.onMessage(webSocket, bytes)
-                    realtimeChatState.value = WebsocketState.Receiving
+                    realtimeChatState.value = RealtimeChatState.Receiving
                     // 处理字节信息
                     Log.i(TAG, "收到字节信息::长度: ${bytes.size}")
                 }
 
                 override fun onOpen(webSocket: WebSocket, response: Response) {
                     super.onOpen(webSocket, response)
-                    realtimeChatState.value = WebsocketState.Connected
+                    // 到了此处说明: 授权 && 连接成功
+                    realtimeChatState.value = RealtimeChatState.InitializedConnected
                     Log.i(TAG, "realtimeChatWsClient::onOpen; response: $response")
                 }
-            }
-        )
-
-        PermissionUtil.requestPermissionSelectX(
-            activity,
-            arrayOf(
-                Manifest.permission.RECORD_AUDIO,
-                Manifest.permission.WRITE_EXTERNAL_STORAGE,
-            ),
-            arrayOf(),
-            object : GainPermissionCallback{
-                @RequiresPermission(Manifest.permission.RECORD_AUDIO)
-                override fun allGranted() {
-                    Log.i(TAG, "获取录音权限成功")
-                    initRealtimeChatRecorderAndPlayer()
-                }
-
-                override fun notGranted(notGrantedPermissions: Array<String?>?) {
-                    Log.w(TAG, "没有获取录音权限: ${notGrantedPermissions?.contentToString()}")
-                    ToastUtils.showToastActivity(activity, "没有获取录音权限")
-                    audioRecordPlayState.value = AudioRecordPlayState.Error("没有获取录音权限")
-                }
-
-                override fun always() {
-                }
-
             }
         )
     }
@@ -236,7 +245,6 @@ class TestVm(
         // 录制音频 -> 音频流bytes实时转为Base64的PCM格式 -> 调用websocket的sendAudioMessage
     }
 
-    // todo 需要创建一个realTimeChatStatus
     fun sendRecordRealtimeChatAudio(){
 
     }

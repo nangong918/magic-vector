@@ -3,6 +3,7 @@ package com.magicvector.activity
 
 import android.annotation.SuppressLint
 import android.util.Log
+import com.core.baseutil.ui.ToastUtils
 import com.data.domain.vo.test.ChatState
 import com.data.domain.vo.test.TtsChatState
 import com.data.domain.vo.test.WebsocketState
@@ -10,6 +11,7 @@ import com.magicvector.databinding.ActivityTestBinding
 import com.magicvector.utils.BaseAppCompatVmActivity
 import com.magicvector.viewModel.activity.TestVm
 import com.data.domain.vo.test.AudioRecordPlayState
+import com.data.domain.vo.test.RealtimeChatState
 
 class TestActivity : BaseAppCompatVmActivity<ActivityTestBinding, TestVm>(
     TestActivity::class,
@@ -38,7 +40,18 @@ class TestActivity : BaseAppCompatVmActivity<ActivityTestBinding, TestVm>(
         }
 
         binding.btnRecordAndSendRealtimeChat.setOnClickListener {
-            vm.recordRealtimeChat()
+            when (vm.realtimeChatState) {
+                vm.realtimeChatState -> {
+                    vm.sendRecordRealtimeChatAudio()
+                }
+                vm.realtimeChatState -> {
+                    vm.recordRealtimeChat()
+                }
+                else -> {
+                    Log.w(TAG, "当前状态异常: ${vm.realtimeChatState}")
+                    ToastUtils.showToastActivity(this, "当前状态异常")
+                }
+            }
         }
 
         binding.btnStopRealtimeChat.setOnClickListener {
@@ -103,49 +116,55 @@ class TestActivity : BaseAppCompatVmActivity<ActivityTestBinding, TestVm>(
         // 状态
         vm.realtimeChatState.observe(this) { state ->
             when (state){
-                is WebsocketState.NotInitialized -> {
+                is RealtimeChatState.NotInitialized -> {
                     binding.tvRealTimeChatStatus.text = "未初始化"
                     binding.btnInitRealtimeChat.isEnabled = true
                     binding.btnRecordAndSendRealtimeChat.isEnabled = false
                     binding.btnStopRealtimeChat.isEnabled = false
                 }
-                is WebsocketState.Initializing -> {
+                is RealtimeChatState.Initializing -> {
                     binding.tvRealTimeChatStatus.text = "正在初始化..."
                     binding.btnInitRealtimeChat.isEnabled = false
                     binding.btnRecordAndSendRealtimeChat.isEnabled = false
                     binding.btnStopRealtimeChat.isEnabled = false
                 }
-                is WebsocketState.InitializedNotConnected -> {
-                    binding.tvRealTimeChatStatus.text = "已初始化未连接"
+                is RealtimeChatState.InitializedConnected -> {
+                    binding.tvRealTimeChatStatus.text = "已初始化并且已经连接"
                     binding.btnInitRealtimeChat.isEnabled = false
                     binding.btnRecordAndSendRealtimeChat.isEnabled = true
                     binding.btnStopRealtimeChat.isEnabled = false
                 }
-                is WebsocketState.Connected -> {
-                    binding.tvRealTimeChatStatus.text = "已连接"
+                is RealtimeChatState.Recording -> {
+                    binding.tvRealTimeChatStatus.text = "正在录音..."
                     binding.btnInitRealtimeChat.isEnabled = false
                     binding.btnRecordAndSendRealtimeChat.isEnabled = true
-                    binding.btnStopRealtimeChat.isEnabled = false
+                    binding.btnStopRealtimeChat.isEnabled = true
+
+                    // btn change
+                    binding.btnRecordAndSendRealtimeChat.text = "结束录音并发送"
                 }
-                is WebsocketState.Sending -> {
+                is RealtimeChatState.Sending -> {
                     binding.tvRealTimeChatStatus.text = "正在发送..."
                     binding.btnInitRealtimeChat.isEnabled = false
                     binding.btnRecordAndSendRealtimeChat.isEnabled = false
                     binding.btnStopRealtimeChat.isEnabled = true
+
+                    // btn change
+                    binding.btnRecordAndSendRealtimeChat.text = "开始录音"
                 }
-                is WebsocketState.Receiving -> {
+                is RealtimeChatState.Receiving -> {
                     binding.tvRealTimeChatStatus.text = "正在接收..."
                     binding.btnInitRealtimeChat.isEnabled = false
                     binding.btnRecordAndSendRealtimeChat.isEnabled = false
                     binding.btnStopRealtimeChat.isEnabled = true
                 }
-                is WebsocketState.Disconnected -> {
+                is RealtimeChatState.Disconnected -> {
                     binding.tvRealTimeChatStatus.text = "已断开"
                     binding.btnInitRealtimeChat.isEnabled = true
                     binding.btnRecordAndSendRealtimeChat.isEnabled = false
                     binding.btnStopRealtimeChat.isEnabled = false
                 }
-                is WebsocketState.Error -> {
+                is RealtimeChatState.Error -> {
                     binding.tvRealTimeChatStatus.text = "错误: ${state.message}"
                     binding.btnInitRealtimeChat.isEnabled = true
                     binding.btnRecordAndSendRealtimeChat.isEnabled = false
