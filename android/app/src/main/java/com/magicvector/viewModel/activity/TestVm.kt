@@ -223,21 +223,44 @@ class TestVm(
         when(type){
             RealtimeDataTypeEnum.START -> {
                 // 开始接收数据
+                realtimeChatState.value = RealtimeChatState.Receiving
+                // 开始播放
+                realtimeChatAudioTrack?.play()
             }
             RealtimeDataTypeEnum.STOP -> {
                 // 结束接收数据
+                realtimeChatState.value = RealtimeChatState.InitializedConnected
+                // 停止播放
+                realtimeChatAudioTrack?.stop()
             }
             RealtimeDataTypeEnum.AUDIO_CHUNK -> {
                 // 音频数据
+                realtimeChatState.value = RealtimeChatState.Receiving
                 val data = map[RealtimeDataTypeEnum.DATA]
-
+                data?.let {
+                    playBase64Audio(data)
+                }
             }
             RealtimeDataTypeEnum.TEXT_MESSAGE -> {
                 // 文本数据
+                realtimeChatState.value = RealtimeChatState.Receiving
                 val data = map[RealtimeDataTypeEnum.DATA]
-                realtimeChatMessage.postValue(realtimeChatMessage.value + data)
+                data?.let {
+                    realtimeChatMessage.postValue(realtimeChatMessage.value + data)
+                }
             }
         }
+    }
+
+    fun playBase64Audio(base64Audio: String){
+        val audioBytes = Base64.decode(base64Audio, Base64.DEFAULT)
+
+        // 写入音频数据
+        realtimeChatAudioTrack?.write(
+            audioBytes,
+            0,
+            audioBytes.size
+        )
     }
 
     fun startRecordRealtimeChatAudio() {
@@ -248,6 +271,13 @@ class TestVm(
             AudioFormat.ENCODING_PCM_16BIT
         )
 
+        // 发送启动录音
+        val dataMap = mapOf(
+            RealtimeDataTypeEnum.TYPE to RealtimeDataTypeEnum.START.type,
+            RealtimeDataTypeEnum.DATA to ""
+        )
+        realtimeChatWsClient?.sendMessage(dataMap)
+
         val audioBuffer = ByteArray(bufferSize)
         realtimeChatAudioRecord?.startRecording()
 
@@ -257,16 +287,27 @@ class TestVm(
                 val readSize = realtimeChatAudioRecord?.read(audioBuffer, 0, bufferSize) ?: 0
                 if (readSize > 0) {
                     val base64Audio = Base64.encodeToString(audioBuffer, 0, readSize, Base64.NO_WRAP)
-                    realtimeChatWsClient?.sendAudioMessage(base64Audio)
+                    val dataMap = mapOf(
+                        RealtimeDataTypeEnum.TYPE to RealtimeDataTypeEnum.AUDIO_CHUNK.type,
+                        RealtimeDataTypeEnum.DATA to base64Audio
+                    )
+                    realtimeChatWsClient?.sendMessage(dataMap)
                 }
             }
             realtimeChatAudioRecord?.stop()
+
+            // 发送结束录音
+            val dataMap = mapOf(
+                RealtimeDataTypeEnum.TYPE to RealtimeDataTypeEnum.STOP.type,
+                RealtimeDataTypeEnum.DATA to ""
+            )
+            realtimeChatWsClient?.sendMessage(dataMap)
+
         }.start()
     }
 
     fun stopAndSendRealtimeChatAudio(){
         realtimeChatState.value = RealtimeChatState.InitializedConnected
-        realtimeChatAudioRecord?.stop()
     }
 
     fun stopRealtimeChat() {

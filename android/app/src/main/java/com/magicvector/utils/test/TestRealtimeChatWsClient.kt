@@ -23,9 +23,9 @@ class TestRealtimeChatWsClient(
 
     private lateinit var webSocket: WebSocket
 
-    fun sendAudioMessage(base64Audio: String){
+    fun sendMessage(messageMap: Map<String, String>){
         if (::webSocket.isInitialized) {
-            webSocket.send(base64Audio)
+            webSocket.send(GSON.toJson(messageMap))
         }
     }
 
