@@ -40,11 +40,11 @@ class TestActivity : BaseAppCompatVmActivity<ActivityTestBinding, TestVm>(
         }
 
         binding.btnRecordAndSendRealtimeChat.setOnClickListener {
-            when (vm.realtimeChatState) {
-                RealtimeChatState.InitializedConnected -> {
+            when (vm.realtimeChatState.value) {
+                is RealtimeChatState.InitializedConnected -> {
                     vm.startRecordRealtimeChatAudio()
                 }
-                RealtimeChatState.Recording -> {
+                is RealtimeChatState.RecordingAndSending -> {
                     vm.stopAndSendRealtimeChatAudio()
                 }
                 else -> {
@@ -132,25 +132,19 @@ class TestActivity : BaseAppCompatVmActivity<ActivityTestBinding, TestVm>(
                     binding.tvRealTimeChatStatus.text = "已初始化并且已经连接"
                     binding.btnInitRealtimeChat.isEnabled = false
                     binding.btnRecordAndSendRealtimeChat.isEnabled = true
-                    binding.btnStopRealtimeChat.isEnabled = false
+                    binding.btnStopRealtimeChat.isEnabled = true
+
+                    // btn change
+                    binding.btnRecordAndSendRealtimeChat.text = "开始录音 + 流式发送"
                 }
-                is RealtimeChatState.Recording -> {
+                is RealtimeChatState.RecordingAndSending -> {
                     binding.tvRealTimeChatStatus.text = "正在录音..."
                     binding.btnInitRealtimeChat.isEnabled = false
                     binding.btnRecordAndSendRealtimeChat.isEnabled = true
                     binding.btnStopRealtimeChat.isEnabled = true
 
                     // btn change
-                    binding.btnRecordAndSendRealtimeChat.text = "结束录音并发送"
-                }
-                is RealtimeChatState.Sending -> {
-                    binding.tvRealTimeChatStatus.text = "正在发送..."
-                    binding.btnInitRealtimeChat.isEnabled = false
-                    binding.btnRecordAndSendRealtimeChat.isEnabled = false
-                    binding.btnStopRealtimeChat.isEnabled = true
-
-                    // btn change
-                    binding.btnRecordAndSendRealtimeChat.text = "开始录音"
+                    binding.btnRecordAndSendRealtimeChat.text = "结束录音 + 接收消息"
                 }
                 is RealtimeChatState.Receiving -> {
                     binding.tvRealTimeChatStatus.text = "正在接收..."

@@ -8,9 +8,7 @@ open class RealtimeChatState {
     // 已初始化并且连接
     object InitializedConnected : RealtimeChatState()
     // 正在记录消息
-    object Recording : RealtimeChatState()
-    // 正在发送消息
-    object Sending : RealtimeChatState()
+    object RecordingAndSending : RealtimeChatState()
     // 正在接收消息
     object Receiving : RealtimeChatState()
     // 断开连接

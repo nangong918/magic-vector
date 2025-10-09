@@ -43,6 +43,7 @@ import org.greenrobot.eventbus.Subscribe
 import org.greenrobot.eventbus.ThreadMode
 import java.io.ByteArrayOutputStream
 import java.util.concurrent.TimeUnit
+import kotlin.concurrent.atomics.AtomicBoolean
 
 class TestVm(
 
@@ -84,6 +85,7 @@ class TestVm(
     // realtime websocket 聊天
     val realtimeChatMessage: MutableLiveData<String> = MutableLiveData("") // 聊天数据，只需要存储text数据，音频数据不要展示是直接播放
     val realtimeChatState: MutableLiveData<RealtimeChatState> = MutableLiveData(RealtimeChatState.NotInitialized)
+    var isRecording = false
 
     //---------------------------NetWork---------------------------
 
@@ -101,11 +103,8 @@ class TestVm(
 
         PermissionUtil.requestPermissionSelectX(
             activity,
-            arrayOf(
-                Manifest.permission.RECORD_AUDIO,
-                Manifest.permission.WRITE_EXTERNAL_STORAGE,
-            ),
-            arrayOf(),
+            arrayOf(Manifest.permission.RECORD_AUDIO),
+            arrayOf(Manifest.permission.WRITE_EXTERNAL_STORAGE),
             object : GainPermissionCallback{
                 @RequiresPermission(Manifest.permission.RECORD_AUDIO)
                 override fun allGranted() {
@@ -119,7 +118,7 @@ class TestVm(
                 override fun notGranted(notGrantedPermissions: Array<String?>?) {
                     Log.w(TAG, "没有获取录音权限: ${notGrantedPermissions?.contentToString()}")
                     ToastUtils.showToastActivity(activity, "没有获取录音权限")
-                    audioRecordPlayState.value = AudioRecordPlayState.Error("没有获取录音权限")
+                    audioRecordPlayState.postValue(AudioRecordPlayState.Error("没有获取录音权限"))
                 }
 
                 override fun always() {
@@ -283,12 +282,15 @@ class TestVm(
         )
         realtimeChatWsClient?.sendMessage(dataMap)
 
+        // 录制状态
+        realtimeChatState.value = RealtimeChatState.RecordingAndSending
+
         val audioBuffer = ByteArray(bufferSize)
         realtimeChatAudioRecord?.startRecording()
 
         // 录制音频并转换为 Base64
         Thread {
-            while (realtimeChatState.value == RealtimeChatState.Recording) {
+            while (realtimeChatState.value == RealtimeChatState.RecordingAndSending) {
                 val readSize = realtimeChatAudioRecord?.read(audioBuffer, 0, bufferSize) ?: 0
                 if (readSize > 0) {
                     val base64Audio = Base64.encodeToString(audioBuffer, 0, readSize, Base64.NO_WRAP)

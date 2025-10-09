@@ -57,7 +57,7 @@
                 android:id="@+id/btn_recordAndSendRealtimeChat"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="录音发送"/>
+                android:text="开始录音 + 流式发送"/>
             <Button
                 android:id="@+id/btn_stopRealtimeChat"
                 android:layout_width="wrap_content"
