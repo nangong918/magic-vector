@@ -224,6 +224,8 @@ class TestVm(
             RealtimeDataTypeEnum.START -> {
                 // 开始接收数据
                 realtimeChatState.value = RealtimeChatState.Receiving
+                // 清空播放缓存
+                recordAudioTrack?.flush()
                 // 开始播放
                 realtimeChatAudioTrack?.play()
             }
@@ -232,6 +234,8 @@ class TestVm(
                 realtimeChatState.value = RealtimeChatState.InitializedConnected
                 // 停止播放
                 realtimeChatAudioTrack?.stop()
+                // 清空播放缓存
+                recordAudioTrack?.flush()
             }
             RealtimeDataTypeEnum.AUDIO_CHUNK -> {
                 // 音频数据
