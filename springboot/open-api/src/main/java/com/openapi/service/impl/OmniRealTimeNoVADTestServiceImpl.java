@@ -13,7 +13,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
-import javax.sound.sampled.LineUnavailableException;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.Arrays;
@@ -46,6 +45,7 @@ public class OmniRealTimeNoVADTestServiceImpl implements OmniRealTimeNoVADTestSe
      * @throws InterruptedException 线程中断
      * @throws IOException          音频处理异常
      */
+    @Override
     public void audioChat(
             Queue<String> b64AudioBuffer,
             Queue<byte[]> rawAudioBuffer,
