@@ -81,7 +81,7 @@ class TestVm(
     val audioRecordPlayState: MutableLiveData<AudioRecordPlayState> = MutableLiveData(AudioRecordPlayState.NotInitialized)
     val audioRecordVolume = MutableLiveData(0f) // 用于存储音量数据
 
-    // websocket realtime聊天
+    // realtime websocket 聊天
     val realtimeChatMessage: MutableLiveData<String> = MutableLiveData("") // 聊天数据，只需要存储text数据，音频数据不要展示是直接播放
     val realtimeChatState: MutableLiveData<RealtimeChatState> = MutableLiveData(RealtimeChatState.NotInitialized)
 
@@ -91,7 +91,7 @@ class TestVm(
     private var realtimeChatWsClient: TestRealtimeChatWsClient? = null
     var realtimeChatAudioRecord: AudioRecord? = null
     var realtimeChatAudioTrack: AudioTrack? = null
-
+    val realTimeChatSampleRate = 24000
     // 初始化 + 连接
     fun initRealtimeChatWsClient(activity: FragmentActivity) {
         realtimeChatWsClient = TestRealtimeChatWsClient(
@@ -187,17 +187,16 @@ class TestVm(
     @RequiresPermission(Manifest.permission.RECORD_AUDIO)
     private fun initRealtimeChatRecorderAndPlayer(){
         // 配置音频参数
-        val sampleRate = 24000
         val inChannelConfig = AudioFormat.CHANNEL_IN_MONO
         val outChannelConfig = AudioFormat.CHANNEL_OUT_MONO
         val audioFormat = AudioFormat.ENCODING_PCM_16BIT
-        val audioRecordBufferSize = AudioRecord.getMinBufferSize(sampleRate, inChannelConfig, audioFormat)
-        val audioTrackBufferSize = AudioTrack.getMinBufferSize(sampleRate, outChannelConfig, audioFormat)
+        val audioRecordBufferSize = AudioRecord.getMinBufferSize(realTimeChatSampleRate, inChannelConfig, audioFormat)
+        val audioTrackBufferSize = AudioTrack.getMinBufferSize(realTimeChatSampleRate, outChannelConfig, audioFormat)
 
         // 创建AudioRecord
         realtimeChatAudioRecord = AudioRecord(
             MediaRecorder.AudioSource.MIC,
-            sampleRate,
+            realTimeChatSampleRate,
             inChannelConfig,
             audioFormat,
             audioRecordBufferSize
@@ -206,7 +205,7 @@ class TestVm(
         // 创建AudioTrack
         realtimeChatAudioTrack = AudioTrack(
             AudioManager.STREAM_MUSIC,
-            sampleRate,
+            realTimeChatSampleRate,
             outChannelConfig,
             audioFormat,
             audioTrackBufferSize,
@@ -241,16 +240,42 @@ class TestVm(
         }
     }
 
-    fun recordRealtimeChat() {
+    fun startRecordRealtimeChatAudio() {
         // 录制音频 -> 音频流bytes实时转为Base64的PCM格式 -> 调用websocket的sendAudioMessage
+        val bufferSize = AudioRecord.getMinBufferSize(
+            realTimeChatSampleRate,
+            AudioFormat.CHANNEL_IN_MONO,
+            AudioFormat.ENCODING_PCM_16BIT
+        )
+
+        val audioBuffer = ByteArray(bufferSize)
+        realtimeChatAudioRecord?.startRecording()
+
+        // 录制音频并转换为 Base64
+        Thread {
+            while (realtimeChatState.value == RealtimeChatState.Recording) {
+                val readSize = realtimeChatAudioRecord?.read(audioBuffer, 0, bufferSize) ?: 0
+                if (readSize > 0) {
+                    val base64Audio = Base64.encodeToString(audioBuffer, 0, readSize, Base64.NO_WRAP)
+                    realtimeChatWsClient?.sendAudioMessage(base64Audio)
+                }
+            }
+            realtimeChatAudioRecord?.stop()
+        }.start()
     }
 
-    fun sendRecordRealtimeChatAudio(){
-
+    fun stopAndSendRealtimeChatAudio(){
+        realtimeChatState.value = RealtimeChatState.InitializedConnected
+        realtimeChatAudioRecord?.stop()
     }
 
     fun stopRealtimeChat() {
-
+        realtimeChatAudioRecord?.stop()
+        realtimeChatAudioRecord?.release()
+        realtimeChatAudioTrack?.stop()
+        realtimeChatAudioTrack?.release()
+        realtimeChatWsClient?.close()
+        realtimeChatState.value = RealtimeChatState.Disconnected
     }
 
     // sse

@@ -41,11 +41,11 @@ class TestActivity : BaseAppCompatVmActivity<ActivityTestBinding, TestVm>(
 
         binding.btnRecordAndSendRealtimeChat.setOnClickListener {
             when (vm.realtimeChatState) {
-                vm.realtimeChatState -> {
-                    vm.sendRecordRealtimeChatAudio()
+                RealtimeChatState.InitializedConnected -> {
+                    vm.startRecordRealtimeChatAudio()
                 }
-                vm.realtimeChatState -> {
-                    vm.recordRealtimeChat()
+                RealtimeChatState.Recording -> {
+                    vm.stopAndSendRealtimeChatAudio()
                 }
                 else -> {
                     Log.w(TAG, "当前状态异常: ${vm.realtimeChatState}")
