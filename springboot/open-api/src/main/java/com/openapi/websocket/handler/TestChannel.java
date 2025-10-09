@@ -1,58 +1,55 @@
 package com.openapi.websocket.handler;
 
-import jakarta.websocket.*;
-import jakarta.websocket.server.ServerEndpoint;
 import lombok.extern.slf4j.Slf4j;
+import org.jetbrains.annotations.NotNull;
 import org.springframework.stereotype.Component;
+import org.springframework.web.socket.CloseStatus;
+import org.springframework.web.socket.TextMessage;
+import org.springframework.web.socket.WebSocketSession;
+import org.springframework.web.socket.handler.TextWebSocketHandler;
 
-import java.io.IOException;
 import java.time.Instant;
 
 
 @Slf4j
 @Component
-@ServerEndpoint(value = "/test-channel")
-public class TestChannel {
+public class TestChannel extends TextWebSocketHandler {
 
-    private Session session;
+    @Override
+    public void afterConnectionEstablished(WebSocketSession session) throws Exception {
+        log.info("[websocket] 新的连接：id={}", session.getId());
+        super.afterConnectionEstablished(session);
+    }
 
-    // 收到消息
-    @OnMessage
-    public void onMessage(String message) throws IOException {
+    @Override
+    protected void handleTextMessage(WebSocketSession session, TextMessage message) throws Exception {
+        log.info("[websocket] 收到消息：id={}，message={}", session.getId(), message.getPayload());
 
-        log.info("[websocket] 收到消息：id={}，message={}", this.session.getId(), message);
-
-        if (message.equalsIgnoreCase("bye")) {
-            // 由服务器主动关闭连接。状态码为 NORMAL_CLOSURE（正常关闭）。
-            this.session.close(new CloseReason(CloseReason.CloseCodes.NORMAL_CLOSURE, "Bye"));;
+        if (message.getPayload().equalsIgnoreCase("bye")) {
+            session.close(CloseStatus.NORMAL);
             return;
         }
 
-        this.session.getAsyncRemote().sendText("["+ Instant.now().toEpochMilli() +"] Hello " + message);
+        String response = "[" + Instant.now().toEpochMilli() + "] Hello " + message.getPayload();
+        session.sendMessage(new TextMessage(response));
     }
 
-    // 连接打开
-    @OnOpen
-    public void onOpen(Session session, EndpointConfig endpointConfig){
-        // 保存 session 到对象
-        this.session = session;
-        log.info("[websocket] 新的连接：id={}", this.session.getId());
+    @Override
+    public void handleTransportError(WebSocketSession session, Throwable exception) throws Exception {
+        log.info("[websocket] 连接异常：id={}，throwable={}", session.getId(), exception.getMessage());
+        session.close();
+        super.handleTransportError(session, exception);
     }
 
-    // 连接关闭
-    @OnClose
-    public void onClose(CloseReason closeReason){
-        log.info("[websocket] 连接断开：id={}，reason={}", this.session.getId(),closeReason);
+    @Override
+    public void afterConnectionClosed(WebSocketSession session, @NotNull CloseStatus status) throws Exception {
+        log.info("[websocket] 连接断开：id={}，reason={}", session.getId(), status);
+        super.afterConnectionClosed(session, status);
     }
 
-    // 连接异常
-    @OnError
-    public void onError(Throwable throwable) throws IOException {
-
-        log.info("[websocket] 连接异常：id={}，throwable={}", this.session.getId(), throwable.getMessage());
-
-        // 关闭连接。状态码为 UNEXPECTED_CONDITION（意料之外的异常）
-        this.session.close(new CloseReason(CloseReason.CloseCodes.UNEXPECTED_CONDITION, throwable.getMessage()));
+    @Override
+    public boolean supportsPartialMessages() {
+        return false; // 如果不支持部分消息，返回 false
     }
 
 }
