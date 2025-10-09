@@ -34,7 +34,7 @@ public class OmniRealTimeNoVADTestServiceImpl implements OmniRealTimeNoVADTestSe
 
     private final ChatConfig config;
     private final String MODEL = "qwen3-omni-flash-realtime";
-// todo 继续完成此处， ** Android 端录音view ** -> spring event 控制 -> websocket实时推流 -> Android 端录音 -> Android 端播放
+
     /**
      * 音频对话
      * @param b64AudioBuffer        64位编码的音频数据响应
@@ -125,7 +125,13 @@ public class OmniRealTimeNoVADTestServiceImpl implements OmniRealTimeNoVADTestSe
         conversation.updateSession(config);
 
         while (!stopConversation.get()){
-            sendAudio(conversation, rawAudioBuffer, stopRecording);
+            if (!stopRecording.get()){
+                sendAudio(conversation, rawAudioBuffer, stopRecording);
+            }
+            else {
+                // 10 毫秒休眠
+                Thread.sleep(10);
+            }
             conversation.commit();
             conversation.createResponse(null, null);
         }
@@ -133,7 +139,7 @@ public class OmniRealTimeNoVADTestServiceImpl implements OmniRealTimeNoVADTestSe
 
     private void sendAudio(OmniRealtimeConversation conversation,
                            Queue<byte[]> rawAudioBuffer,
-                           AtomicBoolean stopRecording) throws IOException {
+                           AtomicBoolean stopRecording) throws IOException, InterruptedException {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
 
         while (!stopRecording.get()) {
@@ -142,6 +148,10 @@ public class OmniRealTimeNoVADTestServiceImpl implements OmniRealTimeNoVADTestSe
             if (audioData != null) {
                 // 将数据写入输出流
                 out.write(audioData);
+            }
+            else {
+                // 10 毫秒休眠
+                Thread.sleep(10);
             }
         }
 
