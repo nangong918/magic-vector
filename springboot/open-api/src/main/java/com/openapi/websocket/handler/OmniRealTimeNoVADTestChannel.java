@@ -33,7 +33,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 @Component
 public class OmniRealTimeNoVADTestChannel extends TextWebSocketHandler {
 
-    private final ChatConfig config;
     private final OmniRealTimeNoVADTestService omniRealTimeNoVADTestService;
 
 

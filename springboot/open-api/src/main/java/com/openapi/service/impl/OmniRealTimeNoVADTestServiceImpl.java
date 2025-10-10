@@ -34,6 +34,8 @@ public class OmniRealTimeNoVADTestServiceImpl implements OmniRealTimeNoVADTestSe
 
     private final ChatConfig config;
     private final String MODEL = "qwen3-omni-flash-realtime";
+    // 用户录音完成的绘画阻塞信号量
+    private CountDownLatch responseDoneLatch = new CountDownLatch(1);
 
     /**
      * 音频对话
@@ -122,7 +124,12 @@ public class OmniRealTimeNoVADTestServiceImpl implements OmniRealTimeNoVADTestSe
 
         while (!stopConversation.get()){
             if (!stopRecording.get()){
-                sendAudio(conversation, rawAudioBuffer, stopRecording);
+                responseDoneLatch.await();
+                log.info("[audioChat] 开始录音，并阻塞会话线程");
+                sendAudio(conversation, rawAudioBuffer, stopRecording, stopConversation);
+                // 准备下一次等待 (CountDownLatch 的设计使得它在计数归零后无法重新计数, 必须new)
+                responseDoneLatch = new CountDownLatch(1);
+                log.info("[audioChat] 录音发送结束，恢复阻塞线程");
             }
             else {
                 // 10 毫秒休眠
@@ -135,9 +142,11 @@ public class OmniRealTimeNoVADTestServiceImpl implements OmniRealTimeNoVADTestSe
 
     private void sendAudio(OmniRealtimeConversation conversation,
                            Queue<byte[]> rawAudioBuffer,
-                           AtomicBoolean stopRecording) throws IOException, InterruptedException {
+                           AtomicBoolean stopRecording,
+                           AtomicBoolean stopConversation) throws IOException, InterruptedException {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
 
+        log.info("[audioChat] 开始将音频流数据填充缓冲区");
         while (!stopRecording.get()) {
             // 从队列中获取数据
             byte[] audioData = rawAudioBuffer.poll();
@@ -150,11 +159,18 @@ public class OmniRealTimeNoVADTestServiceImpl implements OmniRealTimeNoVADTestSe
                 Thread.sleep(10);
             }
         }
+        log.info("[audioChat] 音频数据填充缓冲区结束");
+
+        if (stopConversation.get()){
+            log.info("[audioChat] 会话已经结束，录制的音频取消发送");
+            return;
+        }
 
         // 发送录音数据
         byte[] audioData = out.toByteArray();
         String audioB64 = Base64.getEncoder().encodeToString(audioData);
         conversation.appendAudio(audioB64);
         out.close();
+        log.info("[audioChat] 音频数据发送结束");
     }
 }
