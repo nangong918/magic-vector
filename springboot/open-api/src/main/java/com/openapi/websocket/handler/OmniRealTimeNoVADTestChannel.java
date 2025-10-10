@@ -37,7 +37,7 @@ public class OmniRealTimeNoVADTestChannel extends TextWebSocketHandler {
 
 
     private final Queue<String> responseAudioBuffer = new ConcurrentLinkedQueue<>();
-    private final Queue<byte[]> rawAudioBuffer = new ConcurrentLinkedQueue<>();
+    private final Queue<byte[]> requestAudioBuffer = new ConcurrentLinkedQueue<>();
     private final AtomicBoolean stopRecording = new AtomicBoolean(true);
     private OmniRealtimeConversation conversation;
 
@@ -95,7 +95,7 @@ public class OmniRealTimeNoVADTestChannel extends TextWebSocketHandler {
                 omniRealTimeNoVADTestService.startChat(
                         conversation,
                         stopRecording,
-                        rawAudioBuffer
+                        requestAudioBuffer
                 );
             }
             case STOP -> {
@@ -125,7 +125,7 @@ public class OmniRealTimeNoVADTestChannel extends TextWebSocketHandler {
         log.info("[websocket] 音频块大小：{}", audioBytes.length);
 
         // 将字节数组放入队列
-        rawAudioBuffer.offer(audioBytes);
+        requestAudioBuffer.offer(audioBytes);
     }
 
 }

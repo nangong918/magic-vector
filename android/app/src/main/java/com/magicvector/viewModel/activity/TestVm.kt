@@ -44,6 +44,7 @@ import org.greenrobot.eventbus.ThreadMode
 import java.io.ByteArrayOutputStream
 import java.util.concurrent.TimeUnit
 import kotlin.concurrent.atomics.AtomicBoolean
+import kotlin.math.log
 
 class TestVm(
 
@@ -297,7 +298,8 @@ class TestVm(
                         RealtimeDataTypeEnum.TYPE to RealtimeDataTypeEnum.AUDIO_CHUNK.type,
                         RealtimeDataTypeEnum.DATA to base64Audio
                     )
-                    realtimeChatWsClient?.sendMessage(dataMap)
+                    realtimeChatWsClient!!.sendMessage(dataMap)
+//                    Log.i(TAG, "发送数据:: 类型: ${dataMap[RealtimeDataTypeEnum.TYPE]}; 长度: ${base64Audio.length}; 数据: ${base64Audio.take(100)}")
                 }
             }
             realtimeChatAudioRecord?.stop()
@@ -307,7 +309,8 @@ class TestVm(
                 RealtimeDataTypeEnum.TYPE to RealtimeDataTypeEnum.STOP.type,
                 RealtimeDataTypeEnum.DATA to ""
             )
-            realtimeChatWsClient?.sendMessage(dataMap)
+            realtimeChatWsClient!!.sendMessage(dataMap)
+//            Log.i(TAG, "发送数据:: 类型: ${dataMap[RealtimeDataTypeEnum.TYPE]}")
 
         }.start()
     }

@@ -1,5 +1,6 @@
 package com.magicvector.utils.test
 
+import android.util.Log
 import com.google.gson.Gson
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -18,15 +19,15 @@ class TestRealtimeChatWsClient(
     }
 
     private val client = OkHttpClient.Builder()
-        .pingInterval(30, TimeUnit.SECONDS) // 设置心跳间隔
+//        .pingInterval(30, TimeUnit.SECONDS) // 设置心跳间隔
         .build()
 
     private lateinit var webSocket: WebSocket
 
     fun sendMessage(messageMap: Map<String, String>){
-        if (::webSocket.isInitialized) {
-            webSocket.send(GSON.toJson(messageMap))
-        }
+        val message = GSON.toJson(messageMap)
+        webSocket.send(message)
+        Log.d(TAG, "send message: ${message.take(50)}")
     }
 
     fun start(listener: WebSocketListener){
