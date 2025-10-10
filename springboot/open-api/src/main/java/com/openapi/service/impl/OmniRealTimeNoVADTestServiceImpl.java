@@ -11,6 +11,7 @@ import com.openapi.config.ChatConfig;
 import com.openapi.service.OmniRealTimeNoVADTestService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.jetbrains.annotations.NotNull;
 import org.springframework.stereotype.Service;
 
 import java.io.ByteArrayOutputStream;
@@ -19,7 +20,6 @@ import java.util.Arrays;
 import java.util.Base64;
 import java.util.HashMap;
 import java.util.Queue;
-import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -34,36 +34,23 @@ public class OmniRealTimeNoVADTestServiceImpl implements OmniRealTimeNoVADTestSe
 
     private final ChatConfig config;
     private final String MODEL = "qwen3-omni-flash-realtime";
-    // 用户录音完成的绘画阻塞信号量
-    private CountDownLatch responseDoneLatch = new CountDownLatch(1);
 
     /**
-     * 音频对话
-     * @param b64AudioBuffer        64位编码的音频数据响应
-     * @param rawAudioBuffer        用户录音原始音频数据
-     * @param stopConversation      停止对话    (Spring Event控制)
-     * @param stopRecording         停止录音    (Spring Event控制)
-     * @throws NoApiKeyException    缺少 apikey
-     * @throws InterruptedException 线程中断
-     * @throws IOException          音频处理异常
+     * 获取会话
+     * @param responseAudioBuffer   响应音频数据
+     * @return  会话
      */
     @Override
-    public void audioChat(
-            Queue<String> b64AudioBuffer,
-            Queue<byte[]> rawAudioBuffer,
-            AtomicBoolean stopConversation,
-            AtomicBoolean stopRecording
-    ) throws NoApiKeyException, InterruptedException, IOException {
-        log.info("[audioChat] 开始, apikey: {}", config.getApiKey());
+    public OmniRealtimeConversation getOmniRealtimeConversation(@NotNull Queue<String> responseAudioBuffer){
+        log.info("[获取会话] apikey: {}", config.getApiKey());
 
         OmniRealtimeParam param = OmniRealtimeParam.builder()
                 .model(MODEL)
                 .apikey(config.getApiKey())
                 .build();
-
         final AtomicReference<OmniRealtimeConversation> conversationRef = new AtomicReference<>(null);
 
-        OmniRealtimeConversation conversation = new OmniRealtimeConversation(param, new OmniRealtimeCallback() {
+        return new OmniRealtimeConversation(param, new OmniRealtimeCallback() {
             @Override
             public void onOpen() {
                 super.onOpen();
@@ -84,8 +71,8 @@ public class OmniRealTimeNoVADTestServiceImpl implements OmniRealTimeNoVADTestSe
                         log.info("got llm response delta: {}", message.get("delta").getAsString());
                     }
                     case "response.audio.delta" -> {
-                        String recvAudioB64 = message.get("delta").getAsString();
-                        b64AudioBuffer.add(recvAudioB64);
+                        String b64Audio = message.get("delta").getAsString();
+                        responseAudioBuffer.add(b64Audio);
                     }
                     case "response.done" -> {
                         log.info("======RESPONSE DONE======");
@@ -106,11 +93,17 @@ public class OmniRealTimeNoVADTestServiceImpl implements OmniRealTimeNoVADTestSe
                 log.info("[audioChat] onClose; connection closed code: {}, reason: {}", code, reason);
             }
         });
-        conversationRef.set(conversation);
+    }
 
-        // 连接
+    /**
+     * 设置会话参数 + 启动会话
+     * @param conversation          会话
+     * @throws NoApiKeyException    缺少 apikey
+     * @throws InterruptedException 线程中断
+     */
+    @Override
+    public void setOmniRealtimeConversationConfig(@NotNull OmniRealtimeConversation conversation) throws NoApiKeyException, InterruptedException {
         conversation.connect();
-
         OmniRealtimeConfig config = OmniRealtimeConfig.builder()
                 .modalities(Arrays.asList(OmniRealtimeModality.AUDIO, OmniRealtimeModality.TEXT))
                 .voice("Cherry")
@@ -121,56 +114,51 @@ public class OmniRealTimeNoVADTestServiceImpl implements OmniRealTimeNoVADTestSe
                 }})
                 .build();
         conversation.updateSession(config);
-
-        while (!stopConversation.get()){
-            if (!stopRecording.get()){
-                responseDoneLatch.await();
-                log.info("[audioChat] 开始录音，并阻塞会话线程");
-                sendAudio(conversation, rawAudioBuffer, stopRecording, stopConversation);
-                // 准备下一次等待 (CountDownLatch 的设计使得它在计数归零后无法重新计数, 必须new)
-                responseDoneLatch = new CountDownLatch(1);
-                log.info("[audioChat] 录音发送结束，恢复阻塞线程");
-            }
-            else {
-                // 10 毫秒休眠
-                Thread.sleep(10);
-            }
-            conversation.commit();
-            conversation.createResponse(null, null);
-        }
     }
 
-    private void sendAudio(OmniRealtimeConversation conversation,
-                           Queue<byte[]> rawAudioBuffer,
-                           AtomicBoolean stopRecording,
-                           AtomicBoolean stopConversation) throws IOException, InterruptedException {
+    /**
+     * 启动会话
+     * @param conversation              会话
+     * @param stopRecording             停止录音
+     * @param requestAudioBuffer        请求音频数据
+     * @throws IOException              输入输出异常
+     * @throws InterruptedException     线程中断
+     */
+    @Override
+    public void startChat(@NotNull OmniRealtimeConversation conversation,
+                          @NotNull AtomicBoolean stopRecording,
+                          @NotNull Queue<byte[]> requestAudioBuffer) throws IOException, InterruptedException {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
 
         log.info("[audioChat] 开始将音频流数据填充缓冲区");
         while (!stopRecording.get()) {
             // 从队列中获取数据
-            byte[] audioData = rawAudioBuffer.poll();
+            byte[] audioData = requestAudioBuffer.poll();
+
             if (audioData != null) {
                 // 将数据写入输出流
-                out.write(audioData);
+                int length = audioData.length;
+                if (length > 0) {
+                    log.info("[audioChat] 填充缓冲区数据长度: {}", length);
+                    out.write(audioData, 0, length);
+                }
             }
             else {
                 // 10 毫秒休眠
                 Thread.sleep(10);
             }
         }
-        log.info("[audioChat] 音频数据填充缓冲区结束");
-
-        if (stopConversation.get()){
-            log.info("[audioChat] 会话已经结束，录制的音频取消发送");
-            return;
-        }
 
         // 发送录音数据
         byte[] audioData = out.toByteArray();
         String audioB64 = Base64.getEncoder().encodeToString(audioData);
+        log.info("[audioChat] 音频数据开始添加, 音频数据长度： {}", audioB64.length());
         conversation.appendAudio(audioB64);
         out.close();
-        log.info("[audioChat] 音频数据发送结束");
+
+        log.info("[audioChat] 会话提交");
+        conversation.commit();
+        conversation.createResponse(null, null);
     }
+
 }

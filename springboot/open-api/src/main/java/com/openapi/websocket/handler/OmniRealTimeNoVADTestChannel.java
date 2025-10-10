@@ -1,5 +1,6 @@
 package com.openapi.websocket.handler;
 
+import com.alibaba.dashscope.audio.omni.OmniRealtimeConversation;
 import com.alibaba.dashscope.exception.NoApiKeyException;
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.TypeReference;
@@ -17,7 +18,6 @@ import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
 
-import java.io.IOException;
 import java.util.Base64;
 import java.util.Map;
 import java.util.Queue;
@@ -36,11 +36,10 @@ public class OmniRealTimeNoVADTestChannel extends TextWebSocketHandler {
     private final OmniRealTimeNoVADTestService omniRealTimeNoVADTestService;
 
 
-    private final Queue<String> b64AudioBuffer = new ConcurrentLinkedQueue<>();
+    private final Queue<String> responseAudioBuffer = new ConcurrentLinkedQueue<>();
     private final Queue<byte[]> rawAudioBuffer = new ConcurrentLinkedQueue<>();
-    private final AtomicBoolean stopConversation = new AtomicBoolean(false);
     private final AtomicBoolean stopRecording = new AtomicBoolean(true);
-
+    private OmniRealtimeConversation conversation;
 
     @Override
     public void afterConnectionEstablished(@NotNull WebSocketSession session) throws Exception {
@@ -48,28 +47,23 @@ public class OmniRealTimeNoVADTestChannel extends TextWebSocketHandler {
         log.info("[websocket] 创建连接：id={}", session.getId());
 
         try {
-            omniRealTimeNoVADTestService.audioChat(
-                    b64AudioBuffer,
-                    rawAudioBuffer,
-                    stopConversation,
-                    stopRecording
+            conversation = omniRealTimeNoVADTestService.getOmniRealtimeConversation(
+                    responseAudioBuffer
             );
+            omniRealTimeNoVADTestService.setOmniRealtimeConversationConfig(
+                    conversation
+            );
+            log.info("[websocket] 创建OmniRealtime会话：id={}", conversation.getSessionId());
         } catch (NoApiKeyException e) {
             log.error("[websocket error] 缺少 apikey", e);
         } catch (InterruptedException e) {
             log.error("[websocket error] 线程中断", e);
-        } catch (IOException e) {
-            log.error("[websocket error] 音频处理异常", e);
         }
-
-        stopConversation.set(false);
-        stopRecording.set(true);
     }
 
     @Override
     public void afterConnectionClosed(WebSocketSession session, @NotNull CloseStatus status) throws Exception {
         log.info("[websocket] 连接断开：id={}，reason={}", session.getId(), status);
-        stopConversation.set(true);
         stopRecording.set(true);
         super.afterConnectionClosed(session, status);
     }
@@ -78,7 +72,6 @@ public class OmniRealTimeNoVADTestChannel extends TextWebSocketHandler {
     public void handleTransportError(WebSocketSession session, Throwable exception) throws Exception {
         log.info("[websocket] 连接异常：id={}，throwable={}", session.getId(), exception.getMessage());
         session.close();
-        stopConversation.set(true);
         stopRecording.set(true);
         super.handleTransportError(session, exception);
     }
@@ -99,6 +92,11 @@ public class OmniRealTimeNoVADTestChannel extends TextWebSocketHandler {
             case START -> {
                 log.info("[websocket] 开始录音");
                 stopRecording.set(false);
+                omniRealTimeNoVADTestService.startChat(
+                        conversation,
+                        stopRecording,
+                        rawAudioBuffer
+                );
             }
             case STOP -> {
                 log.info("[websocket] 停止录音");

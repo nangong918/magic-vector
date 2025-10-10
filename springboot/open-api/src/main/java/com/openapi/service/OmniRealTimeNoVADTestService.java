@@ -1,6 +1,8 @@
 package com.openapi.service;
 
+import com.alibaba.dashscope.audio.omni.OmniRealtimeConversation;
 import com.alibaba.dashscope.exception.NoApiKeyException;
+import org.jetbrains.annotations.NotNull;
 
 import java.io.IOException;
 import java.util.Queue;
@@ -11,10 +13,12 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * @date 2025/10/7 17:39
  */
 public interface OmniRealTimeNoVADTestService {
-    void audioChat(
-            Queue<String> b64AudioBuffer,
-            Queue<byte[]> rawAudioBuffer,
-            AtomicBoolean stopConversation,
-            AtomicBoolean stopRecording
-    ) throws NoApiKeyException, InterruptedException, IOException;
+
+    OmniRealtimeConversation getOmniRealtimeConversation(@NotNull Queue<String> responseAudioBuffer);
+
+    void setOmniRealtimeConversationConfig(@NotNull OmniRealtimeConversation conversation) throws NoApiKeyException, InterruptedException;
+
+    void startChat(@NotNull OmniRealtimeConversation conversation,
+                   @NotNull AtomicBoolean stopRecording,
+                   @NotNull Queue<byte[]> requestAudioBuffer) throws IOException, InterruptedException;
 }

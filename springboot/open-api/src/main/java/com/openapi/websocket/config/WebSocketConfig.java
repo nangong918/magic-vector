@@ -21,7 +21,6 @@ import org.springframework.web.socket.server.standard.ServerEndpointExporter;
 @EnableWebSocket
 public class WebSocketConfig implements WebSocketConfigurer {
 
-    private final ChatConfig config;
     private final OmniRealTimeNoVADTestService omniRealTimeNoVADTestService;
 
     /**
@@ -32,7 +31,6 @@ public class WebSocketConfig implements WebSocketConfigurer {
     public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
         registry.addHandler(new TestChannel(), "/test-channel")
                 .addHandler(new OmniRealTimeNoVADTestChannel(
-                        config,
                         omniRealTimeNoVADTestService
                 ), "/realtime-no-vad-test")
                 .setAllowedOrigins("*"); // 根据需要设置允许的源
