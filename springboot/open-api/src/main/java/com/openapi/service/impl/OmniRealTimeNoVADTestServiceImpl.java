@@ -6,19 +6,24 @@ import com.alibaba.dashscope.audio.omni.OmniRealtimeConversation;
 import com.alibaba.dashscope.audio.omni.OmniRealtimeModality;
 import com.alibaba.dashscope.audio.omni.OmniRealtimeParam;
 import com.alibaba.dashscope.exception.NoApiKeyException;
+import com.alibaba.fastjson.JSON;
 import com.google.gson.JsonObject;
 import com.openapi.config.ChatConfig;
+import com.openapi.domain.constant.realtime.RealtimeDataTypeEnum;
 import com.openapi.service.OmniRealTimeNoVADTestService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.stereotype.Service;
+import org.springframework.web.socket.TextMessage;
+import org.springframework.web.socket.WebSocketSession;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Base64;
 import java.util.HashMap;
+import java.util.Map;
 import java.util.Queue;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
@@ -37,11 +42,12 @@ public class OmniRealTimeNoVADTestServiceImpl implements OmniRealTimeNoVADTestSe
 
     /**
      * 获取会话
-     * @param responseAudioBuffer   响应音频数据
-     * @return  会话
+     * @param session       websocket会话
+     * @return              OmniRealtime会话
      */
     @Override
-    public OmniRealtimeConversation getOmniRealtimeConversation(@NotNull Queue<String> responseAudioBuffer){
+    public OmniRealtimeConversation getOmniRealtimeConversation(
+            @NotNull WebSocketSession session){
         log.info("[获取会话] apikey: {}", config.getApiKey());
 
         OmniRealtimeParam param = OmniRealtimeParam.builder()
@@ -62,20 +68,47 @@ public class OmniRealTimeNoVADTestServiceImpl implements OmniRealTimeNoVADTestSe
                 String type = message.get("type").getAsString();
                 switch(type) {
                     case "session.created" -> {
-                        log.info("start session: {}", message.get("session").getAsJsonObject().get("id").getAsString());
+                        log.info("session.created");
                     }
                     case "conversation.item.input_audio_transcription.completed" -> {
                         log.info("question: {}", message.get("transcript").getAsString());
                     }
                     case "response.audio_transcript.delta" -> {
                         log.info("got llm response delta: {}", message.get("delta").getAsString());
+                        Map<String, String> responseMap = new HashMap<>();
+                        responseMap.put(RealtimeDataTypeEnum.TYPE, RealtimeDataTypeEnum.START.getType());
+                        responseMap.put(RealtimeDataTypeEnum.DATA, RealtimeDataTypeEnum.START.getType());
+                        String response = JSON.toJSONString(responseMap);
+                        try {
+                            session.sendMessage(new TextMessage(response));
+                        } catch (IOException e) {
+                            log.error("[websocket error] 响应消息异常", e);
+                        }
                     }
                     case "response.audio.delta" -> {
                         String b64Audio = message.get("delta").getAsString();
-                        responseAudioBuffer.add(b64Audio);
+//                        responseAudioBuffer.add(b64Audio);
+                        Map<String, String> responseMap = new HashMap<>();
+                        responseMap.put(RealtimeDataTypeEnum.TYPE, RealtimeDataTypeEnum.AUDIO_CHUNK.getType());
+                        responseMap.put(RealtimeDataTypeEnum.DATA, b64Audio);
+                        String response = JSON.toJSONString(responseMap);
+                        try {
+                            session.sendMessage(new TextMessage(response));
+                        } catch (IOException e) {
+                            log.error("[websocket error] 响应消息异常", e);
+                        }
                     }
                     case "response.done" -> {
                         log.info("======RESPONSE DONE======");
+                        Map<String, String> responseMap = new HashMap<>();
+                        responseMap.put(RealtimeDataTypeEnum.TYPE, RealtimeDataTypeEnum.START.getType());
+                        responseMap.put(RealtimeDataTypeEnum.DATA, RealtimeDataTypeEnum.START.getType());
+                        String response = JSON.toJSONString(responseMap);
+                        try {
+                            session.sendMessage(new TextMessage(response));
+                        } catch (IOException e) {
+                            log.error("[websocket error] 响应消息异常", e);
+                        }
                         if (conversationRef.get() != null) {
                             log.info("[Metric] response: {}, first text delay: {} ms, first audio delay: {} ms",
                                     conversationRef.get().getResponseId(),

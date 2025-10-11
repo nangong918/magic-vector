@@ -53,7 +53,7 @@ public class OmniRealTimeNoVADTestChannel extends TextWebSocketHandler {
 
         try {
             conversation = omniRealTimeNoVADTestService.getOmniRealtimeConversation(
-                    responseAudioBuffer
+                    session
             );
             omniRealTimeNoVADTestService.setOmniRealtimeConversationConfig(
                     conversation

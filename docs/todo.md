@@ -24,6 +24,7 @@ VAD 实时打断 + 3D-Speaker声纹识别
 ### lv3(无关紧要)
 部分View改用Jetpack compose
 最后升级Flutter, 打通IOS用户
+spring的线程池升级为虚拟线程
 
 
 ## 已完成
@@ -32,3 +33,7 @@ App 加密混淆 (2025/9/24)
 Android MessageList + ChatActivity迁移 (2025/9/27)
 Spring 使用webflux + sse 传输流式数据, Android 用okhttp-sse 接收流式数据 (2025/9/28)
 Spring + Android 实现了SSE 的TTS问答语音合成 (2025/10/3)
+Websocket测试 (2025/10/7)
+添加VoiceWaveView语音波形图组件 (2025/10/7)
+实现 OmniRealTimeNoVADTestChannel 音频处理功能 (2025/10/8)
+完成前后端时音频聊天 (2025/10/11)

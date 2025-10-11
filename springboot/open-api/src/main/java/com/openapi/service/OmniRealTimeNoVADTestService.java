@@ -3,6 +3,7 @@ package com.openapi.service;
 import com.alibaba.dashscope.audio.omni.OmniRealtimeConversation;
 import com.alibaba.dashscope.exception.NoApiKeyException;
 import org.jetbrains.annotations.NotNull;
+import org.springframework.web.socket.WebSocketSession;
 
 import java.io.IOException;
 import java.util.Queue;
@@ -14,7 +15,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
  */
 public interface OmniRealTimeNoVADTestService {
 
-    OmniRealtimeConversation getOmniRealtimeConversation(@NotNull Queue<String> responseAudioBuffer);
+    OmniRealtimeConversation getOmniRealtimeConversation(
+            @NotNull WebSocketSession session);
 
     void setOmniRealtimeConversationConfig(@NotNull OmniRealtimeConversation conversation) throws NoApiKeyException, InterruptedException;
 

@@ -1,6 +1,5 @@
 package com.openapi.websocket.config;
 
-import com.openapi.config.ChatConfig;
 import com.openapi.config.ThreadPoolConfig;
 import com.openapi.service.OmniRealTimeNoVADTestService;
 import com.openapi.websocket.handler.OmniRealTimeNoVADTestChannel;

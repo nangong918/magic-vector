@@ -256,7 +256,8 @@ class TestVm(
         }
     }
 
-    fun playBase64Audio(base64Audio: String){
+    fun playBase64Audio(base64Audio: String) {
+
         val audioBytes = Base64.decode(base64Audio, Base64.DEFAULT)
 
         // 写入音频数据
@@ -265,6 +266,8 @@ class TestVm(
             0,
             audioBytes.size
         )
+
+        Log.i(TAG, "播放音频数据::: ${audioBytes.take(50)}")
     }
 
     fun startRecordRealtimeChatAudio() {
