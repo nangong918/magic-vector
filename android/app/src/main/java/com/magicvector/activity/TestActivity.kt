@@ -244,6 +244,8 @@ class TestActivity : BaseAppCompatVmActivity<ActivityTestBinding, TestVm>(
         // 音量
         vm.audioRecordVolume.observe(this){ volume ->
             Log.i(TAG, "音量: $volume")
+
+            binding.vVoiceWave.setVolume(volume)
         }
 
         /// websocket
@@ -410,26 +412,8 @@ class TestActivity : BaseAppCompatVmActivity<ActivityTestBinding, TestVm>(
 
     private fun initVoiceWaveView() {
         binding.vVoiceWave.apply {
-            duration = 150
-            addHeader(2)
-            addHeader(2)
-            addHeader(4)
-            addHeader(14)
-            addBody(27)
-            addBody(17)
-            addBody(38)
-            addBody(91)
-            addBody(38)
-            addBody(24)
-            addBody(8)
-            addBody(60)
-            addBody(38)
-            addBody(14)
-            addFooter(2)
-            addFooter(2)
-            addFooter(2)
-            addFooter(2)
-            start()
+            init()
+            setVolume(0f)
         }
     }
 

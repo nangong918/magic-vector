@@ -10,9 +10,12 @@ import android.animation.ValueAnimator
 import android.graphics.Path
 import android.os.Handler
 import android.os.Parcelable
+import android.util.Log
 import android.view.Gravity
 import com.view.appview.R
+import com.view.appview.voice.VoiceWaveView.Companion.audioList
 import java.util.*
+import kotlin.math.min
 
 class VoiceWaveView @JvmOverloads constructor(
     context: Context,
@@ -28,6 +31,93 @@ class VoiceWaveView @JvmOverloads constructor(
         private set
 
     private var waveList = LinkedList<Int>()
+
+    companion object {
+        val TAG = VoiceWaveView::class.simpleName
+        val multiple = 50
+        val audioList = listOf<Int>(
+            5,
+            10,
+            20,
+            40,
+
+            60,
+            60,
+            80,
+            80,
+            100,
+            80,
+            80,
+            60,
+            60,
+
+            40,
+            20,
+            10,
+            5,
+        )
+    }
+
+    fun init() {
+        duration = 150
+        // 0 ~ 3
+        for (i in 0 until 4){
+            addHeader(audioList[i])
+        }
+        for (i in 4 until 13){
+            addBody(audioList[i])
+        }
+        for (i in 13 until 17){
+            addFooter(audioList[i])
+        }
+        start()
+    }
+
+    fun setVolume(volume: Float){
+        // 放大10倍
+        val rate = volume * multiple
+
+        for (i in 0 until headerWaveList.size){
+            for (j in 0 until 4){
+                headerWaveList[i] = min((audioList[j] * rate).toInt(), 100)
+            }
+        }
+        for (i in 0 until bodyWaveList.size){
+            for (j in 4 until 13){
+                bodyWaveList[i] = min((audioList[j] * rate).toInt(), 100)
+            }
+        }
+        for (i in 0 until footerWaveList.size){
+            for (j in 13 until 17){
+                footerWaveList[i] = min((audioList[j] * rate).toInt(), 100)
+            }
+        }
+
+        val waveList = listOf(
+            headerWaveList[0],
+            headerWaveList[1],
+            headerWaveList[2],
+            headerWaveList[3],
+
+            bodyWaveList[0],
+            bodyWaveList[1],
+            bodyWaveList[2],
+            bodyWaveList[3],
+            bodyWaveList[4],
+            bodyWaveList[5],
+            bodyWaveList[6],
+            bodyWaveList[7],
+            bodyWaveList[8],
+
+            footerWaveList[0],
+            footerWaveList[1],
+            footerWaveList[2],
+            footerWaveList[3],
+        )
+
+        Log.i(TAG, "volume: $waveList")
+    }
+
 
     /**
      * 线间距 px
@@ -111,7 +201,7 @@ class VoiceWaveView @JvmOverloads constructor(
 
         paintPathLine = Paint()
         paintPathLine?.isAntiAlias = true
-        paintPathLine?.setStyle(Paint.Style.STROKE);
+        paintPathLine?.style = Paint.Style.STROKE;
     }
 
     /**

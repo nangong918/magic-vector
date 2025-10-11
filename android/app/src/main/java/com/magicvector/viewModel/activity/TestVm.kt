@@ -510,7 +510,7 @@ class TestVm(
         Thread {
             val buffer = ByteArray(1024)
             val handler = Handler(Looper.getMainLooper())
-            val updateInterval = 300L // 300ms
+            val updateInterval = 100L // 100ms
 
             // 定时更新音量的 Runnable
             val volumeUpdateRunnable = object : Runnable {
