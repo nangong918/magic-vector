@@ -7,6 +7,8 @@ import android.media.AudioManager
 import android.media.AudioRecord
 import android.media.AudioTrack
 import android.media.MediaRecorder
+import android.os.Handler
+import android.os.Looper
 import android.util.Base64
 import android.util.Log
 import androidx.annotation.RequiresPermission
@@ -45,6 +47,7 @@ import java.io.ByteArrayOutputStream
 import java.util.concurrent.TimeUnit
 import kotlin.concurrent.atomics.AtomicBoolean
 import kotlin.math.log
+import kotlin.math.sqrt
 
 class TestVm(
 
@@ -497,8 +500,6 @@ class TestVm(
     }
     // 开始录音
     fun beginRecordAudio(activity: FragmentActivity){
-
-        // 开始录音
         recordAudioRecord?.let {
             it.startRecording()
             audioRecordPlayState.value = AudioRecordPlayState.Recording
@@ -508,37 +509,61 @@ class TestVm(
 
         Thread {
             val buffer = ByteArray(1024)
+            val handler = Handler(Looper.getMainLooper())
+            val updateInterval = 300L // 300ms
+
+            // 定时更新音量的 Runnable
+            val volumeUpdateRunnable = object : Runnable {
+                override fun run() {
+                    if (audioRecordPlayState.value == AudioRecordPlayState.Recording) {
+                        // 使用最近读取的数据计算音量
+                        val amplitude = calculateRMSAmplitude(buffer, buffer.size)
+                        audioRecordVolume.postValue(amplitude)
+                        handler.postDelayed(this, updateInterval)
+                    }
+                }
+            }
+
+            // 启动定时更新
+            handler.post(volumeUpdateRunnable)
+
             while (audioRecordPlayState.value == AudioRecordPlayState.Recording) {
                 val read = recordAudioRecord?.read(buffer, 0, buffer.size) ?: 0
                 if (read > 0) {
                     // 将录制的数据写入缓存
                     recordAudioBuffer!!.write(buffer, 0, read)
-
-                    // 计算音量
-                    val amplitude = calculateAmplitude(buffer, read)
-                    audioRecordVolume.postValue(amplitude) // 更新 LiveData
-                } else {
-                    // 当没有读取到声音时，设置音量为0
-                    audioRecordVolume.postValue(0f)
+                    // 注意：buffer 会被持续更新，volumeUpdateRunnable 会使用最新的数据
                 }
             }
+
+            // 停止录音时移除回调
+            handler.removeCallbacks(volumeUpdateRunnable)
         }.start()
     }
 
-    // 计算音量
-    private fun calculateAmplitude(buffer: ByteArray, read: Int): Float {
-        var sum = 0.0
-        for (i in 0 until read step 2) {
-            // 将字节转换为短整型（16-bit PCM）
-            val sample = (buffer[i].toInt() shl 8 or (buffer[i + 1].toInt() and 0xFF)).toShort()
-            sum += Math.abs(sample.toDouble())
+    // 计算音量（RMS - 均方根值，更准确）
+    // RMS 计算（最准确）
+    fun calculateRMSAmplitude(buffer: ByteArray, bytesRead: Int): Float {
+        if (bytesRead < 2) return 0f
+
+        var sumSquares = 0.0
+        var sampleCount = 0
+
+        for (i in 0 until bytesRead - 1 step 2) {
+            // 假设小端序（Android 通常使用）
+            val low = buffer[i].toInt() and 0xFF
+            val high = buffer[i + 1].toInt() and 0xFF
+            val sample = (high shl 8) or low
+            val signedSample = if (sample > 32767) sample - 65536 else sample
+
+            sumSquares += signedSample * signedSample
+            sampleCount++
         }
-        // 计算平均值并归一化
-        return if (read > 0) {
-            (sum / (read / 2)).toFloat() // 归一化处理
-        } else {
-            0f // 如果没有读取到音频数据，返回0
-        }
+
+        if (sampleCount == 0) return 0f
+
+        val rms = sqrt(sumSquares / sampleCount)
+        return minOf(1.0f, (rms / 32767.0).toFloat())
     }
 
     // 停止录音

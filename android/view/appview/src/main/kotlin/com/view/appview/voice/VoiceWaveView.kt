@@ -158,7 +158,7 @@ class VoiceWaveView @JvmOverloads constructor(
                 valueAnimator.repeatMode = ValueAnimator.REVERSE
                 valueAnimator.repeatCount = ValueAnimator.INFINITE
                 valueAnimator.addUpdateListener {
-                    valueAnimatorOffset = it.getAnimatedValue() as Float
+                    valueAnimatorOffset = it.animatedValue as Float
                     invalidate()
                 }
                 valueAnimator.start()
