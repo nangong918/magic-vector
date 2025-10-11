@@ -1,6 +1,7 @@
 package com.openapi.websocket.config;
 
 import com.openapi.config.ChatConfig;
+import com.openapi.config.ThreadPoolConfig;
 import com.openapi.service.OmniRealTimeNoVADTestService;
 import com.openapi.websocket.handler.OmniRealTimeNoVADTestChannel;
 import com.openapi.websocket.handler.TestChannel;
@@ -22,6 +23,7 @@ import org.springframework.web.socket.server.standard.ServerEndpointExporter;
 public class WebSocketConfig implements WebSocketConfigurer {
 
     private final OmniRealTimeNoVADTestService omniRealTimeNoVADTestService;
+    private final ThreadPoolConfig threadPoolConfig;
 
     /**
      * 注册 WebSocket 处理器
@@ -31,7 +33,8 @@ public class WebSocketConfig implements WebSocketConfigurer {
     public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
         registry.addHandler(new TestChannel(), "/test-channel")
                 .addHandler(new OmniRealTimeNoVADTestChannel(
-                        omniRealTimeNoVADTestService
+                        omniRealTimeNoVADTestService,
+                        threadPoolConfig.taskExecutor()
                 ), "/realtime-no-vad-test")
                 .setAllowedOrigins("*"); // 根据需要设置允许的源
     }

@@ -299,7 +299,6 @@ class TestVm(
                         RealtimeDataTypeEnum.DATA to base64Audio
                     )
                     realtimeChatWsClient!!.sendMessage(dataMap)
-//                    Log.i(TAG, "发送数据:: 类型: ${dataMap[RealtimeDataTypeEnum.TYPE]}; 长度: ${base64Audio.length}; 数据: ${base64Audio.take(100)}")
                 }
             }
             realtimeChatAudioRecord?.stop()

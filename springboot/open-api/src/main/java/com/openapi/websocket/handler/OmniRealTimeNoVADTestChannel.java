@@ -4,12 +4,12 @@ import com.alibaba.dashscope.audio.omni.OmniRealtimeConversation;
 import com.alibaba.dashscope.exception.NoApiKeyException;
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.TypeReference;
-import com.openapi.config.ChatConfig;
 import com.openapi.domain.constant.realtime.RealtimeDataTypeEnum;
 import com.openapi.service.OmniRealTimeNoVADTestService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import org.springframework.web.socket.BinaryMessage;
@@ -18,10 +18,13 @@ import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
 
+import java.io.IOException;
 import java.util.Base64;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
@@ -34,11 +37,13 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public class OmniRealTimeNoVADTestChannel extends TextWebSocketHandler {
 
     private final OmniRealTimeNoVADTestService omniRealTimeNoVADTestService;
-
+    private final ThreadPoolTaskExecutor taskExecutor;
+    private volatile Future<?> chatFuture;
 
     private final Queue<String> responseAudioBuffer = new ConcurrentLinkedQueue<>();
     private final Queue<byte[]> requestAudioBuffer = new ConcurrentLinkedQueue<>();
     private final AtomicBoolean stopRecording = new AtomicBoolean(true);
+    // AI会话；非单例，不能注入，会话是每个连接单独一个
     private OmniRealtimeConversation conversation;
 
     @Override
@@ -92,11 +97,27 @@ public class OmniRealTimeNoVADTestChannel extends TextWebSocketHandler {
             case START -> {
                 log.info("[websocket] 开始录音");
                 stopRecording.set(false);
-                omniRealTimeNoVADTestService.startChat(
-                        conversation,
-                        stopRecording,
-                        requestAudioBuffer
-                );
+                chatFuture = taskExecutor.submit(() -> {
+                    try {
+                        omniRealTimeNoVADTestService.startChat(
+                                conversation,
+                                stopRecording,
+                                requestAudioBuffer
+                        );
+                    } catch (Exception e) {
+                        stopRecording.set(true);
+                        log.error("[audioChat] 聊天处理异常", e);
+                        Map<String, String> responseMap = new HashMap<>();
+                        responseMap.put(RealtimeDataTypeEnum.TYPE, RealtimeDataTypeEnum.STOP.getType());
+                        responseMap.put(RealtimeDataTypeEnum.DATA, "聊天处理异常" + e.getMessage());
+                        String response = JSON.toJSONString(responseMap);
+                        try {
+                            session.sendMessage(new TextMessage(response));
+                        } catch (IOException ex) {
+                            log.error("[websocket error] 响应消息异常", ex);
+                        }
+                    }
+                });
             }
             case STOP -> {
                 log.info("[websocket] 停止录音");
