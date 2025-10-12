@@ -101,8 +101,8 @@ public class OmniRealTimeNoVADTestServiceImpl implements OmniRealTimeNoVADTestSe
                     case "response.done" -> {
                         log.info("======RESPONSE DONE======");
                         Map<String, String> responseMap = new HashMap<>();
-                        responseMap.put(RealtimeDataTypeEnum.TYPE, RealtimeDataTypeEnum.START.getType());
-                        responseMap.put(RealtimeDataTypeEnum.DATA, RealtimeDataTypeEnum.START.getType());
+                        responseMap.put(RealtimeDataTypeEnum.TYPE, RealtimeDataTypeEnum.STOP.getType());
+                        responseMap.put(RealtimeDataTypeEnum.DATA, RealtimeDataTypeEnum.STOP.getType());
                         String response = JSON.toJSONString(responseMap);
                         try {
                             session.sendMessage(new TextMessage(response));

@@ -40,7 +40,6 @@ public class OmniRealTimeNoVADTestChannel extends TextWebSocketHandler {
     private final ThreadPoolTaskExecutor taskExecutor;
     private volatile Future<?> chatFuture;
 
-    private final Queue<String> responseAudioBuffer = new ConcurrentLinkedQueue<>();
     private final Queue<byte[]> requestAudioBuffer = new ConcurrentLinkedQueue<>();
     private final AtomicBoolean stopRecording = new AtomicBoolean(true);
     // AI会话；非单例，不能注入，会话是每个连接单独一个
@@ -82,8 +81,7 @@ public class OmniRealTimeNoVADTestChannel extends TextWebSocketHandler {
     }
 
     @Override
-    protected void handleTextMessage(WebSocketSession session, TextMessage message) throws Exception {
-        log.info("[websocket] 收到消息：id={}，message={}", session.getId(), message.getPayload());
+    protected void handleTextMessage(@NotNull WebSocketSession session, TextMessage message) throws Exception {
 
         Map<String, String> messageMap = JSON.parseObject(message.getPayload(), new TypeReference<>() {});
         String type = messageMap.get(RealtimeDataTypeEnum.TYPE);
@@ -143,7 +141,7 @@ public class OmniRealTimeNoVADTestChannel extends TextWebSocketHandler {
         }
         // 解码 Base64 字符串为字节数组
         byte[] audioBytes = Base64.getDecoder().decode(base64Audio);
-        log.info("[websocket] 音频块大小：{}", audioBytes.length);
+//        log.info("[websocket] 音频块大小：{}", audioBytes.length);
 
         // 将字节数组放入队列
         requestAudioBuffer.offer(audioBytes);

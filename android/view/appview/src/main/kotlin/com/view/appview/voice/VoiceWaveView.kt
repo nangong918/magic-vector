@@ -74,7 +74,7 @@ class VoiceWaveView @JvmOverloads constructor(
     }
 
     fun setVolume(volume: Float){
-        // 放大10倍
+        // 放大multiple倍
         val rate = volume * multiple
 
         for (i in 0 until headerWaveList.size){

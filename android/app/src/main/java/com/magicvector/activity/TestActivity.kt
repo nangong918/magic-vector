@@ -166,6 +166,12 @@ class TestActivity : BaseAppCompatVmActivity<ActivityTestBinding, TestVm>(
                 }
             }
         }
+        // 音量大小
+        vm.realtimeChatVolume.observe(this) {
+            Log.i(TAG, "realtimeChatVolume更新: $it")
+            binding.vRealTimeChatVoiceWave.setVolume(it)
+        }
+
 
         /// 录音播放
         // 状态
@@ -412,6 +418,11 @@ class TestActivity : BaseAppCompatVmActivity<ActivityTestBinding, TestVm>(
 
     private fun initVoiceWaveView() {
         binding.vVoiceWave.apply {
+            init()
+            setVolume(0f)
+        }
+
+        binding.vRealTimeChatVoiceWave.apply {
             init()
             setVolume(0f)
         }

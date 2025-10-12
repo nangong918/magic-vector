@@ -89,6 +89,7 @@ class TestVm(
     // realtime websocket 聊天
     val realtimeChatMessage: MutableLiveData<String> = MutableLiveData("") // 聊天数据，只需要存储text数据，音频数据不要展示是直接播放
     val realtimeChatState: MutableLiveData<RealtimeChatState> = MutableLiveData(RealtimeChatState.NotInitialized)
+    val realtimeChatVolume = MutableLiveData(0f)
 
     //---------------------------NetWork---------------------------
 
@@ -296,6 +297,26 @@ class TestVm(
 
         // 录制音频并转换为 Base64
         Thread {
+            val handler = Handler(Looper.getMainLooper())
+            val updateInterval = 100L // 100ms
+
+
+            // 定时更新音量的 Runnable
+            val volumeUpdateRunnable = object : Runnable {
+                override fun run() {
+                    if (realtimeChatState.value == RealtimeChatState.RecordingAndSending) {
+                        // 使用最近读取的数据计算音量
+                        val amplitude = calculateRMSAmplitude(audioBuffer, audioBuffer.size)
+                        Log.i(TAG, "realtimeChat音量: $amplitude")
+                        realtimeChatVolume.postValue(amplitude)
+                        handler.postDelayed(this, updateInterval)
+                    }
+                }
+            }
+
+            // 启动定时更新
+            handler.post(volumeUpdateRunnable)
+
             while (realtimeChatState.value == RealtimeChatState.RecordingAndSending) {
                 val readSize = realtimeChatAudioRecord?.read(audioBuffer, 0, bufferSize) ?: 0
                 if (readSize > 0) {
@@ -308,7 +329,12 @@ class TestVm(
 //                    Log.i(TAG, "发送数据:: 类型: ${dataMap[RealtimeDataTypeEnum.TYPE]}; 长度: ${base64Audio.length}; 数据: ${base64Audio.take(100)}")
                 }
             }
-            realtimeChatAudioRecord?.stop()
+
+            try {
+                realtimeChatAudioRecord?.stop()
+            } catch (e : Exception){
+                Log.e(TAG, "stopAndSendRealtimeChatAudio: ${e.message}")
+            }
 
             // 发送结束录音
             val dataMap = mapOf(
