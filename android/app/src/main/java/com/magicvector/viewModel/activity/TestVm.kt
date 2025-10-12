@@ -284,7 +284,7 @@ class TestVm(
         // 发送启动录音
         val dataMap = mapOf(
             RealtimeDataTypeEnum.TYPE to RealtimeDataTypeEnum.START.type,
-            RealtimeDataTypeEnum.DATA to ""
+            RealtimeDataTypeEnum.DATA to RealtimeDataTypeEnum.START.name
         )
         realtimeChatWsClient?.sendMessage(dataMap)
 
@@ -305,6 +305,7 @@ class TestVm(
                         RealtimeDataTypeEnum.DATA to base64Audio
                     )
                     realtimeChatWsClient!!.sendMessage(dataMap)
+//                    Log.i(TAG, "发送数据:: 类型: ${dataMap[RealtimeDataTypeEnum.TYPE]}; 长度: ${base64Audio.length}; 数据: ${base64Audio.take(100)}")
                 }
             }
             realtimeChatAudioRecord?.stop()
@@ -312,7 +313,7 @@ class TestVm(
             // 发送结束录音
             val dataMap = mapOf(
                 RealtimeDataTypeEnum.TYPE to RealtimeDataTypeEnum.STOP.type,
-                RealtimeDataTypeEnum.DATA to ""
+                RealtimeDataTypeEnum.DATA to RealtimeDataTypeEnum.STOP.name
             )
             realtimeChatWsClient!!.sendMessage(dataMap)
 //            Log.i(TAG, "发送数据:: 类型: ${dataMap[RealtimeDataTypeEnum.TYPE]}")
@@ -438,11 +439,8 @@ class TestVm(
         audioRecordPlayState.value = AudioRecordPlayState.Initializing
         PermissionUtil.requestPermissionSelectX(
             activity,
-            arrayOf(
-                Manifest.permission.RECORD_AUDIO,
-                Manifest.permission.WRITE_EXTERNAL_STORAGE,
-            ),
-            arrayOf(),
+            arrayOf(Manifest.permission.RECORD_AUDIO),
+            arrayOf(Manifest.permission.WRITE_EXTERNAL_STORAGE),
                 object : GainPermissionCallback{
                     @RequiresPermission(Manifest.permission.RECORD_AUDIO)
                     override fun allGranted() {
@@ -500,6 +498,8 @@ class TestVm(
     }
     // 开始录音
     fun beginRecordAudio(activity: FragmentActivity){
+
+        // 开始录音
         recordAudioRecord?.let {
             it.startRecording()
             audioRecordPlayState.value = AudioRecordPlayState.Recording

@@ -17,7 +17,7 @@ class BaseConstant {
 
     // url
     object ConstantUrl {
-        private const val LOCAL_ADDRESS = "192.168.101.176:48888"
+        private const val LOCAL_ADDRESS = "192.168.1.7:48888"
         private const val TEST_ADDRESS = "192.168.1.7:48888"
 
 
