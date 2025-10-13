@@ -11,6 +11,7 @@ import com.alibaba.dashscope.exception.UploadFileException;
 import com.alibaba.fastjson.JSON;
 import com.openapi.component.manager.OptimizedSentenceDetector;
 import com.openapi.config.ChatConfig;
+import com.openapi.config.ThreadPoolConfig;
 import com.openapi.domain.constant.realtime.RealtimeDataTypeEnum;
 import com.openapi.domain.interfaces.OnSSTResultCallback;
 import com.openapi.service.RealTimeTestServiceService;
@@ -29,10 +30,8 @@ import reactor.core.publisher.Flux;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.util.Base64;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Queue;
+import java.util.*;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
@@ -60,6 +59,9 @@ public class RealTimeTestServiceServiceImpl implements RealTimeTestServiceServic
     private final String SYSTEM_PROMPT = "你是我的傲娇小女友，回答问题的时候暧昧一些。回答的之后只能输出正常语句, 不能使用表情等。对话精简一些，最好在3至5句话。";
     private final Recognition sttRecognizer;
     private final MultiModalConversation multiModalConversation;
+    // 模拟句子间的间隔时间
+    private final static long SENTENCE_INTERVAL = 300;
+    private final ThreadPoolConfig threadPoolConfig;
 
     @Override
     public void startChat(@NotNull AtomicBoolean stopRecording,
@@ -143,6 +145,9 @@ public class RealTimeTestServiceServiceImpl implements RealTimeTestServiceServic
                 );
     }
 
+    private final Queue<String> sentenceQueue = new ConcurrentLinkedQueue<>();
+    private final AtomicBoolean isTTSFinished = new AtomicBoolean(true);
+    private final AtomicBoolean isLLMFinished = new AtomicBoolean(false);
     private void llmStreamCall(String sentence, WebSocketSession session) {
         log.info("\n[LLM 开始] 输入内容: {}", sentence);
 
@@ -170,6 +175,7 @@ public class RealTimeTestServiceServiceImpl implements RealTimeTestServiceServic
 
                 // 处理每个流片段
                 fragment -> {
+                    isLLMFinished.set(false);
                     int currentCount = fragmentCount.incrementAndGet();
                     long fragmentTime = System.currentTimeMillis() - startTime.get();
 
@@ -185,14 +191,16 @@ public class RealTimeTestServiceServiceImpl implements RealTimeTestServiceServic
                     // 尝试从缓冲区提取完整句子并输出
                     String completeSentence;
                     while ((completeSentence = optimizedSentenceDetector.detectAndExtractFirstSentence(textBuffer)) != null) {
-                        log.info("\n[提取到完整句子]: {}", completeSentence);
                         /// tts
-                        try {
-                            generateAudio(completeSentence, session);
-                        } catch (NoApiKeyException e) {
-                            throw new RuntimeException(e);
-                        } catch (UploadFileException e) {
-                            throw new RuntimeException(e);
+                        if (StringUtils.hasText(completeSentence)){
+                            sentenceQueue.add(completeSentence);
+                            try {
+                                generateAudio(session);
+                            } catch (NoApiKeyException e) {
+                                throw new RuntimeException(e);
+                            } catch (UploadFileException e) {
+                                throw new RuntimeException(e);
+                            }
                         }
                     }
 
@@ -209,6 +217,7 @@ public class RealTimeTestServiceServiceImpl implements RealTimeTestServiceServic
                 error -> {
                     long totalTime = System.currentTimeMillis() - startTime.get();
                     log.error("\n[LLM 错误] 总耗时: {}ms, 片段总数: {}", totalTime, fragmentCount.get(), error);
+                    isLLMFinished.set(true);
                 },
 
                 // 处理完成
@@ -222,14 +231,43 @@ public class RealTimeTestServiceServiceImpl implements RealTimeTestServiceServic
                         log.info("[最终剩余未完成内容]: {}", textBuffer);
                     }
 
+                    isLLMFinished.set(true);
+                    sendEOF(session);
                     log.info("[LLM 流式响应完全结束]");
                 }
         );
     }
 
-    private void generateAudio(String sentence, WebSocketSession session) throws NoApiKeyException, UploadFileException {
-        if (!StringUtils.hasText(sentence)){
+    private void generateAudio(WebSocketSession session) throws NoApiKeyException, UploadFileException {
+        if (!isTTSFinished.get()){
             return;
+        }
+
+        // 全部取出
+        List<String> sentences = new ArrayList<>();
+        while (!sentenceQueue.isEmpty()) {
+            sentences.add(sentenceQueue.poll());
+        }
+        if (sentences.isEmpty()){
+            log.info("[TTS] 暂无数据");
+            isTTSFinished.set(true);
+            return;
+        }
+
+        // 拼接
+        StringBuilder sb = new StringBuilder();
+        for (String sentence : sentences) {
+            sb.append(sentence);
+        }
+        String sentence = sb.toString();
+        if (!StringUtils.hasText(sentence)){
+            log.info("[TTS] 暂无数据");
+            isTTSFinished.set(true);
+            return;
+        }
+        else {
+            isTTSFinished.set(false);
+            log.info("[TTS] 输入内容: {}", sentence);
         }
 
         MultiModalConversationParam param = MultiModalConversationParam.builder()
@@ -242,20 +280,15 @@ public class RealTimeTestServiceServiceImpl implements RealTimeTestServiceServic
 
         Flowable<MultiModalConversationResult> result = multiModalConversation.streamCall(param);
 
-
-
         result.doOnSubscribe(
                 subscription -> log.info("TTS开始"))
                 .doFinally(() -> {
-                    // 发送结束标识
-                    try {
-                        Map<String, String> responseMap = new HashMap<>();
-                        responseMap.put(RealtimeDataTypeEnum.TYPE, RealtimeDataTypeEnum.STOP.getType());
-                        responseMap.put(RealtimeDataTypeEnum.DATA, RealtimeDataTypeEnum.STOP.getType());
-                        String endResponse = JSON.toJSONString(responseMap);
-                        session.sendMessage(new TextMessage(endResponse));
-                    } catch (IOException e) {
-                        log.error("[websocket error] 发送结束消息异常", e);
+                    isTTSFinished.set(true);
+                    sendEOF(session);
+                    if (!sentenceQueue.isEmpty()){
+                        log.info("[TTS]自我调用, 剩余数据: {}", sentenceQueue.size());
+                        // 自我调用
+                        generateAudio(session);
                     }
                 })
                 .blockingForEach(r -> {
@@ -276,5 +309,22 @@ public class RealTimeTestServiceServiceImpl implements RealTimeTestServiceServic
                         }
                     }
                 });
+    }
+
+    private void sendEOF(WebSocketSession session){
+        if (isTTSFinished.get() && isLLMFinished.get()) {
+            // 发送结束标识
+            try {
+                // 当前的合成音频播放完成之后不代表全合成音频都播放完成了, 因此此处不能发送EOF
+                Map<String, String> responseMap = new HashMap<>();
+                responseMap.put(RealtimeDataTypeEnum.TYPE, RealtimeDataTypeEnum.STOP.getType());
+                responseMap.put(RealtimeDataTypeEnum.DATA, RealtimeDataTypeEnum.STOP.getType());
+                String endResponse = JSON.toJSONString(responseMap);
+                session.sendMessage(new TextMessage(endResponse));
+                log.info("[LLM 流式响应结束]");
+            } catch (IOException e) {
+                log.error("[websocket error] 发送结束消息异常", e);
+            }
+        }
     }
 }
