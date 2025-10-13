@@ -174,21 +174,10 @@ public class SttTests {
 
                 combinedBuffer.flip();
 
-                // 模拟实时音频流，分块发送
-                int chunkSize = 3200; // 200ms 的音频数据 (16000采样率 * 2字节 * 0.2秒)
-                while (combinedBuffer.remaining() > 0) {
-                    int currentChunkSize = Math.min(chunkSize, combinedBuffer.remaining());
-                    byte[] chunkArray = new byte[currentChunkSize];
-                    combinedBuffer.get(chunkArray);
-
-                    ByteBuffer chunkBuffer = ByteBuffer.wrap(chunkArray);
-                    emitter.onNext(chunkBuffer);
-
-                    // 模拟实时音频流的延迟
-                    Thread.sleep(10);
-                }
-
+                // 不再分块，直接发送整个字节数组
+                emitter.onNext(combinedBuffer);
                 emitter.onComplete();
+
             } catch (Exception e) {
                 emitter.onError(e);
             }
@@ -220,12 +209,6 @@ public class SttTests {
                             }
                         });
 
-        try {
-            System.out.println("等待10秒");
-            Thread.sleep(10_000L);
-        } catch (InterruptedException e) {
-            throw new RuntimeException(e);
-        }
     }
 
     public static void main(String[] args) throws NoApiKeyException, UploadFileException, InterruptedException, InputRequiredException {
