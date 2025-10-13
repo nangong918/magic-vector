@@ -61,6 +61,7 @@ public class RealTimeTestServiceServiceImpl implements RealTimeTestServiceServic
     private final Recognition sttRecognizer;
     private final MultiModalConversation multiModalConversation;
 
+    @Override
     public void startChat(@NotNull AtomicBoolean stopRecording,
                           @NotNull Queue<byte[]> requestAudioBuffer,
                           @NotNull WebSocketSession session) throws IOException, InterruptedException, NoApiKeyException {
