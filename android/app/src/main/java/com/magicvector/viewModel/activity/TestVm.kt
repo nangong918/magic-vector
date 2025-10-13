@@ -45,8 +45,6 @@ import org.greenrobot.eventbus.Subscribe
 import org.greenrobot.eventbus.ThreadMode
 import java.io.ByteArrayOutputStream
 import java.util.concurrent.TimeUnit
-import kotlin.concurrent.atomics.AtomicBoolean
-import kotlin.math.log
 import kotlin.math.sqrt
 
 class TestVm(
@@ -60,6 +58,7 @@ class TestVm(
         const val baseSseTTSUrl = BaseConstant.ConstantUrl.LOCAL_URL + "/test/stream-tts-sse"
         const val baseWebsocketUrl = BaseConstant.ConstantUrl.LOCAL_WS_URL + "/test-channel"
         const val realtimeChatWsUrl = BaseConstant.ConstantUrl.LOCAL_WS_URL + "/realtime-no-vad-test"
+        const val realtimeChat2WsUrl = BaseConstant.ConstantUrl.LOCAL_WS_URL + "/realtime-test"
     }
 
     init {
@@ -91,7 +90,278 @@ class TestVm(
     val realtimeChatState: MutableLiveData<RealtimeChatState> = MutableLiveData(RealtimeChatState.NotInitialized)
     val realtimeChatVolume = MutableLiveData(0f)
 
+    // realtime websocket 聊天2
+    val realtimeChat2Message: MutableLiveData<String> = MutableLiveData("")
+    val realtimeChat2State: MutableLiveData<RealtimeChatState> = MutableLiveData(RealtimeChatState.NotInitialized)
+    val realtimeChat2Volume = MutableLiveData(0f)
+
     //---------------------------NetWork---------------------------
+
+    // websocket realtime2 chat
+    private var realtimeChat2WsClient: TestRealtimeChatWsClient? = null
+    var realtimeChat2AudioRecord: AudioRecord? = null
+    var realtimeChat2AudioTrack: AudioTrack? = null
+    // 初始化 + 连接
+    fun initRealtimeChat2WsClient(activity: FragmentActivity) {
+        realtimeChat2WsClient = TestRealtimeChatWsClient(
+            GSON,
+            realtimeChat2WsUrl
+        )
+
+        PermissionUtil.requestPermissionSelectX(
+            activity,
+            arrayOf(Manifest.permission.RECORD_AUDIO),
+            arrayOf(Manifest.permission.WRITE_EXTERNAL_STORAGE),
+            object : GainPermissionCallback{
+                @RequiresPermission(Manifest.permission.RECORD_AUDIO)
+                override fun allGranted() {
+                    Log.i(TAG, "获取录音权限成功")
+
+                    initRealtimeChat2RecorderAndPlayer()
+
+                    startRealtime2Ws()
+                }
+
+                override fun notGranted(notGrantedPermissions: Array<String?>?) {
+                    Log.w(TAG, "没有获取录音权限: ${notGrantedPermissions?.contentToString()}")
+                    ToastUtils.showToastActivity(activity, "没有获取录音权限")
+                    realtimeChat2State.postValue(RealtimeChatState.Error("没有获取录音权限"))
+                }
+
+                override fun always() {
+                }
+
+            }
+        )
+    }
+
+    @RequiresPermission(Manifest.permission.RECORD_AUDIO)
+    private fun initRealtimeChat2RecorderAndPlayer(){
+        // 配置音频参数
+        val inChannelConfig = AudioFormat.CHANNEL_IN_MONO
+        val outChannelConfig = AudioFormat.CHANNEL_OUT_MONO
+        val audioFormat = AudioFormat.ENCODING_PCM_16BIT
+        val audioRecordBufferSize = AudioRecord.getMinBufferSize(realTimeChatSampleRate, inChannelConfig, audioFormat)
+        val audioTrackBufferSize = AudioTrack.getMinBufferSize(realTimeChatSampleRate, outChannelConfig, audioFormat)
+
+        // 创建AudioRecord
+        realtimeChat2AudioRecord = AudioRecord(
+            MediaRecorder.AudioSource.MIC,
+            realTimeChatSampleRate,
+            inChannelConfig,
+            audioFormat,
+            audioRecordBufferSize
+        )
+
+        // 创建AudioTrack
+        realtimeChat2AudioTrack = AudioTrack(
+            AudioManager.STREAM_MUSIC,
+            realTimeChatSampleRate,
+            outChannelConfig,
+            audioFormat,
+            audioTrackBufferSize,
+            AudioTrack.MODE_STREAM
+        )
+    }
+
+    private fun startRealtime2Ws() {
+        realtimeChat2WsClient!!.start(
+            object : WebSocketListener() {
+                override fun onClosed(
+                    webSocket: WebSocket,
+                    code: Int,
+                    reason: String
+                ) {
+                    super.onClosed(webSocket, code, reason)
+                    realtimeChat2State.postValue(RealtimeChatState.Disconnected)
+                    Log.i(TAG, "realtimeChatWsClient::onClosed")
+                }
+
+                override fun onClosing(
+                    webSocket: WebSocket,
+                    code: Int,
+                    reason: String
+                ) {
+                    super.onClosing(webSocket, code, reason)
+                    Log.i(TAG, "realtimeChatWsClient::onClosing")
+                }
+
+                override fun onFailure(
+                    webSocket: WebSocket,
+                    t: Throwable,
+                    response: Response?
+                ) {
+                    super.onFailure(webSocket, t, response)
+                    Log.e(TAG, "realtimeChatWsClient::onFailure: ${t.message}")
+                    realtimeChat2State.postValue(RealtimeChatState.Error(t.message ?: "-"))
+                }
+
+                override fun onMessage(webSocket: WebSocket, text: String) {
+                    super.onMessage(webSocket, text)
+                    // 处理text
+                    realtimeChat2State.postValue(RealtimeChatState.Receiving)
+                    handleTextMessage2(text)
+                }
+
+                override fun onMessage(webSocket: WebSocket, bytes: ByteString) {
+                    super.onMessage(webSocket, bytes)
+                    realtimeChat2State.postValue(RealtimeChatState.Receiving)
+                    // 处理字节信息
+                    Log.i(TAG, "收到字节信息::长度: ${bytes.size}")
+                }
+
+                override fun onOpen(webSocket: WebSocket, response: Response) {
+                    super.onOpen(webSocket, response)
+                    // 到了此处说明: 授权 && 连接成功
+                    realtimeChat2State.postValue(RealtimeChatState.InitializedConnected)
+                    Log.i(TAG, "realtimeChatWsClient::onOpen; response: $response")
+                }
+            }
+        )
+    }
+
+    private fun handleTextMessage2(text: String){
+        // text --GSON--> Map<String, String>
+        val map: Map<String, String> = GSON.fromJson(text, object : TypeToken<Map<String, String>>() {}.type)
+
+        val typeStr = map[RealtimeDataTypeEnum.TYPE]
+        val type = RealtimeDataTypeEnum.getByType(typeStr)
+
+        when(type){
+            RealtimeDataTypeEnum.START -> {
+                // 开始接收数据
+                realtimeChat2State.postValue(RealtimeChatState.Receiving)
+                // 清空播放缓存
+                realtimeChat2AudioTrack?.flush()
+                // 开始播放
+                realtimeChat2AudioTrack?.play()
+            }
+            RealtimeDataTypeEnum.STOP -> {
+                // 结束接收数据
+                realtimeChat2State.postValue(RealtimeChatState.InitializedConnected)
+                // 停止播放
+                realtimeChat2AudioTrack?.stop()
+                // 清空播放缓存
+                realtimeChat2AudioTrack?.flush()
+            }
+            RealtimeDataTypeEnum.AUDIO_CHUNK -> {
+                // 音频数据
+                realtimeChat2State.postValue(RealtimeChatState.Receiving)
+                val data = map[RealtimeDataTypeEnum.DATA]
+                data?.let {
+                    playBase64Audio2(data)
+                }
+            }
+            RealtimeDataTypeEnum.TEXT_MESSAGE -> {
+                // 文本数据
+                realtimeChat2State.postValue(RealtimeChatState.Receiving)
+                val data = map[RealtimeDataTypeEnum.DATA]
+                data?.let {
+                    realtimeChat2Message.postValue(realtimeChat2Message.value + data)
+                }
+            }
+        }
+    }
+
+    fun playBase64Audio2(base64Audio: String) {
+
+        val audioBytes = Base64.decode(base64Audio, Base64.DEFAULT)
+
+        // 写入音频数据
+        realtimeChat2AudioTrack?.write(
+            audioBytes,
+            0,
+            audioBytes.size
+        )
+
+        Log.i(TAG, "播放音频数据::: ${audioBytes.take(50)}")
+    }
+
+    fun startRecordRealtimeChatAudio2() {
+        // 录制音频 -> 音频流bytes实时转为Base64的PCM格式 -> 调用websocket的sendAudioMessage
+        val bufferSize = AudioRecord.getMinBufferSize(
+            realTimeChatSampleRate,
+            AudioFormat.CHANNEL_IN_MONO,
+            AudioFormat.ENCODING_PCM_16BIT
+        )
+
+        // 发送启动录音
+        val dataMap = mapOf(
+            RealtimeDataTypeEnum.TYPE to RealtimeDataTypeEnum.START.type,
+            RealtimeDataTypeEnum.DATA to RealtimeDataTypeEnum.START.name
+        )
+        realtimeChat2WsClient?.sendMessage(dataMap)
+
+        // 录制状态
+        realtimeChat2State.value = RealtimeChatState.RecordingAndSending
+
+        val audioBuffer = ByteArray(bufferSize)
+        realtimeChat2AudioRecord?.startRecording()
+
+        // 录制音频并转换为 Base64
+        Thread {
+            val handler = Handler(Looper.getMainLooper())
+            val updateInterval = 100L // 100ms
+
+
+            // 定时更新音量的 Runnable
+            val volumeUpdateRunnable = object : Runnable {
+                override fun run() {
+                    if (realtimeChat2State.value == RealtimeChatState.RecordingAndSending) {
+                        // 使用最近读取的数据计算音量
+                        val amplitude = calculateRMSAmplitude(audioBuffer, audioBuffer.size)
+                        Log.i(TAG, "realtimeChat音量: $amplitude")
+                        realtimeChat2Volume.postValue(amplitude)
+                        handler.postDelayed(this, updateInterval)
+                    }
+                }
+            }
+
+            // 启动定时更新
+            handler.post(volumeUpdateRunnable)
+
+            while (realtimeChat2State.value == RealtimeChatState.RecordingAndSending) {
+                val readSize = realtimeChat2AudioRecord?.read(audioBuffer, 0, bufferSize) ?: 0
+                if (readSize > 0) {
+                    val base64Audio = Base64.encodeToString(audioBuffer, 0, readSize, Base64.NO_WRAP)
+                    val dataMap = mapOf(
+                        RealtimeDataTypeEnum.TYPE to RealtimeDataTypeEnum.AUDIO_CHUNK.type,
+                        RealtimeDataTypeEnum.DATA to base64Audio
+                    )
+                    realtimeChat2WsClient!!.sendMessage(dataMap)
+//                    Log.i(TAG, "发送数据:: 类型: ${dataMap[RealtimeDataTypeEnum.TYPE]}; 长度: ${base64Audio.length}; 数据: ${base64Audio.take(100)}")
+                }
+            }
+
+            try {
+                realtimeChat2AudioRecord?.stop()
+            } catch (e : Exception){
+                Log.e(TAG, "stopAndSendRealtimeChatAudio: ${e.message}")
+            }
+
+            // 发送结束录音
+            val dataMap = mapOf(
+                RealtimeDataTypeEnum.TYPE to RealtimeDataTypeEnum.STOP.type,
+                RealtimeDataTypeEnum.DATA to RealtimeDataTypeEnum.STOP.name
+            )
+            realtimeChat2WsClient!!.sendMessage(dataMap)
+//            Log.i(TAG, "发送数据:: 类型: ${dataMap[RealtimeDataTypeEnum.TYPE]}")
+
+        }.start()
+    }
+
+    fun stopAndSendRealtimeChatAudio2(){
+        realtimeChat2State.postValue(RealtimeChatState.InitializedConnected)
+    }
+
+    fun stopRealtimeChat2() {
+        realtimeChat2AudioRecord?.stop()
+        realtimeChat2AudioRecord?.release()
+        realtimeChat2AudioTrack?.stop()
+        realtimeChat2AudioTrack?.release()
+        realtimeChat2WsClient?.close()
+        realtimeChat2State.postValue(RealtimeChatState.Disconnected)
+    }
 
     // websocket realtime聊天
     private var realtimeChatWsClient: TestRealtimeChatWsClient? = null

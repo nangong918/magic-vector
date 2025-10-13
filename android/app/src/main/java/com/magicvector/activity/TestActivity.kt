@@ -33,6 +33,29 @@ class TestActivity : BaseAppCompatVmActivity<ActivityTestBinding, TestVm>(
 
     override fun setListener() {
         super.setListener()
+        // realtime chat2
+        binding.btnInitRealtimeChat2.setOnClickListener {
+            vm.initRealtimeChat2WsClient(this)
+        }
+
+        binding.btnRecordAndSendRealtimeChat2.setOnClickListener {
+            when (vm.realtimeChat2State.value) {
+                is RealtimeChatState.InitializedConnected -> {
+                    vm.startRecordRealtimeChatAudio2()
+                }
+                is RealtimeChatState.RecordingAndSending -> {
+                    vm.stopAndSendRealtimeChatAudio2()
+                }
+                else -> {
+                    Log.w(TAG, "当前状态异常: ${vm.realtimeChat2State}")
+                    ToastUtils.showToastActivity(this, "当前状态异常")
+                }
+            }
+        }
+
+        binding.btnStopRealtimeChat2.setOnClickListener {
+            vm.stopRealtimeChat2()
+        }
 
         // realtime chat
         binding.btnInitRealtimeChat.setOnClickListener {
@@ -107,6 +130,72 @@ class TestActivity : BaseAppCompatVmActivity<ActivityTestBinding, TestVm>(
 
     @SuppressLint("SetTextI18n")
     fun observeData(){
+        /// realtime chat2
+        // 文本数据
+        vm.realtimeChat2Message.observe(this) { chatMessage ->
+            // 文本数据
+            binding.tvRealTimeChatMessage2.text = chatMessage
+        }
+        // 状态
+        vm.realtimeChat2State.observe(this) { state ->
+            when (state){
+                is RealtimeChatState.NotInitialized -> {
+                    binding.tvRealTimeChatStatus2.text = "未初始化"
+                    binding.btnInitRealtimeChat2.isEnabled = true
+                    binding.btnRecordAndSendRealtimeChat2.isEnabled = false
+                    binding.btnStopRealtimeChat2.isEnabled = false
+                }
+                is RealtimeChatState.Initializing -> {
+                    binding.tvRealTimeChatStatus2.text = "正在初始化..."
+                    binding.btnInitRealtimeChat2.isEnabled = false
+                    binding.btnRecordAndSendRealtimeChat2.isEnabled = false
+                    binding.btnStopRealtimeChat2.isEnabled = false
+                }
+                is RealtimeChatState.InitializedConnected -> {
+                    binding.tvRealTimeChatStatus2.text = "已初始化并且已经连接"
+                    binding.btnInitRealtimeChat2.isEnabled = false
+                    binding.btnRecordAndSendRealtimeChat2.isEnabled = true
+                    binding.btnStopRealtimeChat2.isEnabled = true
+
+                    // btn change
+                    binding.btnRecordAndSendRealtimeChat2.text = "开始录音 + 流式发送"
+                }
+                is RealtimeChatState.RecordingAndSending -> {
+                    binding.tvRealTimeChatStatus2.text = "正在录音..."
+                    binding.btnInitRealtimeChat2.isEnabled = false
+                    binding.btnRecordAndSendRealtimeChat2.isEnabled = true
+                    binding.btnStopRealtimeChat2.isEnabled = true
+
+                    // btn change
+                    binding.btnRecordAndSendRealtimeChat2.text = "结束录音 + 接收消息"
+                }
+                is RealtimeChatState.Receiving -> {
+                    binding.tvRealTimeChatStatus2.text = "正在接收..."
+                    binding.btnInitRealtimeChat2.isEnabled = false
+                    binding.btnRecordAndSendRealtimeChat2.isEnabled = false
+                    binding.btnStopRealtimeChat2.isEnabled = true
+                }
+                is RealtimeChatState.Disconnected -> {
+                    binding.tvRealTimeChatStatus2.text = "已断开"
+                    binding.btnInitRealtimeChat2.isEnabled = true
+                    binding.btnRecordAndSendRealtimeChat2.isEnabled = false
+                    binding.btnStopRealtimeChat2.isEnabled = false
+                }
+                is RealtimeChatState.Error -> {
+                    binding.tvRealTimeChatStatus2.text = "错误: ${state.message}"
+                    binding.btnInitRealtimeChat2.isEnabled = true
+                    binding.btnRecordAndSendRealtimeChat2.isEnabled = false
+                    binding.btnStopRealtimeChat2.isEnabled = false
+                }
+            }
+        }
+        // 音量大小
+        vm.realtimeChat2Volume.observe(this) {
+            Log.i(TAG, "realtimeChatVolume更新: $it")
+            binding.vRealTimeChatVoiceWave2.setVolume(it)
+        }
+
+
         /// realtime chat
         // 文本数据
         vm.realtimeChatMessage.observe(this) { chatMessage ->
@@ -423,6 +512,11 @@ class TestActivity : BaseAppCompatVmActivity<ActivityTestBinding, TestVm>(
         }
 
         binding.vRealTimeChatVoiceWave.apply {
+            init()
+            setVolume(0f)
+        }
+
+        binding.vRealTimeChatVoiceWave2.apply {
             init()
             setVolume(0f)
         }
