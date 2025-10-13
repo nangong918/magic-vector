@@ -132,4 +132,6 @@
     <string name="test_audio_desc">MediaRecorder录音，AudioTrack播放音频。\nViewAudioPlayView展示音频录制、播放强度。</string>
     <string name="test_RealTimeChat_title">多模态实时语音聊天</string>
     <string name="test_RealTimeChat_desc">使用AudioRecord进行音频录制.\nwebsocket发送PCM格式Base64格式String交给AI,\nAI回复PCM格式Base64格式String和ChatMessage.\nAndroid端展示并用AudioTrack播放音频流数据.\n此测试在Server端未使用VAD时停检测\n(因为需要声纹识别支持, 否则AI会讲自己的声音当作User的发言)</string>
+    <string name="test_RealTimeChat_title2">多模态实时语音聊天2</string>
+    <string name="test_RealTimeChat_desc2">非Alibaba多模态模型,自制实时多模态.\n由于Omni Realtime模型无法添加MCP, \n无法使用Faction Call, 无法整合SpringAI的RAG和ChatMemory.\n(本demo是为了配合SpringAI,如果使用LangChain4J能实现Open格式的Omni实时多模态整合)</string>
 </resources>
