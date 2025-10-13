@@ -57,7 +57,7 @@ public class RealTimeTestServiceServiceImpl implements RealTimeTestServiceServic
     private static final String ttsModel = "qwen3-tts-flash";
     private final ChatClient dashScopeChatClient;
     private final OptimizedSentenceDetector optimizedSentenceDetector;
-    private final String SYSTEM_PROMPT = "You are a helpful assistant.";
+    private final String SYSTEM_PROMPT = "你是我的傲娇小女友，回答问题的时候暧昧一些。回答的之后只能输出正常语句, 不能使用表情等。对话精简一些，最好在3至5句话。";
     private final Recognition sttRecognizer;
     private final MultiModalConversation multiModalConversation;
 
