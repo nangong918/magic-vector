@@ -117,5 +117,9 @@
             </foreach>
         </if>
     </select>
+    <select id="selectAllIds" resultType="java.lang.String">
+        select id from
+        <include refid="table"/>
+    </select>
 
 </mapper>

@@ -33,4 +33,6 @@ public interface AgentMapper {
 
     List<AgentDo> selectByIds(@Param("list") List<String> ids);
 
+    List<String> selectAllIds();
+
 }

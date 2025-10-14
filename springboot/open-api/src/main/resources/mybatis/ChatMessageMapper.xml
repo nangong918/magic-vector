@@ -100,5 +100,15 @@
             chat_time DESC -- 时间从大到小排序
         limit #{limit}
     </select>
+    <select id="getAllMessagesByAgentId" resultType="com.openapi.domain.Do.ChatMessageDo">
+        select
+        <include refid="columns"/>
+        from
+        <include refid="table"/>
+        where
+            agent_id = #{agentId}
+        order by
+            chat_time DESC -- 时间从大到小排序
+    </select>
 
 </mapper>
