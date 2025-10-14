@@ -6,7 +6,7 @@ import java.util.concurrent.atomic.AtomicReference
 
 class CreateAgentAAo {
 
-    val atomicUrl : AtomicReference<Uri> = AtomicReference(null)
+    val avatarAtomicUrl : AtomicReference<Uri> = AtomicReference(null)
     val nameLd = MutableLiveData("")
     val descriptionLd = MutableLiveData("")
 

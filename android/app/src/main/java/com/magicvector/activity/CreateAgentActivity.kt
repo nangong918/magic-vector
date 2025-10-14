@@ -21,7 +21,7 @@ class CreateAgentActivity : BaseAppCompatVmActivity<ActivityCreateAgentBinding, 
     override fun initViewModel() {
         super.initViewModel()
 
-
+        vm.initResource(this, binding.imvgAvatar)
     }
 
     override fun initView() {
@@ -38,5 +38,9 @@ class CreateAgentActivity : BaseAppCompatVmActivity<ActivityCreateAgentBinding, 
                 finish()
             }
         )
+
+        binding.imvgAvatar.setOnClickListener {
+            vm.selectAgentAvatar(this)
+        }
     }
 }
