@@ -11,7 +11,6 @@ import com.czy.smartmedicine.utils.BaseAppCompatVmFragment
 import com.data.domain.OnPositionItemClick
 import com.data.domain.fragmentActivity.intentAo.ChatIntentAo
 import com.magicvector.activity.ChatActivity
-import com.magicvector.activity.CreateAgentActivity
 import com.magicvector.databinding.FragmentMessageListBinding
 import com.magicvector.viewModel.fragment.MessageListVm
 import java.util.Optional
@@ -57,9 +56,11 @@ class MessageListFragment : BaseAppCompatVmFragment<
                         val intentAo = ChatIntentAo()
                         intentAo.ao = it[position]
 
-                        val intent = Intent(activity, ChatActivity::class.java)
-                        intent.putExtra(ChatIntentAo::class.simpleName, intentAo)
-                        startActivity(intent)
+                        vm.startChatActivity(requireActivity()) {
+                            val intent = Intent(activity, ChatActivity::class.java)
+                            intent.putExtra(ChatIntentAo::class.simpleName, intentAo)
+                            startActivity(intent)
+                        }
                     }
             }
         })

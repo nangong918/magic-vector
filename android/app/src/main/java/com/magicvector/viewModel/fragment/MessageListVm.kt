@@ -1,14 +1,23 @@
 package com.magicvector.viewModel.fragment
 
+import android.Manifest
 import android.content.Intent
+import android.util.Log
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.annotation.RequiresPermission
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.ViewModel
+import com.core.baseutil.permissions.GainPermissionCallback
+import com.core.baseutil.permissions.PermissionUtil
+import com.core.baseutil.ui.ToastUtils
 import com.data.domain.OnPositionItemClick
 import com.data.domain.fragmentActivity.fao.MessageFAo
+import com.data.domain.fragmentActivity.intentAo.ChatIntentAo
+import com.magicvector.activity.ChatActivity
 import com.magicvector.activity.CreateAgentActivity
 import com.view.appview.message.MessageContactAdapter
+import kotlinx.coroutines.Runnable
 
 
 open class MessageListVm(
@@ -69,4 +78,27 @@ open class MessageListVm(
         }
     }
 
+    fun startChatActivity(activity: FragmentActivity, successRunnable: Runnable) {
+        PermissionUtil.requestPermissionSelectX(
+            activity,
+            arrayOf(Manifest.permission.RECORD_AUDIO),
+            arrayOf(Manifest.permission.WRITE_EXTERNAL_STORAGE),
+            object : GainPermissionCallback{
+                @RequiresPermission(Manifest.permission.RECORD_AUDIO)
+                override fun allGranted() {
+                    Log.i(TAG, "获取录音权限成功")
+                    successRunnable.run()
+                }
+
+                override fun notGranted(notGrantedPermissions: Array<String?>?) {
+                    Log.w(TAG, "没有获取录音权限: ${notGrantedPermissions?.contentToString()}")
+                    ToastUtils.showToastActivity(activity, "没有获取录音权限")
+                }
+
+                override fun always() {
+                }
+
+            }
+        )
+    }
 }
