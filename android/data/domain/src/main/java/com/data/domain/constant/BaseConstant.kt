@@ -30,6 +30,10 @@ class BaseConstant {
         const val PROD_WS_URL = "wss://api.github.com";
     }
 
+    object WSConstantUrl {
+        const val AGENT_REALTIME_CHAT_URL = ConstantUrl.LOCAL_WS_URL + "/agent/realtime/chat"
+    }
+
     object PermissionConstant {
         // permission
         val MUST_PERMISSIONS: Array<String> = arrayOf(
