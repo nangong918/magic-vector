@@ -1,6 +1,11 @@
 package com.magicvector.activity
 
+import android.app.Activity
+import android.content.Intent
 import android.os.Bundle
+import com.core.appcore.api.handler.SyncRequestCallback
+import com.core.baseutil.network.networkLoad.NetworkLoadUtils
+import com.core.baseutil.ui.ToastUtils
 import com.magicvector.databinding.ActivityCreateAgentBinding
 import com.magicvector.utils.BaseAppCompatVmActivity
 import com.magicvector.viewModel.activity.CreateAgentVm
@@ -41,6 +46,28 @@ class CreateAgentActivity : BaseAppCompatVmActivity<ActivityCreateAgentBinding, 
 
         binding.imvgAvatar.setOnClickListener {
             vm.selectAgentAvatar(this)
+        }
+
+        binding.btnConfirm.setOnClickListener {
+            NetworkLoadUtils.showDialog(this)
+            vm.doCreateAgent(this, object : SyncRequestCallback{
+                override fun onThrowable(throwable: Throwable?) {
+                    NetworkLoadUtils.dismissDialogSafety(this@CreateAgentActivity)
+                    ToastUtils.showToastActivity(
+                        this@CreateAgentActivity,
+                        getString(com.view.appview.R.string.create_failed)
+                    )
+                }
+
+                override fun onAllRequestSuccess() {
+                    NetworkLoadUtils.dismissDialogSafety(this@CreateAgentActivity)
+                    val resultIntent = Intent().apply {
+                        putExtra(CreateAgentActivity::class.simpleName, true) // 设置返回值
+                    }
+                    setResult(RESULT_OK, resultIntent)
+                    finish()
+                }
+            })
         }
     }
 }

@@ -109,7 +109,15 @@ class CreateAgentVm(
     private fun handleCreateAgent(response: BaseResponse<AgentResponse>?,
                                   context: Context,
                                   callback: SyncRequestCallback) {
-
+        response?.let {
+            val agentId = response.data?.agentAo?.agentId
+            if (agentId != null){
+                ToastUtils.showToastActivity(context, context.getString(
+                    com.view.appview.R.string.create_success
+                ))
+            }
+        }
+        callback.onAllRequestSuccess()
     }
 
     // 查询Agent

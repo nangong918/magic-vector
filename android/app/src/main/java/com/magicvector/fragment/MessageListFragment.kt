@@ -12,15 +12,14 @@ import com.data.domain.OnPositionItemClick
 import com.data.domain.fragmentActivity.intentAo.ChatIntentAo
 import com.magicvector.activity.ChatActivity
 import com.magicvector.activity.CreateAgentActivity
-import com.magicvector.activity.TestActivity
 import com.magicvector.databinding.FragmentMessageListBinding
-import com.magicvector.viewModel.fragment.MessageVm
+import com.magicvector.viewModel.fragment.MessageListVm
 import java.util.Optional
 
 class MessageListFragment : BaseAppCompatVmFragment<
-        FragmentMessageListBinding, MessageVm>(
+        FragmentMessageListBinding, MessageListVm>(
     MessageListFragment::class,
-            MessageVm::class
+            MessageListVm::class
 ) {
 
     override fun initBinding(): FragmentMessageListBinding {
@@ -46,6 +45,7 @@ class MessageListFragment : BaseAppCompatVmFragment<
     override fun initViewModel() {
         super.initViewModel()
 
+        vm.initResource(requireActivity())
         vm.initFAo()
 
         vm.initAdapter(object : OnPositionItemClick {
@@ -89,8 +89,7 @@ class MessageListFragment : BaseAppCompatVmFragment<
         super.setListener()
 
         binding.fbtnCreateAgent.setOnClickListener {
-            val intent = Intent(activity, CreateAgentActivity::class.java)
-            startActivity(intent)
+            vm.turnToCreateAgent(requireActivity())
         }
     }
 
