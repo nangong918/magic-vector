@@ -8,11 +8,25 @@ Spring 项目部署在Docker -> 上传到阿里云服务器 todo Docker，Nginx 
 简单的SpringAI智能体部署Docker + 内网穿透
 
 ### lv0(当前任务)
-Android 实现录音View / Android 的MediaCore进行录音 / FFmpeg
-升级为Websocket进行实时语音通话
+chat memory(内存)
+chat history(历史：mysql)
+
+chat mcp(tools -> 本地测试)
+
+chat rag(向量)
+
+chat app agent创建
+chat app agent聊天
+
+研究esp32-sc; 构建身体（头部和底部两部分）
 
 ### lv1(计划任务)
-chat memory
+联网mcp
+chat vad
+chat 声纹识别（避免vad将自己的声音误认为输入）
+
+音频合成缓存，解决当前音频请求频率过高问题
+
 图片视觉
 
 ### lv2(研究性任务)
@@ -39,3 +53,4 @@ Websocket测试 (2025/10/7)
 完成前后端时音频聊天 (2025/10/11)
 Omni实时多模态音频聊天 + 音量检测 (2025/10/12)
 STT fun-asr-realtime 测试 (2025/10/13)
+stt -> llm -> nlp -> tts 工作流完成 (2025/10/13)

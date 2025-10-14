@@ -195,6 +195,7 @@ public class RealTimeTestServiceServiceImpl implements RealTimeTestServiceServic
                         if (StringUtils.hasText(completeSentence)){
                             sentenceQueue.add(completeSentence);
                             try {
+                                // todo 对话延迟：第一个消息要立刻回答，后面的消息要延迟300ms合成
                                 generateAudio(session);
                             } catch (NoApiKeyException e) {
                                 throw new RuntimeException(e);
