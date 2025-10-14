@@ -3,6 +3,13 @@ package com.openapi;
 import com.alibaba.cloud.ai.dashscope.chat.DashScopeChatModel;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.Test;
+import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.ai.chat.memory.ChatMemory;
+import org.springframework.ai.chat.memory.MessageWindowChatMemory;
+import org.springframework.ai.chat.messages.AssistantMessage;
+import org.springframework.ai.chat.messages.UserMessage;
+import org.springframework.ai.chat.model.ChatResponse;
+import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 
@@ -24,5 +31,41 @@ public class ChatMemoryTest {
     public void helloWorldTests(){
         log.info("chatModel: {}", chatModel);
     }
+
+    @Test
+    public void chatModelChatMemoryTest(){
+        ChatMemory chatMemory = MessageWindowChatMemory.builder()
+                .maxMessages(10)
+                .build();
+
+        String conversationId = "001";
+
+        String systemPrompt = "你是一个聊天助手叫做uimi，回复尽量精简，一两句话内。";
+
+
+        // 首次交互
+        UserMessage userMessage1 = new UserMessage("你好啊，你是谁？ 我叫做czy，记住我的名字");
+        chatMemory.add(conversationId, userMessage1);
+        Prompt prompt1 = Prompt.builder()
+                .messages(chatMemory.get(conversationId))
+                .build().augmentSystemMessage(systemPrompt);
+        ChatResponse response1 = chatModel.call(prompt1);
+        chatMemory.add(conversationId, response1.getResult().getOutput());
+
+        System.out.println("首次交互: " + response1.getResult().getOutput().getText());
+
+        // 第二次交互
+        UserMessage userMessage2 = new UserMessage("我叫什么名字？你还记得你叫什么名字吗？");
+        chatMemory.add(conversationId, userMessage2);
+        var prompt2 = new Prompt(chatMemory.get(conversationId));
+        ChatResponse response2 = chatModel.call(prompt2);
+        chatMemory.add(conversationId, response2.getResult().getOutput());
+        System.out.println("response2 = " + response2.getResult().getOutput().getText());
+    }
+
+    @Test
+    public void chatClientChatMemoryTest() {
+    }
+
 
 }
