@@ -1,12 +1,14 @@
 package com.view.appview.chat
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.util.AttributeSet
 import android.view.LayoutInflater
-import android.view.View
+import android.view.MotionEvent
 import android.widget.EditText
 import androidx.constraintlayout.widget.ConstraintLayout
 import com.view.appview.databinding.ViewSendMessageBinding
+import kotlinx.coroutines.Runnable
 
 class SendMessageView : ConstraintLayout {
 
@@ -56,6 +58,25 @@ class SendMessageView : ConstraintLayout {
     fun setImgClickListener(listener: OnClickListener?) {
         listener?.let {
             binding.btnPicture.setOnClickListener(listener)
+        }
+    }
+
+    @SuppressLint("ClickableViewAccessibility")
+    fun setTakAudioOnTouchListener(startRecording: Runnable, stopRecording: Runnable){
+        binding.btnTakeAudio.setOnTouchListener { v, event ->
+            when (event.action) {
+                MotionEvent.ACTION_DOWN -> {
+                    binding.btnTakeAudio.text = context.getString(com.view.appview.R.string.release_to_cancel)
+                    startRecording.run()
+                    true
+                }
+                MotionEvent.ACTION_UP -> {
+                    binding.btnTakeAudio.text = context.getString(com.view.appview.R.string.press_to_record)
+                    stopRecording.run()
+                    true
+                }
+                else -> false
+            }
         }
     }
 

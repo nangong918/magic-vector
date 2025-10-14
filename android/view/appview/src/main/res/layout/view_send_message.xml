@@ -81,7 +81,7 @@
         android:layout_height="70dp">
 
         <TextView
-            android:id="@+id/textView"
+            android:id="@+id/btn_takeAudio"
             android:layout_width="0dp"
             android:layout_height="50dp"
             android:background="@drawable/round_corners_button2"
@@ -94,7 +94,7 @@
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent"
-            tools:text="按住说话" />
+            tools:text="按住录音" />
 
         <androidx.appcompat.widget.AppCompatImageView
             android:id="@+id/btn_keyboard"

@@ -136,4 +136,6 @@
     <string name="test_RealTimeChat_desc2">非Alibaba多模态模型,自制实时多模态.\n由于Omni Realtime模型无法添加MCP, \n无法使用Faction Call, 无法整合SpringAI的RAG和ChatMemory.\n(本demo是为了配合SpringAI,如果使用LangChain4J能实现Open格式的Omni实时多模态整合)</string>
     <string name="create_success">创建成功</string>
     <string name="create_failed">创建失败</string>
+    <string name="release_to_cancel">松开结束</string>
+    <string name="press_to_record">按住录音</string>
 </resources>
