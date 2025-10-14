@@ -11,6 +11,7 @@ import com.czy.smartmedicine.utils.BaseAppCompatVmFragment
 import com.data.domain.OnPositionItemClick
 import com.data.domain.fragmentActivity.intentAo.ChatIntentAo
 import com.magicvector.activity.ChatActivity
+import com.magicvector.activity.CreateAgentActivity
 import com.magicvector.activity.TestActivity
 import com.magicvector.databinding.FragmentMessageListBinding
 import com.magicvector.viewModel.fragment.MessageVm
@@ -86,6 +87,11 @@ class MessageListFragment : BaseAppCompatVmFragment<
 
     override fun setListener() {
         super.setListener()
+
+        binding.fbtnCreateAgent.setOnClickListener {
+            val intent = Intent(activity, CreateAgentActivity::class.java)
+            startActivity(intent)
+        }
     }
 
 }

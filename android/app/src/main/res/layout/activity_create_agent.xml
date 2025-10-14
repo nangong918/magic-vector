@@ -6,6 +6,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
+    android:gravity="center_horizontal"
     tools:context=".activity.CreateAgentActivity">
 
 
@@ -13,6 +14,15 @@
         android:id="@+id/top_bar"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"/>
+
+    <!-- Agent Avatar -->
+    <de.hdodenhof.circleimageview.CircleImageView
+        android:id="@+id/imvg_avatar"
+        android:layout_marginTop="20dp"
+        android:layout_height="120dp"
+        android:layout_width="120dp"
+        android:src="@xml/person_24px"
+        android:background="@drawable/circle_corners_bg_white" />
 
     <!-- Agent Name -->
     <com.view.appview.GeneralEditText
