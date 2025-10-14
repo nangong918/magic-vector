@@ -21,5 +21,5 @@ public class UserDo {
     private String account;
     private String password;
     @Nullable
-    private String ossId;
+    private String ossId = null;
 }
