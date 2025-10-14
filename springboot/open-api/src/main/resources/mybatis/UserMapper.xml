@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.openapi.mapper.UserMapper">
+
+    <sql id="table">
+        user
+    </sql>
+
+    <sql id="columns">
+        id, name, account, password, oss_id
+    </sql>
+
+    <insert id="insert">
+        insert into
+        <include refid="table"/>
+        (
+        <include refid="columns"/>
+        )
+        values(
+        #{id}, #{name}, #{account}, #{password}, #{ossId}
+        )
+    </insert>
+
+    <update id="updateNameById">
+        update
+        <include refid="table"/>
+        set name = #{name}
+        where id = #{id}
+    </update>
+    <update id="updatePasswordById">
+        update
+        <include refid="table"/>
+        set password = #{password}
+        where id = #{id}
+    </update>
+    <update id="updateAvatarById">
+        update
+        <include refid="table"/>
+        set oss_id = #{ossId}
+        where id = #{id}
+    </update>
+
+    <delete id="deleteById">
+        delete from
+        <include refid="table"/>
+        where id = #{id}
+    </delete>
+    <delete id="deleteByAccount">
+        delete from
+        <include refid="table"/>
+        where account = #{account}
+    </delete>
+
+    <select id="selectById" resultType="com.openapi.domain.Do.UserDo">
+        select
+        <include refid="columns"/>
+        from
+        <include refid="table"/>
+        where id = #{id}
+    </select>
+    <select id="selectByAccount" resultType="com.openapi.domain.Do.UserDo">
+        select
+        <include refid="columns"/>
+        from
+        <include refid="table"/>
+        where account = #{account}
+    </select>
+</mapper>
