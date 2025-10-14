@@ -11,8 +11,8 @@ import java.time.LocalDateTime;
 public class ChatMessageDo {
     @Id
     private String id = String.valueOf(IdUtil.getSnowflake().nextId());
-    private String agentId; // 也可也理解为sessionId, 毕竟救我一个用户
-//    private String userId; // 就老子一个用户
+    private String agentId; // 也可也理解为sessionId
+    private String userId;
     private String content;
     // 时间
     private LocalDateTime chatTime;

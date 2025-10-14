@@ -31,11 +31,12 @@ public class ChatMessageServiceImpl implements ChatMessageService {
      * @return 消息Id
      */
     @Override
-    public String insertOne(@NotNull String agentId, @NotNull String message, boolean isUser) {
+    public String insertOne(@NotNull String agentId, @NotNull String message, boolean isUser, String userId) {
         ChatMessageDo chatMessageDo = new ChatMessageDo();
         chatMessageDo.setAgentId(agentId);
         chatMessageDo.setContent(message);
         chatMessageDo.setRole(isUser ? 0 : 1);
+        chatMessageDo.setUserId(userId);
         chatMessageDo.setChatTime(LocalDateTime.now());
         chatMessageMapper.insert(chatMessageDo);
         return chatMessageDo.getId();

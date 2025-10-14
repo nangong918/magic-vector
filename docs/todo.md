@@ -11,12 +11,11 @@ Spring 项目部署在Docker -> 上传到阿里云服务器 todo Docker，Nginx 
 chat memory(内存)
 chat history(历史：mysql)
 
-chat mcp(tools -> 本地测试)
-
-chat rag(向量)
-
 chat app agent创建
 chat app agent聊天
+
+chat mcp(tools -> 本地测试)
+chat rag(向量)
 
 研究esp32-sc; 构建身体（头部和底部两部分）
 

@@ -12,7 +12,8 @@ import java.util.List;
  * @date 2025/9/30 16:09
  */
 public interface ChatMessageService {
-    String insertOne(@NotNull String agentId, @NotNull String message, boolean isUser);
+
+    String insertOne(@NotNull String agentId, @NotNull String message, boolean isUser, String userId);
 
     List<ChatMessageDo> getMessagesByAgentIdDeadlineLimit(
             @NotNull String agentId,
