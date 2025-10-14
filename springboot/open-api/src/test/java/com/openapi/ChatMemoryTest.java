@@ -4,6 +4,7 @@ import com.alibaba.cloud.ai.dashscope.chat.DashScopeChatModel;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.Test;
 import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.ai.chat.client.advisor.MessageChatMemoryAdvisor;
 import org.springframework.ai.chat.memory.ChatMemory;
 import org.springframework.ai.chat.memory.MessageWindowChatMemory;
 import org.springframework.ai.chat.messages.AssistantMessage;
@@ -65,6 +66,34 @@ public class ChatMemoryTest {
 
     @Test
     public void chatClientChatMemoryTest() {
+        ChatMemory chatMemory = MessageWindowChatMemory.builder()
+                // 窗口大小设置为10
+                .maxMessages(10)
+                .build();
+
+        String conversationId = "002";
+
+        String systemPrompt = "你是一个聊天助手叫做uimi，回复尽量精简，一两句话内。";
+
+        ChatClient chatClient = ChatClient.builder(chatModel)
+                .defaultAdvisors(MessageChatMemoryAdvisor.builder(chatMemory).build())
+                .defaultSystem(systemPrompt)
+                .build();
+
+        String answer1 = chatClient.prompt()
+                .user("你好啊，你是谁？ 我叫做czy，记住我的名字")
+                .advisors(a -> a.param(ChatMemory.CONVERSATION_ID, conversationId))
+                .call()
+                .content();
+        System.out.println("answer1 = " + answer1);
+
+        String answer2 = chatClient.prompt()
+                .user("我叫什么名字？你还记得你叫什么名字吗？")
+                .advisors(a -> a.param(ChatMemory.CONVERSATION_ID, conversationId))
+                .call()
+                .content();
+
+        System.out.println("answer2 = " + answer2);
     }
 
 
