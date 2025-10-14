@@ -5,7 +5,7 @@ import com.minio.service.OssService;
 import com.openapi.config.UserConfig;
 import com.openapi.domain.Do.UserDo;
 import com.openapi.mapper.UserMapper;
-import com.openapi.service.UserServiceService;
+import com.openapi.service.UserService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
@@ -25,7 +25,7 @@ import java.util.Optional;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class UserServiceServiceImpl implements UserServiceService {
+public class UserServiceImpl implements UserService {
 
     private final OssService ossService;
     private final UserMapper userMapper;
@@ -74,7 +74,12 @@ public class UserServiceServiceImpl implements UserServiceService {
     }
 
     @Override
-    public boolean checkUserExist(String account){
+    public boolean checkUserExistById(String id){
+        return userMapper.selectById(id) != null;
+    }
+
+    @Override
+    public boolean checkUserExistByAccount(String account){
         return userMapper.selectByAccount(account) != null;
     }
 

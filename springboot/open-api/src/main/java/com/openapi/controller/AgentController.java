@@ -2,9 +2,11 @@ package com.openapi.controller;
 
 import com.openapi.domain.ao.AgentAo;
 import com.openapi.domain.constant.error.CommonExceptions;
+import com.openapi.domain.constant.error.UserExceptions;
 import com.openapi.domain.dto.BaseResponse;
 import com.openapi.domain.dto.resonse.AgentResponse;
 import com.openapi.service.AgentService;
+import com.openapi.service.UserService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.util.StringUtils;
@@ -29,11 +31,13 @@ import org.springframework.web.multipart.MultipartFile;
 public class AgentController {
 
     private final AgentService agentService;
+    private final UserService userService;
 
     // 创建Agent
     @PostMapping("/create")
     public BaseResponse<AgentResponse> createAgent(
             @RequestParam("avatar") MultipartFile avatar,
+            @RequestParam("userId") String userId,
             @RequestParam("name") String name,
             @RequestParam("description") String description
     ) {
@@ -45,8 +49,11 @@ public class AgentController {
         if (!StringUtils.hasText(description)){
             return BaseResponse.LogBackError(CommonExceptions.PARAM_ERROR);
         }
+        if (!userService.checkUserExistById(userId)){
+            return BaseResponse.LogBackError(UserExceptions.USER_NOT_EXIST);
+        }
 
-        AgentAo agentAo = agentService.createAgent(avatar, name, description);
+        AgentAo agentAo = agentService.createAgent(avatar, userId, name, description);
 
         AgentResponse response = new AgentResponse();
         response.setAgentAo(agentAo);

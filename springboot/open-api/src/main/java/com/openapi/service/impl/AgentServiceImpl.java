@@ -31,9 +31,10 @@ public class AgentServiceImpl implements AgentService {
     private final AgentConfig agentConfig;
 
     @Override
-    public AgentAo createAgent(@Nullable MultipartFile avatar, @NotNull String name, @NotNull String description) {
+    public AgentAo createAgent(@Nullable MultipartFile avatar, @NotNull String userId, @NotNull String name, @NotNull String description) {
         AgentDo agentDo = new AgentDo();
         agentDo.setName(name);
+        agentDo.setUserId(userId);
         agentDo.setDescription(description);
 
         if (avatar == null){

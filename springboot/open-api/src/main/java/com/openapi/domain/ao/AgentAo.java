@@ -11,4 +11,5 @@ import lombok.Data;
 public class AgentAo {
     private AgentVo agentVo;
     private String agentId;
+    private String userId;
 }

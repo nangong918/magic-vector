@@ -8,7 +8,7 @@
     </sql>
 
     <sql id="columns">
-        id, name, description, oss_id
+        id, name, description, oss_id, user_id
     </sql>
     <insert id="insert">
         insert into
@@ -17,7 +17,7 @@
         <include refid="columns"/>
         )
         values(
-        #{id}, #{name}, #{description}, #{ossId}
+        #{id}, #{name}, #{description}, #{ossId}, #{userId}
         )
     </insert>
     <insert id="insertBatch">
@@ -30,7 +30,7 @@
             values
             <foreach item="item" index="index" collection="list" separator="," open="(" close=")">
                 (
-                #{item.id}, #{item.name}, #{item.description}, #{item.ossId}
+                #{item.id}, #{item.name}, #{item.description}, #{item.ossId}, #{item.userId}
                 )
             </foreach>
         </if>
@@ -52,6 +52,9 @@
         <if test="ossId != null">
             oss_id = #{ossId}
         </if>
+        <if test="userId != null">
+            user_id = #{userId}
+        </if>
         where id = #{id}
     </update>
     <update id="updateBatch">
@@ -71,6 +74,9 @@
                 </if>
                 <if test="agentDo.ossId != null">
                     oss_id = #{agentDo.ossId}
+                </if>
+                <if test="agentDo.userId != null">
+                    user_id = #{agentDo.userId}
                 </if>
             </foreach>
         </if>

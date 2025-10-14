@@ -10,7 +10,7 @@ import org.springframework.web.multipart.MultipartFile;
  * @date 2025/9/29 16:26
  */
 public interface AgentService {
-    AgentAo createAgent(@Nullable MultipartFile avatar, @NotNull String name, @NotNull String description);
+    AgentAo createAgent(@Nullable MultipartFile avatar, @NotNull String userId, @NotNull String name, @NotNull String description);
 
     AgentAo getAgentById(String id);
 }

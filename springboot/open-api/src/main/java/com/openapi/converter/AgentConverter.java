@@ -41,6 +41,7 @@ public interface AgentConverter {
         AgentVo vo = _do2Vo(agentDo);
         ao.setAgentVo(vo);
         ao.setAgentId(agentDo.getId());
+        ao.setUserId(agentDo.getUserId());
         return ao;
     }
 
