@@ -86,6 +86,8 @@ class CreateAgentVm(
 
         api.createAgent(
             filePart,
+            // todo 此处在测试结束之后需要改成正确的角色信息
+            "testUser",
             nameBody,
             descriptionBody,
             object : OnSuccessCallback<BaseResponse<AgentResponse>> {
