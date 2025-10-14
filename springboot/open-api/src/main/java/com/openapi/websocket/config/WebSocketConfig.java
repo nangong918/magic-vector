@@ -7,12 +7,10 @@ import com.openapi.websocket.handler.OmniRealTimeNoVADTestChannel;
 import com.openapi.websocket.handler.RealTimeTestChannel;
 import com.openapi.websocket.handler.TestChannel;
 import lombok.RequiredArgsConstructor;
-import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.socket.config.annotation.EnableWebSocket;
 import org.springframework.web.socket.config.annotation.WebSocketConfigurer;
 import org.springframework.web.socket.config.annotation.WebSocketHandlerRegistry;
-import org.springframework.web.socket.server.standard.ServerEndpointExporter;
 
 /**
  * @author 13225
@@ -46,9 +44,6 @@ public class WebSocketConfig implements WebSocketConfigurer {
                 .setAllowedOrigins("*"); // 根据需要设置允许的源
     }
 
-    @Bean
-    public ServerEndpointExporter serverEndpointExporter() {
-        return new ServerEndpointExporter();
-    }
+
 
 }
