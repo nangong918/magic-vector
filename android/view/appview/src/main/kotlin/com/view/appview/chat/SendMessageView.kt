@@ -3,6 +3,7 @@ package com.view.appview.chat
 import android.content.Context
 import android.util.AttributeSet
 import android.view.LayoutInflater
+import android.view.View
 import android.widget.EditText
 import androidx.constraintlayout.widget.ConstraintLayout
 import com.view.appview.databinding.ViewSendMessageBinding
@@ -24,6 +25,14 @@ class SendMessageView : ConstraintLayout {
     )
 
     private fun init(context: Context) {
+
+        // 点击事件
+        binding.btnAudio.setOnClickListener {
+            setKeyboardOpen(false)
+        }
+        binding.btnKeyboard.setOnClickListener {
+            setKeyboardOpen(true)
+        }
     }
 
     fun getEditText(): EditText {
@@ -44,16 +53,23 @@ class SendMessageView : ConstraintLayout {
         }
     }
 
-    fun setCallClickListener(listener: OnClickListener?) {
-        listener?.let {
-            binding.btnCall.setOnClickListener(listener)
-        }
-    }
-
     fun setImgClickListener(listener: OnClickListener?) {
         listener?.let {
             binding.btnPicture.setOnClickListener(listener)
         }
     }
 
+    private var isKeyboardOpen = true
+
+    fun setKeyboardOpen(isOpen: Boolean) {
+        isKeyboardOpen = isOpen
+        if (isOpen){
+            binding.lyKeyboard.visibility = VISIBLE
+            binding.lyAudio.visibility = GONE
+        }
+        else {
+            binding.lyKeyboard.visibility = GONE
+            binding.lyAudio.visibility = VISIBLE
+        }
+    }
 }

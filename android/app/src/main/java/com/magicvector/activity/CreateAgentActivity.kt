@@ -14,7 +14,7 @@ class CreateAgentActivity : BaseAppCompatVmActivity<ActivityCreateAgentBinding, 
     CreateAgentActivity::class,
     CreateAgentVm::class
 ) {
-
+// todo 尝试实现创建Agent
     override fun initBinding(): ActivityCreateAgentBinding {
         return ActivityCreateAgentBinding.inflate(layoutInflater)
     }
