@@ -28,6 +28,8 @@ class TestActivity : BaseAppCompatVmActivity<ActivityTestBinding, TestVm>(
     override fun initViewModel() {
         super.initViewModel()
 
+        observeData()
+
         initVoiceWaveView()
     }
 
@@ -124,8 +126,6 @@ class TestActivity : BaseAppCompatVmActivity<ActivityTestBinding, TestVm>(
         binding.btnSendMessage.setOnClickListener {
             vm.sendQuestion()
         }
-
-        observeData()
     }
 
     @SuppressLint("SetTextI18n")
@@ -502,8 +502,6 @@ class TestActivity : BaseAppCompatVmActivity<ActivityTestBinding, TestVm>(
 
 
     }
-
-
 
     private fun initVoiceWaveView() {
         binding.vVoiceWave.apply {

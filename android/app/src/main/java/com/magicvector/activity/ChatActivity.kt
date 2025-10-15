@@ -8,6 +8,7 @@ import android.util.Log
 import android.view.View
 import com.data.domain.ao.message.MessageContactItemAo
 import com.data.domain.fragmentActivity.intentAo.ChatIntentAo
+import com.data.domain.vo.test.RealtimeChatState
 import com.magicvector.databinding.ActivityChatBinding
 import com.magicvector.utils.BaseAppCompatVmActivity
 import com.magicvector.viewModel.activity.ChatVm
@@ -105,10 +106,37 @@ class ChatActivity : BaseAppCompatVmActivity<ActivityChatBinding, ChatVm>(
             }
             vm.adapter.setCurrentAvatarUrl(newAvatarUrl)
         })
+
+        // 录制状态
+        // 状态
+        vm.realtimeChatState.observe(this) { state ->
+            when (state){
+                is RealtimeChatState.NotInitialized -> {
+                }
+                is RealtimeChatState.Initializing -> {
+                }
+                is RealtimeChatState.InitializedConnected -> {
+//                    binding.btnRecordAndSendRealtimeChat2.text = "开始录音 + 流式发送"
+                }
+                is RealtimeChatState.RecordingAndSending -> {
+
+//                    binding.btnRecordAndSendRealtimeChat2.text = "结束录音 + 接收消息"
+                }
+                is RealtimeChatState.Receiving -> {
+                }
+                is RealtimeChatState.Disconnected -> {
+                }
+                is RealtimeChatState.Error -> {
+                    Log.e(TAG, "realtimeChatState: Error: ${state.message}")
+                }
+            }
+        }
     }
 
     override fun initView() {
         super.initView()
+
+        binding.smSendMessage.setKeyboardOpen(true)
     }
 
     override fun setListener() {
@@ -126,6 +154,18 @@ class ChatActivity : BaseAppCompatVmActivity<ActivityChatBinding, ChatVm>(
         binding.smSendMessage.setImgClickListener {
             v -> vm.beginSelectPicture(this)
         }
+
+        // 按住发送语音与取消录制
+        binding.smSendMessage.setTakAudioOnTouchListener(
+            {
+                // 开始录制
+                vm.startRecordRealtimeChatAudio()
+            },
+            {
+                // 结束录制
+                vm.stopAndSendRealtimeChatAudio()
+            }
+        )
     }
 
     override fun onDestroy() {
