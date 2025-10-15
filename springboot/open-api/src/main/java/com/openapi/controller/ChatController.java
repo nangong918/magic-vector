@@ -1,25 +1,18 @@
 package com.openapi.controller;
 
 
-import com.alibaba.cloud.ai.dashscope.chat.DashScopeChatModel;
 import com.openapi.domain.constant.error.CommonExceptions;
 import com.openapi.domain.dto.BaseResponse;
-import com.openapi.domain.dto.request.ChatRequest;
 import com.openapi.domain.dto.resonse.ChatMessageResponse;
 import com.openapi.service.ChatMessageService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
-import org.springframework.ai.chat.client.ChatClient;
-import org.springframework.http.MediaType;
-import org.springframework.http.codec.ServerSentEvent;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
-import reactor.core.publisher.Flux;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.UUID;
 
 
 @Slf4j
@@ -29,7 +22,6 @@ import java.util.UUID;
 @RequestMapping("/chat")
 public class ChatController {
 
-    private final DashScopeChatModel dashScopeChatModel;
     private final ChatMessageService chatMessageService;
 
 

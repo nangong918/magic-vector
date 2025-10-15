@@ -4,6 +4,7 @@ import com.openapi.domain.ao.AgentAo;
 import com.openapi.domain.constant.error.CommonExceptions;
 import com.openapi.domain.constant.error.UserExceptions;
 import com.openapi.domain.dto.BaseResponse;
+import com.openapi.domain.dto.resonse.AgentListResponse;
 import com.openapi.domain.dto.resonse.AgentResponse;
 import com.openapi.service.AgentService;
 import com.openapi.service.UserService;
@@ -17,6 +18,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
+
+import java.util.List;
 
 /**
  * @author 13225
@@ -73,6 +76,22 @@ public class AgentController {
         AgentAo agentAo = agentService.getAgentById(agentId);
         AgentResponse response = new AgentResponse();
         response.setAgentAo(agentAo);
+        return BaseResponse.getResponseEntitySuccess(response);
+    }
+
+    // 获取AgentList
+    @GetMapping("/getList")
+    public BaseResponse<AgentListResponse> getAgentList(
+            @RequestParam("userId") String userId
+    ){
+        // 参数校验
+        if (!userService.checkUserExistById(userId)){
+            return BaseResponse.LogBackError(UserExceptions.USER_NOT_EXIST);
+        }
+
+        List<AgentAo> agentAos = agentService.getUserAgentsAo(userId);
+        AgentListResponse response = new AgentListResponse();
+        response.setAgentAos(agentAos);
         return BaseResponse.getResponseEntitySuccess(response);
     }
 

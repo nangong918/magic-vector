@@ -121,5 +121,10 @@
         select id from
         <include refid="table"/>
     </select>
+    <select id="selectAllByUserId" resultType="java.lang.String">
+        select id from
+        <include refid="table"/>
+        where user_id = #{userId}
+    </select>
 
 </mapper>

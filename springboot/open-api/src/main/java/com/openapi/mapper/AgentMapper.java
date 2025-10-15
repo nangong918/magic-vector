@@ -35,4 +35,6 @@ public interface AgentMapper {
 
     List<String> selectAllIds();
 
+    List<String> selectAllByUserId(String userId);
+
 }

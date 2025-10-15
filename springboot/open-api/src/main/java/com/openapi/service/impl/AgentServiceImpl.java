@@ -14,8 +14,11 @@ import lombok.val;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.springframework.stereotype.Service;
+import org.springframework.util.CollectionUtils;
+import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -86,5 +89,47 @@ public class AgentServiceImpl implements AgentService {
                         .map(List::getFirst)
                         .orElse(null);
         return agentConverter.do2Ao(agentDo, avatarUrl);
+    }
+
+    @NotNull
+    @Override
+    public List<AgentAo> getAgentsByIds(List<String> ids){
+        if (CollectionUtils.isEmpty(ids)){
+            return new ArrayList<>();
+        }
+        List<AgentDo> agentDos = agentMapper.selectByIds(ids);
+        if (CollectionUtils.isEmpty(agentDos)){
+            return new ArrayList<>();
+        }
+        List<String> fileIds = agentDos.stream().map(AgentDo::getOssId).toList();
+        List<String> avatarUrls = ossService.getFileUrlsByFileIds(fileIds);
+
+        assert avatarUrls.size() == agentDos.size();
+        List<AgentAo> agentAos = new ArrayList<>();
+        for (int i = 0; i < agentDos.size(); i++){
+            agentAos.add(agentConverter.do2Ao(agentDos.get(i), avatarUrls.get(i)));
+        }
+        return agentAos;
+    }
+
+    @NotNull
+    @Override
+    public List<String> getUserAgents(String userId){
+        List<String> agentIds = new ArrayList<>();
+        if (!StringUtils.hasText(userId)){
+            return agentIds;
+        }
+        agentIds = agentMapper.selectAllByUserId(userId);
+        return agentIds;
+    }
+
+    @NotNull
+    @Override
+    public List<AgentAo> getUserAgentsAo(String userId){
+        List<String> agentIds =getUserAgents(userId);
+        if (agentIds.isEmpty()){
+            return new ArrayList<>();
+        }
+        return getAgentsByIds(agentIds);
     }
 }
