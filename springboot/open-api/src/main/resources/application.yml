@@ -10,8 +10,9 @@ spring:
   ai:
     dashscope:
       api-key: ${ALI_API_KEY}
-      agent:
-        deepseek-id: "deepseek-r1"
+      chat:
+        options:
+          model: qwen-flash
       embedding:
         options:
           model: "text-embedding-v3"
