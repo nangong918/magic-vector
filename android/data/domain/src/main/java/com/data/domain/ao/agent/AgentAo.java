@@ -10,4 +10,5 @@ import com.data.domain.vo.agent.AgentVo;
 public class AgentAo {
     public AgentVo agentVo;
     public String agentId;
+    public String userId;
 }

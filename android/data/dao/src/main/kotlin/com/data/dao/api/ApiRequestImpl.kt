@@ -5,6 +5,8 @@ import com.core.baseutil.network.BaseApiRequestImpl
 import com.core.baseutil.network.BaseResponse
 import com.core.baseutil.network.OnSuccessCallback
 import com.core.baseutil.network.OnThrowableCallback
+import com.data.domain.dto.response.AgentLastChatListResponse
+import com.data.domain.dto.response.AgentListResponse
 import com.data.domain.dto.response.AgentResponse
 import com.data.domain.dto.response.ChatMessageResponse
 import okhttp3.MultipartBody
@@ -57,6 +59,42 @@ open class ApiRequestImpl(apiRequest: ApiRequest) : BaseApiRequestImpl() {
         sendRequestCallback(
             apiCall = {
                 mApi.getAgentInfo(agentId)
+            },
+            successCallback = onSuccessCallback,
+            throwableCallback = throwableCallback
+        )
+    }
+
+    //    @GET("/agent/getList")
+    //    suspend fun getAgentList(
+    //        @Query("userId") userId: String
+    //    ): BaseResponse<AgentListResponse>
+    fun <T> getAgentList(
+        userId: String,
+        onSuccessCallback: OnSuccessCallback<BaseResponse<AgentListResponse>>?,
+        throwableCallback: OnThrowableCallback?
+    ){
+        sendRequestCallback(
+            apiCall = {
+                mApi.getAgentList(userId)
+            },
+            successCallback = onSuccessCallback,
+            throwableCallback = throwableCallback
+        )
+    }
+
+    //    @GET("/agent/getLastAgentChatList")
+    //    suspend fun getLastAgentChatList(
+    //        @Query("userId") userId: String
+    //    ): BaseResponse<AgentLastChatListResponse>
+    fun <T> getLastAgentChatList(
+        userId: String,
+        onSuccessCallback: OnSuccessCallback<BaseResponse<AgentLastChatListResponse>>?,
+        throwableCallback: OnThrowableCallback?
+    ){
+        sendRequestCallback(
+            apiCall = {
+                mApi.getLastAgentChatList(userId)
             },
             successCallback = onSuccessCallback,
             throwableCallback = throwableCallback

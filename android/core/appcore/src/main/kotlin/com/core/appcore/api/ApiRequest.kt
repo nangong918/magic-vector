@@ -1,6 +1,8 @@
 package com.core.appcore.api
 
 import com.core.baseutil.network.BaseResponse
+import com.data.domain.dto.response.AgentLastChatListResponse
+import com.data.domain.dto.response.AgentListResponse
 import com.data.domain.dto.response.AgentResponse
 import com.data.domain.dto.response.ChatMessageResponse
 import okhttp3.MultipartBody
@@ -38,6 +40,26 @@ interface ApiRequest {
     suspend fun getAgentInfo(
         @Query("agentId") agentId: String
     ): BaseResponse<AgentResponse>
+
+    /**
+     * 获取Agent列表
+     * @param userId   用户Id
+     * @return  Agent列表
+     */
+    @GET("/agent/getList")
+    suspend fun getAgentList(
+        @Query("userId") userId: String
+    ): BaseResponse<AgentListResponse>
+
+    /**
+     * 获取LastAgentChat列表
+     * @param userId   用户Id
+     * @return  LastAgentChat列表
+     */
+    @GET("/agent/getLastAgentChatList")
+    suspend fun getLastAgentChatList(
+        @Query("userId") userId: String
+    ): BaseResponse<AgentLastChatListResponse>
 
     /**
      * 获取最新的20条消息
