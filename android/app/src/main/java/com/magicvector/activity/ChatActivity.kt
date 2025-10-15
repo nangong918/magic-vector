@@ -38,21 +38,18 @@ class ChatActivity : BaseAppCompatVmActivity<ActivityChatBinding, ChatVm>(
             Log.e(TAG, "ChatActivity::intentAo转换失败", e)
         }
 
-        vm.initAAo(ao)
+        vm.initResource(activity = this@ChatActivity, ao)
 
         // adapter
         vm.initAdapter(
             object : OnChatMessageClick{
                 override fun onMessageClick(position: Int) {
-                    // todo
                 }
 
                 override fun onAvatarClick(position: Int) {
-                    // todo
                 }
 
                 override fun onQuoteClick(position: Int) {
-                    // todo
                 }
             }
         )
@@ -129,6 +126,12 @@ class ChatActivity : BaseAppCompatVmActivity<ActivityChatBinding, ChatVm>(
         binding.smSendMessage.setImgClickListener {
             v -> vm.beginSelectPicture(this)
         }
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+
+        vm.stopRealtimeChat()
     }
 
 }

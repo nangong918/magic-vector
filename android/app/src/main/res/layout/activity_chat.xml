@@ -74,6 +74,18 @@
         app:stackFromEnd="true"
         tools:layout_editor_absoluteX="0dp" />
 
+    <com.view.appview.voice.VoiceWaveView
+        android:id="@+id/v_voiceWave"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toTopOf="@+id/sm_sendMessage"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:layout_width="wrap_content"
+        android:layout_height="150dp"
+        app:lineColor="@color/colorPrimary"
+        app:waveMode="left_right"
+        android:gravity="center" />
+
     <com.view.appview.chat.SendMessageView
         android:id="@+id/sm_sendMessage"
         app:layout_constraintBottom_toBottomOf="parent"

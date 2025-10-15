@@ -10,6 +10,7 @@ class MessageContactItemAo : Serializable {
     var vo : MessageContactItemVo = MessageContactItemVo()
 
     // data
+    // contactId, 也是agentId
     var contactId: String? = null
     var timestamp: Long = 0L // long 用于排序 不是用于显示时间
 

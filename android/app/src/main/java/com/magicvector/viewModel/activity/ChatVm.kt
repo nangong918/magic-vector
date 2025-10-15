@@ -51,13 +51,21 @@ class ChatVm(
         val GSON = Gson()
     }
 
+    fun initResource(activity: FragmentActivity, ao : MessageContactItemAo?) {
+        realtimeChatState.postValue(RealtimeChatState.NotInitialized)
+        aao.messageContactItemAo = ao
+        if (aao.messageContactItemAo?.contactId != null){
+            realtimeChatState.postValue(RealtimeChatState.Initializing)
+            initRealtimeChatWsClient(activity, aao.messageContactItemAo!!.contactId!!)
+        }
+        else {
+            realtimeChatState.postValue(RealtimeChatState.Error("Agent Id is Null"))
+        }
+    }
+
     //---------------------------AAo Ld---------------------------
 
     val aao = ChatAAo()
-
-    fun initAAo(messageContactItemAo : MessageContactItemAo?){
-        aao.messageContactItemAo = messageContactItemAo
-    }
 
     lateinit var adapter : ChatMessageAdapter
 
@@ -70,7 +78,7 @@ class ChatVm(
 
     val realtimeChatMessage: MutableLiveData<String> = MutableLiveData("")
     val realtimeChatState: MutableLiveData<RealtimeChatState> = MutableLiveData(RealtimeChatState.NotInitialized)
-    val realtimeChatVolume = MutableLiveData(0f)
+//    val realtimeChatVolume = MutableLiveData(0f)
 
     //---------------------------NetWork---------------------------
 
@@ -91,7 +99,7 @@ class ChatVm(
             object : GainPermissionCallback{
                 @RequiresPermission(Manifest.permission.RECORD_AUDIO)
                 override fun allGranted() {
-                    Log.i(TestVm.Companion.TAG, "获取录音权限成功")
+                    Log.i(TAG, "获取录音权限成功")
 
                     initRealtimeChatRecorderAndPlayer()
 
@@ -99,7 +107,7 @@ class ChatVm(
                 }
 
                 override fun notGranted(notGrantedPermissions: Array<String?>?) {
-                    Log.w(TestVm.Companion.TAG, "没有获取录音权限: ${notGrantedPermissions?.contentToString()}")
+                    Log.w(TAG, "没有获取录音权限: ${notGrantedPermissions?.contentToString()}")
                     ToastUtils.showToastActivity(activity, "没有获取录音权限")
                     realtimeChatState.postValue(RealtimeChatState.Error("没有获取录音权限"))
                 }
@@ -154,7 +162,7 @@ class ChatVm(
                 ) {
                     super.onClosed(webSocket, code, reason)
                     realtimeChatState.postValue(RealtimeChatState.Disconnected)
-                    Log.i(TestVm.Companion.TAG, "realtimeChatWsClient::onClosed")
+                    Log.i(TAG, "realtimeChatWsClient::onClosed")
                 }
 
                 override fun onClosing(
@@ -163,7 +171,7 @@ class ChatVm(
                     reason: String
                 ) {
                     super.onClosing(webSocket, code, reason)
-                    Log.i(TestVm.Companion.TAG, "realtimeChatWsClient::onClosing")
+                    Log.i(TAG, "realtimeChatWsClient::onClosing")
                 }
 
                 override fun onFailure(
@@ -172,7 +180,7 @@ class ChatVm(
                     response: Response?
                 ) {
                     super.onFailure(webSocket, t, response)
-                    Log.e(TestVm.Companion.TAG, "realtimeChatWsClient::onFailure: ${t.message}")
+                    Log.e(TAG, "realtimeChatWsClient::onFailure: ${t.message}")
                     realtimeChatState.postValue(RealtimeChatState.Error(t.message ?: "-"))
                 }
 
@@ -187,14 +195,14 @@ class ChatVm(
                     super.onMessage(webSocket, bytes)
                     realtimeChatState.postValue(RealtimeChatState.Receiving)
                     // 处理字节信息
-                    Log.i(TestVm.Companion.TAG, "收到字节信息::长度: ${bytes.size}")
+                    Log.i(TAG, "收到字节信息::长度: ${bytes.size}")
                 }
 
                 override fun onOpen(webSocket: WebSocket, response: Response) {
                     super.onOpen(webSocket, response)
                     // 到了此处说明: 授权 && 连接成功
                     realtimeChatState.postValue(RealtimeChatState.InitializedConnected)
-                    Log.i(TestVm.Companion.TAG, "realtimeChatWsClient::onOpen; response: $response")
+                    Log.i(TAG, "realtimeChatWsClient::onOpen; response: $response")
                 }
             }
         )
@@ -202,7 +210,7 @@ class ChatVm(
 
     private fun handleTextMessage(text: String){
         // text --GSON--> Map<String, String>
-        val map: Map<String, String> = TestVm.Companion.GSON.fromJson(text, object : TypeToken<Map<String, String>>() {}.type)
+        val map: Map<String, String> = GSON.fromJson(text, object : TypeToken<Map<String, String>>() {}.type)
 
         val typeStr = map[RealtimeDataTypeEnum.TYPE]
         val type = RealtimeDataTypeEnum.getByType(typeStr)
@@ -254,7 +262,7 @@ class ChatVm(
             audioBytes.size
         )
 
-        Log.i(TestVm.Companion.TAG, "播放音频数据::: ${audioBytes.take(50)}")
+        Log.i(TAG, "播放音频数据::: ${audioBytes.take(50)}")
     }
 
     fun startRecordRealtimeChatAudio() {
@@ -289,9 +297,9 @@ class ChatVm(
                 override fun run() {
                     if (realtimeChatState.value == RealtimeChatState.RecordingAndSending) {
                         // 使用最近读取的数据计算音量
-                        val amplitude = calculateRMSAmplitude(audioBuffer, audioBuffer.size)
-                        Log.i(TestVm.Companion.TAG, "realtimeChat音量: $amplitude")
-                        realtimeChatVolume.postValue(amplitude)
+/*                        val amplitude = calculateRMSAmplitude(audioBuffer, audioBuffer.size)
+                        Log.i(TAG, "realtimeChat音量: $amplitude")
+                        realtimeChatVolume.postValue(amplitude)*/
                         handler.postDelayed(this, updateInterval)
                     }
                 }
@@ -316,7 +324,7 @@ class ChatVm(
             try {
                 realtimeChatAudioRecord?.stop()
             } catch (e : Exception){
-                Log.e(TestVm.Companion.TAG, "stopAndSendRealtimeChatAudio: ${e.message}")
+                Log.e(TAG, "stopAndSendRealtimeChatAudio: ${e.message}")
             }
 
             // 发送结束录音
@@ -335,10 +343,18 @@ class ChatVm(
     }
 
     fun stopRealtimeChat() {
-        realtimeChatAudioRecord?.stop()
-        realtimeChatAudioRecord?.release()
-        realtimeChatAudioTrack?.stop()
-        realtimeChatAudioTrack?.release()
+        try {
+            realtimeChatAudioRecord?.stop()
+            realtimeChatAudioRecord?.release()
+        } catch (e : Exception){
+            Log.e(TAG, "释放录音失败", e)
+        }
+        try {
+            realtimeChatAudioTrack?.stop()
+            realtimeChatAudioTrack?.release()
+        } catch (e : Exception){
+            Log.e(TAG, "释放播放失败", e)
+        }
         realtimeChatWsClient?.close()
         realtimeChatState.postValue(RealtimeChatState.Disconnected)
     }
