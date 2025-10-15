@@ -69,7 +69,7 @@ open class ApiRequestImpl(apiRequest: ApiRequest) : BaseApiRequestImpl() {
     //    suspend fun getAgentList(
     //        @Query("userId") userId: String
     //    ): BaseResponse<AgentListResponse>
-    fun <T> getAgentList(
+    fun getAgentList(
         userId: String,
         onSuccessCallback: OnSuccessCallback<BaseResponse<AgentListResponse>>?,
         throwableCallback: OnThrowableCallback?
@@ -87,7 +87,7 @@ open class ApiRequestImpl(apiRequest: ApiRequest) : BaseApiRequestImpl() {
     //    suspend fun getLastAgentChatList(
     //        @Query("userId") userId: String
     //    ): BaseResponse<AgentLastChatListResponse>
-    fun <T> getLastAgentChatList(
+    fun getLastAgentChatList(
         userId: String,
         onSuccessCallback: OnSuccessCallback<BaseResponse<AgentLastChatListResponse>>?,
         throwableCallback: OnThrowableCallback?

@@ -62,9 +62,12 @@ class MainApplication : Application() {
 
             return apiRequestImplInstance!!
         }
+
+        fun getUserId(): String{
+            // todo 测试用的userId，正式的时候需要修改
+            return "test_user"
+        }
     }
-
-
 
     //----------------------------utils----------------------------
 

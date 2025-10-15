@@ -1,6 +1,7 @@
 package com.magicvector.viewModel.fragment
 
 import android.Manifest
+import android.content.Context
 import android.content.Intent
 import android.util.Log
 import androidx.activity.result.ActivityResultLauncher
@@ -8,13 +9,18 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.RequiresPermission
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.ViewModel
+import com.core.appcore.api.handler.SyncRequestCallback
+import com.core.appcore.utils.AppResponseUtil
+import com.core.baseutil.network.BaseResponse
+import com.core.baseutil.network.OnSuccessCallback
+import com.core.baseutil.network.OnThrowableCallback
 import com.core.baseutil.permissions.GainPermissionCallback
 import com.core.baseutil.permissions.PermissionUtil
 import com.core.baseutil.ui.ToastUtils
 import com.data.domain.OnPositionItemClick
+import com.data.domain.dto.response.AgentLastChatListResponse
 import com.data.domain.fragmentActivity.fao.MessageFAo
-import com.data.domain.fragmentActivity.intentAo.ChatIntentAo
-import com.magicvector.activity.ChatActivity
+import com.magicvector.MainApplication
 import com.magicvector.activity.CreateAgentActivity
 import com.view.appview.message.MessageContactAdapter
 import kotlinx.coroutines.Runnable
@@ -49,6 +55,34 @@ open class MessageListVm(
     }
 
     //---------------------------NetWork---------------------------
+
+    private fun doGetLastAgentChatList(context: Context, callback: SyncRequestCallback){
+        MainApplication.getApiRequestImplInstance().getLastAgentChatList(
+            MainApplication.getUserId(),
+            object : OnSuccessCallback<BaseResponse<AgentLastChatListResponse>>{
+                override fun onResponse(response: BaseResponse<AgentLastChatListResponse>?) {
+                    AppResponseUtil.handleSyncResponseEx(
+                        response,
+                        context,
+                        callback,
+                        ::handleGetLastAgentChatList
+                    )
+                }
+
+            },
+            object : OnThrowableCallback{
+                override fun callback(throwable: Throwable?) {
+                    callback(throwable)
+                }
+            }
+        )
+    }
+
+    private fun handleGetLastAgentChatList(response: BaseResponse<AgentLastChatListResponse>?,
+                                           context: Context,
+                                           callback: SyncRequestCallback){
+        callback.onAllRequestSuccess()
+    }
 
     //---------------------------Logic---------------------------
 
