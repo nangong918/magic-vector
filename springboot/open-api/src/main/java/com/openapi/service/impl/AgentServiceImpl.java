@@ -11,6 +11,7 @@ import com.openapi.domain.ao.AgentChatAo;
 import com.openapi.mapper.AgentMapper;
 import com.openapi.service.AgentService;
 import com.openapi.service.ChatMessageService;
+import com.openapi.utils.DateUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
@@ -189,8 +190,9 @@ public class AgentServiceImpl implements AgentService {
                         }
                     }
 
+                    long lastChatTimeL = DateUtils.getTimestamp(lastChatTime);
                     // 设置最后时间
-                    agentChatAo.setLastChatTime(lastChatTime);
+                    agentChatAo.setLastChatTime(lastChatTimeL);
                     break;
                 }
             }

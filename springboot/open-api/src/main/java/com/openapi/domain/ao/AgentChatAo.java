@@ -3,7 +3,6 @@ package com.openapi.domain.ao;
 import com.openapi.domain.Do.ChatMessageDo;
 import lombok.Data;
 
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -14,7 +13,9 @@ import java.util.List;
 @Data
 public class AgentChatAo {
     private AgentAo agentAo;
-    private LocalDateTime lastChatTime = LocalDateTime.MIN;
+    private Long lastChatTime = 0L;
     // 最新的20条消息
     private List<ChatMessageDo> lastChatMessages = new ArrayList<>();
+    // 未读消息 todo 待实现
+    private Integer unreadCount = 0;
 }

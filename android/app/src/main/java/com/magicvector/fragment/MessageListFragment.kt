@@ -10,6 +10,7 @@ import android.view.ViewGroup
 import com.czy.smartmedicine.utils.BaseAppCompatVmFragment
 import com.data.domain.OnPositionItemClick
 import com.data.domain.fragmentActivity.intentAo.ChatIntentAo
+import com.magicvector.MainApplication
 import com.magicvector.activity.ChatActivity
 import com.magicvector.databinding.FragmentMessageListBinding
 import com.magicvector.viewModel.fragment.MessageListVm
@@ -49,7 +50,7 @@ class MessageListFragment : BaseAppCompatVmFragment<
 
         vm.initAdapter(object : OnPositionItemClick {
             override fun onPositionItemClick(position: Int) {
-                Optional.of(vm.fao.messageContactList)
+                Optional.of(MainApplication.getMessageListManager().messageContactItemAos)
                     .filter { it -> it.size > position }
                     .ifPresent {
                         it ->

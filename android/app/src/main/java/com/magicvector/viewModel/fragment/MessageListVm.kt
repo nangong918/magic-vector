@@ -15,6 +15,7 @@ import com.core.baseutil.cache.HttpRequestManager
 import com.core.baseutil.network.BaseResponse
 import com.core.baseutil.network.OnSuccessCallback
 import com.core.baseutil.network.OnThrowableCallback
+import com.core.baseutil.network.networkLoad.NetworkLoadUtils
 import com.core.baseutil.permissions.GainPermissionCallback
 import com.core.baseutil.permissions.PermissionUtil
 import com.core.baseutil.ui.ToastUtils
@@ -36,6 +37,18 @@ open class MessageListVm(
 
     fun initResource(activity: FragmentActivity){
         initCreateAgentLuncher(activity)
+
+        NetworkLoadUtils.showDialog(activity)
+        initNetworkRequest(activity, object : SyncRequestCallback {
+            override fun onThrowable(throwable: Throwable?) {
+                NetworkLoadUtils.dismissDialogSafety(activity)
+                Log.e(TAG, "initResource: onThrowable", throwable)
+            }
+
+            override fun onAllRequestSuccess() {
+                NetworkLoadUtils.dismissDialogSafety(activity)
+            }
+        })
     }
 
     //---------------------------FAo Ld---------------------------
@@ -50,7 +63,7 @@ open class MessageListVm(
 
     fun initAdapter(onPositionItemClick : OnPositionItemClick){
         adapter = MessageContactAdapter(
-            fao.messageContactList,
+            MainApplication.getMessageListManager().messageContactItemAos,
             onPositionItemClick
         )
     }
@@ -64,6 +77,7 @@ open class MessageListVm(
         }
         else {
             val messageContactItemAos = MainApplication.getMessageListManager().messageContactItemAos
+            fao.messageContactCountLd.postValue(messageContactItemAos.size)
         }
     }
 
@@ -94,9 +108,13 @@ open class MessageListVm(
                                            callback: SyncRequestCallback){
         if (response?.data != null){
             MainApplication.getMessageListManager().setAgentChatAos(response.data!!)
+            fao.messageContactCountLd.postValue(
+                MainApplication.getMessageListManager().messageContactItemAos.size
+            )
         }
         else {
             MainApplication.getMessageListManager().clear()
+            fao.messageContactCountLd.postValue(0)
         }
         callback.onAllRequestSuccess()
     }
@@ -116,14 +134,23 @@ open class MessageListVm(
         ) { result ->
             // 如果intent 返回值中包括ok，则表明创建成功，需要进行刷新list
             val backIntent: Intent? = result.data
-            if (backIntent != null){
+            if (backIntent != null) {
                 val createResult: Boolean = backIntent.getBooleanExtra(
                     CreateAgentActivity::class.simpleName,
                     false
                 )
                 // 创建成功
                 if (createResult) {
-                    // todo 网络请求刷新列表
+                    doGetLastAgentChatList(activity, object : SyncRequestCallback {
+                        override fun onThrowable(throwable: Throwable?) {
+                            NetworkLoadUtils.dismissDialogSafety(activity)
+                            Log.e(TAG, "initResource: onThrowable", throwable)
+                        }
+
+                        override fun onAllRequestSuccess() {
+                            NetworkLoadUtils.dismissDialogSafety(activity)
+                        }
+                    })
                 }
             }
         }
