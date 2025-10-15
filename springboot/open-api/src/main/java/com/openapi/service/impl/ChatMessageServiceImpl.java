@@ -64,7 +64,7 @@ public class ChatMessageServiceImpl implements ChatMessageService {
      * @param agentId   智能助手Id
      * @return          聊天记录
      */
-    @Cacheable
+    @Cacheable(value = "agentMessages", key = "#agentId")
     @NotNull
     @Override
     public List<ChatMessageDo> getLast20Messages(@NotNull String agentId){
@@ -76,7 +76,6 @@ public class ChatMessageServiceImpl implements ChatMessageService {
      * @param agentIds  agent Id
      * @return          批量查询结果
      */
-    @Cacheable
     @NotNull
     @Override
     public List<List<ChatMessageDo>> getLast20MessagesByAgentIds(@NotNull List<String> agentIds){

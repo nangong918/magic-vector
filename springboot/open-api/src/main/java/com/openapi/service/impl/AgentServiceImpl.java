@@ -166,31 +166,33 @@ public class AgentServiceImpl implements AgentService {
             agentChatAos.add(agentChatAo);
         }
 
+
         // 获取最新20条消息
         List<List<ChatMessageDo>> chatMessageDos = chatMessageService.getLast20MessagesByAgentIds(agentIds);
 
-        // 使用 Map 来提高性能
-        Map<String, List<ChatMessageDo>> chatMessagesMap = new HashMap<>();
-        for (int i = 0; i < agentChatAos.size(); i++) {
-            String agentId = agentChatAos.get(i).getAgentAo().getAgentId();
-            chatMessagesMap.put(agentId, chatMessageDos.get(i));
-        }
-
-        // 填充最新20条消息并获取最后时间
+        // 填充最新20条消息
         for (AgentChatAo agentChatAo : agentChatAos) {
-            String agentId = agentChatAo.getAgentAo().getAgentId();
-            List<ChatMessageDo> messages = chatMessagesMap.get(agentId);
-            if (messages != null) {
-                agentChatAo.setLastChatMessages(messages);
+            for (List<ChatMessageDo> messageDo : chatMessageDos) {
+                if (messageDo.isEmpty()) {
+                    continue;
+                }
+                if (agentChatAo.getAgentAo().getAgentId().equals(
+                        messageDo.getFirst().getAgentId()
+                )) {
+                    agentChatAo.setLastChatMessages(messageDo);
 
-                // 获取最后时间
-                LocalDateTime lastChatTime = messages.stream()
-                        .map(ChatMessageDo::getChatTime)
-                        .max(LocalDateTime::compareTo)
-                        .orElse(LocalDateTime.MIN);
+                    // 获取最后时间
+                    LocalDateTime lastChatTime = LocalDateTime.MIN;
+                    for (ChatMessageDo chatMessageDo : messageDo) {
+                        if (chatMessageDo.getChatTime().isAfter(lastChatTime)) {
+                            lastChatTime = chatMessageDo.getChatTime();
+                        }
+                    }
 
-                // 设置最后时间
-                agentChatAo.setLastChatTime(lastChatTime);
+                    // 设置最后时间
+                    agentChatAo.setLastChatTime(lastChatTime);
+                    break;
+                }
             }
         }
 

@@ -97,6 +97,7 @@ public class AgentController {
         return BaseResponse.getResponseEntitySuccess(response);
     }
 
+    // 获取用户和Agent的最近聊天list
     @GetMapping("/getLastAgentChatList")
     public BaseResponse<AgentLastChatListResponse> getLastAgentChatList(
             @RequestParam("userId") String userId
