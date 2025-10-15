@@ -13,6 +13,8 @@ class BaseConstant {
 
         // 请求是否加认证token前缀 最后要在拦截器检查去掉; 定义一些不像url的命名避免出现与后端路由重合
         const val AUTH_TOKEN_PREFIX: String = "/has-0!0-token"
+
+        const val CHAT_HISTORY_LIMIT_COUNT = 20;
     }
 
     // url

@@ -105,7 +105,7 @@ open class ApiRequestImpl(apiRequest: ApiRequest) : BaseApiRequestImpl() {
     //    suspend fun getLastChat(
     //        @Query("agentId") agentId: String
     //    ): BaseResponse<ChatMessageResponse>
-    fun <T> getLastChat(
+    fun getLastChat(
         agentId: String,
         onSuccessCallback: OnSuccessCallback<BaseResponse<ChatMessageResponse>>?,
         throwableCallback: OnThrowableCallback?
@@ -125,7 +125,7 @@ open class ApiRequestImpl(apiRequest: ApiRequest) : BaseApiRequestImpl() {
     //        // max 50
     //        @Query("limit") limit: Int,
     //    ): BaseResponse<ChatMessageResponse>
-    fun <T> getTimeLimitChat(
+    fun getTimeLimitChat(
         agentId: String,
         // yyyy-MM-dd HH:mm:ss
         deadline: String,

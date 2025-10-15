@@ -15,6 +15,8 @@ import retrofit2.http.Query
 
 interface ApiRequest {
 
+    //==========Agent
+
     /**
      * 创建Agent
      * @param avatar        头像
@@ -60,6 +62,8 @@ interface ApiRequest {
     suspend fun getLastAgentChatList(
         @Query("userId") userId: String
     ): BaseResponse<AgentLastChatListResponse>
+
+    //==========Chat
 
     /**
      * 获取最新的20条消息

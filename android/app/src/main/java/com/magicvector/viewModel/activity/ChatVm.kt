@@ -1,6 +1,7 @@
 package com.magicvector.viewModel.activity
 
 import android.Manifest
+import android.content.Context
 import android.content.Intent
 import android.media.AudioFormat
 import android.media.AudioManager
@@ -20,6 +21,11 @@ import androidx.annotation.RequiresPermission
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
+import com.core.appcore.api.handler.SyncRequestCallback
+import com.core.appcore.utils.AppResponseUtil
+import com.core.baseutil.network.BaseResponse
+import com.core.baseutil.network.OnSuccessCallback
+import com.core.baseutil.network.OnThrowableCallback
 import com.core.baseutil.permissions.GainPermissionCallback
 import com.core.baseutil.permissions.PermissionUtil
 import com.core.baseutil.photo.SelectPhotoUtil
@@ -27,10 +33,12 @@ import com.core.baseutil.ui.ToastUtils
 import com.data.domain.ao.message.MessageContactItemAo
 import com.data.domain.constant.BaseConstant
 import com.data.domain.constant.test.RealtimeDataTypeEnum
+import com.data.domain.dto.response.ChatMessageResponse
 import com.data.domain.fragmentActivity.aao.ChatAAo
 import com.data.domain.vo.test.RealtimeChatState
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
+import com.magicvector.MainApplication
 import com.magicvector.utils.chat.RealtimeChatWsClient
 import com.view.appview.R
 import com.view.appview.chat.ChatMessageAdapter
@@ -86,6 +94,7 @@ class ChatVm(
     private var realtimeChatAudioRecord: AudioRecord? = null
     private var realtimeChatAudioTrack: AudioTrack? = null
 
+    // ws
     fun initRealtimeChatWsClient(activity: FragmentActivity, agentId: String) {
         realtimeChatWsClient = RealtimeChatWsClient(
             GSON,
@@ -117,6 +126,60 @@ class ChatVm(
 
             }
         )
+    }
+
+    // chatHistory First
+    fun doGetLastChat(context: Context, callback: SyncRequestCallback){
+        MainApplication.getApiRequestImplInstance().getLastChat(
+            aao.messageContactItemAo!!.contactId!!,
+            object : OnSuccessCallback<BaseResponse<ChatMessageResponse>>{
+                override fun onResponse(response: BaseResponse<ChatMessageResponse>?) {
+                    AppResponseUtil.handleSyncResponseEx(
+                        response,
+                        context,
+                        callback,
+                        ::handleGetChatHistory
+                    )
+                }
+
+            },
+            object : OnThrowableCallback{
+                override fun callback(throwable: Throwable?) {
+                    callback(throwable)
+                }
+            }
+        )
+    }
+
+    // 特定时间段的chat history
+    fun doGetTimeLimitChat(context: Context, deadline: String, callback: SyncRequestCallback){
+        MainApplication.getApiRequestImplInstance().getTimeLimitChat(
+            aao.messageContactItemAo!!.contactId!!,
+            deadline,
+            BaseConstant.Constant.CHAT_HISTORY_LIMIT_COUNT,
+            object : OnSuccessCallback<BaseResponse<ChatMessageResponse>>{
+                override fun onResponse(response: BaseResponse<ChatMessageResponse>?) {
+                    AppResponseUtil.handleSyncResponseEx(
+                        response,
+                        context,
+                        callback,
+                        ::handleGetChatHistory
+                    )
+                }
+
+            },
+            object : OnThrowableCallback{
+                override fun callback(throwable: Throwable?) {
+                    callback(throwable)
+                }
+            }
+        )
+    }
+
+    private fun handleGetChatHistory(response: BaseResponse<ChatMessageResponse>?,
+                                     context: Context,
+                                     callback: SyncRequestCallback){
+        callback.onAllRequestSuccess()
     }
 
     //---------------------------Logic---------------------------

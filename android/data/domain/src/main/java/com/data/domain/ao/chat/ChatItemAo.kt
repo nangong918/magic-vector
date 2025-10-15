@@ -8,7 +8,9 @@ class ChatItemAo {
     var vo : ChatItemVo = ChatItemVo()
 
     // data
+    // senderId = agentId
     var senderId : String? = null
+    // receiverId = userId
     var receiverId : String? = null
     var messageId : String? = null
     var timestamp : Long = 0L
