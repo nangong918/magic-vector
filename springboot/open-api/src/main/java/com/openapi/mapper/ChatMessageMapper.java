@@ -46,5 +46,11 @@ public interface ChatMessageMapper {
                 @Param("limit") Integer limit
     );
 
+    List<List<ChatMessageDo>> getMessageByAgentIds(
+            @Param("agentIds") List<String> agentIds,
+            @Param("deadline")LocalDateTime deadline,
+            @Param("limit") Integer limit
+    );
+
     List<ChatMessageDo> getAllMessagesByAgentId(String agentId);
 }

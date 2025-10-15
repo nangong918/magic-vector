@@ -5,9 +5,12 @@ import com.minio.service.OssService;
 import com.openapi.config.AgentConfig;
 import com.openapi.converter.AgentConverter;
 import com.openapi.domain.Do.AgentDo;
+import com.openapi.domain.Do.ChatMessageDo;
 import com.openapi.domain.ao.AgentAo;
+import com.openapi.domain.ao.AgentChatAo;
 import com.openapi.mapper.AgentMapper;
 import com.openapi.service.AgentService;
+import com.openapi.service.ChatMessageService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
@@ -18,8 +21,11 @@ import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 
@@ -32,6 +38,7 @@ public class AgentServiceImpl implements AgentService {
     private final AgentConverter agentConverter;
     private final OssService ossService;
     private final AgentConfig agentConfig;
+    private final ChatMessageService chatMessageService;
 
     @Override
     public AgentAo createAgent(@Nullable MultipartFile avatar, @NotNull String userId, @NotNull String name, @NotNull String description) {
@@ -131,5 +138,62 @@ public class AgentServiceImpl implements AgentService {
             return new ArrayList<>();
         }
         return getAgentsByIds(agentIds);
+    }
+
+    /**
+     * 获取用户与Agent最近Chat的Ao
+     * @param userId    用户Id
+     * @return          聊天aoList
+     */
+    @NotNull
+    @Override
+    public List<AgentChatAo> getLastAgentChatList(@NotNull String userId){
+        List<String> agentIds = getUserAgents(userId);
+        if (agentIds.isEmpty()){
+            return new ArrayList<>();
+        }
+
+        List<AgentAo> agentAos = getAgentsByIds(agentIds);
+        if (agentAos.isEmpty()){
+            return new ArrayList<>();
+        }
+
+        // 填充agentAo
+        List<AgentChatAo> agentChatAos = new ArrayList<>(agentAos.size());
+        for (AgentAo agentAo : agentAos){
+            var agentChatAo = new AgentChatAo();
+            agentChatAo.setAgentAo(agentAo);
+            agentChatAos.add(agentChatAo);
+        }
+
+        // 获取最新20条消息
+        List<List<ChatMessageDo>> chatMessageDos = chatMessageService.getLast20MessagesByAgentIds(agentIds);
+
+        // 使用 Map 来提高性能
+        Map<String, List<ChatMessageDo>> chatMessagesMap = new HashMap<>();
+        for (int i = 0; i < agentChatAos.size(); i++) {
+            String agentId = agentChatAos.get(i).getAgentAo().getAgentId();
+            chatMessagesMap.put(agentId, chatMessageDos.get(i));
+        }
+
+        // 填充最新20条消息并获取最后时间
+        for (AgentChatAo agentChatAo : agentChatAos) {
+            String agentId = agentChatAo.getAgentAo().getAgentId();
+            List<ChatMessageDo> messages = chatMessagesMap.get(agentId);
+            if (messages != null) {
+                agentChatAo.setLastChatMessages(messages);
+
+                // 获取最后时间
+                LocalDateTime lastChatTime = messages.stream()
+                        .map(ChatMessageDo::getChatTime)
+                        .max(LocalDateTime::compareTo)
+                        .orElse(LocalDateTime.MIN);
+
+                // 设置最后时间
+                agentChatAo.setLastChatTime(lastChatTime);
+            }
+        }
+
+        return agentChatAos;
     }
 }

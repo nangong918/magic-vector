@@ -1,6 +1,7 @@
 package com.openapi.service;
 
 import com.openapi.domain.ao.AgentAo;
+import com.openapi.domain.ao.AgentChatAo;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.springframework.web.multipart.MultipartFile;
@@ -21,4 +22,6 @@ public interface AgentService {
     @NotNull List<String> getUserAgents(String userId);
 
     @NotNull List<AgentAo> getUserAgentsAo(String userId);
+
+    @NotNull List<AgentChatAo> getLastAgentChatList(@NotNull String userId);
 }

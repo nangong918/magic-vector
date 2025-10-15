@@ -10,6 +10,7 @@ import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -64,9 +65,24 @@ public class ChatMessageServiceImpl implements ChatMessageService {
      * @return          聊天记录
      */
     @Cacheable
+    @NotNull
     @Override
     public List<ChatMessageDo> getLast20Messages(@NotNull String agentId){
         return chatMessageMapper.getMessagesByAgentIdDeadlineLimit(agentId, LocalDateTime.now(), 20);
     }
 
+    /**
+     * 批量查询
+     * @param agentIds  agent Id
+     * @return          批量查询结果
+     */
+    @Cacheable
+    @NotNull
+    @Override
+    public List<List<ChatMessageDo>> getLast20MessagesByAgentIds(@NotNull List<String> agentIds){
+        if (agentIds.isEmpty()){
+            return new ArrayList<>();
+        }
+        return chatMessageMapper.getMessageByAgentIds(agentIds, LocalDateTime.now(), 20);
+    }
 }

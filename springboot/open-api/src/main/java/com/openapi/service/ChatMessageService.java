@@ -21,6 +21,10 @@ public interface ChatMessageService {
             @NotNull Integer limit
     );
 
+    @NotNull
     @Cacheable
     List<ChatMessageDo> getLast20Messages(@NotNull String agentId);
+
+    @Cacheable
+    @NotNull List<List<ChatMessageDo>> getLast20MessagesByAgentIds(@NotNull List<String> agentIds);
 }

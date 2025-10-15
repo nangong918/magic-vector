@@ -110,5 +110,19 @@
         order by
             chat_time DESC -- 时间从大到小排序
     </select>
+    <select id="getMessageByAgentIds" resultType="java.util.List">
+        SELECT
+        <include refid="columns"/>
+        FROM
+        <include refid="table"/>
+        WHERE agent_id IN
+            <foreach item="agentId" collection="agentIds" separator=","
+                     open="(" close=")">
+                #{agentId}
+            </foreach>
+            AND chat_time &gt; #{deadline}
+        ORDER BY chat_time DESC -- 时间从大到小排序
+        LIMIT #{limit}
+    </select>
 
 </mapper>

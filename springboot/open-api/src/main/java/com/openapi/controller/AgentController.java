@@ -1,9 +1,11 @@
 package com.openapi.controller;
 
 import com.openapi.domain.ao.AgentAo;
+import com.openapi.domain.ao.AgentChatAo;
 import com.openapi.domain.constant.error.CommonExceptions;
 import com.openapi.domain.constant.error.UserExceptions;
 import com.openapi.domain.dto.BaseResponse;
+import com.openapi.domain.dto.resonse.AgentLastChatListResponse;
 import com.openapi.domain.dto.resonse.AgentListResponse;
 import com.openapi.domain.dto.resonse.AgentResponse;
 import com.openapi.service.AgentService;
@@ -92,6 +94,23 @@ public class AgentController {
         List<AgentAo> agentAos = agentService.getUserAgentsAo(userId);
         AgentListResponse response = new AgentListResponse();
         response.setAgentAos(agentAos);
+        return BaseResponse.getResponseEntitySuccess(response);
+    }
+
+    @GetMapping("/getLastAgentChatList")
+    public BaseResponse<AgentLastChatListResponse> getLastAgentChatList(
+            @RequestParam("userId") String userId
+    ){
+        // 参数校验
+        if (!userService.checkUserExistById(userId)){
+            return BaseResponse.LogBackError(UserExceptions.USER_NOT_EXIST);
+        }
+
+        List<AgentChatAo> agentChatAos = agentService.getLastAgentChatList(userId);
+
+        AgentLastChatListResponse response = new AgentLastChatListResponse();
+        response.setAgentChatAos(agentChatAos);
+
         return BaseResponse.getResponseEntitySuccess(response);
     }
 
