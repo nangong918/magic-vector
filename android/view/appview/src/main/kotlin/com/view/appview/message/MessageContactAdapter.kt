@@ -9,7 +9,7 @@ import com.view.appview.databinding.ViewMessageCardItemBinding
 import java.util.Optional
 
 class MessageContactAdapter(
-    private val messageContactItemAosPointer: List<MessageContactItemAo>,
+    private val messageContactItemAosPointer: MutableList<MessageContactItemAo>,
     private val onPositionItemClick : OnPositionItemClick
 ) : RecyclerView.Adapter<MessageCardItemViewHolder>(){
     override fun onCreateViewHolder(

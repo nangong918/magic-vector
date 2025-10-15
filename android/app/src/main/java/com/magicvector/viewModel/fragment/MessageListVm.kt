@@ -11,6 +11,7 @@ import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.ViewModel
 import com.core.appcore.api.handler.SyncRequestCallback
 import com.core.appcore.utils.AppResponseUtil
+import com.core.baseutil.cache.HttpRequestManager
 import com.core.baseutil.network.BaseResponse
 import com.core.baseutil.network.OnSuccessCallback
 import com.core.baseutil.network.OnThrowableCallback
@@ -56,6 +57,16 @@ open class MessageListVm(
 
     //---------------------------NetWork---------------------------
 
+    fun initNetworkRequest(context: Context, callback: SyncRequestCallback){
+        if (HttpRequestManager.getIsFirstOpen(TAG)){
+            // 第一次打开，初始化
+            doGetLastAgentChatList(context, callback)
+        }
+        else {
+            val messageContactItemAos = MainApplication.getMessageListManager().messageContactItemAos
+        }
+    }
+
     private fun doGetLastAgentChatList(context: Context, callback: SyncRequestCallback){
         MainApplication.getApiRequestImplInstance().getLastAgentChatList(
             MainApplication.getUserId(),
@@ -81,6 +92,12 @@ open class MessageListVm(
     private fun handleGetLastAgentChatList(response: BaseResponse<AgentLastChatListResponse>?,
                                            context: Context,
                                            callback: SyncRequestCallback){
+        if (response?.data != null){
+            MainApplication.getMessageListManager().setAgentChatAos(response.data!!)
+        }
+        else {
+            MainApplication.getMessageListManager().clear()
+        }
         callback.onAllRequestSuccess()
     }
 

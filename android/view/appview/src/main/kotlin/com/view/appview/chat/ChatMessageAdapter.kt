@@ -11,7 +11,7 @@ import com.view.appview.databinding.ViewSendMessageItemBinding
 import java.util.Optional
 
 class ChatMessageAdapter(
-    private val chatMessageItemAosPointer: List<ChatItemAo>,
+    private val chatMessageItemAosPointer: MutableList<ChatItemAo>,
     private val onChatMessageClick : OnChatMessageClick
 ) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
 

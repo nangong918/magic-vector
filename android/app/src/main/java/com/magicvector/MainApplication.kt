@@ -6,6 +6,7 @@ import com.core.appcore.api.ApiRequest
 import com.core.appcore.api.ApiRequestProvider
 import com.core.baseutil.image.ImageManager
 import com.data.dao.api.ApiRequestImpl
+import com.magicvector.manager.MessageListManager
 
 class MainApplication : Application() {
 
@@ -66,6 +67,11 @@ class MainApplication : Application() {
         fun getUserId(): String{
             // todo 测试用的userId，正式的时候需要修改
             return "test_user"
+        }
+
+        private val messageListManager = MessageListManager()
+        fun getMessageListManager(): MessageListManager {
+            return messageListManager
         }
     }
 

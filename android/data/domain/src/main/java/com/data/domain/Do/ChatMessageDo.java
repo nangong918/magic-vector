@@ -7,7 +7,7 @@ import java.time.LocalDateTime;
 
 public class ChatMessageDo {
     public String id;
-    public String agentId; // 也可也理解为sessionId, 毕竟救我一个用户
+    public String agentId;
     public String content;
     // 时间
     public LocalDateTime chatTime;
