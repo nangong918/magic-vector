@@ -116,10 +116,13 @@ class ChatActivity : BaseAppCompatVmActivity<ActivityChatBinding, ChatVm>(
                 is RealtimeChatState.Initializing -> {
                 }
                 is RealtimeChatState.InitializedConnected -> {
+                    binding.vVoiceWave.visibility = View.GONE
+                    binding.vVoiceWave.stop()
 //                    binding.btnRecordAndSendRealtimeChat2.text = "开始录音 + 流式发送"
                 }
                 is RealtimeChatState.RecordingAndSending -> {
-
+                    binding.vVoiceWave.visibility = View.VISIBLE
+                    binding.vVoiceWave.start()
 //                    binding.btnRecordAndSendRealtimeChat2.text = "结束录音 + 接收消息"
                 }
                 is RealtimeChatState.Receiving -> {
@@ -137,6 +140,8 @@ class ChatActivity : BaseAppCompatVmActivity<ActivityChatBinding, ChatVm>(
         super.initView()
 
         binding.smSendMessage.setKeyboardOpen(true)
+        
+        binding.vVoiceWave.init()
     }
 
     override fun setListener() {
