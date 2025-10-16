@@ -36,6 +36,7 @@ import com.data.domain.ao.message.MessageContactItemAo
 import com.data.domain.constant.BaseConstant
 import com.data.domain.constant.test.RealtimeDataTypeEnum
 import com.data.domain.dto.response.ChatMessageResponse
+import com.data.domain.dto.ws.RealtimeChatConnectRequest
 import com.data.domain.fragmentActivity.aao.ChatAAo
 import com.data.domain.vo.test.RealtimeChatState
 import com.google.gson.Gson
@@ -67,7 +68,7 @@ class ChatVm(
         aao.messageContactItemAo = ao
         if (aao.messageContactItemAo?.contactId != null){
             realtimeChatState.postValue(RealtimeChatState.Initializing)
-            initRealtimeChatWsClient(activity, aao.messageContactItemAo!!.contactId!!)
+            initRealtimeChatWsClient(activity)
         }
         else {
             realtimeChatState.postValue(RealtimeChatState.Error("Agent Id is Null"))
@@ -129,7 +130,7 @@ class ChatVm(
     private var realtimeChatAudioTrack: AudioTrack? = null
 
     // ws
-    fun initRealtimeChatWsClient(activity: FragmentActivity, agentId: String) {
+    fun initRealtimeChatWsClient(activity: FragmentActivity) {
         realtimeChatWsClient = RealtimeChatWsClient(
             GSON,
             BaseConstant.WSConstantUrl.AGENT_REALTIME_CHAT_URL
@@ -311,6 +312,19 @@ class ChatVm(
                     // 到了此处说明: 授权 && 连接成功
                     realtimeChatState.postValue(RealtimeChatState.InitializedConnected)
                     Log.i(TAG, "realtimeChatWsClient::onOpen; response: $response")
+                    // 发送连接成功的消息
+                    val request = RealtimeChatConnectRequest()
+                    request.agentId = aao.messageContactItemAo!!.contactId!!
+                    request.userId = MainApplication.getUserId()
+                    request.timestamp = System.currentTimeMillis()
+
+                    val requestMap: MutableMap<String, String> = HashMap()
+                    requestMap.put(RealtimeDataTypeEnum.TYPE, RealtimeDataTypeEnum.CONNECT.name)
+                    val requestJson: String = GSON.toJson(request)
+                    requestMap.put(RealtimeDataTypeEnum.DATA, requestJson)
+
+                    // 发送连接数据
+                    realtimeChatWsClient!!.sendMessage(requestMap)
                 }
             }
         )
@@ -356,6 +370,9 @@ class ChatVm(
                     realtimeChatMessage.postValue(realtimeChatMessage.value + data)
                 }
             }
+            // Android 向后端发送消息的数据类型，后端不会向Android传输这些类型的数据
+            RealtimeDataTypeEnum.CONNECT -> {}
+            RealtimeDataTypeEnum.DISCONNECT -> {}
         }
     }
 

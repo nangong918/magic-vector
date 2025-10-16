@@ -7,6 +7,10 @@ import org.jetbrains.annotations.NotNull;
  * @date 2025/10/7 17:14
  */
 public enum RealtimeDataTypeEnum {
+    // connect
+    CONNECT("connect"),
+    // disconnect
+    DISCONNECT("disconnect"),
     // start_send/receive
     START("start"),
     // stop_send/receive
