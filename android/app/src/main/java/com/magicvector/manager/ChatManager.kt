@@ -27,7 +27,7 @@ class ChatManager(val agentId: String) {
     val viewChatMessageList: MutableList<ChatItemAo> = mutableListOf()
 
     // response -> view
-    private fun responsesToViews(responses: List<ChatMessageDo>){
+    fun responsesToViews(responses: List<ChatMessageDo>){
         for (response in responses) {
             // 只有 ChatItemAo 中不包含此条消息才添加
             var isExist = false
@@ -39,6 +39,7 @@ class ChatManager(val agentId: String) {
             }
             if (!isExist) {
                 val view = responseToView(response)
+                // todo 用timestamp二分插入指定位置
                 viewChatMessageList.add(view)
             }
         }
@@ -70,7 +71,7 @@ class ChatManager(val agentId: String) {
     }
 
     // ws -> view
-    private fun wssToViews(wss: List<RealtimeChatTextResponse>){
+    fun wssToViews(wss: List<RealtimeChatTextResponse>){
         for (ws in wss) {
             // 只有 ChatItemAo 中不包含此条消息才添加
             var isExist = false
@@ -82,6 +83,7 @@ class ChatManager(val agentId: String) {
             }
             if (!isExist) {
                 val view = wsToView(ws)
+                // todo 用timestamp二分插入指定位置
                 viewChatMessageList.add(view)
             }
         }

@@ -1,7 +1,6 @@
 package com.data.domain.fragmentActivity.aao
 
 import androidx.lifecycle.MutableLiveData
-import com.data.domain.ao.chat.ChatItemAo
 import com.data.domain.ao.message.MessageContactItemAo
 
 class ChatAAo {
@@ -13,6 +12,5 @@ class ChatAAo {
     var messageContactItemAo : MessageContactItemAo? = null
     val inputTextLd : MutableLiveData<String> = MutableLiveData("")
 
-    val chatMessageList: MutableList<ChatItemAo> = mutableListOf()
     val chatMessageCountLd: MutableLiveData<Int> = MutableLiveData(0)
 }

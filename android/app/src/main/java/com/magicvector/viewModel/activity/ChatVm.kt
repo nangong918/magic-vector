@@ -23,9 +23,11 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import com.core.appcore.api.handler.SyncRequestCallback
 import com.core.appcore.utils.AppResponseUtil
+import com.core.baseutil.cache.HttpRequestManager
 import com.core.baseutil.network.BaseResponse
 import com.core.baseutil.network.OnSuccessCallback
 import com.core.baseutil.network.OnThrowableCallback
+import com.core.baseutil.network.networkLoad.NetworkLoadUtils
 import com.core.baseutil.permissions.GainPermissionCallback
 import com.core.baseutil.permissions.PermissionUtil
 import com.core.baseutil.photo.SelectPhotoUtil
@@ -39,6 +41,7 @@ import com.data.domain.vo.test.RealtimeChatState
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import com.magicvector.MainApplication
+import com.magicvector.manager.ChatManager
 import com.magicvector.utils.chat.RealtimeChatWsClient
 import com.view.appview.R
 import com.view.appview.chat.ChatMessageAdapter
@@ -68,7 +71,25 @@ class ChatVm(
         }
         else {
             realtimeChatState.postValue(RealtimeChatState.Error("Agent Id is Null"))
+            throw IllegalArgumentException("Agent Id is Null")
         }
+
+        // 获取chatManager
+        chatManagerPointer = MainApplication.getChatMapManager().getChatManager(
+            aao.messageContactItemAo!!.contactId!!
+        )
+
+        NetworkLoadUtils.showDialog(activity)
+        initNetworkRequest(activity, object : SyncRequestCallback {
+            override fun onThrowable(throwable: Throwable?) {
+                NetworkLoadUtils.dismissDialogSafety(activity)
+                Log.e(TAG, "initResource: onThrowable", throwable)
+            }
+
+            override fun onAllRequestSuccess() {
+                NetworkLoadUtils.dismissDialogSafety(activity)
+            }
+        })
     }
 
     //---------------------------AAo Ld---------------------------
@@ -79,7 +100,7 @@ class ChatVm(
 
     fun initAdapter(onChatMessageClick : OnChatMessageClick){
         adapter = ChatMessageAdapter(
-            aao.chatMessageList,
+            chatManagerPointer.viewChatMessageList,
             onChatMessageClick
         )
     }
@@ -89,6 +110,19 @@ class ChatVm(
 //    val realtimeChatVolume = MutableLiveData(0f)
 
     //---------------------------NetWork---------------------------
+
+    // chat
+    private fun initNetworkRequest(context: Context, callback: SyncRequestCallback){
+        if (HttpRequestManager.getIsFirstOpen(TAG)){
+            // 第一次打开，初始化
+            doGetLastChat(context, callback)
+        }
+        else {
+            aao.chatMessageCountLd.postValue(chatManagerPointer.viewChatMessageList.size)
+        }
+    }
+
+    // audio
 
     private var realtimeChatWsClient: RealtimeChatWsClient? = null
     private var realtimeChatAudioRecord: AudioRecord? = null
@@ -179,10 +213,21 @@ class ChatVm(
     private fun handleGetChatHistory(response: BaseResponse<ChatMessageResponse>?,
                                      context: Context,
                                      callback: SyncRequestCallback){
+
+        response?.data?.chatMessages?.let {
+            chatManagerPointer.responsesToViews(it)
+            aao.chatMessageCountLd.postValue(chatManagerPointer.viewChatMessageList.size)
+        }
+
         callback.onAllRequestSuccess()
     }
 
     //---------------------------Logic---------------------------
+
+    //===========chatHistory
+
+    lateinit var chatManagerPointer: ChatManager
+
     val realTimeChatSampleRate = 24000
     // realtime chat
 

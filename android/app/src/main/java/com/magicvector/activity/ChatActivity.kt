@@ -39,7 +39,12 @@ class ChatActivity : BaseAppCompatVmActivity<ActivityChatBinding, ChatVm>(
             Log.e(TAG, "ChatActivity::intentAo转换失败", e)
         }
 
-        vm.initResource(activity = this@ChatActivity, ao)
+        try {
+            vm.initResource(activity = this@ChatActivity, ao)
+        } catch (e: IllegalArgumentException){
+            Log.e(TAG, "ChatActivity::initResource失败", e)
+            finish()
+        }
 
         // adapter
         vm.initAdapter(
