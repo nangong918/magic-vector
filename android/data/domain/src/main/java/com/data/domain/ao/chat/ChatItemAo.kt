@@ -1,8 +1,9 @@
 package com.data.domain.ao.chat
 
+import com.core.baseutil.sort.SortItem
 import com.data.domain.vo.chat.ChatItemVo
 
-class ChatItemAo {
+class ChatItemAo : SortItem{
 
     // vo
     var vo : ChatItemVo = ChatItemVo()
@@ -14,4 +15,9 @@ class ChatItemAo {
     var receiverId : String? = null
     var messageId : String? = null
     var timestamp : Long = 0L
+
+    // 排序方法
+    override fun getIndex(): Long {
+        return timestamp
+    }
 }

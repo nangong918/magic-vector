@@ -2,6 +2,7 @@ package com.magicvector.manager
 
 import android.util.Log
 import com.core.baseutil.date.DateUtils
+import com.core.baseutil.sort.SortUtil
 import com.data.domain.Do.ChatMessageDo
 import com.data.domain.ao.chat.ChatItemAo
 import com.data.domain.constant.chat.MessageTypeEnum
@@ -29,7 +30,7 @@ class ChatManager(val agentId: String) {
     // response -> view
     fun responsesToViews(responses: List<ChatMessageDo>){
         for (response in responses) {
-            // 只有 ChatItemAo 中不包含此条消息才添加
+            // 只有 ChatItemAo 中不包含此条消息才添加 (http的消息是唯一的)
             var isExist = false
             for (viewChatMessage in viewChatMessageList){
                 if (viewChatMessage.messageId == response.id){
@@ -39,8 +40,9 @@ class ChatManager(val agentId: String) {
             }
             if (!isExist) {
                 val view = responseToView(response)
-                // todo 用timestamp二分插入指定位置
-                viewChatMessageList.add(view)
+                // 二分查找适合的位置插入
+                val insertPosition = SortUtil.findInsertPosition(view.getIndex(), viewChatMessageList)
+                viewChatMessageList.add(insertPosition, view)
             }
         }
     }
@@ -73,18 +75,25 @@ class ChatManager(val agentId: String) {
     // ws -> view
     fun wssToViews(wss: List<RealtimeChatTextResponse>){
         for (ws in wss) {
-            // 只有 ChatItemAo 中不包含此条消息才添加
+            // ChatItemAo 中不包含此条消息添加, 包含则覆盖
             var isExist = false
+            var viewIndex = -1
             for (view in viewChatMessageList) {
                 if (view.messageId == ws.messageId) {
                     isExist = true
+                    viewIndex = viewChatMessageList.indexOf(view)
                     break
                 }
             }
             if (!isExist) {
                 val view = wsToView(ws)
-                // todo 用timestamp二分插入指定位置
-                viewChatMessageList.add(view)
+                // 二分查找适合的位置插入
+                val insertPosition = SortUtil.findInsertPosition(view.getIndex(), viewChatMessageList)
+                viewChatMessageList.add(insertPosition, view)
+            }
+            else {
+                val view = wsToView(ws)
+                viewChatMessageList[viewIndex] = view
             }
         }
     }
