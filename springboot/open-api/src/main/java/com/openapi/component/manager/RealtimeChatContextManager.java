@@ -9,7 +9,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 /**
  * @author 13225
  * @date 2025/10/16 9:50
- * 实时聊天的上下文管理器，一个连接一个，并非单例，不呢个使用@Component
+ * 实时聊天的上下文管理器，一个连接一个，并非单例，不能使用@Component
+ * 需求：1. 用户发送语音 + 回调显示用户语音 2. 流式音频回调 3. 流式文本持续回显 4. 聊天记录保存到mysql 5.下次会话的时候加载到ChatModel
  */
 public class RealtimeChatContextManager {
 
@@ -20,6 +21,7 @@ public class RealtimeChatContextManager {
     // agent会话信息
     public String userId;
     public String agentId;
+    public long connectTimestamp = 0L;
     public WebSocketSession session;
 
     // llm -> tts
@@ -31,5 +33,6 @@ public class RealtimeChatContextManager {
     // 当前聊天会话信息
     public StringBuilder currentResponse = new StringBuilder();
 
-
+    public void clear() {
+    }
 }

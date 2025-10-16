@@ -25,7 +25,6 @@ import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import org.springframework.web.socket.TextMessage;
-import org.springframework.web.socket.WebSocketSession;
 import reactor.core.publisher.Flux;
 
 import java.io.ByteArrayOutputStream;
@@ -36,8 +35,6 @@ import java.util.Base64;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Queue;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -57,6 +54,7 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
     private final Recognition sttRecognizer;
     private final MultiModalConversation multiModalConversation;
 
+    @Override
     public void startChat(@NotNull RealtimeChatContextManager chatContextManager) throws InterruptedException, NoApiKeyException {
         log.info("[startChat] 开始将音频流数据填充缓冲区");
 

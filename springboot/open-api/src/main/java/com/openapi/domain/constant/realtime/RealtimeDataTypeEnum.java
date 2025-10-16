@@ -9,6 +9,10 @@ import org.jetbrains.annotations.NotNull;
  */
 @Getter
 public enum RealtimeDataTypeEnum {
+    // connect
+    CONNECT("connect"),
+    // disconnect
+    DISCONNECT("disconnect"),
     // start_send/receive
     START("start"),
     // stop_send/receive
