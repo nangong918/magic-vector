@@ -1,5 +1,7 @@
 package com.openapi.domain.constant;
 
+import com.alibaba.dashscope.aigc.multimodalconversation.AudioParameters;
+
 /**
  * @author 13225
  * @date 2025/10/16 10:12
@@ -10,6 +12,8 @@ public interface ModelConstant {
     String TTS_Model = "qwen3-tts-flash";
     String Chat_Model = "qwen-flash";
     long SENTENCE_INTERVAL = 300;
+    AudioParameters.Voice TTS_Voice = AudioParameters.Voice.CHERRY;
+    String TTS_LanguageType = "Chinese";
 
     String STT_Format = "pcm";
     int SST_SampleRate = 16000;

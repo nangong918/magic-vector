@@ -1,6 +1,7 @@
 package com.openapi.domain.Do;
 
 import cn.hutool.core.util.IdUtil;
+import com.openapi.domain.constant.RoleTypeEnum;
 import lombok.Data;
 import org.springframework.data.annotation.Id;
 
@@ -17,5 +18,5 @@ public class ChatMessageDo {
     // 时间
     private LocalDateTime chatTime;
     // 发送方: 0: agent, 1: user (相当于isUser ? 0 : 1)
-    private Integer role = 0;
+    private Integer role = RoleTypeEnum.AGENT.getValue();
 }

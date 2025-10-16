@@ -46,6 +46,11 @@ public class RealtimeChatChannel extends TextWebSocketHandler {
     public void afterConnectionClosed(WebSocketSession session, @NotNull CloseStatus status) throws Exception {
         log.info("[websocket] 连接断开：id={}，reason={}", session.getId(), status);
         realtimeChatContextManager.stopRecording.set(true);
+        // 取消聊天任务
+        if (chatFuture != null) {
+            // true 表示中断正在执行的任务
+            chatFuture.cancel(true);
+        }
         super.afterConnectionClosed(session, status);
     }
 
@@ -89,6 +94,9 @@ public class RealtimeChatChannel extends TextWebSocketHandler {
                 log.info("[websocket] 用户申请断开，开始结束会话信息");
             }
             case START -> {
+                // 无VAD模式
+                // 开启新的一问一答
+                realtimeChatContextManager.newChatMessage();
                 log.info("[websocket] 开始录音");
                 realtimeChatContextManager.stopRecording.set(false);
                 chatFuture = taskExecutor.submit(() -> {

@@ -1,6 +1,5 @@
 package com.openapi.service.impl;
 
-import com.alibaba.dashscope.aigc.multimodalconversation.AudioParameters;
 import com.alibaba.dashscope.aigc.multimodalconversation.MultiModalConversation;
 import com.alibaba.dashscope.aigc.multimodalconversation.MultiModalConversationParam;
 import com.alibaba.dashscope.aigc.multimodalconversation.MultiModalConversationResult;
@@ -9,11 +8,14 @@ import com.alibaba.dashscope.audio.asr.recognition.RecognitionParam;
 import com.alibaba.dashscope.exception.NoApiKeyException;
 import com.alibaba.dashscope.exception.UploadFileException;
 import com.alibaba.fastjson.JSON;
+import com.alibaba.fastjson.TypeReference;
 import com.openapi.component.manager.OptimizedSentenceDetector;
 import com.openapi.component.manager.RealtimeChatContextManager;
 import com.openapi.config.ChatConfig;
 import com.openapi.domain.constant.ModelConstant;
+import com.openapi.domain.constant.RoleTypeEnum;
 import com.openapi.domain.constant.realtime.RealtimeDataTypeEnum;
+import com.openapi.domain.dto.ws.RealtimeChatTextResponse;
 import com.openapi.domain.interfaces.OnSSTResultCallback;
 import com.openapi.service.RealtimeChatService;
 import io.reactivex.BackpressureStrategy;
@@ -84,6 +86,23 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
         /// stt
         Flowable<ByteBuffer> audioFlowable = convertAudioToFlowable(audioData);
         sttStreamCall(audioFlowable, result -> {
+            // 返回结果给前端
+            RealtimeChatTextResponse userAudioSttResponse = new RealtimeChatTextResponse();
+            userAudioSttResponse.agentId = chatContextManager.agentId;
+            userAudioSttResponse.userId = chatContextManager.userId;
+            userAudioSttResponse.role = RoleTypeEnum.USER.getValue();
+            userAudioSttResponse.content = result;
+            userAudioSttResponse.messageId = chatContextManager.getCurrentUserMessageId();
+            userAudioSttResponse.timestamp = chatContextManager.connectTimestamp;
+            String response = JSON.toJSONString(userAudioSttResponse);
+
+            Map<String, String> responseMap = new HashMap<>();
+            responseMap.put(RealtimeDataTypeEnum.TYPE, RealtimeDataTypeEnum.TEXT_MESSAGE.getType());
+            responseMap.put(RealtimeDataTypeEnum.DATA, response);
+
+            String startResponse = JSON.toJSONString(responseMap);
+
+            chatContextManager.session.sendMessage(new TextMessage(startResponse));
             /// llm
             if (StringUtils.hasText(result)){
                 llmStreamCall(result, chatContextManager);
@@ -163,6 +182,26 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
                     chatContextManager.isLLMFinished.set(false);
                     int currentCount = fragmentCount.incrementAndGet();
                     long fragmentTime = System.currentTimeMillis() - startTime.get();
+
+                    // 发送当前fragment消息
+                    chatContextManager.currentResponse.append(fragment);
+                    RealtimeChatTextResponse agentFragmentResponse = new RealtimeChatTextResponse();
+                    agentFragmentResponse.setAgentId(chatContextManager.agentId);
+                    agentFragmentResponse.setUserId(chatContextManager.userId);
+                    agentFragmentResponse.setRole(RoleTypeEnum.AGENT.getValue());
+                    agentFragmentResponse.setContent(chatContextManager.currentResponse.toString());
+                    agentFragmentResponse.setMessageId(chatContextManager.getCurrentAgentMessageId());
+                    agentFragmentResponse.setTimestamp(chatContextManager.currentMessageTimestamp);
+                    String agentFragmentResponseJson = JSON.toJSONString(agentFragmentResponse);
+                    Map<String, String> responseMap = new HashMap<>();
+                    responseMap.put(RealtimeDataTypeEnum.TYPE, RealtimeDataTypeEnum.TEXT_MESSAGE.getType());
+                    responseMap.put(RealtimeDataTypeEnum.DATA, agentFragmentResponseJson);
+                    String response = JSON.toJSONString(responseMap);
+                    try {
+                        chatContextManager.session.sendMessage(new TextMessage(response));
+                    } catch (IOException e) {
+                        log.error("[websocket error] 响应消息异常", e);
+                    }
 
                     // 观察片段信息
                     log.info("\n[LLM 片段 #{}, 耗时: {}ms]", currentCount, fragmentTime);
@@ -261,8 +300,8 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
                 .model(ModelConstant.TTS_Model)
                 .apiKey(chatConfig.getApiKey())
                 .text(sentence)
-                .voice(AudioParameters.Voice.CHERRY)
-                .languageType("Chinese")
+                .voice(ModelConstant.TTS_Voice)
+                .languageType(ModelConstant.TTS_LanguageType)
                 .build();
 
         Flowable<MultiModalConversationResult> result = multiModalConversation.streamCall(param);

@@ -1,5 +1,7 @@
 package com.openapi.component.manager;
 
+import cn.hutool.core.util.IdUtil;
+import com.openapi.domain.constant.RoleTypeEnum;
 import org.springframework.web.socket.WebSocketSession;
 
 import java.util.Queue;
@@ -31,7 +33,21 @@ public class RealtimeChatContextManager {
 
 
     // 当前聊天会话信息
+    private String currentMessageId = String.valueOf(IdUtil.getSnowflake().nextId());
+    public long currentMessageTimestamp = System.currentTimeMillis();
     public StringBuilder currentResponse = new StringBuilder();
+    // 开启新的一问一答 todo 需要停止之前全部的模型消息和缓存
+    public void newChatMessage(){
+        currentMessageId = String.valueOf(IdUtil.getSnowflake().nextId());
+        currentMessageTimestamp = System.currentTimeMillis();
+        currentResponse = new StringBuilder();
+    }
+    public String getCurrentAgentMessageId(){
+        return RoleTypeEnum.AGENT.getValue() + ":" + currentMessageId;
+    }
+    public String getCurrentUserMessageId(){
+        return RoleTypeEnum.USER.getValue() + ":" + currentMessageId;
+    }
 
     public void clear() {
     }

@@ -1,5 +1,9 @@
 package com.data.domain.constant.chat
 
+/**
+ * 发送消息类型枚举
+ * @see RoleTypeEnum
+ */
 enum class SendMessageTypeEnum(val value: Int, val desc: String) {
 
     VIEW_TYPE_SENDER(0, "发送者"),
