@@ -43,6 +43,7 @@ import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import com.magicvector.MainApplication
 import com.magicvector.manager.ChatManager
+import com.magicvector.manager.ChatWsTextMessageHandler
 import com.magicvector.utils.chat.RealtimeChatWsClient
 import com.view.appview.R
 import com.view.appview.chat.ChatMessageAdapter
@@ -366,8 +367,11 @@ class ChatVm(
                 // 文本数据
                 realtimeChatState.postValue(RealtimeChatState.Receiving)
                 val data = map[RealtimeDataTypeEnum.DATA]
-                data?.let {
-                    realtimeChatMessage.postValue(realtimeChatMessage.value + data)
+                if (data != null){
+                    ChatWsTextMessageHandler.handleTextMessage(data, GSON, chatManagerPointer = chatManagerPointer)
+                }
+                else {
+                    Log.e(TAG, "handleTextMessage: data is null")
                 }
             }
             // Android 向后端发送消息的数据类型，后端不会向Android传输这些类型的数据
