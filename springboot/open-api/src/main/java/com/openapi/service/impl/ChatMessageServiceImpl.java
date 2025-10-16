@@ -43,6 +43,12 @@ public class ChatMessageServiceImpl implements ChatMessageService {
         return chatMessageDo.getId();
     }
 
+    @Override
+    public String insertOne(@NotNull ChatMessageDo chatMessageDo){
+        chatMessageMapper.insert(chatMessageDo);
+        return chatMessageDo.getId();
+    }
+
     /**
      * 查询指定时间之前的指定条数消息
      * @param agentId               智能助手Id

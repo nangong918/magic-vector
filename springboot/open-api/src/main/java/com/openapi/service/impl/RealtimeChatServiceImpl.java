@@ -8,15 +8,17 @@ import com.alibaba.dashscope.audio.asr.recognition.RecognitionParam;
 import com.alibaba.dashscope.exception.NoApiKeyException;
 import com.alibaba.dashscope.exception.UploadFileException;
 import com.alibaba.fastjson.JSON;
-import com.alibaba.fastjson.TypeReference;
 import com.openapi.component.manager.OptimizedSentenceDetector;
 import com.openapi.component.manager.RealtimeChatContextManager;
 import com.openapi.config.ChatConfig;
+import com.openapi.converter.ChatMessageConverter;
+import com.openapi.domain.Do.ChatMessageDo;
 import com.openapi.domain.constant.ModelConstant;
 import com.openapi.domain.constant.RoleTypeEnum;
 import com.openapi.domain.constant.realtime.RealtimeDataTypeEnum;
 import com.openapi.domain.dto.ws.RealtimeChatTextResponse;
 import com.openapi.domain.interfaces.OnSSTResultCallback;
+import com.openapi.service.ChatMessageService;
 import com.openapi.service.RealtimeChatService;
 import io.reactivex.BackpressureStrategy;
 import io.reactivex.Flowable;
@@ -55,6 +57,8 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
     private final OptimizedSentenceDetector optimizedSentenceDetector;
     private final Recognition sttRecognizer;
     private final MultiModalConversation multiModalConversation;
+    private ChatMessageService chatMessageService;
+    private ChatMessageConverter chatMessageConverter;
 
     @Override
     public void startChat(@NotNull RealtimeChatContextManager chatContextManager) throws InterruptedException, NoApiKeyException {
@@ -93,9 +97,16 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
             userAudioSttResponse.role = RoleTypeEnum.USER.getValue();
             userAudioSttResponse.content = result;
             userAudioSttResponse.messageId = chatContextManager.getCurrentUserMessageId();
-            userAudioSttResponse.timestamp = chatContextManager.connectTimestamp;
+            userAudioSttResponse.timestamp = chatContextManager.currentMessageTimestamp;
+            userAudioSttResponse.chatTime = chatContextManager.currentMessageDateTime;
             String response = JSON.toJSONString(userAudioSttResponse);
 
+            // 保存到数据库
+            ChatMessageDo chatMessageDo = chatMessageConverter.realtimeChatTextResponseToChatMessageDo(userAudioSttResponse);
+            String messageId = chatMessageService.insertOne(chatMessageDo);
+            log.info("保存用户语音识别结果到数据库：{}", messageId);
+
+            // 发送给Client
             Map<String, String> responseMap = new HashMap<>();
             responseMap.put(RealtimeDataTypeEnum.TYPE, RealtimeDataTypeEnum.TEXT_MESSAGE.getType());
             responseMap.put(RealtimeDataTypeEnum.DATA, response);
@@ -192,6 +203,13 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
                     agentFragmentResponse.setContent(chatContextManager.currentResponse.toString());
                     agentFragmentResponse.setMessageId(chatContextManager.getCurrentAgentMessageId());
                     agentFragmentResponse.setTimestamp(chatContextManager.currentMessageTimestamp);
+                    agentFragmentResponse.setChatTime(chatContextManager.currentMessageDateTime);
+                    // 存储消息到数据库
+                    ChatMessageDo chatMessageDo = chatMessageConverter.realtimeChatTextResponseToChatMessageDo(agentFragmentResponse);
+                    String messageId = chatMessageService.insertOne(chatMessageDo);
+                    log.info("成功将LLM插入消息，消息Id: {}", messageId);
+
+                    // 发送消息给Client
                     String agentFragmentResponseJson = JSON.toJSONString(agentFragmentResponse);
                     Map<String, String> responseMap = new HashMap<>();
                     responseMap.put(RealtimeDataTypeEnum.TYPE, RealtimeDataTypeEnum.TEXT_MESSAGE.getType());

@@ -15,6 +15,8 @@ public interface ChatMessageService {
 
     String insertOne(@NotNull String agentId, @NotNull String message, boolean isUser, String userId);
 
+    String insertOne(@NotNull ChatMessageDo chatMessageDo);
+
     List<ChatMessageDo> getMessagesByAgentIdDeadlineLimit(
             @NotNull String agentId,
             @NotNull LocalDateTime deadline,
