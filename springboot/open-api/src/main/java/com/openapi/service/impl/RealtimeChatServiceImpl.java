@@ -49,12 +49,14 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Base64;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.stream.Collectors;
 
 /**
  * @author 13225
@@ -182,8 +184,9 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
     private void llmStreamCall(String sentence, @NotNull RealtimeChatContextManager chatContextManager, ChatClient chatClient) {
         log.info("\n[LLM 开始] 输入内容: {}", sentence);
 
-        Flux<String> responseFlux = chatClient.prompt(ModelConstant.SYSTEM_PROMPT)
+        Flux<String> responseFlux = chatClient.prompt()
                 .user(sentence)
+                .advisors(a -> a.param(ChatMemory.CONVERSATION_ID, chatContextManager.agentId))
                 .stream()
                 .content();
 
@@ -425,7 +428,13 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
         List<ChatMessageDo> chatMessageDos = chatMessageService.getLast10Messages(chatContextManager.agentId);
         // 将历史消息添加到ChatMemory中
         if (!chatMessageDos.isEmpty()) {
-            List<Message> historyMessages = chatMessageConverter.chatMessageDoListToMessageList(chatMessageDos);
+
+            // 按时间正序排列，确保对话顺序正确 （前端展示是最新的放在第0个，而此处是最新的放在最后一个添加，所以需要重排序）
+            List<ChatMessageDo> sortedMessages = chatMessageDos.stream()
+                    .sorted(Comparator.comparing(ChatMessageDo::getChatTime))
+                    .toList();
+
+            List<Message> historyMessages = chatMessageConverter.chatMessageDoListToMessageList(sortedMessages);
             for (Message message : historyMessages) {
                 chatMemory.add(chatContextManager.agentId, message);
             }
