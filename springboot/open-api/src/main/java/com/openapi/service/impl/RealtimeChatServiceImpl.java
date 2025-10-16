@@ -1,5 +1,6 @@
 package com.openapi.service.impl;
 
+import com.alibaba.cloud.ai.dashscope.chat.DashScopeChatModel;
 import com.alibaba.dashscope.aigc.multimodalconversation.MultiModalConversation;
 import com.alibaba.dashscope.aigc.multimodalconversation.MultiModalConversationParam;
 import com.alibaba.dashscope.aigc.multimodalconversation.MultiModalConversationResult;
@@ -10,22 +11,34 @@ import com.alibaba.dashscope.exception.UploadFileException;
 import com.alibaba.fastjson.JSON;
 import com.openapi.component.manager.OptimizedSentenceDetector;
 import com.openapi.component.manager.RealtimeChatContextManager;
+import com.openapi.config.AgentConfig;
 import com.openapi.config.ChatConfig;
 import com.openapi.converter.ChatMessageConverter;
 import com.openapi.domain.Do.ChatMessageDo;
+import com.openapi.domain.ao.AgentAo;
 import com.openapi.domain.constant.ModelConstant;
 import com.openapi.domain.constant.RoleTypeEnum;
+import com.openapi.domain.constant.error.AgentExceptions;
+import com.openapi.domain.constant.error.UserExceptions;
 import com.openapi.domain.constant.realtime.RealtimeDataTypeEnum;
 import com.openapi.domain.dto.ws.RealtimeChatTextResponse;
+import com.openapi.domain.exception.AppException;
 import com.openapi.domain.interfaces.OnSSTResultCallback;
+import com.openapi.service.AgentService;
 import com.openapi.service.ChatMessageService;
 import com.openapi.service.RealtimeChatService;
+import com.openapi.service.UserService;
 import io.reactivex.BackpressureStrategy;
 import io.reactivex.Flowable;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.ai.chat.client.advisor.MessageChatMemoryAdvisor;
+import org.springframework.ai.chat.memory.ChatMemory;
+import org.springframework.ai.chat.messages.AssistantMessage;
+import org.springframework.ai.chat.messages.Message;
+import org.springframework.ai.chat.messages.UserMessage;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import org.springframework.web.socket.TextMessage;
@@ -39,6 +52,7 @@ import java.util.Base64;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -53,15 +67,17 @@ import java.util.concurrent.atomic.AtomicLong;
 public class RealtimeChatServiceImpl implements RealtimeChatService {
 
     private final ChatConfig chatConfig;
-    private final ChatClient dashScopeChatClient;
     private final OptimizedSentenceDetector optimizedSentenceDetector;
     private final Recognition sttRecognizer;
     private final MultiModalConversation multiModalConversation;
-    private ChatMessageService chatMessageService;
-    private ChatMessageConverter chatMessageConverter;
+    private final ChatMessageService chatMessageService;
+    private final ChatMessageConverter chatMessageConverter;
+    private final AgentConfig agentConfig;
+    private final UserService userService;
+    private final AgentService agentService;
 
     @Override
-    public void startChat(@NotNull RealtimeChatContextManager chatContextManager) throws InterruptedException, NoApiKeyException {
+    public void startChat(@NotNull RealtimeChatContextManager chatContextManager, ChatClient chatClient) throws InterruptedException, NoApiKeyException {
         log.info("[startChat] 开始将音频流数据填充缓冲区");
 
         /// audioBytes
@@ -116,7 +132,7 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
             chatContextManager.session.sendMessage(new TextMessage(startResponse));
             /// llm
             if (StringUtils.hasText(result)){
-                llmStreamCall(result, chatContextManager);
+                llmStreamCall(result, chatContextManager, chatClient);
             }
         });
     }
@@ -163,10 +179,10 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
                 );
     }
 
-    private void llmStreamCall(String sentence, @NotNull RealtimeChatContextManager chatContextManager) {
+    private void llmStreamCall(String sentence, @NotNull RealtimeChatContextManager chatContextManager, ChatClient chatClient) {
         log.info("\n[LLM 开始] 输入内容: {}", sentence);
 
-        Flux<String> responseFlux = dashScopeChatClient.prompt(ModelConstant.SYSTEM_PROMPT)
+        Flux<String> responseFlux = chatClient.prompt(ModelConstant.SYSTEM_PROMPT)
                 .user(sentence)
                 .stream()
                 .content();
@@ -372,4 +388,49 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
         }
     }
 
+    /**
+     * 初始化ChatClient
+     * @param chatContextManager    chatContextManager
+     * @param chatModel             chatModel
+     * @return                      ChatClient
+     * @throws AppException         AppException
+     */
+    @NotNull
+    @Override
+    public ChatClient initChatClient(@NotNull RealtimeChatContextManager chatContextManager, @NotNull DashScopeChatModel chatModel) throws AppException {
+        if (!userService.checkUserExistById(chatContextManager.userId)){
+            throw new AppException(UserExceptions.USER_NOT_EXIST);
+        }
+        AgentAo agentAo = agentService.getAgentById(chatContextManager.agentId);
+        if (agentAo == null || agentAo.getAgentId() == null){
+            throw new AppException(AgentExceptions.AGENT_NOT_EXIST);
+        }
+
+        // 设定
+        String description = Optional.ofNullable(agentAo.getAgentVo())
+                .map(agentVo -> agentVo.description)
+                .orElseGet(() -> {
+                    log.warn("Agent 没有设定，使用默认设定");
+                    return ModelConstant.SYSTEM_PROMPT;
+                });
+
+        ChatMemory chatMemory = agentConfig.chatMemory();
+
+        ChatClient chatClient = ChatClient.builder(chatModel)
+                .defaultAdvisors(MessageChatMemoryAdvisor.builder(chatMemory).build())
+                .defaultSystem(description)
+                .build();
+
+        // 预先加载10条历史聊天记录
+        List<ChatMessageDo> chatMessageDos = chatMessageService.getLast10Messages(chatContextManager.agentId);
+        // 将历史消息添加到ChatMemory中
+        if (!chatMessageDos.isEmpty()) {
+            List<Message> historyMessages = chatMessageConverter.chatMessageDoListToMessageList(chatMessageDos);
+            for (Message message : historyMessages) {
+                chatMemory.add(chatContextManager.agentId, message);
+            }
+        }
+
+        return chatClient;
+    }
 }

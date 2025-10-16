@@ -24,9 +24,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 
 
@@ -168,10 +166,10 @@ public class AgentServiceImpl implements AgentService {
         }
 
 
-        // 获取最新20条消息
-        List<List<ChatMessageDo>> chatMessageDos = chatMessageService.getLast20MessagesByAgentIds(agentIds);
+        // 获取最新10条消息
+        List<List<ChatMessageDo>> chatMessageDos = chatMessageService.getLast10MessagesByAgentIds(agentIds);
 
-        // 填充最新20条消息
+        // 填充最新10条消息
         for (AgentChatAo agentChatAo : agentChatAos) {
             for (List<ChatMessageDo> messageDo : chatMessageDos) {
                 if (messageDo.isEmpty()) {

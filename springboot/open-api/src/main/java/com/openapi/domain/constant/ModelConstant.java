@@ -14,6 +14,9 @@ public interface ModelConstant {
     long SENTENCE_INTERVAL = 300;
     AudioParameters.Voice TTS_Voice = AudioParameters.Voice.CHERRY;
     String TTS_LanguageType = "Chinese";
+    // 记忆上下文长度
+    int MEMORY_CONTEXT_LENGTH = 10;
+    int LIMIT_FETCH_CHAT_HISTORY_LENGTH = 50;
 
     String STT_Format = "pcm";
     int SST_SampleRate = 16000;

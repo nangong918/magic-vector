@@ -1,6 +1,7 @@
 package com.openapi.service.impl;
 
 import com.openapi.domain.Do.ChatMessageDo;
+import com.openapi.domain.constant.ModelConstant;
 import com.openapi.mapper.ChatMessageMapper;
 import com.openapi.service.ChatMessageService;
 import lombok.RequiredArgsConstructor;
@@ -66,15 +67,15 @@ public class ChatMessageServiceImpl implements ChatMessageService {
     }
 
     /**
-     * 查询最新聊天记录20条; 会AOP先走Redis
+     * 查询最新聊天记录10条; 会AOP先走Redis
      * @param agentId   智能助手Id
      * @return          聊天记录
      */
     @Cacheable(value = "agentMessages", key = "#agentId")
     @NotNull
     @Override
-    public List<ChatMessageDo> getLast20Messages(@NotNull String agentId){
-        return chatMessageMapper.getMessagesByAgentIdDeadlineLimit(agentId, LocalDateTime.now(), 20);
+    public List<ChatMessageDo> getLast10Messages(@NotNull String agentId){
+        return chatMessageMapper.getMessagesByAgentIdDeadlineLimit(agentId, LocalDateTime.now(), ModelConstant.MEMORY_CONTEXT_LENGTH);
     }
 
     /**
@@ -84,10 +85,10 @@ public class ChatMessageServiceImpl implements ChatMessageService {
      */
     @NotNull
     @Override
-    public List<List<ChatMessageDo>> getLast20MessagesByAgentIds(@NotNull List<String> agentIds){
+    public List<List<ChatMessageDo>> getLast10MessagesByAgentIds(@NotNull List<String> agentIds){
         if (agentIds.isEmpty()){
             return new ArrayList<>();
         }
-        return chatMessageMapper.getMessageByAgentIds(agentIds, LocalDateTime.now(), 20);
+        return chatMessageMapper.getMessageByAgentIds(agentIds, LocalDateTime.now(), ModelConstant.MEMORY_CONTEXT_LENGTH);
     }
 }

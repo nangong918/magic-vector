@@ -25,7 +25,7 @@ public interface ChatMessageService {
 
     @NotNull
     @Cacheable(value = "agentMessages", key = "#agentId")
-    List<ChatMessageDo> getLast20Messages(@NotNull String agentId);
+    List<ChatMessageDo> getLast10Messages(@NotNull String agentId);
 
-    @NotNull List<List<ChatMessageDo>> getLast20MessagesByAgentIds(@NotNull List<String> agentIds);
+    @NotNull List<List<ChatMessageDo>> getLast10MessagesByAgentIds(@NotNull List<String> agentIds);
 }

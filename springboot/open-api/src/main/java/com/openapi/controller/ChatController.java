@@ -1,6 +1,7 @@
 package com.openapi.controller;
 
 
+import com.openapi.domain.constant.ModelConstant;
 import com.openapi.domain.constant.error.CommonExceptions;
 import com.openapi.domain.dto.BaseResponse;
 import com.openapi.domain.dto.resonse.ChatMessageResponse;
@@ -33,7 +34,7 @@ public class ChatController {
         if (!StringUtils.hasText(agentId)){
             return BaseResponse.LogBackError(CommonExceptions.PARAM_ERROR);
         }
-        val chatMessageDos = chatMessageService.getLast20Messages(agentId);
+        val chatMessageDos = chatMessageService.getLast10Messages(agentId);
         ChatMessageResponse response = new ChatMessageResponse();
         response.setChatMessages(chatMessageDos);
 
@@ -64,8 +65,8 @@ public class ChatController {
         if (limit <= 0){
             return BaseResponse.LogBackError(CommonExceptions.PARAM_ERROR);
         }
-        else if (limit > 50){
-            limit = 50;
+        else if (limit > ModelConstant.LIMIT_FETCH_CHAT_HISTORY_LENGTH){
+            limit = ModelConstant.LIMIT_FETCH_CHAT_HISTORY_LENGTH;
         }
 
         val chatMessageDos = chatMessageService.getMessagesByAgentIdDeadlineLimit(agentId, time, limit);

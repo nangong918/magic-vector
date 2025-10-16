@@ -1,6 +1,7 @@
 package com.openapi.websocket.handler;
 
 
+import com.alibaba.cloud.ai.dashscope.chat.DashScopeChatModel;
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.TypeReference;
 import com.openapi.component.manager.RealtimeChatContextManager;
@@ -10,6 +11,7 @@ import com.openapi.service.RealtimeChatService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
+import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
@@ -34,6 +36,8 @@ public class RealtimeChatChannel extends TextWebSocketHandler {
     private volatile Future<?> chatFuture;
     private RealtimeChatContextManager realtimeChatContextManager = new RealtimeChatContextManager();
     private final RealtimeChatService realtimeChatService;
+    private final DashScopeChatModel dashScopeChatModel;
+    private ChatClient chatClient;
 
 
     @Override
@@ -85,6 +89,9 @@ public class RealtimeChatChannel extends TextWebSocketHandler {
                     realtimeChatContextManager.agentId = connectRequest.getAgentId();
                     realtimeChatContextManager.session = session;
                     realtimeChatContextManager.connectTimestamp = connectRequest.getTimestamp();
+
+                    // 初始化chatClient
+                    chatClient = realtimeChatService.initChatClient(realtimeChatContextManager, dashScopeChatModel);
                 } catch (Exception e){
                     log.warn("[websocket warn] 断开连接，参数错误");
                     session.close();
@@ -103,7 +110,8 @@ public class RealtimeChatChannel extends TextWebSocketHandler {
                     try {
                         // 启动聊天
                         realtimeChatService.startChat(
-                                realtimeChatContextManager
+                                realtimeChatContextManager,
+                                chatClient
                         );
                     } catch (Exception e) {
                         realtimeChatContextManager.stopRecording.set(true);
