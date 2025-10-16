@@ -16,7 +16,7 @@ import com.data.domain.ao.chat.ChatItemAo
 class ChatManager {
     // request
     val requestChatMessageList: MutableList<ChatMessageDo> = mutableListOf()
-    // ws
+    // ws todo 前后端确定好数据格式
     // view
     val viewChatMessageList: MutableList<ChatItemAo> = mutableListOf()
 }
