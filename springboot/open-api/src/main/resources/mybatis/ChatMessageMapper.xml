@@ -8,7 +8,7 @@
     </sql>
 
     <sql id="columns">
-        id, agent_id, content, chat_time, role, user_id
+        id, agent_id, content, chat_time, role, user_id, chat_timestamp
     </sql>
 
     <insert id="insert">
@@ -18,7 +18,7 @@
         <include refid="columns"/>
         )
         values(
-        #{id}, #{agentId}, #{content}, #{chatTime}, #{role}, #{userId}
+        #{id}, #{agentId}, #{content}, #{chatTime}, #{role}, #{userId}, #{chatTimestamp}
         )
     </insert>
     <insert id="insertBatch">
@@ -31,7 +31,7 @@
             values
             <foreach item="item" index="index" collection="list" separator="," open="(" close=")">
                 (
-                #{item.id}, #{item.agentId}, #{item.content}, #{item.chatTime}, #{item.role}, #{item.userId}
+                #{item.id}, #{item.agentId}, #{item.content}, #{item.chatTime}, #{item.role}, #{item.userId}, #{{item.chatTimestamp}
                 )
             </foreach>
         </if>
