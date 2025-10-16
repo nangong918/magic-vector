@@ -13,7 +13,7 @@ import java.util.List;
 public class AgentChatAo {
     public AgentAo agentAo;
     public Long lastChatTime = 0L;
-    // 最新的20条消息
+    // 最新的10条消息
     public List<ChatMessageDo> lastChatMessages = new ArrayList<>();
     // 未读消息
     public Integer unreadCount = 0;
