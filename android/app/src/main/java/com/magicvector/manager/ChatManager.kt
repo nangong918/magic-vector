@@ -17,16 +17,12 @@ import com.data.domain.dto.ws.RealtimeChatTextResponse
  *  1.Room
  *  2.MMKV
  */
-class ChatManager {
+class ChatManager(val agentId: String) {
 
     companion object {
         val TAG = ChatManager::class.simpleName
     }
 
-    // response
-    val responseChatMessageList: MutableList<ChatMessageDo> = mutableListOf()
-    // ws
-    val wsChatMessageList: MutableList<RealtimeChatTextResponse> = mutableListOf()
     // view
     val viewChatMessageList: MutableList<ChatItemAo> = mutableListOf()
 
@@ -117,4 +113,7 @@ class ChatManager {
         return ao
     }
 
+    fun clear(){
+        viewChatMessageList.clear()
+    }
 }

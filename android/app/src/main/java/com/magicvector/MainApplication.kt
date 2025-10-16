@@ -6,6 +6,7 @@ import com.core.appcore.api.ApiRequest
 import com.core.appcore.api.ApiRequestProvider
 import com.core.baseutil.image.ImageManager
 import com.data.dao.api.ApiRequestImpl
+import com.magicvector.manager.ChatMapManager
 import com.magicvector.manager.MessageListManager
 
 class MainApplication : Application() {
@@ -72,6 +73,12 @@ class MainApplication : Application() {
         private val messageListManager = MessageListManager()
         fun getMessageListManager(): MessageListManager {
             return messageListManager
+        }
+
+        // chatMapManager
+        private val chatMapManager = ChatMapManager()
+        fun getChatMapManager(): ChatMapManager {
+            return chatMapManager
         }
     }
 

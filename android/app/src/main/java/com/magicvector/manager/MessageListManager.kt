@@ -7,15 +7,11 @@ import com.data.domain.dto.response.AgentLastChatListResponse
 import java.util.Optional
 
 class MessageListManager {
-    // request
-    val agentChatAos: MutableList<AgentChatAo> = mutableListOf()
     // view
     val messageContactItemAos: MutableList<MessageContactItemAo> = mutableListOf()
 
     fun setAgentChatAos(response: AgentLastChatListResponse){
-        agentChatAos.clear()
         response.agentChatAos?.let {
-            agentChatAos.addAll(response.agentChatAos)
             messageContactItemAos.clear()
         }
         response.agentChatAos?.forEach {
@@ -50,7 +46,6 @@ class MessageListManager {
     }
 
     fun clear() {
-        agentChatAos.clear()
         messageContactItemAos.clear()
     }
 }
