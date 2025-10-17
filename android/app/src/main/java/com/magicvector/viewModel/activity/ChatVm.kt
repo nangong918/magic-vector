@@ -199,7 +199,7 @@ class ChatVm(
         )
     }
 
-    // 特定时间段的chat history
+    // 特定时间段的chat history todo: 上拉上滑获取之前的chat History
     fun doGetTimeLimitChat(context: Context, deadline: String, callback: SyncRequestCallback){
         MainApplication.getApiRequestImplInstance().getTimeLimitChat(
             aao.messageContactItemAo!!.contactId!!,
@@ -551,6 +551,7 @@ class ChatVm(
     }
 
     fun sendMessage() {
+        // todo 完成本文发送
     }
 
     //===========selectImage

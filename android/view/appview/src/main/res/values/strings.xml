@@ -140,4 +140,5 @@
     <string name="press_to_record">按住录音</string>
     <string name="please_input_agent_name">请输入Agent的名称</string>
     <string name="please_input_agent_description">请为Agent设定正确的设定</string>
+    <string name="init_agent_failed">Agent初始化失败</string>
 </resources>

@@ -6,6 +6,7 @@ import android.os.Bundle
 import android.text.TextUtils
 import android.util.Log
 import android.view.View
+import com.core.baseutil.ui.ToastUtils
 import com.data.domain.ao.message.MessageContactItemAo
 import com.data.domain.fragmentActivity.intentAo.ChatIntentAo
 import com.data.domain.vo.test.RealtimeChatState
@@ -46,6 +47,8 @@ class ChatActivity : BaseAppCompatVmActivity<ActivityChatBinding, ChatVm>(
             vm.initResource(activity = this@ChatActivity, ao, getWhereNeedUpdate())
         } catch (e: IllegalArgumentException){
             Log.e(TAG, "ChatActivity::initResource失败", e)
+            ToastUtils.showToastActivity(this@ChatActivity,
+                getString(com.view.appview.R.string.init_agent_failed))
             finish()
         }
 
