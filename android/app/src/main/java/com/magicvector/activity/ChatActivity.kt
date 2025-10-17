@@ -13,6 +13,9 @@ import com.magicvector.databinding.ActivityChatBinding
 import com.magicvector.utils.BaseAppCompatVmActivity
 import com.magicvector.viewModel.activity.ChatVm
 import com.view.appview.chat.OnChatMessageClick
+import com.view.appview.recycler.RecyclerViewWhereNeedUpdate
+import com.view.appview.recycler.UpdateRecyclerViewItem
+import com.view.appview.recycler.UpdateRecyclerViewTypeEnum
 
 class ChatActivity : BaseAppCompatVmActivity<ActivityChatBinding, ChatVm>(
     ChatActivity::class,
@@ -40,7 +43,7 @@ class ChatActivity : BaseAppCompatVmActivity<ActivityChatBinding, ChatVm>(
         }
 
         try {
-            vm.initResource(activity = this@ChatActivity, ao, TODO())
+            vm.initResource(activity = this@ChatActivity, ao, getWhereNeedUpdate())
         } catch (e: IllegalArgumentException){
             Log.e(TAG, "ChatActivity::initResource失败", e)
             finish()
@@ -165,6 +168,55 @@ class ChatActivity : BaseAppCompatVmActivity<ActivityChatBinding, ChatVm>(
                 vm.stopAndSendRealtimeChatAudio()
             }
         )
+    }
+
+    fun getWhereNeedUpdate(): RecyclerViewWhereNeedUpdate {
+        return object : RecyclerViewWhereNeedUpdate {
+            override fun whereNeedUpdate(updateInfos: List<UpdateRecyclerViewItem>) {
+                if (updateInfos.isEmpty()){
+                    return
+                }
+                for (updateInfo in updateInfos) {
+                    when (updateInfo.type){
+                        UpdateRecyclerViewTypeEnum.SINGLE_ID_UPDATE -> {
+                            if (updateInfo.singleUpdateId == null){
+                                return
+                            }
+                            // 单个更新
+                            // 找到id当前的position然后更新
+                            var viewIndex = -1
+                            for (chatItemAo in vm.chatManagerPointer.getViewChatMessageList()){
+                                if (chatItemAo.messageId == updateInfo.singleUpdateId){
+                                    viewIndex = vm.chatManagerPointer.getViewChatMessageList().indexOf(chatItemAo)
+                                }
+                            }
+                            if (viewIndex != -1){
+                                vm.adapter.notifyItemChanged(viewIndex)
+                            }
+                        }
+                        UpdateRecyclerViewTypeEnum.ID_TO_END_UPDATE -> {
+                            if (updateInfo.idToEndUpdateId == null){
+                                return
+                            }
+                            // 找到id当前的position然后更新
+                            var viewIndex = -1
+                            for (chatItemAo in vm.chatManagerPointer.getViewChatMessageList()){
+                                if (chatItemAo.messageId == updateInfo.idToEndUpdateId){
+                                    viewIndex = vm.chatManagerPointer.getViewChatMessageList().indexOf(chatItemAo)
+                                }
+                            }
+                            if (viewIndex >= 0){
+                                val endPosition = vm.chatManagerPointer.getViewChatMessageList().size - 1
+                                vm.adapter.notifyItemRangeChanged(
+                                    viewIndex,
+                                    endPosition
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 
     override fun onDestroy() {

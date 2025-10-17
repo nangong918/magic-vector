@@ -40,8 +40,6 @@ class ChatManager(val agentId: String) {
     fun getViewChatMessageList(): MutableList<ChatItemAo> {
         return viewChatMessageList
     }
-    // ids Set
-    private val viewChatMessageIds: MutableSet<String> = mutableSetOf()
 
     // response -> view
     fun setResponsesToViews(responses: List<ChatMessageDo>){
@@ -55,7 +53,15 @@ class ChatManager(val agentId: String) {
         var minPosition = viewChatMessageList.size - 1
         for (response in responses) {
             // 只有 ChatItemAo 中不包含此条消息才添加 (http的消息是唯一的)
-            if (!viewChatMessageIds.contains(response.id)) {
+            var viewIndex = -1
+            for (chatItemAo in viewChatMessageList){
+                if (chatItemAo.messageId == response.id) {
+                    viewIndex = viewChatMessageList.indexOf(chatItemAo)
+                    break
+                }
+            }
+            // 不存在
+            if (viewIndex < 0) {
                 val view = responseToView(response)
                 // 降序二分查找适合的位置插入
                 val insertPosition = SortUtil.descFindInsertPosition(view.getIndex(), viewChatMessageList)
@@ -113,8 +119,11 @@ class ChatManager(val agentId: String) {
         var minPosition = viewChatMessageList.size - 1
         for (ws in wss) {
             var viewIndex = -1
-            if (viewChatMessageIds.contains(ws.messageId)){
-                viewIndex = viewChatMessageIds.indexOf(ws.messageId)
+            for (chatItemAo in viewChatMessageList){
+                if (chatItemAo.messageId == ws.messageId) {
+                    viewIndex = viewChatMessageList.indexOf(chatItemAo)
+                    break
+                }
             }
             // ChatItemAo 中不包含此条消息添加, 包含则覆盖
             // 不存在
@@ -124,8 +133,6 @@ class ChatManager(val agentId: String) {
                 // 降序二分查找适合的位置插入
                 val insertPosition = SortUtil.descFindInsertPosition(view.getIndex(), viewChatMessageList)
                 viewChatMessageList.add(insertPosition, view)
-                // 更新存在的 ID 集合
-                viewChatMessageIds.add(ws.messageId)
                 // 更新最小左边界
                 minPosition = insertPosition.coerceAtMost(minPosition)
             }
@@ -153,8 +160,11 @@ class ChatManager(val agentId: String) {
 
     private fun setWsToViews(ws: RealtimeChatTextResponse){
         var viewIndex = -1
-        if (viewChatMessageIds.contains(ws.messageId)){
-            viewIndex = viewChatMessageIds.indexOf(ws.messageId)
+        for (chatItemAo in viewChatMessageList){
+            if (chatItemAo.messageId == ws.messageId) {
+                viewIndex = viewChatMessageList.indexOf(chatItemAo)
+                break
+            }
         }
         // ChatItemAo 中不包含此条消息添加, 包含则覆盖
         // 不存在
@@ -165,8 +175,6 @@ class ChatManager(val agentId: String) {
             // 降序二分查找适合的位置插入
             val insertPosition = SortUtil.descFindInsertPosition(view.getIndex(), viewChatMessageList)
             viewChatMessageList.add(insertPosition, view)
-            // 更新存在的 ID 集合
-            viewChatMessageIds.add(ws.messageId)
             // 更新最小左边界
             minPosition = insertPosition.coerceAtMost(minPosition)
 
@@ -218,6 +226,5 @@ class ChatManager(val agentId: String) {
     fun clear(){
         viewChatMessageList.clear()
         needUpdateQueue.clear()
-        viewChatMessageIds.clear()
     }
 }
