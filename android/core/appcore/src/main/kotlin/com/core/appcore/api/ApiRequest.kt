@@ -27,7 +27,7 @@ interface ApiRequest {
     @Multipart
     @POST("/agent/create")
     suspend fun createAgent(
-        @Part avatar: MultipartBody.Part,
+        @Part avatar: MultipartBody.Part?,
         @Part("userId") userId: String,
         @Part("name") name: RequestBody,
         @Part("description") description: RequestBody

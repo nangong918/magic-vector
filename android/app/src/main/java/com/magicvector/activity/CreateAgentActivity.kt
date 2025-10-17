@@ -1,11 +1,11 @@
 package com.magicvector.activity
 
-import android.app.Activity
 import android.content.Intent
 import android.os.Bundle
 import com.core.appcore.api.handler.SyncRequestCallback
 import com.core.baseutil.network.networkLoad.NetworkLoadUtils
 import com.core.baseutil.ui.ToastUtils
+import com.data.domain.constant.BaseConstant
 import com.magicvector.databinding.ActivityCreateAgentBinding
 import com.magicvector.utils.BaseAppCompatVmActivity
 import com.magicvector.viewModel.activity.CreateAgentVm
@@ -14,7 +14,6 @@ class CreateAgentActivity : BaseAppCompatVmActivity<ActivityCreateAgentBinding, 
     CreateAgentActivity::class,
     CreateAgentVm::class
 ) {
-// todo 尝试实现创建Agent
     override fun initBinding(): ActivityCreateAgentBinding {
         return ActivityCreateAgentBinding.inflate(layoutInflater)
     }
@@ -33,6 +32,9 @@ class CreateAgentActivity : BaseAppCompatVmActivity<ActivityCreateAgentBinding, 
         super.initView()
 
         binding.topBar.setTitle(getString(com.view.appview.R.string.create_agent))
+
+        binding.gEditName.setMaxLine(1)
+        binding.gEditName.setMaxNumber(BaseConstant.Constant.MAX_AGENT_NAME_LENGTH)
     }
 
     override fun setListener() {
@@ -61,11 +63,16 @@ class CreateAgentActivity : BaseAppCompatVmActivity<ActivityCreateAgentBinding, 
 
                 override fun onAllRequestSuccess() {
                     NetworkLoadUtils.dismissDialogSafety(this@CreateAgentActivity)
-                    val resultIntent = Intent().apply {
-                        putExtra(CreateAgentActivity::class.simpleName, true) // 设置返回值
+                    if (vm.aao.isCreateSuccess){
+                        val resultIntent = Intent().apply {
+                            putExtra(CreateAgentActivity::class.simpleName, true) // 设置返回值
+                        }
+                        setResult(RESULT_OK, resultIntent)
+                        finish()
                     }
-                    setResult(RESULT_OK, resultIntent)
-                    finish()
+                    // 创建失败弹窗
+                    ToastUtils.showToastActivity(this@CreateAgentActivity,
+                        getString(com.view.appview.R.string.create_failed))
                 }
             })
         }

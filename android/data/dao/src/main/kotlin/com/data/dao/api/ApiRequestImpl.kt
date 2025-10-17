@@ -26,7 +26,7 @@ open class ApiRequestImpl(apiRequest: ApiRequest) : BaseApiRequestImpl() {
     //        @Part("description") description: RequestBody
     //    ): BaseResponse<AgentResponse>
     fun createAgent(
-        avatar: MultipartBody.Part,
+        avatar: MultipartBody.Part?,
         userId: String,
         name: RequestBody,
         description: RequestBody,

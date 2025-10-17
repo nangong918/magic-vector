@@ -10,4 +10,5 @@ class CreateAgentAAo {
     val nameLd = MutableLiveData("")
     val descriptionLd = MutableLiveData("")
 
+    var isCreateSuccess: Boolean = false
 }

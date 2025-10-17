@@ -52,28 +52,54 @@ class CreateAgentVm(
 
     // 创建Agent
     fun doCreateAgent(context: Context, callback: SyncRequestCallback){
-        var bitmap: Bitmap? = MainApplication.getImageManager()!!.
-        uriToBitmapMediaStore(context, aao.avatarAtomicUrl.get())
-        bitmap = MainApplication.getImageManager()!!.
-        processImage(bitmap, BaseConstant.Constant.BITMAP_MAX_SIZE_AVATAR)
-
-        // Http Send
-        var imageFile: File? = null
-        // 确保您在这里传入正确的 Uri
-//        Uri uri = Uri.fromFile(new File(Environment.getExternalStorageDirectory(), imageName));
-        imageFile = MainApplication.getImageManager()!!.
-        bitmapToFile(bitmap, aao.avatarAtomicUrl.get(), context)
-
-        if (imageFile == null || !imageFile.exists()) {
-            // 处理文件未创建或路径不正确的情况
-            Log.e(TAG, "Image file creation failed")
+        // 入参校验
+        var name = aao.nameLd.value
+        // 清除空格和特殊符号
+        name = name?.replace("\\s+".toRegex(), "")
+        val isNameAllWhitespaceOrSpecialChars = name?.all { it.isWhitespace() || !it.isLetterOrDigit() }
+        if (name == null || name.isEmpty() || isNameAllWhitespaceOrSpecialChars == true){
+            ToastUtils.showToastActivity(context, context.getString(com.view.appview.R.string.please_input_agent_name))
             return
         }
 
-        // 获取文件名
-        // 使用 getName() 获取文件名
-        val originalFilename = imageFile.name
-        val filePart: MultipartBody.Part = FileUtil.createMultipartBodyPart(imageFile, "img")
+        val description = aao.descriptionLd.value
+        // 检查是否全部由空格和特殊符号组成
+        val isDescAllWhitespaceOrSpecialChars = description?.all { it.isWhitespace() || !it.isLetterOrDigit() }
+        if (description == null || description.isEmpty() || isDescAllWhitespaceOrSpecialChars == true){
+            ToastUtils.showToastActivity(context, context.getString(com.view.appview.R.string.please_input_agent_description))
+            return
+        }
+
+        var filePart: MultipartBody.Part? = null
+
+        // 上传头像的情况下
+        if (aao.avatarAtomicUrl.get() != null){
+            Log.d(TAG, "uri不为null，上传图像img资源")
+            var bitmap: Bitmap? = MainApplication.getImageManager()!!.
+            uriToBitmapMediaStore(context, aao.avatarAtomicUrl.get())
+
+            bitmap = MainApplication.getImageManager()!!.
+            processImage(bitmap, BaseConstant.Constant.BITMAP_MAX_SIZE_AVATAR)
+
+            // Http Send
+            var imageFile: File? = null
+            // 确保您在这里传入正确的 Uri
+//        Uri uri = Uri.fromFile(new File(Environment.getExternalStorageDirectory(), imageName));
+            imageFile = MainApplication.getImageManager()!!.
+            bitmapToFile(bitmap, aao.avatarAtomicUrl.get(), context)
+
+            if (imageFile == null || !imageFile.exists()) {
+                // 处理文件未创建或路径不正确的情况
+                Log.w(TAG, "Image file creation failed")
+                return
+            }
+
+            // 获取文件名
+            // 使用 getName() 获取文件名
+            val originalFilename = imageFile.name
+            Log.d(TAG, "Original Filename: $originalFilename")
+            filePart = FileUtil.createMultipartBodyPart(imageFile, "img")
+        }
 
         val nameBody = RequestBody.create(
             "text/plain".toMediaTypeOrNull(),
@@ -111,11 +137,11 @@ class CreateAgentVm(
                                   context: Context,
                                   callback: SyncRequestCallback) {
         response?.let {
-            val agentId = response.data?.agentAo?.agentId
-            if (agentId != null){
+            if (response.data?.agentAo?.agentId != null){
                 ToastUtils.showToastActivity(context, context.getString(
                     com.view.appview.R.string.create_success
                 ))
+                aao.isCreateSuccess = true
             }
         }
         callback.onAllRequestSuccess()

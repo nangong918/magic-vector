@@ -48,6 +48,10 @@ class GeneralEditText : ConstraintLayout{
         }
     }
 
+    fun setMaxLine(maxLine: Int) {
+        binding.edtvInfo.maxLines = maxLine
+    }
+
     fun setOnlyNumberAndMaxNumber(isOnlyNum: Boolean, maxNumber: Int) {
         setOnlyNumber(isOnlyNum)
         setMaxNumber(maxNumber)
