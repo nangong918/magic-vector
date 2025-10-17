@@ -136,7 +136,33 @@ public class RealtimeChatChannel extends TextWebSocketHandler {
                 log.info("[websocket] 收到音频块");
                 handleAudioChunk(messageMap.get(RealtimeDataTypeEnum.DATA));
             }
-            case TEXT_MESSAGE -> log.info("[websocket] 收到文本消息：{}", messageMap.get(RealtimeDataTypeEnum.DATA));
+            case TEXT_MESSAGE -> {
+                log.info("[websocket] 收到文本消息：{}", messageMap.get(RealtimeDataTypeEnum.DATA));
+                realtimeChatContextManager.newChatMessage();
+                realtimeChatContextManager.stopRecording.set(false);
+                chatFuture = taskExecutor.submit(() -> {
+                    try {
+                        // 启动text聊天
+                        realtimeChatService.startTextChat(
+                                messageMap.get(RealtimeDataTypeEnum.DATA),
+                                realtimeChatContextManager,
+                                chatClient
+                        );
+                    } catch (Exception e) {
+                        realtimeChatContextManager.stopRecording.set(true);
+                        log.error("[audioChat] 聊天处理异常", e);
+                        Map<String, String> responseMap = new HashMap<>();
+                        responseMap.put(RealtimeDataTypeEnum.TYPE, RealtimeDataTypeEnum.STOP.getType());
+                        responseMap.put(RealtimeDataTypeEnum.DATA, "聊天处理异常" + e.getMessage());
+                        String response = JSON.toJSONString(responseMap);
+                        try {
+                            session.sendMessage(new TextMessage(response));
+                        } catch (IOException ex) {
+                            log.error("[websocket error] 响应消息异常", ex);
+                        }
+                    }
+                });
+            }
             default -> log.warn("[websocket warn] 忽略未知类型消息：{}", type);
         }
     }

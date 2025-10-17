@@ -31,14 +31,13 @@ import com.openapi.service.UserService;
 import io.reactivex.BackpressureStrategy;
 import io.reactivex.Flowable;
 import lombok.RequiredArgsConstructor;
+import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.client.advisor.MessageChatMemoryAdvisor;
 import org.springframework.ai.chat.memory.ChatMemory;
-import org.springframework.ai.chat.messages.AssistantMessage;
 import org.springframework.ai.chat.messages.Message;
-import org.springframework.ai.chat.messages.UserMessage;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import org.springframework.web.socket.TextMessage;
@@ -56,7 +55,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.stream.Collectors;
 
 /**
  * @author 13225
@@ -79,7 +77,7 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
     private final AgentService agentService;
 
     @Override
-    public void startChat(@NotNull RealtimeChatContextManager chatContextManager, ChatClient chatClient) throws InterruptedException, NoApiKeyException {
+    public void startChat(@NotNull RealtimeChatContextManager chatContextManager, @NotNull ChatClient chatClient) throws InterruptedException, NoApiKeyException {
         log.info("[startChat] 开始将音频流数据填充缓冲区");
 
         /// audioBytes
@@ -442,4 +440,38 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
 
         return chatClient;
     }
+
+
+    @Override
+    public void startTextChat(@NotNull String userQuestion, @NotNull RealtimeChatContextManager chatContextManager, @NotNull ChatClient chatClient) throws AppException, IOException {
+        log.info("[websocket] 开始文本聊天：userQuestion={}", userQuestion);
+
+        // 前端传递过来再传递回去是因为需要分配messageId
+        RealtimeChatTextResponse userAudioSttResponse = new RealtimeChatTextResponse();
+        userAudioSttResponse.agentId = chatContextManager.agentId;
+        userAudioSttResponse.userId = chatContextManager.userId;
+        userAudioSttResponse.role = RoleTypeEnum.USER.getValue();
+        userAudioSttResponse.content = userQuestion;
+        userAudioSttResponse.messageId = chatContextManager.getCurrentUserMessageId();
+        userAudioSttResponse.timestamp = chatContextManager.currentMessageTimestamp;
+        userAudioSttResponse.chatTime = chatContextManager.currentMessageDateTime;
+        String response = JSON.toJSONString(userAudioSttResponse);
+
+        // 保存到数据库
+        ChatMessageDo chatMessageDo = chatMessageConverter.realtimeChatTextResponseToChatMessageDo(userAudioSttResponse);
+        String messageId = chatMessageService.insertOne(chatMessageDo);
+        log.info("保存用户TextChat数据到数据库：{}", messageId);
+
+        // 发送给Client
+        Map<String, String> responseMap = new HashMap<>();
+        responseMap.put(RealtimeDataTypeEnum.TYPE, RealtimeDataTypeEnum.TEXT_MESSAGE.getType());
+        responseMap.put(RealtimeDataTypeEnum.DATA, response);
+
+        String startResponse = JSON.toJSONString(responseMap);
+
+        chatContextManager.session.sendMessage(new TextMessage(startResponse));
+
+        llmStreamCall(userQuestion, chatContextManager, chatClient);
+    }
+
 }

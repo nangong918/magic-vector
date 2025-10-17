@@ -7,12 +7,16 @@ import com.openapi.domain.exception.AppException;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.ai.chat.client.ChatClient;
 
+import java.io.IOException;
+
 /**
  * @author 13225
  * @date 2025/10/16 10:08
  */
 public interface RealtimeChatService {
-    void startChat(@NotNull RealtimeChatContextManager chatContextManager, ChatClient chatClient) throws InterruptedException, NoApiKeyException;
+    void startChat(@NotNull RealtimeChatContextManager chatContextManager, @NotNull ChatClient chatClient) throws InterruptedException, NoApiKeyException;
 
     ChatClient initChatClient(@NotNull RealtimeChatContextManager chatContextManager, @NotNull DashScopeChatModel chatModel) throws AppException;
+
+    void startTextChat(@NotNull String userQuestion, @NotNull RealtimeChatContextManager chatContextManager, @NotNull ChatClient chatClient) throws AppException, IOException;
 }
