@@ -41,7 +41,7 @@ public class AgentController {
     // 创建Agent
     @PostMapping("/create")
     public BaseResponse<AgentResponse> createAgent(
-            @RequestParam("avatar") MultipartFile avatar,
+            @RequestParam(value = "avatar", required = false) MultipartFile avatar,
             @RequestParam("userId") String userId,
             @RequestParam("name") String name,
             @RequestParam("description") String description
@@ -55,6 +55,7 @@ public class AgentController {
             return BaseResponse.LogBackError(CommonExceptions.PARAM_ERROR);
         }
         if (!userService.checkUserExistById(userId)){
+            log.warn("用户:{} 不存在", userId);
             return BaseResponse.LogBackError(UserExceptions.USER_NOT_EXIST);
         }
 

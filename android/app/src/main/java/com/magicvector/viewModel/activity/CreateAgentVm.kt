@@ -58,7 +58,12 @@ class CreateAgentVm(
         name = name?.replace("\\s+".toRegex(), "")
         val isNameAllWhitespaceOrSpecialChars = name?.all { it.isWhitespace() || !it.isLetterOrDigit() }
         if (name == null || name.isEmpty() || isNameAllWhitespaceOrSpecialChars == true){
+            Log.d(TAG, "name: $name")
+            Log.d(TAG, "name == null: ${name == null}")
+            Log.d(TAG, "name.isEmpty(): ${name?.isEmpty()}")
+            Log.d(TAG, "isNameAllWhitespaceOrSpecialChars: $isNameAllWhitespaceOrSpecialChars")
             ToastUtils.showToastActivity(context, context.getString(com.view.appview.R.string.please_input_agent_name))
+            callback.onThrowable(Throwable(context.getString(com.view.appview.R.string.please_input_agent_name)))
             return
         }
 
@@ -66,7 +71,12 @@ class CreateAgentVm(
         // 检查是否全部由空格和特殊符号组成
         val isDescAllWhitespaceOrSpecialChars = description?.all { it.isWhitespace() || !it.isLetterOrDigit() }
         if (description == null || description.isEmpty() || isDescAllWhitespaceOrSpecialChars == true){
+            Log.d(TAG, "description: $description")
+            Log.d(TAG, "description == null: ${description == null}")
+            Log.d(TAG, "description.isEmpty(): ${description?.isEmpty()}")
+            Log.d(TAG, "isDescAllWhitespaceOrSpecialChars: $isDescAllWhitespaceOrSpecialChars")
             ToastUtils.showToastActivity(context, context.getString(com.view.appview.R.string.please_input_agent_description))
+            callback.onThrowable(Throwable(context.getString(com.view.appview.R.string.please_input_agent_description)))
             return
         }
 
@@ -101,6 +111,10 @@ class CreateAgentVm(
             filePart = FileUtil.createMultipartBodyPart(imageFile, "img")
         }
 
+        val userIdBody = RequestBody.create(
+            "text/plain".toMediaTypeOrNull(),
+            MainApplication.getUserId()
+        )
         val nameBody = RequestBody.create(
             "text/plain".toMediaTypeOrNull(),
             aao.nameLd.value!!
@@ -112,7 +126,7 @@ class CreateAgentVm(
 
         api.createAgent(
             filePart,
-            MainApplication.getUserId(),
+            userIdBody,
             nameBody,
             descriptionBody,
             object : OnSuccessCallback<BaseResponse<AgentResponse>> {

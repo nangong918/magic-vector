@@ -142,4 +142,8 @@
     <string name="please_input_agent_description">请为Agent设定正确的设定</string>
     <string name="init_agent_failed">Agent初始化失败</string>
     <string name="please_input_legal_content">请输入合法的内容</string>
+    <string name="agent_name">Agent名称</string>
+    <string name="agent_setting">Agent系统设定</string>
+    <string name="agent_name_hint">为你的AI创建一个名字</string>
+    <string name="agent_setting_hint">为你的AI设计独特的设定!</string>
 </resources>

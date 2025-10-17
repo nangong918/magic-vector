@@ -151,7 +151,7 @@ class ChatActivity : BaseAppCompatVmActivity<ActivityChatBinding, ChatVm>(
 
         // 发送消息
         binding.smSendMessage.setSendClickListener({ v ->
-            vm.sendMessage()
+            vm.sendMessage(this@ChatActivity)
             binding.smSendMessage.setEditMessage("")
         })
 

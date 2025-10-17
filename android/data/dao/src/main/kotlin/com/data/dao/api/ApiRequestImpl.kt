@@ -21,13 +21,13 @@ open class ApiRequestImpl(apiRequest: ApiRequest) : BaseApiRequestImpl() {
     //    @POST("/agent/create")
     //    suspend fun createAgent(
     //        @Part avatar: MultipartBody.Part,
-    //        @Part("userId") userId: String,
+    //        @Part("userId") userId: RequestBody,
     //        @Part("name") name: RequestBody,
     //        @Part("description") description: RequestBody
     //    ): BaseResponse<AgentResponse>
     fun createAgent(
         avatar: MultipartBody.Part?,
-        userId: String,
+        userId: RequestBody,
         name: RequestBody,
         description: RequestBody,
         onSuccessCallback: OnSuccessCallback<BaseResponse<AgentResponse>>?,

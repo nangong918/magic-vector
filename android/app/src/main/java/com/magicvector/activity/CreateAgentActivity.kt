@@ -26,6 +26,13 @@ class CreateAgentActivity : BaseAppCompatVmActivity<ActivityCreateAgentBinding, 
         super.initViewModel()
 
         vm.initResource(this, binding.imvgAvatar)
+
+        observeData()
+    }
+
+    fun observeData() {
+        binding.gEditName.setLiveData(vm.aao.nameLd)
+        binding.gEditSetting.setLiveData(vm.aao.descriptionLd)
     }
 
     override fun initView() {
@@ -35,6 +42,11 @@ class CreateAgentActivity : BaseAppCompatVmActivity<ActivityCreateAgentBinding, 
 
         binding.gEditName.setMaxLine(1)
         binding.gEditName.setMaxNumber(BaseConstant.Constant.MAX_AGENT_NAME_LENGTH)
+
+        binding.gEditName.setTitle(getString(com.view.appview.R.string.agent_name))
+        binding.gEditName.setHint(getString(com.view.appview.R.string.agent_name_hint))
+        binding.gEditSetting.setTitle(getString(com.view.appview.R.string.agent_setting))
+        binding.gEditSetting.setHint(getString(com.view.appview.R.string.agent_setting_hint))
     }
 
     override fun setListener() {
