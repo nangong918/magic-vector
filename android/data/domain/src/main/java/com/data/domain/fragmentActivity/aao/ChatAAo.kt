@@ -11,6 +11,4 @@ class ChatAAo {
 
     var messageContactItemAo : MessageContactItemAo? = null
     val inputTextLd : MutableLiveData<String> = MutableLiveData("")
-
-    val chatMessageCountLd: MutableLiveData<Int> = MutableLiveData(0)
 }

@@ -40,7 +40,7 @@ class ChatActivity : BaseAppCompatVmActivity<ActivityChatBinding, ChatVm>(
         }
 
         try {
-            vm.initResource(activity = this@ChatActivity, ao)
+            vm.initResource(activity = this@ChatActivity, ao, TODO())
         } catch (e: IllegalArgumentException){
             Log.e(TAG, "ChatActivity::initResource失败", e)
             finish()
@@ -82,17 +82,6 @@ class ChatActivity : BaseAppCompatVmActivity<ActivityChatBinding, ChatVm>(
             }
             else {
                 View.GONE
-            }
-        }
-
-        vm.aao.chatMessageCountLd.observe(this){
-            count ->
-            if (count <= 0){
-                binding.rclvMessage.visibility = View.GONE
-            }
-            else {
-                binding.rclvMessage.visibility = View.VISIBLE
-                vm.adapter.notifyDataSetChanged()
             }
         }
 

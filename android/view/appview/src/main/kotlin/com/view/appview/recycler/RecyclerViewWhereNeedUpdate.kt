@@ -1,5 +1,5 @@
 package com.view.appview.recycler
 
 interface RecyclerViewWhereNeedUpdate {
-    fun whereNeedUpdate(positions: IntArray)
+    fun whereNeedUpdate(updateInfos: List<UpdateRecyclerViewItem>)
 }

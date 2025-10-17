@@ -25,7 +25,7 @@ object ChatWsTextMessageHandler {
             throw IllegalArgumentException("role is null or invalid")
         }
 
-        chatManagerPointer.wssToViews(listOf(response))
+        chatManagerPointer.setWssToViews(listOf(response))
     }
 
 }

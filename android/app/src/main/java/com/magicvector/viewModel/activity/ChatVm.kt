@@ -1,6 +1,7 @@
 package com.magicvector.viewModel.activity
 
 import android.Manifest
+import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
 import android.media.AudioFormat
@@ -46,8 +47,10 @@ import com.magicvector.manager.ChatManager
 import com.magicvector.manager.ChatWsTextMessageHandler
 import com.magicvector.utils.chat.RealtimeChatWsClient
 import com.view.appview.R
+import com.view.appview.recycler.RecyclerViewWhereNeedUpdate
 import com.view.appview.chat.ChatMessageAdapter
 import com.view.appview.chat.OnChatMessageClick
+import com.view.appview.recycler.UpdateRecyclerViewItem
 import okhttp3.Response
 import okhttp3.WebSocket
 import okhttp3.WebSocketListener
@@ -62,10 +65,16 @@ class ChatVm(
     companion object {
         val TAG: String = ChatVm::class.java.name
         val GSON = Gson()
+        val mainHandler: Handler = Handler(Looper.getMainLooper())
     }
 
-    fun initResource(activity: FragmentActivity, ao : MessageContactItemAo?) {
+    lateinit var recyclerViewWhereNeedUpdate: RecyclerViewWhereNeedUpdate
+
+    fun initResource(activity: FragmentActivity, ao : MessageContactItemAo?, whereNeedUpdate: RecyclerViewWhereNeedUpdate) {
         realtimeChatState.postValue(RealtimeChatState.NotInitialized)
+
+        recyclerViewWhereNeedUpdate = whereNeedUpdate
+
         aao.messageContactItemAo = ao
         if (aao.messageContactItemAo?.contactId != null){
             realtimeChatState.postValue(RealtimeChatState.Initializing)
@@ -102,12 +111,11 @@ class ChatVm(
 
     fun initAdapter(onChatMessageClick : OnChatMessageClick){
         adapter = ChatMessageAdapter(
-            chatManagerPointer.viewChatMessageList,
+            chatManagerPointer.getViewChatMessageList(),
             onChatMessageClick
         )
     }
 
-    val realtimeChatMessage: MutableLiveData<String> = MutableLiveData("")
     val realtimeChatState: MutableLiveData<RealtimeChatState> = MutableLiveData(RealtimeChatState.NotInitialized)
 //    val realtimeChatVolume = MutableLiveData(0f)
 
@@ -120,7 +128,11 @@ class ChatVm(
             doGetLastChat(context, callback)
         }
         else {
-            aao.chatMessageCountLd.postValue(chatManagerPointer.viewChatMessageList.size)
+            // 重启viewModel了，全部更新
+            mainHandler.post {
+                @SuppressLint("NotifyDataSetChanged")
+                adapter.notifyDataSetChanged()
+            }
         }
     }
 
@@ -217,8 +229,15 @@ class ChatVm(
                                      callback: SyncRequestCallback){
 
         response?.data?.chatMessages?.let {
-            chatManagerPointer.responsesToViews(it)
-            aao.chatMessageCountLd.postValue(chatManagerPointer.viewChatMessageList.size)
+            chatManagerPointer.setResponsesToViews(it)
+            val updateList = chatManagerPointer.getNeedUpdateList()
+            if (!updateList.isEmpty()){
+                recyclerViewWhereNeedUpdate.whereNeedUpdate(updateList)
+                Log.d(TAG, "handleGetChatHistory::待更新数据：${updateList.size} 条")
+            }
+            else {
+                Log.d(TAG, "handleGetChatHistory::没有待更新数据")
+            }
         }
 
         callback.onAllRequestSuccess()
