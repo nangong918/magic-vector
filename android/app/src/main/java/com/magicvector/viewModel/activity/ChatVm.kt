@@ -338,13 +338,13 @@ class ChatVm(
                     request.userId = MainApplication.getUserId()
                     request.timestamp = System.currentTimeMillis()
 
-                    val requestMap: MutableMap<String, String> = HashMap()
-                    requestMap.put(RealtimeDataTypeEnum.TYPE, RealtimeDataTypeEnum.CONNECT.name)
-                    val requestJson: String = GSON.toJson(request)
-                    requestMap.put(RealtimeDataTypeEnum.DATA, requestJson)
+                    val dataMap = mapOf(
+                        RealtimeDataTypeEnum.TYPE to RealtimeDataTypeEnum.CONNECT.type,
+                        RealtimeDataTypeEnum.DATA to GSON.toJson(request)
+                    )
 
                     // 发送连接数据
-                    realtimeChatWsClient!!.sendMessage(requestMap)
+                    realtimeChatWsClient!!.sendMessage(dataMap)
                 }
             }
         )
