@@ -221,10 +221,6 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
                     agentFragmentResponse.setMessageId(chatContextManager.getCurrentAgentMessageId());
                     agentFragmentResponse.setTimestamp(chatContextManager.currentMessageTimestamp);
                     agentFragmentResponse.setChatTime(chatContextManager.currentMessageDateTime);
-                    // 存储消息到数据库
-                    ChatMessageDo chatMessageDo = chatMessageConverter.realtimeChatTextResponseToChatMessageDo(agentFragmentResponse);
-                    String messageId = chatMessageService.insertOne(chatMessageDo);
-                    log.info("成功将LLM插入消息，消息Id: {}", messageId);
 
                     // 发送消息给Client
                     String agentFragmentResponseJson = JSON.toJSONString(agentFragmentResponse);
@@ -285,6 +281,13 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
                     long totalTime = System.currentTimeMillis() - startTime.get();
                     log.info("\n[LLM 结束] 总耗时: {}ms, 片段总数: {}, 总字符数: {}",
                             totalTime, fragmentCount.get(), textBuffer.length());
+
+                    // 存储消息到数据库
+                    ChatMessageDo chatMessageDo = chatMessageConverter.realtimeChatTextResponseToChatMessageDo(
+                            chatContextManager.getCurrentResponse()
+                    );
+                    String messageId = chatMessageService.insertOne(chatMessageDo);
+                    log.info("成功将LLM插入消息，消息Id: {}", messageId);
 
                     // 处理缓冲区中可能剩余的不完整内容
                     if (!textBuffer.isEmpty()) {

@@ -2,6 +2,9 @@ package com.openapi.component.manager;
 
 import cn.hutool.core.util.IdUtil;
 import com.openapi.domain.constant.RoleTypeEnum;
+import com.openapi.domain.dto.ws.RealtimeChatTextResponse;
+import lombok.NonNull;
+import lombok.val;
 import org.springframework.web.socket.WebSocketSession;
 
 import java.time.LocalDateTime;
@@ -45,11 +48,28 @@ public class RealtimeChatContextManager {
         currentMessageDateTime = LocalDateTime.now();
         currentResponse = new StringBuilder();
     }
+
+    @NonNull
     public String getCurrentAgentMessageId(){
         return RoleTypeEnum.AGENT.getValue() + ":" + currentMessageId;
     }
+
+    @NonNull
     public String getCurrentUserMessageId(){
         return RoleTypeEnum.USER.getValue() + ":" + currentMessageId;
+    }
+
+    @NonNull
+    public RealtimeChatTextResponse getCurrentResponse(){
+        val response = new RealtimeChatTextResponse();
+        response.setAgentId(agentId);
+        response.setUserId(userId);
+        response.setRole(RoleTypeEnum.AGENT.getValue());
+        response.setContent(currentResponse.toString());
+        response.setMessageId(getCurrentAgentMessageId());
+        response.setTimestamp(currentMessageTimestamp);
+        response.setChatTime(currentMessageDateTime);
+        return response;
     }
 
     public void clear() {
