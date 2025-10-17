@@ -260,6 +260,9 @@ class TestVm(
                     realtimeChat2Message.postValue(realtimeChat2Message.value + data)
                 }
             }
+
+            RealtimeDataTypeEnum.CONNECT -> {}
+            RealtimeDataTypeEnum.DISCONNECT -> {}
         }
     }
 
@@ -527,6 +530,9 @@ class TestVm(
                     realtimeChatMessage.postValue(realtimeChatMessage.value + data)
                 }
             }
+
+            RealtimeDataTypeEnum.CONNECT -> {}
+            RealtimeDataTypeEnum.DISCONNECT -> {}
         }
     }
 

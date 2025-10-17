@@ -550,8 +550,22 @@ class ChatVm(
         }
     }
 
-    fun sendMessage() {
-        // todo 完成本文发送
+    fun sendMessage(context: Context) {
+        val inputText = aao.inputTextLd.value
+        val isAllWhitespaceOrSpecialChars = inputText?.all { it.isWhitespace() || !it.isLetterOrDigit() }
+
+        if (inputText == null || inputText.isEmpty() || isAllWhitespaceOrSpecialChars == true){
+            // 请输入合法的内容
+            ToastUtils.showToastActivity(context, context.getString(R.string.please_input_legal_content))
+            return
+        }
+
+        val dataMap = mapOf(
+            RealtimeDataTypeEnum.TYPE to RealtimeDataTypeEnum.TEXT_MESSAGE.type,
+            RealtimeDataTypeEnum.DATA to inputText
+        )
+        realtimeChatWsClient!!.sendMessage(dataMap)
+        // 发送的时候不用回显，因为此时还没拿到后端的messageId
     }
 
     //===========selectImage
