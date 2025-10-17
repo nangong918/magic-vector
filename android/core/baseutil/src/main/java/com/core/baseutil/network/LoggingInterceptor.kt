@@ -2,6 +2,7 @@ package com.core.baseutil.network
 
 import android.util.Log
 import com.google.gson.Gson
+import com.google.gson.GsonBuilder
 import okhttp3.Headers
 import okhttp3.Interceptor
 import okhttp3.MediaType
@@ -16,7 +17,8 @@ class LoggingInterceptor(private val isShowHeader: Boolean = true) : Interceptor
     companion object {
         private val TAG = LoggingInterceptor::class.java.name
 
-        val GSON = Gson()
+        // 使用 GsonBuilder 创建格式化的 Gson 实例
+        val GSON: Gson = GsonBuilder().setPrettyPrinting().create()
     }
 
 
