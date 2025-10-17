@@ -7,6 +7,8 @@ import com.data.domain.Do.ChatMessageDo
 import com.data.domain.ao.chat.ChatItemAo
 import com.data.domain.constant.chat.MessageTypeEnum
 import com.data.domain.dto.ws.RealtimeChatTextResponse
+import com.view.appview.recycler.UpdateRecyclerViewItem
+import com.view.appview.recycler.UpdateRecyclerViewTypeEnum
 
 /**
  * ChatManager
@@ -24,11 +26,18 @@ class ChatManager(val agentId: String) {
         val TAG = ChatManager::class.simpleName
     }
 
+    val needUpdateQueue: ArrayDeque<UpdateRecyclerViewItem> = ArrayDeque()
+
     // view
     val viewChatMessageList: MutableList<ChatItemAo> = mutableListOf()
 
     // response -> view
     fun responsesToViews(responses: List<ChatMessageDo>){
+        /*
+            http请求一定是批量的，chat记录是timestamp越大越靠前。
+            插入之后偏移是向后偏移，所以只需要确定[Math(position_min), list.size - 1]
+         */
+        var minPosition = viewChatMessageList.size - 1
         for (response in responses) {
             // 只有 ChatItemAo 中不包含此条消息才添加 (http的消息是唯一的)
             var isExist = false
@@ -40,10 +49,21 @@ class ChatManager(val agentId: String) {
             }
             if (!isExist) {
                 val view = responseToView(response)
-                // 二分查找适合的位置插入
-                val insertPosition = SortUtil.findInsertPosition(view.getIndex(), viewChatMessageList)
+                // 降序二分查找适合的位置插入
+                val insertPosition = SortUtil.descFindInsertPosition(view.getIndex(), viewChatMessageList)
                 viewChatMessageList.add(insertPosition, view)
+                // 最小左边界
+                minPosition = insertPosition.coerceAtMost(minPosition)
             }
+        }
+        if (minPosition < viewChatMessageList.size - 1){
+            val updateRecyclerViewItem = UpdateRecyclerViewItem()
+            updateRecyclerViewItem.type = UpdateRecyclerViewTypeEnum.ID_TO_END_UPDATE
+            updateRecyclerViewItem.idToEndUpdateId = viewChatMessageList[minPosition].messageId
+            needUpdateQueue.add(updateRecyclerViewItem)
+        }
+        else {
+            Log.d(TAG, "全部都存在：minPosition: $minPosition > viewChatMessageList.size - 1: ${viewChatMessageList.size - 1}")
         }
     }
 
@@ -74,6 +94,7 @@ class ChatManager(val agentId: String) {
 
     // ws -> view
     fun wssToViews(wss: List<RealtimeChatTextResponse>){
+        var minPosition = viewChatMessageList.size - 1
         for (ws in wss) {
             // ChatItemAo 中不包含此条消息添加, 包含则覆盖
             var isExist = false
@@ -87,14 +108,29 @@ class ChatManager(val agentId: String) {
             }
             if (!isExist) {
                 val view = wsToView(ws)
-                // 二分查找适合的位置插入
-                val insertPosition = SortUtil.findInsertPosition(view.getIndex(), viewChatMessageList)
+                // 降序二分查找适合的位置插入
+                val insertPosition = SortUtil.descFindInsertPosition(view.getIndex(), viewChatMessageList)
                 viewChatMessageList.add(insertPosition, view)
+                // 最小左边界
+                minPosition = insertPosition.coerceAtMost(minPosition)
             }
             else {
                 val view = wsToView(ws)
                 viewChatMessageList[viewIndex] = view
+                val updateRecyclerViewItem = UpdateRecyclerViewItem()
+                updateRecyclerViewItem.type = UpdateRecyclerViewTypeEnum.SINGLE_ID_UPDATE
+                updateRecyclerViewItem.singleUpdateId = view.messageId
+                needUpdateQueue.add(updateRecyclerViewItem)
             }
+        }
+        if (minPosition < viewChatMessageList.size - 1){
+            val updateRecyclerViewItem = UpdateRecyclerViewItem()
+            updateRecyclerViewItem.type = UpdateRecyclerViewTypeEnum.ID_TO_END_UPDATE
+            updateRecyclerViewItem.idToEndUpdateId = viewChatMessageList[minPosition].messageId
+            needUpdateQueue.add(updateRecyclerViewItem)
+        }
+        else {
+            Log.d(TAG, "全部都存在：minPosition: $minPosition > viewChatMessageList.size - 1: ${viewChatMessageList.size - 1}")
         }
     }
 
@@ -126,5 +162,6 @@ class ChatManager(val agentId: String) {
 
     fun clear(){
         viewChatMessageList.clear()
+        needUpdateQueue.clear()
     }
 }
