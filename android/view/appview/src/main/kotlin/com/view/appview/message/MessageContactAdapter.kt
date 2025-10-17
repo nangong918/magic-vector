@@ -29,7 +29,7 @@ class MessageContactAdapter(
         position: Int
     ) {
         Optional.of(messageContactItemAosPointer)
-            .filter { it -> it.size <= position }
+            .filter { it.size > position }
             .ifPresent {
                 holder.bindAo(it[position])
             }
