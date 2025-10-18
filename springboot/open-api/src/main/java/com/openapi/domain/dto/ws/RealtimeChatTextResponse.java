@@ -19,6 +19,6 @@ public class RealtimeChatTextResponse {
     public String messageId;
     // timestamp: 消息发送的时间 用于排序
     public Long timestamp;
-    // date time：消息发送时间 用于展示
+    // date time：消息发送时间 用于展示 todo 改为String
     public LocalDateTime chatTime;
 }
