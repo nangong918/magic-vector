@@ -204,7 +204,8 @@ class ChatManager(val agentId: String) {
 //        ao.vo.imgUrl = ""
         ao.vo.content = ws.content
         ao.vo.time = runCatching {
-            DateUtils.yyyyMMddHHmmssToString(ws.chatTime)
+//            DateUtils.yyyyMMddHHmmssToString(ws.chatTime)
+            ws.chatTime
         }.getOrElse {
             // 记录异常信息（可选）
             Log.e(TAG, "时间转换失败")

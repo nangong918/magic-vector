@@ -3,6 +3,7 @@ package com.openapi.component.manager;
 import cn.hutool.core.util.IdUtil;
 import com.openapi.domain.constant.RoleTypeEnum;
 import com.openapi.domain.dto.ws.RealtimeChatTextResponse;
+import com.openapi.utils.DateUtils;
 import lombok.NonNull;
 import lombok.val;
 import org.springframework.web.socket.WebSocketSession;
@@ -60,6 +61,11 @@ public class RealtimeChatContextManager {
     }
 
     @NonNull
+    public String getCurrentMessageTimeStr(){
+        return DateUtils.yyyyMMddHHmmssToString(this.currentMessageDateTime);
+    }
+
+    @NonNull
     public RealtimeChatTextResponse getCurrentResponse(){
         val response = new RealtimeChatTextResponse();
         response.setAgentId(agentId);
@@ -68,7 +74,33 @@ public class RealtimeChatContextManager {
         response.setContent(currentResponse.toString());
         response.setMessageId(getCurrentAgentMessageId());
         response.setTimestamp(currentMessageTimestamp);
-        response.setChatTime(currentMessageDateTime);
+        response.setChatTime(getCurrentMessageTimeStr());
+        return response;
+    }
+
+    @NonNull
+    public RealtimeChatTextResponse getSSTResultResponse(@NonNull String sstResult){
+        val response = new RealtimeChatTextResponse();
+        response.setAgentId(agentId);
+        response.setUserId(userId);
+        response.setRole(RoleTypeEnum.USER.getValue());
+        response.setContent(sstResult);
+        response.setMessageId(getCurrentAgentMessageId());
+        response.setTimestamp(currentMessageTimestamp);
+        response.setChatTime(getCurrentMessageTimeStr());
+        return response;
+    }
+
+    @NonNull
+    public RealtimeChatTextResponse getUserTextResponse(@NonNull String userChatText){
+        val response = new RealtimeChatTextResponse();
+        response.setAgentId(agentId);
+        response.setUserId(userId);
+        response.setRole(RoleTypeEnum.USER.getValue());
+        response.setContent(userChatText);
+        response.setMessageId(getCurrentAgentMessageId());
+        response.setTimestamp(currentMessageTimestamp);
+        response.setChatTime(getCurrentMessageTimeStr());
         return response;
     }
 

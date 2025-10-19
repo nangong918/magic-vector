@@ -107,14 +107,7 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
         Flowable<ByteBuffer> audioFlowable = convertAudioToFlowable(audioData);
         sttStreamCall(audioFlowable, result -> {
             // 返回结果给前端
-            RealtimeChatTextResponse userAudioSttResponse = new RealtimeChatTextResponse();
-            userAudioSttResponse.agentId = chatContextManager.agentId;
-            userAudioSttResponse.userId = chatContextManager.userId;
-            userAudioSttResponse.role = RoleTypeEnum.USER.getValue();
-            userAudioSttResponse.content = result;
-            userAudioSttResponse.messageId = chatContextManager.getCurrentUserMessageId();
-            userAudioSttResponse.timestamp = chatContextManager.currentMessageTimestamp;
-            userAudioSttResponse.chatTime = chatContextManager.currentMessageDateTime;
+            RealtimeChatTextResponse userAudioSttResponse = chatContextManager.getSSTResultResponse(result);
             String response = JSON.toJSONString(userAudioSttResponse);
 
             // 保存到数据库
@@ -213,14 +206,7 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
 
                     // 发送当前fragment消息
                     chatContextManager.currentResponse.append(fragment);
-                    RealtimeChatTextResponse agentFragmentResponse = new RealtimeChatTextResponse();
-                    agentFragmentResponse.setAgentId(chatContextManager.agentId);
-                    agentFragmentResponse.setUserId(chatContextManager.userId);
-                    agentFragmentResponse.setRole(RoleTypeEnum.AGENT.getValue());
-                    agentFragmentResponse.setContent(chatContextManager.currentResponse.toString());
-                    agentFragmentResponse.setMessageId(chatContextManager.getCurrentAgentMessageId());
-                    agentFragmentResponse.setTimestamp(chatContextManager.currentMessageTimestamp);
-                    agentFragmentResponse.setChatTime(chatContextManager.currentMessageDateTime);
+                    RealtimeChatTextResponse agentFragmentResponse = chatContextManager.getCurrentResponse();
 
                     // 发送消息给Client
                     String agentFragmentResponseJson = JSON.toJSONString(agentFragmentResponse);
@@ -450,14 +436,7 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
         log.info("[websocket] 开始文本聊天：userQuestion={}", userQuestion);
 
         // 前端传递过来再传递回去是因为需要分配messageId
-        RealtimeChatTextResponse userAudioSttResponse = new RealtimeChatTextResponse();
-        userAudioSttResponse.agentId = chatContextManager.agentId;
-        userAudioSttResponse.userId = chatContextManager.userId;
-        userAudioSttResponse.role = RoleTypeEnum.USER.getValue();
-        userAudioSttResponse.content = userQuestion;
-        userAudioSttResponse.messageId = chatContextManager.getCurrentUserMessageId();
-        userAudioSttResponse.timestamp = chatContextManager.currentMessageTimestamp;
-        userAudioSttResponse.chatTime = chatContextManager.currentMessageDateTime;
+        RealtimeChatTextResponse userAudioSttResponse = chatContextManager.getUserTextResponse(userQuestion);
         String response = JSON.toJSONString(userAudioSttResponse);
 
         // 保存到数据库
