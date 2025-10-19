@@ -94,7 +94,7 @@ public class RealtimeChatChannel extends TextWebSocketHandler {
                     chatClient = realtimeChatService.initChatClient(realtimeChatContextManager, dashScopeChatModel);
                 } catch (Exception e){
                     log.warn("[websocket warn] 断开连接，参数错误");
-                    session.close();
+//                    session.close();
                 }
             }
             case DISCONNECT -> {
