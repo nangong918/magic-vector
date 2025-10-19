@@ -25,6 +25,9 @@ object ChatWsTextMessageHandler {
             throw IllegalArgumentException("role is null or invalid")
         }
 
+        response.content?.let {
+            Log.i(TAG, "handleTextMessage: $it")
+        }
         chatManagerPointer.setWssToViews(listOf(response))
     }
 

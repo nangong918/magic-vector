@@ -359,6 +359,7 @@ class ChatVm(
 
         when(type){
             RealtimeDataTypeEnum.START -> {
+                Log.i(TAG, "handleTextMessage::START播放")
                 // 开始接收数据
                 realtimeChatState.postValue(RealtimeChatState.Receiving)
                 // 清空播放缓存
@@ -367,6 +368,7 @@ class ChatVm(
                 realtimeChatAudioTrack?.play()
             }
             RealtimeDataTypeEnum.STOP -> {
+                Log.i(TAG, "handleTextMessage::STOP播放")
                 // 结束接收数据
                 realtimeChatState.postValue(RealtimeChatState.InitializedConnected)
                 // 停止播放

@@ -206,6 +206,7 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
 
                 // 处理每个流片段
                 fragment -> {
+                    log.info("[LLM] 片段: {}", fragment);
                     chatContextManager.isLLMFinished.set(false);
                     int currentCount = fragmentCount.incrementAndGet();
                     long fragmentTime = System.currentTimeMillis() - startTime.get();
@@ -469,9 +470,9 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
 
         String startResponse = JSON.toJSONString(responseMap);
 
-        chatContextManager.session.sendMessage(new TextMessage(startResponse));
-
         llmStreamCall(userQuestion, chatContextManager, chatClient);
+
+        chatContextManager.session.sendMessage(new TextMessage(startResponse));
     }
 
 }

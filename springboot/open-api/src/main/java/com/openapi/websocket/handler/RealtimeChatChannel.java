@@ -59,9 +59,9 @@ public class RealtimeChatChannel extends TextWebSocketHandler {
     }
 
     @Override
-    public void handleTransportError(WebSocketSession session, Throwable exception) throws Exception {
-        log.info("[websocket] 连接异常：id={}，throwable={}", session.getId(), exception.getMessage());
-        session.close();
+    public void handleTransportError(WebSocketSession session, @NotNull Throwable exception) throws Exception {
+        log.error("[websocket] 连接异常：id={}", session.getId(), exception);
+//        session.close();
         realtimeChatContextManager.stopRecording.set(true);
         super.handleTransportError(session, exception);
     }

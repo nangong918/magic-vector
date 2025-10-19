@@ -3,23 +3,51 @@ package com.openapi;
 
 import com.alibaba.cloud.ai.dashscope.chat.DashScopeChatModel;
 import com.alibaba.cloud.ai.dashscope.embedding.DashScopeEmbeddingModel;
+import com.alibaba.dashscope.aigc.multimodalconversation.MultiModalConversation;
+import com.alibaba.dashscope.audio.asr.recognition.Recognition;
+import com.alibaba.dashscope.exception.NoApiKeyException;
+import com.alibaba.dashscope.exception.UploadFileException;
+import com.alibaba.fastjson.JSON;
 import com.hankcs.hanlp.HanLP;
 import com.hankcs.hanlp.corpus.tag.Nature;
 import com.hankcs.hanlp.seg.common.Term;
 import com.openapi.component.manager.OptimizedSentenceDetector;
+import com.openapi.config.AgentConfig;
+import com.openapi.config.ChatConfig;
+import com.openapi.converter.ChatMessageConverter;
+import com.openapi.domain.Do.ChatMessageDo;
+import com.openapi.domain.ao.AgentAo;
+import com.openapi.domain.constant.ModelConstant;
+import com.openapi.domain.constant.error.AgentExceptions;
+import com.openapi.domain.constant.realtime.RealtimeDataTypeEnum;
 import com.openapi.domain.dto.request.ChatRequest;
+import com.openapi.domain.dto.ws.RealtimeChatTextResponse;
+import com.openapi.domain.exception.AppException;
+import com.openapi.service.AgentService;
+import com.openapi.service.ChatMessageService;
+import com.openapi.service.RealtimeChatService;
+import com.openapi.service.UserService;
 import lombok.extern.slf4j.Slf4j;
+import lombok.val;
 import org.junit.jupiter.api.Test;
 import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.ai.chat.client.advisor.MessageChatMemoryAdvisor;
+import org.springframework.ai.chat.memory.ChatMemory;
+import org.springframework.ai.chat.messages.Message;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
+import org.springframework.util.StringUtils;
 import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.web.socket.TextMessage;
 import reactor.core.publisher.Flux;
 
-import java.util.List;
+import java.io.IOException;
+import java.util.*;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
 
 @Slf4j
@@ -266,7 +294,7 @@ public class ChatTests {
         ChatClient chatClient = ChatClient.builder(dashScopeChatModel)
                 .build();
 
-        String systemPrompt = "你只能输出自然语言，不要输出表情等特殊符号，在输出完一句话之后需加上如下标点符号之一：" + OptimizedSentenceDetector.END_PUNCTUATION;
+        String systemPrompt = "你只能输出自然语言，不要输出表情等特殊符号" + OptimizedSentenceDetector.END_PUNCTUATION;
         String userQuestion = "你好啊，你是谁？";
 
         // 获取流式响应
@@ -312,6 +340,124 @@ public class ChatTests {
 
         try {
             Thread.sleep(5000);
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    @Autowired
+    private ChatMessageService chatMessageService;
+    @Autowired
+    private ChatMessageConverter chatMessageConverter;
+    @Autowired
+    private AgentConfig agentConfig;
+    @Autowired
+    private AgentService agentService;
+
+    @Test
+    public void chatRealtimeContextTest(){
+        final String agentId = "1979114877567455232";
+        AgentAo agentAo = agentService.getAgentById(agentId);
+        if (agentAo == null || agentAo.getAgentId() == null){
+            throw new AppException(AgentExceptions.AGENT_NOT_EXIST);
+        }
+
+        // 设定
+        String description = Optional.ofNullable(agentAo.getAgentVo())
+                .map(agentVo -> agentVo.description)
+                .orElseGet(() -> {
+                    log.warn("Agent 没有设定，使用默认设定");
+                    return ModelConstant.SYSTEM_PROMPT;
+                });
+
+        ChatMemory chatMemory = agentConfig.chatMemory();
+
+        ChatClient chatClient = ChatClient.builder(dashScopeChatModel)
+                .defaultAdvisors(MessageChatMemoryAdvisor.builder(chatMemory).build())
+                .defaultSystem(description)
+                .build();
+
+        // 预先加载10条历史聊天记录
+        List<ChatMessageDo> chatMessageDos = chatMessageService.getLast10Messages(agentId);
+        // 将历史消息添加到ChatMemory中
+        if (!chatMessageDos.isEmpty()) {
+
+            // 按时间正序排列，确保对话顺序正确 （前端展示是最新的放在第0个，而此处是最新的放在最后一个添加，所以需要重排序）
+            List<ChatMessageDo> sortedMessages = chatMessageDos.stream()
+                    .sorted(Comparator.comparing(ChatMessageDo::getChatTime))
+                    .toList();
+
+            List<Message> historyMessages = chatMessageConverter.chatMessageDoListToMessageList(sortedMessages);
+            for (Message message : historyMessages) {
+                chatMemory.add(agentId, message);
+            }
+        }
+
+        String userQuestion = "你好啊";
+
+        Flux<String> responseFlux = chatClient.prompt()
+                .user(userQuestion)
+                .advisors(a -> a.param(ChatMemory.CONVERSATION_ID, agentId))
+                .stream()
+                .content();
+
+        StringBuffer textBuffer = new StringBuffer();
+        AtomicInteger fragmentCount = new AtomicInteger(0);
+        AtomicLong startTime = new AtomicLong(System.currentTimeMillis());
+
+
+        // 订阅流式响应并处理
+        responseFlux.subscribe(
+
+                // 处理每个流片段
+                fragment -> {
+                    // 将新片段添加到缓冲区
+                    textBuffer.append(fragment);
+                    log.info("[缓冲区累计]: {} 字符", textBuffer.length());
+
+                    // 尝试从缓冲区提取完整句子并输出
+                    String completeSentence;
+                    while ((completeSentence = optimizedSentenceDetector.detectAndExtractFirstSentence(textBuffer)) != null) {
+                        /// tts
+                        if (StringUtils.hasText(completeSentence)){
+                            log.info("[TTS] 完整句子: {}", completeSentence);
+                        }
+                    }
+
+                    // 显示当前缓冲区剩余内容
+                    if (!textBuffer.isEmpty()) {
+                        log.info("[缓冲区剩余]: {}", textBuffer);
+                    }
+
+                    // 更新最后活跃时间
+                    startTime.set(System.currentTimeMillis());
+                },
+
+                // 处理错误
+                error -> {
+                    long totalTime = System.currentTimeMillis() - startTime.get();
+                    log.error("\n[LLM 错误] 总耗时: {}ms, 片段总数: {}", totalTime, fragmentCount.get(), error);
+                },
+
+                // 处理完成
+                () -> {
+                    long totalTime = System.currentTimeMillis() - startTime.get();
+                    log.info("\n[LLM 结束] 总耗时: {}ms, 片段总数: {}, 总字符数: {}",
+                            totalTime, fragmentCount.get(), textBuffer.length());
+
+                    // 处理缓冲区中可能剩余的不完整内容
+                    if (!textBuffer.isEmpty()) {
+                        log.info("[最终剩余未完成内容]: {}", textBuffer);
+                    }
+
+                    log.info("[LLM 流式响应完全结束]");
+                }
+        );
+
+
+        // 休眠 20秒
+        try {
+            Thread.sleep(20_000);
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
         }
