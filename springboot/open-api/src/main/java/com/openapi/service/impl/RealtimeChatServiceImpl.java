@@ -33,6 +33,7 @@ import io.reactivex.Flowable;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
+import lombok.val;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.client.advisor.MessageChatMemoryAdvisor;
@@ -111,9 +112,14 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
             String response = JSON.toJSONString(userAudioSttResponse);
 
             // 保存到数据库
-            ChatMessageDo chatMessageDo = chatMessageConverter.realtimeChatTextResponseToChatMessageDo(userAudioSttResponse);
-            String messageId = chatMessageService.insertOne(chatMessageDo);
-            log.info("保存用户语音识别结果到数据库：{}", messageId);
+            ChatMessageDo chatMessageDo = null;
+            try {
+                chatMessageDo = chatMessageConverter.realtimeChatTextResponseToChatMessageDo(userAudioSttResponse, userAudioSttResponse.chatTime);
+                String messageId = chatMessageService.insertOne(chatMessageDo);
+                log.info("保存用户语音识别结果到数据库：{}", messageId);
+            } catch (Exception e) {
+                log.error("保存用户语音识别结果到数据库失败：{}", e.getMessage());
+            }
 
             // 发送给Client
             Map<String, String> responseMap = new HashMap<>();
@@ -269,11 +275,18 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
                             totalTime, fragmentCount.get(), textBuffer.length());
 
                     // 存储消息到数据库
-                    ChatMessageDo chatMessageDo = chatMessageConverter.realtimeChatTextResponseToChatMessageDo(
-                            chatContextManager.getCurrentResponse()
-                    );
-                    String messageId = chatMessageService.insertOne(chatMessageDo);
-                    log.info("成功将LLM插入消息，消息Id: {}", messageId);
+                    val realtimeChatTextResponse = chatContextManager.getCurrentResponse();
+                    ChatMessageDo chatMessageDo = null;
+                    try {
+                        chatMessageDo = chatMessageConverter.realtimeChatTextResponseToChatMessageDo(
+                                realtimeChatTextResponse,
+                                realtimeChatTextResponse.getChatTime()
+                        );
+                        String messageId = chatMessageService.insertOne(chatMessageDo);
+                        log.info("成功将LLM插入消息，消息Id: {}", messageId);
+                    } catch (Exception e) {
+                        log.error("[LLM 错误] 存储消息异常", e);
+                    }
 
                     // 处理缓冲区中可能剩余的不完整内容
                     if (!textBuffer.isEmpty()) {
@@ -440,9 +453,14 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
         String response = JSON.toJSONString(userAudioSttResponse);
 
         // 保存到数据库
-        ChatMessageDo chatMessageDo = chatMessageConverter.realtimeChatTextResponseToChatMessageDo(userAudioSttResponse);
-        String messageId = chatMessageService.insertOne(chatMessageDo);
-        log.info("保存用户TextChat数据到数据库：{}", messageId);
+        ChatMessageDo chatMessageDo = null;
+        try {
+            chatMessageDo = chatMessageConverter.realtimeChatTextResponseToChatMessageDo(userAudioSttResponse, userAudioSttResponse.chatTime);
+            String messageId = chatMessageService.insertOne(chatMessageDo);
+            log.info("保存用户TextChat数据到数据库：{}", messageId);
+        } catch (Exception e) {
+            log.error("保存用户TextChat数据到数据库异常", e);
+        }
 
         // 发送给Client
         Map<String, String> responseMap = new HashMap<>();

@@ -3,6 +3,7 @@ package com.openapi.converter;
 import com.openapi.domain.Do.ChatMessageDo;
 import com.openapi.domain.constant.RoleTypeEnum;
 import com.openapi.domain.dto.ws.RealtimeChatTextResponse;
+import com.openapi.utils.DateUtils;
 import lombok.NonNull;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
@@ -12,6 +13,7 @@ import org.springframework.ai.chat.messages.AssistantMessage;
 import org.springframework.ai.chat.messages.Message;
 import org.springframework.ai.chat.messages.UserMessage;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -25,14 +27,24 @@ public interface ChatMessageConverter {
     ChatMessageConverter INSTANCE = Mappers.getMapper(ChatMessageConverter.class);
 
     // RealtimeChatTextResponse -> ChatMessageDo
-    @Mapping(source = "messageId", target = "id")
-    @Mapping(source = "agentId", target = "agentId")
-    @Mapping(source = "userId", target = "userId")
-    @Mapping(source = "content", target = "content")
-    @Mapping(source = "chatTime", target = "chatTime")
-    @Mapping(source = "timestamp", target = "chatTimestamp")
-    @Mapping(source = "role", target = "role")
-    ChatMessageDo realtimeChatTextResponseToChatMessageDo(RealtimeChatTextResponse realtimeChatTextResponse);
+    default ChatMessageDo realtimeChatTextResponseToChatMessageDo(RealtimeChatTextResponse response, String chatTimeStr) throws Exception {
+        if ( response == null ) {
+            return null;
+        }
+
+        ChatMessageDo chatMessageDo = new ChatMessageDo();
+
+        chatMessageDo.setId( response.getMessageId() );
+        chatMessageDo.setAgentId( response.getAgentId() );
+        chatMessageDo.setUserId( response.getUserId() );
+        chatMessageDo.setContent( response.getContent() );
+        chatMessageDo.setChatTimestamp( response.getTimestamp() );
+        chatMessageDo.setRole( response.getRole() );
+
+        LocalDateTime chatTime = DateUtils.getLocalDateTime(chatTimeStr, DateUtils.yyyyMMddHHmmss);
+        chatMessageDo.setChatTime(chatTime);
+        return chatMessageDo;
+    }
 
     // List<ChatMessageDo> -> List<Message>
     @NonNull
