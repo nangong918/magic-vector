@@ -6,6 +6,7 @@ import android.os.Bundle
 import android.text.TextUtils
 import android.util.Log
 import android.view.View
+import androidx.recyclerview.widget.LinearLayoutManager
 import com.core.baseutil.ui.ToastUtils
 import com.data.domain.ao.message.MessageContactItemAo
 import com.data.domain.fragmentActivity.intentAo.ChatIntentAo
@@ -68,6 +69,11 @@ class ChatActivity : BaseAppCompatVmActivity<ActivityChatBinding, ChatVm>(
                 }
             }
         )
+
+        // 反转layout
+        val layoutManager = LinearLayoutManager(this)
+        layoutManager.reverseLayout = true // 反转布局
+        binding.rclvMessage.layoutManager = layoutManager
 
         binding.rclvMessage.adapter = vm.adapter
 
@@ -189,7 +195,7 @@ class ChatActivity : BaseAppCompatVmActivity<ActivityChatBinding, ChatVm>(
                         // 单个覆盖更新
                         UpdateRecyclerViewTypeEnum.SINGLE_ID_UPDATE -> {
                             if (updateInfo.singleUpdateId == null){
-                                Log.w(TAG, "whereNeedUpdate: singleUpdateId is null")
+                                Log.w(tag, "whereNeedUpdate: singleUpdateId is null")
                                 return
                             }
                             // 单个更新
