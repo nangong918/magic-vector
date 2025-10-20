@@ -13,11 +13,11 @@ object ChatWsTextMessageHandler {
     fun handleTextMessage(message: String, GSON: Gson, chatManagerPointer: ChatManager){
         var response : RealtimeChatTextResponse
         try {
-            Log.i(TAG, "handleTextMessage: $message")
+            Log.i(TAG, "handleTextMessage::receiveMessage: $message")
             response = GSON.fromJson(message,
                 RealtimeChatTextResponse::class.java)
         } catch (e: Exception){
-            Log.e(TAG, "handleTextMessage: $message", e)
+            Log.e(TAG, "handleTextMessage::error: $message", e)
             return
         }
 
@@ -27,9 +27,14 @@ object ChatWsTextMessageHandler {
         }
 
         response.content?.let {
-            Log.i(TAG, "handleTextMessage: $it")
+            Log.i(TAG, "handleTextMessage::content: $it")
         }
-        chatManagerPointer.setWssToViews(listOf(response))
+
+        try {
+            chatManagerPointer.setWssToViews(listOf(response))
+        } catch (e: Exception){
+            Log.e(TAG, "handleTextMessage::error: $message", e)
+        }
     }
 
 }
