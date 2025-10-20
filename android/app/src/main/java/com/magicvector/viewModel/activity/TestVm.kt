@@ -215,6 +215,14 @@ class TestVm(
                     // 到了此处说明: 授权 && 连接成功
                     realtimeChat2State.postValue(RealtimeChatState.InitializedConnected)
                     Log.i(TAG, "realtimeChatWsClient::onOpen; response: $response")
+
+                    val dataMap = mapOf(
+                        RealtimeDataTypeEnum.TYPE to RealtimeDataTypeEnum.CONNECT.type,
+                        RealtimeDataTypeEnum.DATA to RealtimeDataTypeEnum.CONNECT.name
+                    )
+
+                    // 发送连接数据
+                    realtimeChatWsClient!!.sendMessage(dataMap)
                 }
             }
         )

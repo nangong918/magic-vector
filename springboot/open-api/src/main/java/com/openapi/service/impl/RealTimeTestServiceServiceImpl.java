@@ -1,5 +1,6 @@
 package com.openapi.service.impl;
 
+import com.alibaba.cloud.ai.dashscope.chat.DashScopeChatModel;
 import com.alibaba.dashscope.aigc.multimodalconversation.AudioParameters;
 import com.alibaba.dashscope.aigc.multimodalconversation.MultiModalConversation;
 import com.alibaba.dashscope.aigc.multimodalconversation.MultiModalConversationParam;
@@ -339,8 +340,19 @@ public class RealTimeTestServiceServiceImpl implements RealTimeTestServiceServic
         }
     }
 
+    @NotNull
     @Override
-    public void startTextChat(@NotNull String userQuestion, @NotNull WebSocketSession session) throws IOException {
+    public ChatClient initChatClient(@NotNull DashScopeChatModel chatModel){
+        ChatClient chatClient = ChatClient.builder(chatModel)
+//                .defaultAdvisors(MessageChatMemoryAdvisor.builder(chatMemory).build())
+                .defaultSystem(SYSTEM_PROMPT)
+                .build();
+
+        return chatClient;
+    }
+
+    @Override
+    public void startTextChat(@NotNull String userQuestion, @NotNull WebSocketSession session, @NotNull ChatClient chatClient) throws IOException {
         log.info("[websocket] 开始文本聊天：userQuestion={}", userQuestion);
 
         // 前端传递过来再传递回去是因为需要分配messageId
@@ -349,8 +361,109 @@ public class RealTimeTestServiceServiceImpl implements RealTimeTestServiceServic
         userAudioSttResponse.put(RealtimeDataTypeEnum.DATA, userQuestion);
         String startResponse = JSON.toJSONString(userAudioSttResponse);
 
-        llmStreamCall(userQuestion, session);
+        llmStreamCall2(userQuestion, session, chatClient);
 
         session.sendMessage(new TextMessage(startResponse));
+    }
+
+    private void llmStreamCall2(@NotNull String sentence, @NotNull WebSocketSession session, @NotNull ChatClient chatClient) {
+        log.info("\n[LLM2 开始] 输入内容: {}", sentence);
+
+        Flux<String> responseFlux = chatClient.prompt()
+                .user(sentence)
+                .stream()
+                .content();
+
+        StringBuffer textBuffer = new StringBuffer();
+        AtomicInteger fragmentCount = new AtomicInteger(0);
+        AtomicLong startTime = new AtomicLong(System.currentTimeMillis());
+
+        // 发送开始标识
+        try {
+            Map<String, String> responseMap = new HashMap<>();
+            responseMap.put(RealtimeDataTypeEnum.TYPE, RealtimeDataTypeEnum.START.getType());
+            responseMap.put(RealtimeDataTypeEnum.DATA, RealtimeDataTypeEnum.START.getType());
+            String startResponse = JSON.toJSONString(responseMap);
+            session.sendMessage(new TextMessage(startResponse));
+        } catch (IOException e) {
+            log.error("[websocket error] 发送开始消息异常", e);
+        }
+
+        StringBuffer responseTextBuffer = new StringBuffer();
+
+        // 订阅流式响应并处理
+        responseFlux.subscribe(
+
+                // 处理每个流片段
+                fragment -> {
+                    log.info("[LLM2] 片段: {}", fragment);
+                    isLLMFinished.set(false);
+
+                    // 流式发送
+                    responseTextBuffer.append(fragment);
+                    Map<String, String> responseMap = new HashMap<>();
+                    responseMap.put(RealtimeDataTypeEnum.TYPE, RealtimeDataTypeEnum.TEXT_MESSAGE.getType());
+                    responseMap.put(RealtimeDataTypeEnum.DATA, responseTextBuffer.toString());
+                    String response = JSON.toJSONString(responseMap);
+                    try {
+                        session.sendMessage(new TextMessage(response));
+                    } catch (IOException e) {
+                        log.error("[websocket error] 响应消息异常", e);
+                    }
+
+                    // 将新片段添加到缓冲区
+                    textBuffer.append(fragment);
+                    log.info("[缓冲区累计]: {} 字符", textBuffer.length());
+
+
+                    // 尝试从缓冲区提取完整句子并输出
+                    String completeSentence;
+                    while ((completeSentence = optimizedSentenceDetector.detectAndExtractFirstSentence(textBuffer)) != null) {
+                        /// tts
+                        if (StringUtils.hasText(completeSentence)){
+                            sentenceQueue.add(completeSentence);
+                            try {
+                                // todo 对话延迟：第一个消息要立刻回答，后面的消息要延迟300ms合成
+                                generateAudio(session);
+                            } catch (NoApiKeyException e) {
+                                throw new RuntimeException(e);
+                            } catch (UploadFileException e) {
+                                throw new RuntimeException(e);
+                            }
+                        }
+                    }
+
+                    // 显示当前缓冲区剩余内容
+                    if (!textBuffer.isEmpty()) {
+                        log.info("[缓冲区剩余]: {}", textBuffer);
+                    }
+
+                    // 更新最后活跃时间
+                    startTime.set(System.currentTimeMillis());
+                },
+
+                // 处理错误
+                error -> {
+                    long totalTime = System.currentTimeMillis() - startTime.get();
+                    log.error("\n[LLM2 错误] 总耗时: {}ms, 片段总数: {}", totalTime, fragmentCount.get(), error);
+                    isLLMFinished.set(true);
+                },
+
+                // 处理完成
+                () -> {
+                    long totalTime = System.currentTimeMillis() - startTime.get();
+                    log.info("\n[LLM2 结束] 总耗时: {}ms, 片段总数: {}, 总字符数: {}",
+                            totalTime, fragmentCount.get(), textBuffer.length());
+
+                    // 处理缓冲区中可能剩余的不完整内容
+                    if (!textBuffer.isEmpty()) {
+                        log.info("[最终剩余未完成内容]: {}", textBuffer);
+                    }
+
+                    isLLMFinished.set(true);
+                    sendEOF(session);
+                    log.info("[LLM2 流式响应完全结束]");
+                }
+        );
     }
 }

@@ -1,5 +1,6 @@
 package com.openapi.websocket.handler;
 
+import com.alibaba.cloud.ai.dashscope.chat.DashScopeChatModel;
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.TypeReference;
 import com.openapi.domain.constant.realtime.RealtimeDataTypeEnum;
@@ -7,6 +8,7 @@ import com.openapi.service.RealTimeTestServiceService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
+import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
@@ -38,6 +40,8 @@ public class RealTimeTestChannel extends TextWebSocketHandler {
     private final ThreadPoolTaskExecutor taskExecutor;
     private volatile Future<?> audioChatFuture;
     private volatile Future<?> textChatFuture;
+    private ChatClient chatClient;
+    private final DashScopeChatModel dashScopeChatModel;
 
 
     private final Queue<byte[]> requestAudioBuffer = new ConcurrentLinkedQueue<>();
@@ -77,6 +81,10 @@ public class RealTimeTestChannel extends TextWebSocketHandler {
 
         RealtimeDataTypeEnum realtimeDataTypeEnum = RealtimeDataTypeEnum.getByType(type);
         switch (realtimeDataTypeEnum) {
+            case CONNECT -> {
+                chatClient = realTimeTestServiceService.initChatClient(dashScopeChatModel);
+                log.info("[websocket] CONNECT::chatClient初始化");
+            }
             case START -> {
                 log.info("[websocket] 开始录音");
                 stopRecording.set(false);
@@ -118,7 +126,8 @@ public class RealTimeTestChannel extends TextWebSocketHandler {
                         // 启动聊天
                         realTimeTestServiceService.startTextChat(
                                 userQuestion,
-                                session
+                                session,
+                                chatClient
                         );
                     } catch (Exception e) {
                         stopRecording.set(true);

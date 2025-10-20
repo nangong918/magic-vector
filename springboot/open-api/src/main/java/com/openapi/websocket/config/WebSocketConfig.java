@@ -43,7 +43,8 @@ public class WebSocketConfig implements WebSocketConfigurer {
                 ), "/realtime-no-vad-test")
                 .addHandler(new RealTimeTestChannel(
                                 realTimeTestServiceService,
-                                threadPoolConfig.taskExecutor()
+                                threadPoolConfig.taskExecutor(),
+                                dashScopeChatModel
                         ),
                         "/realtime-test")
                 .addHandler(new RealtimeChatChannel(
