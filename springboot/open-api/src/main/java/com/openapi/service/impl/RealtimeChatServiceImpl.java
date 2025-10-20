@@ -17,7 +17,6 @@ import com.openapi.converter.ChatMessageConverter;
 import com.openapi.domain.Do.ChatMessageDo;
 import com.openapi.domain.ao.AgentAo;
 import com.openapi.domain.constant.ModelConstant;
-import com.openapi.domain.constant.RoleTypeEnum;
 import com.openapi.domain.constant.error.AgentExceptions;
 import com.openapi.domain.constant.error.UserExceptions;
 import com.openapi.domain.constant.realtime.RealtimeDataTypeEnum;
@@ -31,7 +30,6 @@ import com.openapi.service.UserService;
 import io.reactivex.BackpressureStrategy;
 import io.reactivex.Flowable;
 import lombok.RequiredArgsConstructor;
-import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 import org.jetbrains.annotations.NotNull;
@@ -212,7 +210,7 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
                     long fragmentTime = System.currentTimeMillis() - startTime.get();
 
                     // 发送当前fragment消息
-                    chatContextManager.currentResponse.append(fragment);
+                    chatContextManager.currentResponseStringBuffer.append(fragment);
                     RealtimeChatTextResponse agentFragmentResponse = chatContextManager.getCurrentResponse();
 
                     // 发送消息给Client

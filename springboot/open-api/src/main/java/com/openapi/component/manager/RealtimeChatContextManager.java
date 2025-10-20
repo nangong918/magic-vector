@@ -41,13 +41,13 @@ public class RealtimeChatContextManager {
     private String currentMessageId = String.valueOf(IdUtil.getSnowflake().nextId());
     public long currentMessageTimestamp = System.currentTimeMillis();
     public LocalDateTime currentMessageDateTime = LocalDateTime.now();
-    public StringBuilder currentResponse = new StringBuilder();
+    public StringBuffer currentResponseStringBuffer = new StringBuffer();
     // 开启新的一问一答 todo 需要停止之前全部的模型消息和缓存
     public void newChatMessage(){
         currentMessageId = String.valueOf(IdUtil.getSnowflake().nextId());
         currentMessageTimestamp = System.currentTimeMillis();
         currentMessageDateTime = LocalDateTime.now();
-        currentResponse = new StringBuilder();
+        currentResponseStringBuffer = new StringBuffer();
     }
 
     @NonNull
@@ -71,7 +71,7 @@ public class RealtimeChatContextManager {
         response.setAgentId(agentId);
         response.setUserId(userId);
         response.setRole(RoleTypeEnum.AGENT.getValue());
-        response.setContent(currentResponse.toString());
+        response.setContent(currentResponseStringBuffer.toString());
         response.setMessageId(getCurrentAgentMessageId());
         response.setTimestamp(currentMessageTimestamp);
         response.setChatTime(getCurrentMessageTimeStr());
@@ -98,7 +98,7 @@ public class RealtimeChatContextManager {
         response.setUserId(userId);
         response.setRole(RoleTypeEnum.USER.getValue());
         response.setContent(userChatText);
-        response.setMessageId(getCurrentAgentMessageId());
+        response.setMessageId(getCurrentUserMessageId());
         response.setTimestamp(currentMessageTimestamp);
         response.setChatTime(getCurrentMessageTimeStr());
         return response;
