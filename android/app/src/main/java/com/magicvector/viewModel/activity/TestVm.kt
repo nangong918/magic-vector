@@ -366,6 +366,14 @@ class TestVm(
         realtimeChat2State.postValue(RealtimeChatState.Disconnected)
     }
 
+    fun sendQuestion(question: String){
+        val dataMap = mapOf(
+            RealtimeDataTypeEnum.TYPE to RealtimeDataTypeEnum.TEXT_MESSAGE.type,
+            RealtimeDataTypeEnum.DATA to question
+        )
+        realtimeChatWsClient?.sendMessage(dataMap)
+    }
+
     // websocket realtime聊天
     private var realtimeChatWsClient: TestRealtimeChatWsClient? = null
     var realtimeChatAudioRecord: AudioRecord? = null
@@ -527,10 +535,10 @@ class TestVm(
                 realtimeChatState.postValue(RealtimeChatState.Receiving)
                 val data = map[RealtimeDataTypeEnum.DATA]
                 data?.let {
-                    realtimeChatMessage.postValue(realtimeChatMessage.value + data)
+                    realtimeChatMessage.postValue(data)
                 }
             }
-
+            // 这是前端提供给后端的状态，前端不必理会
             RealtimeDataTypeEnum.CONNECT -> {}
             RealtimeDataTypeEnum.DISCONNECT -> {}
         }

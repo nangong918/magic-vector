@@ -59,6 +59,16 @@ class TestActivity : BaseAppCompatVmActivity<ActivityTestBinding, TestVm>(
             vm.stopRealtimeChat2()
         }
 
+        binding.btnRealtimeChat2SendQuestion.setOnClickListener {
+            val question = binding.editRealtimeChat2.text.toString()
+            if (question.isEmpty()){
+                ToastUtils.showToastActivity(this, "请输入问题")
+                return@setOnClickListener
+            }
+            binding.editRealtimeChat2.text.clear()
+            vm.sendQuestion(question)
+        }
+
         // realtime chat
         binding.btnInitRealtimeChat.setOnClickListener {
             vm.initRealtimeChatWsClient(this)
@@ -144,18 +154,21 @@ class TestActivity : BaseAppCompatVmActivity<ActivityTestBinding, TestVm>(
                     binding.btnInitRealtimeChat2.isEnabled = true
                     binding.btnRecordAndSendRealtimeChat2.isEnabled = false
                     binding.btnStopRealtimeChat2.isEnabled = false
+                    binding.btnRealtimeChat2SendQuestion.isEnabled = false
                 }
                 is RealtimeChatState.Initializing -> {
                     binding.tvRealTimeChatStatus2.text = "正在初始化..."
                     binding.btnInitRealtimeChat2.isEnabled = false
                     binding.btnRecordAndSendRealtimeChat2.isEnabled = false
                     binding.btnStopRealtimeChat2.isEnabled = false
+                    binding.btnRealtimeChat2SendQuestion.isEnabled = false
                 }
                 is RealtimeChatState.InitializedConnected -> {
                     binding.tvRealTimeChatStatus2.text = "已初始化并且已经连接"
                     binding.btnInitRealtimeChat2.isEnabled = false
                     binding.btnRecordAndSendRealtimeChat2.isEnabled = true
                     binding.btnStopRealtimeChat2.isEnabled = true
+                    binding.btnRealtimeChat2SendQuestion.isEnabled = true
 
                     // btn change
                     binding.btnRecordAndSendRealtimeChat2.text = "开始录音 + 流式发送"
@@ -165,6 +178,7 @@ class TestActivity : BaseAppCompatVmActivity<ActivityTestBinding, TestVm>(
                     binding.btnInitRealtimeChat2.isEnabled = false
                     binding.btnRecordAndSendRealtimeChat2.isEnabled = true
                     binding.btnStopRealtimeChat2.isEnabled = true
+                    binding.btnRealtimeChat2SendQuestion.isEnabled = false
 
                     // btn change
                     binding.btnRecordAndSendRealtimeChat2.text = "结束录音 + 接收消息"
@@ -174,18 +188,21 @@ class TestActivity : BaseAppCompatVmActivity<ActivityTestBinding, TestVm>(
                     binding.btnInitRealtimeChat2.isEnabled = false
                     binding.btnRecordAndSendRealtimeChat2.isEnabled = false
                     binding.btnStopRealtimeChat2.isEnabled = true
+                    binding.btnRealtimeChat2SendQuestion.isEnabled = false
                 }
                 is RealtimeChatState.Disconnected -> {
                     binding.tvRealTimeChatStatus2.text = "已断开"
                     binding.btnInitRealtimeChat2.isEnabled = true
                     binding.btnRecordAndSendRealtimeChat2.isEnabled = false
                     binding.btnStopRealtimeChat2.isEnabled = false
+                    binding.btnRealtimeChat2SendQuestion.isEnabled = false
                 }
                 is RealtimeChatState.Error -> {
                     binding.tvRealTimeChatStatus2.text = "错误: ${state.message}"
                     binding.btnInitRealtimeChat2.isEnabled = true
                     binding.btnRecordAndSendRealtimeChat2.isEnabled = false
                     binding.btnStopRealtimeChat2.isEnabled = false
+                    binding.btnRealtimeChat2SendQuestion.isEnabled = false
                 }
             }
         }

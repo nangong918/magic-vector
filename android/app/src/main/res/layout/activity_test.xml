@@ -58,6 +58,19 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="开始录音 + 流式发送"/>
+
+            <EditText
+                android:id="@+id/edit_RealtimeChat2"
+                android:layout_marginStart="20dp"
+                android:layout_marginEnd="20dp"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"/>
+            <Button
+                android:id="@+id/btn_RealtimeChat2_SendQuestion"
+                android:text="发送Question"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"/>
+
             <Button
                 android:id="@+id/btn_stopRealtimeChat2"
                 android:layout_width="wrap_content"
