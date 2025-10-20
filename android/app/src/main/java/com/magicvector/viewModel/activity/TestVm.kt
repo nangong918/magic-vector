@@ -22,6 +22,7 @@ import com.core.baseutil.ui.ToastUtils
 import com.data.domain.constant.BaseConstant
 import com.data.domain.constant.test.RealtimeDataTypeEnum
 import com.data.domain.dto.ws.RealtimeChatConnectRequest
+import com.data.domain.dto.ws.RealtimeChatTextResponse
 import com.data.domain.event.WebSocketMessageEvent
 import com.data.domain.event.WebsocketEventTypeEnum
 import com.data.domain.vo.test.AudioRecordPlayState
@@ -32,6 +33,7 @@ import com.data.domain.vo.test.WebsocketState
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import com.magicvector.MainApplication
+import com.magicvector.manager.ChatWsTextMessageHandler
 import com.magicvector.utils.test.SSEClient
 import com.magicvector.utils.test.TTS_SSEClient
 import com.magicvector.utils.test.TestRealtimeChatWsClient
@@ -271,10 +273,28 @@ class TestVm(
             }
             RealtimeDataTypeEnum.TEXT_MESSAGE -> {
                 // 文本数据
-                realtimeChat2State.postValue(RealtimeChatState.Receiving)
+//                realtimeChat2State.postValue(RealtimeChatState.Receiving)
+//                val data = map[RealtimeDataTypeEnum.DATA]
+//                data?.let {
+//                    realtimeChat2Message.postValue(realtimeChat2Message.value + data)
+//                }
+                // 文本数据
+                realtimeChatState.postValue(RealtimeChatState.Receiving)
                 val data = map[RealtimeDataTypeEnum.DATA]
-                data?.let {
-                    realtimeChat2Message.postValue(realtimeChat2Message.value + data)
+                if (data != null){
+                    Log.i(TAG, "handleTextMessage: $data")
+                    var response : RealtimeChatTextResponse
+                    try {
+                        val type = object : TypeToken<RealtimeChatTextResponse>() {}.type
+                        response = GSON.fromJson(data, type)
+                        realtimeChat2Message.postValue(response.content?:"")
+                    } catch (e: Exception){
+                        Log.e(TAG, "handleTextMessage: $data", e)
+                        return
+                    }
+                }
+                else {
+                    Log.e(TAG, "handleTextMessage: data is null")
                 }
             }
 

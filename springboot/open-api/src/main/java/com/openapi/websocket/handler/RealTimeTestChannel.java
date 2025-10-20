@@ -143,12 +143,14 @@ public class RealTimeTestChannel extends TextWebSocketHandler {
             }
             case TEXT_MESSAGE -> {
                 String userQuestion = messageMap.get(RealtimeDataTypeEnum.DATA);
+                realtimeChatContextManager.newChatMessage();
+                realtimeChatContextManager.stopRecording.set(false);
                 textChatFuture = taskExecutor.submit(() -> {
                     try {
                         // 启动聊天
                         realTimeTestServiceService.startTextChat(
                                 userQuestion,
-                                session,
+                                realtimeChatContextManager,
                                 chatClient
                         );
                     } catch (Exception e) {

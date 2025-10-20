@@ -22,5 +22,5 @@ public interface RealTimeTestServiceService {
 
     @NotNull ChatClient initChatClient(@NotNull RealtimeChatContextManager chatContextManager, @NotNull DashScopeChatModel chatModel);
 
-    void startTextChat(@NotNull String userQuestion, @NotNull WebSocketSession session, @NotNull ChatClient chatClient) throws IOException;
+    void startTextChat(@NotNull String userQuestion, @NotNull RealtimeChatContextManager chatContextManager, @NotNull ChatClient chatClient) throws IOException;
 }
