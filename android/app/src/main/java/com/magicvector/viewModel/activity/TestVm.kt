@@ -21,6 +21,7 @@ import com.core.baseutil.permissions.PermissionUtil
 import com.core.baseutil.ui.ToastUtils
 import com.data.domain.constant.BaseConstant
 import com.data.domain.constant.test.RealtimeDataTypeEnum
+import com.data.domain.dto.ws.RealtimeChatConnectRequest
 import com.data.domain.event.WebSocketMessageEvent
 import com.data.domain.event.WebsocketEventTypeEnum
 import com.data.domain.vo.test.AudioRecordPlayState
@@ -30,6 +31,7 @@ import com.data.domain.vo.test.TtsChatState
 import com.data.domain.vo.test.WebsocketState
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
+import com.magicvector.MainApplication
 import com.magicvector.utils.test.SSEClient
 import com.magicvector.utils.test.TTS_SSEClient
 import com.magicvector.utils.test.TestRealtimeChatWsClient
@@ -216,9 +218,15 @@ class TestVm(
                     realtimeChat2State.postValue(RealtimeChatState.InitializedConnected)
                     Log.i(TAG, "realtimeChatWsClient::onOpen; response: $response")
 
+                    // 发送连接成功的消息
+                    val request = RealtimeChatConnectRequest()
+                    request.agentId = "test"
+                    request.userId = MainApplication.getUserId()
+                    request.timestamp = System.currentTimeMillis()
+
                     val dataMap = mapOf(
                         RealtimeDataTypeEnum.TYPE to RealtimeDataTypeEnum.CONNECT.type,
-                        RealtimeDataTypeEnum.DATA to RealtimeDataTypeEnum.CONNECT.name
+                        RealtimeDataTypeEnum.DATA to GSON.toJson(request)
                     )
                     Log.i(TAG, "发送连接数据: $dataMap")
                     // 发送连接数据

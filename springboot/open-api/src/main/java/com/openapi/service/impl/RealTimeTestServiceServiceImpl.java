@@ -11,10 +11,20 @@ import com.alibaba.dashscope.exception.NoApiKeyException;
 import com.alibaba.dashscope.exception.UploadFileException;
 import com.alibaba.fastjson.JSON;
 import com.openapi.component.manager.OptimizedSentenceDetector;
+import com.openapi.component.manager.RealtimeChatContextManager;
+import com.openapi.config.AgentConfig;
 import com.openapi.config.ChatConfig;
 import com.openapi.config.ThreadPoolConfig;
+import com.openapi.converter.ChatMessageConverter;
+import com.openapi.domain.Do.ChatMessageDo;
+import com.openapi.domain.ao.AgentAo;
+import com.openapi.domain.constant.ModelConstant;
+import com.openapi.domain.constant.error.AgentExceptions;
 import com.openapi.domain.constant.realtime.RealtimeDataTypeEnum;
+import com.openapi.domain.exception.AppException;
 import com.openapi.domain.interfaces.OnSSTResultCallback;
+import com.openapi.service.AgentService;
+import com.openapi.service.ChatMessageService;
 import com.openapi.service.RealTimeTestServiceService;
 import io.reactivex.BackpressureStrategy;
 import io.reactivex.Flowable;
@@ -22,6 +32,9 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.ai.chat.client.advisor.MessageChatMemoryAdvisor;
+import org.springframework.ai.chat.memory.ChatMemory;
+import org.springframework.ai.chat.messages.Message;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import org.springframework.web.socket.TextMessage;
@@ -63,6 +76,10 @@ public class RealTimeTestServiceServiceImpl implements RealTimeTestServiceServic
     // 模拟句子间的间隔时间
     private final static long SENTENCE_INTERVAL = 300;
     private final ThreadPoolConfig threadPoolConfig;
+    private final AgentService agentService;
+    private final AgentConfig agentConfig;
+    private final ChatMessageService chatMessageService;
+    private final ChatMessageConverter chatMessageConverter;
 
     @Override
     public void startChat(@NotNull AtomicBoolean stopRecording,
@@ -342,11 +359,54 @@ public class RealTimeTestServiceServiceImpl implements RealTimeTestServiceServic
 
     @NotNull
     @Override
-    public ChatClient initChatClient(@NotNull DashScopeChatModel chatModel){
+    public ChatClient initChatClient(@NotNull RealtimeChatContextManager chatContextManager, @NotNull DashScopeChatModel chatModel){
+        // 特别注意：此处的id是测试值，也就是说如果user不存在agent的话需要进行创建
+        List<String> agentIds = agentService.getUserAgents(chatContextManager.userId);
+        if (agentIds.isEmpty()){
+            throw new AppException(AgentExceptions.AGENT_NOT_EXIST);
+        }
+        chatContextManager.agentId = agentIds.getFirst();
+
+        AgentAo agentAo = agentService.getAgentById(chatContextManager.agentId);
+        if (agentAo == null || agentAo.getAgentId() == null){
+            throw new AppException(AgentExceptions.AGENT_NOT_EXIST);
+        }
+        else {
+            log.info("initChatClient::agentId: {}", chatContextManager.agentId);
+        }
+
+        // 设定
+        String description = Optional.ofNullable(agentAo.getAgentVo())
+                .map(agentVo -> agentVo.description)
+                .orElseGet(() -> {
+                    log.warn("Agent 没有设定，使用默认设定");
+                    return ModelConstant.SYSTEM_PROMPT;
+                });
+
+        log.info("Agent 设定: {}", description);
+
+        ChatMemory chatMemory = agentConfig.chatMemory();
+
         ChatClient chatClient = ChatClient.builder(chatModel)
-//                .defaultAdvisors(MessageChatMemoryAdvisor.builder(chatMemory).build())
+                .defaultAdvisors(MessageChatMemoryAdvisor.builder(chatMemory).build())
                 .defaultSystem(SYSTEM_PROMPT)
                 .build();
+
+        // 预先加载10条历史聊天记录
+        List<ChatMessageDo> chatMessageDos = chatMessageService.getLast10Messages(chatContextManager.agentId);
+        // 将历史消息添加到ChatMemory中
+        if (!chatMessageDos.isEmpty()) {
+
+            // 按时间正序排列，确保对话顺序正确 （前端展示是最新的放在第0个，而此处是最新的放在最后一个添加，所以需要重排序）
+            List<ChatMessageDo> sortedMessages = chatMessageDos.stream()
+                    .sorted(Comparator.comparing(ChatMessageDo::getChatTime))
+                    .toList();
+
+            List<Message> historyMessages = chatMessageConverter.chatMessageDoListToMessageList(sortedMessages);
+            for (Message message : historyMessages) {
+                chatMemory.add(chatContextManager.agentId, message);
+            }
+        }
 
         return chatClient;
     }

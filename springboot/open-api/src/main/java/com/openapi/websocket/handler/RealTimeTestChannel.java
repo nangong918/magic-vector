@@ -3,7 +3,9 @@ package com.openapi.websocket.handler;
 import com.alibaba.cloud.ai.dashscope.chat.DashScopeChatModel;
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.TypeReference;
+import com.openapi.component.manager.RealtimeChatContextManager;
 import com.openapi.domain.constant.realtime.RealtimeDataTypeEnum;
+import com.openapi.domain.dto.ws.RealtimeChatConnectRequest;
 import com.openapi.service.RealTimeTestServiceService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -42,6 +44,7 @@ public class RealTimeTestChannel extends TextWebSocketHandler {
     private volatile Future<?> textChatFuture;
     private ChatClient chatClient;
     private final DashScopeChatModel dashScopeChatModel;
+    private RealtimeChatContextManager realtimeChatContextManager = new RealtimeChatContextManager();
 
 
     private final Queue<byte[]> requestAudioBuffer = new ConcurrentLinkedQueue<>();
@@ -83,8 +86,20 @@ public class RealTimeTestChannel extends TextWebSocketHandler {
         switch (realtimeDataTypeEnum) {
             case CONNECT -> {
                 log.info("[websocket] CONNECT::chatClient初始化开始");
+                String connectMessage = messageMap.get(RealtimeDataTypeEnum.DATA);
                 try {
-                    chatClient = realTimeTestServiceService.initChatClient(dashScopeChatModel);
+                    RealtimeChatConnectRequest connectRequest = JSON.parseObject(connectMessage, RealtimeChatConnectRequest.class);
+                    // 重新连接就是新的会话信息
+                    realtimeChatContextManager = new RealtimeChatContextManager();
+                    realtimeChatContextManager.userId = connectRequest.getUserId();
+                    realtimeChatContextManager.agentId = connectRequest.getAgentId();
+                    realtimeChatContextManager.session = session;
+                    realtimeChatContextManager.connectTimestamp = connectRequest.getTimestamp();
+
+                    chatClient = realTimeTestServiceService.initChatClient(
+                            realtimeChatContextManager,
+                            dashScopeChatModel
+                    );
                     log.info("[websocket] CONNECT::chatClient初始化结束");
                 } catch (Exception e){
                     log.error("[websocket error] chatClient初始化异常", e);
@@ -93,6 +108,7 @@ public class RealTimeTestChannel extends TextWebSocketHandler {
             }
             case START -> {
                 log.info("[websocket] 开始录音");
+                realtimeChatContextManager.newChatMessage();
                 stopRecording.set(false);
                 audioChatFuture = taskExecutor.submit(() -> {
                     try {

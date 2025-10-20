@@ -2,6 +2,7 @@ package com.openapi.service;
 
 import com.alibaba.cloud.ai.dashscope.chat.DashScopeChatModel;
 import com.alibaba.dashscope.exception.NoApiKeyException;
+import com.openapi.component.manager.RealtimeChatContextManager;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.web.socket.WebSocketSession;
@@ -19,7 +20,7 @@ public interface RealTimeTestServiceService {
                    @NotNull Queue<byte[]> requestAudioBuffer,
                    @NotNull WebSocketSession session) throws IOException, InterruptedException, NoApiKeyException;
 
-    @NotNull ChatClient initChatClient(@NotNull DashScopeChatModel chatModel);
+    @NotNull ChatClient initChatClient(@NotNull RealtimeChatContextManager chatContextManager, @NotNull DashScopeChatModel chatModel);
 
     void startTextChat(@NotNull String userQuestion, @NotNull WebSocketSession session, @NotNull ChatClient chatClient) throws IOException;
 }
