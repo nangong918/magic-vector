@@ -170,23 +170,33 @@ public class RealTimeTestServiceServiceImpl implements RealTimeTestServiceServic
         } catch (IOException e) {
             log.error("[websocket error] 发送开始消息异常", e);
         }
+
+        StringBuffer responseTextBuffer = new StringBuffer();
+
         // 订阅流式响应并处理
         responseFlux.subscribe(
 
                 // 处理每个流片段
                 fragment -> {
+                    log.info("[LLM] 片段: {}", fragment);
                     isLLMFinished.set(false);
-                    int currentCount = fragmentCount.incrementAndGet();
-                    long fragmentTime = System.currentTimeMillis() - startTime.get();
 
-                    // 观察片段信息
-                    log.info("\n[LLM 片段 #{}, 耗时: {}ms]", currentCount, fragmentTime);
-                    log.info("[片段内容]: {}", fragment);
-                    log.info("[片段长度]: {} 字符", fragment.length());
+                    // 流式发送
+                    responseTextBuffer.append(fragment);
+                    Map<String, String> responseMap = new HashMap<>();
+                    responseMap.put(RealtimeDataTypeEnum.TYPE, RealtimeDataTypeEnum.TEXT_MESSAGE.getType());
+                    responseMap.put(RealtimeDataTypeEnum.DATA, responseTextBuffer.toString());
+                    String response = JSON.toJSONString(responseMap);
+                    try {
+                        session.sendMessage(new TextMessage(response));
+                    } catch (IOException e) {
+                        log.error("[websocket error] 响应消息异常", e);
+                    }
 
                     // 将新片段添加到缓冲区
                     textBuffer.append(fragment);
                     log.info("[缓冲区累计]: {} 字符", textBuffer.length());
+
 
                     // 尝试从缓冲区提取完整句子并输出
                     String completeSentence;
