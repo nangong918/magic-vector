@@ -220,9 +220,10 @@ class TestVm(
                         RealtimeDataTypeEnum.TYPE to RealtimeDataTypeEnum.CONNECT.type,
                         RealtimeDataTypeEnum.DATA to RealtimeDataTypeEnum.CONNECT.name
                     )
-
+                    Log.i(TAG, "发送连接数据: $dataMap")
                     // 发送连接数据
-                    realtimeChatWsClient!!.sendMessage(dataMap)
+                    realtimeChat2WsClient!!.sendMessage(dataMap)
+                    Log.i(TAG, "发送连接数据成功")
                 }
             }
         )

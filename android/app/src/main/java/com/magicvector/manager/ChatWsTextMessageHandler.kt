@@ -13,6 +13,7 @@ object ChatWsTextMessageHandler {
     fun handleTextMessage(message: String, GSON: Gson, chatManagerPointer: ChatManager){
         var response : RealtimeChatTextResponse
         try {
+            Log.i(TAG, "handleTextMessage: $message")
             val type = object : TypeToken<RealtimeChatTextResponse>() {}.type
             response = GSON.fromJson(message, type)
         } catch (e: Exception){

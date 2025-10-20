@@ -82,8 +82,14 @@ public class RealTimeTestChannel extends TextWebSocketHandler {
         RealtimeDataTypeEnum realtimeDataTypeEnum = RealtimeDataTypeEnum.getByType(type);
         switch (realtimeDataTypeEnum) {
             case CONNECT -> {
-                chatClient = realTimeTestServiceService.initChatClient(dashScopeChatModel);
-                log.info("[websocket] CONNECT::chatClient初始化");
+                log.info("[websocket] CONNECT::chatClient初始化开始");
+                try {
+                    chatClient = realTimeTestServiceService.initChatClient(dashScopeChatModel);
+                    log.info("[websocket] CONNECT::chatClient初始化结束");
+                } catch (Exception e){
+                    log.error("[websocket error] chatClient初始化异常", e);
+                    throw new RuntimeException(e);
+                }
             }
             case START -> {
                 log.info("[websocket] 开始录音");
