@@ -344,7 +344,7 @@ class ChatVm(
                     )
 
                     // 发送连接数据
-                    realtimeChatWsClient!!.sendMessage(dataMap)
+                    realtimeChatWsClient!!.sendMessage(dataMap, true)
                 }
             }
         )
@@ -566,7 +566,7 @@ class ChatVm(
             RealtimeDataTypeEnum.TYPE to RealtimeDataTypeEnum.TEXT_MESSAGE.type,
             RealtimeDataTypeEnum.DATA to inputText
         )
-        realtimeChatWsClient!!.sendMessage(dataMap)
+        realtimeChatWsClient!!.sendMessage(dataMap, true)
         // 发送的时候不用回显，因为此时还没拿到后端的messageId
     }
 

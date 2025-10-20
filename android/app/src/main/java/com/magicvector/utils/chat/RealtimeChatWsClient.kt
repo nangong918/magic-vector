@@ -2,6 +2,7 @@ package com.magicvector.utils.chat
 
 import android.util.Log
 import com.google.gson.Gson
+import com.magicvector.utils.test.TestRealtimeChatWsClient
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.WebSocket
@@ -32,6 +33,16 @@ class RealtimeChatWsClient(
         Log.d(TAG, "send message: ${message.take(50)}")
     }
 
+    fun sendMessage(messageMap: Map<String, String>, isShowAll: Boolean){
+        val message = GSON.toJson(messageMap)
+        webSocket.send(message)
+        if (isShowAll){
+            Log.d(TestRealtimeChatWsClient.Companion.TAG, "send message: $message")
+        }
+        else {
+            Log.d(TestRealtimeChatWsClient.Companion.TAG, "send message: ${message.take(50)}")
+        }
+    }
 
     // 发送字节数据
     fun sendMessage(message: ByteString){
