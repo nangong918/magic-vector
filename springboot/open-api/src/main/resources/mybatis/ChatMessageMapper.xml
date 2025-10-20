@@ -95,7 +95,7 @@
         <include refid="table"/>
         where
             agent_id = #{agentId} and
-            chat_time &gt; #{deadline}
+            chat_time &lt;= #{deadline}
         order by
             chat_time DESC -- 时间从大到小排序
         limit #{limit}
@@ -120,7 +120,7 @@
                      open="(" close=")">
                 #{agentId}
             </foreach>
-            AND chat_time &gt; #{deadline}
+            AND chat_time &lt;= #{deadline}
         ORDER BY chat_time DESC -- 时间从大到小排序
         LIMIT #{limit}
     </select>
