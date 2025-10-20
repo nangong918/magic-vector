@@ -22,6 +22,9 @@ class ChatActivity : BaseAppCompatVmActivity<ActivityChatBinding, ChatVm>(
     ChatActivity::class,
     ChatVm::class
 ) {
+
+    private val tag = ChatActivity::class.simpleName
+
     override fun initBinding(): ActivityChatBinding {
         return ActivityChatBinding.inflate(layoutInflater)
     }
@@ -177,8 +180,10 @@ class ChatActivity : BaseAppCompatVmActivity<ActivityChatBinding, ChatVm>(
         return object : RecyclerViewWhereNeedUpdate {
             override fun whereNeedUpdate(updateInfos: List<UpdateRecyclerViewItem>) {
                 if (updateInfos.isEmpty()){
+                    Log.d(tag, "whereNeedUpdate: updateInfos is empty")
                     return
                 }
+                Log.d(tag, "当前的chatList长度为：${vm.chatManagerPointer.getViewChatMessageList().size}")
                 for (updateInfo in updateInfos) {
                     when (updateInfo.type){
                         // 单个覆盖更新
@@ -197,11 +202,15 @@ class ChatActivity : BaseAppCompatVmActivity<ActivityChatBinding, ChatVm>(
                             }
                             if (viewIndex != -1){
                                 vm.adapter.notifyItemChanged(viewIndex)
+                                Log.d(tag, "whereNeedUpdate: SINGLE_ID_UPDATE: $viewIndex")
+                            }
+                            else {
+                                Log.w(tag, "whereNeedUpdate: SINGLE_ID_UPDATE: not found")
                             }
                         }
                         UpdateRecyclerViewTypeEnum.ID_TO_END_UPDATE -> {
                             if (updateInfo.idToEndUpdateId == null){
-                                Log.w(TAG, "whereNeedUpdate: idToEndUpdateId is null")
+                                Log.w(tag, "whereNeedUpdate: idToEndUpdateId is null")
                                 return
                             }
                             // 找到id当前的position然后更新
@@ -217,12 +226,16 @@ class ChatActivity : BaseAppCompatVmActivity<ActivityChatBinding, ChatVm>(
                                     viewIndex,
                                     endPosition
                                 )
+                                Log.d(tag, "whereNeedUpdate: ID_TO_END_UPDATE 范围: [$viewIndex, $endPosition]")
+                            }
+                            else {
+                                Log.w(tag, "whereNeedUpdate: ID_TO_END_UPDATE: not found")
                             }
                         }
                         // 单个插入
                         UpdateRecyclerViewTypeEnum.SINGLE_ID_INSERT -> {
                             if (updateInfo.singleInsertId == null){
-                                Log.w(TAG, "whereNeedUpdate: singleInsertId is null")
+                                Log.w(tag, "whereNeedUpdate: singleInsertId is null")
                                 return
                             }
                             // 找到id当前的position然后更新
@@ -234,6 +247,10 @@ class ChatActivity : BaseAppCompatVmActivity<ActivityChatBinding, ChatVm>(
                             }
                             if (viewIndex >= 0) {
                                 vm.adapter.notifyItemInserted(viewIndex)
+                                Log.d(tag, "whereNeedUpdate: SINGLE_ID_INSERT: $viewIndex")
+                            }
+                            else {
+                                Log.w(tag, "whereNeedUpdate: SINGLE_ID_INSERT: not found")
                             }
                         }
                     }

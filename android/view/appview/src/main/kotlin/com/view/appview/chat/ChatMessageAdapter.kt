@@ -29,7 +29,7 @@ class ChatMessageAdapter(
         return Optional.of(chatMessageItemAosPointer)
             .filter { it -> it.size > position }
             .map { it -> it[position].vo.viewType }
-            .orElse(SendMessageTypeEnum.VIEW_TYPE_SENDER.value)
+            .orElse(SendMessageTypeEnum.VIEW_TYPE_USER.value)
     }
 
     override fun onCreateViewHolder(
@@ -39,12 +39,12 @@ class ChatMessageAdapter(
         val inflater = LayoutInflater.from(parent.context)
 
         when (viewType) {
-            SendMessageTypeEnum.VIEW_TYPE_SENDER.value -> {
+            SendMessageTypeEnum.VIEW_TYPE_USER.value -> {
                 val binding: ViewSendMessageItemBinding =
                     ViewSendMessageItemBinding.inflate(inflater, parent, false)
                 return SenderViewHolder(binding)
             }
-            SendMessageTypeEnum.VIEW_TYPE_RECEIVER.value -> {
+            SendMessageTypeEnum.VIEW_TYPE_AGENT.value -> {
                 val binding: ViewReceivedMessageItemBinding =
                     ViewReceivedMessageItemBinding.inflate(inflater, parent, false)
                 return ReceiverViewHolder(binding)
@@ -64,11 +64,11 @@ class ChatMessageAdapter(
         }
         val ao: ChatItemAo = chatMessageItemAosPointer[position]
         when(ao.vo.viewType){
-            SendMessageTypeEnum.VIEW_TYPE_SENDER.value -> {
+            SendMessageTypeEnum.VIEW_TYPE_USER.value -> {
                 (holder as SenderViewHolder).bindAo(ao)
                 holder.setChatMessageClick(onChatMessageClick)
             }
-            SendMessageTypeEnum.VIEW_TYPE_RECEIVER.value -> {
+            SendMessageTypeEnum.VIEW_TYPE_AGENT.value -> {
                 (holder as ReceiverViewHolder).bindAo(ao)
                 holder.bindAvatar(currentAvatarUrl)
                 holder.setChatMessageClick(onChatMessageClick)

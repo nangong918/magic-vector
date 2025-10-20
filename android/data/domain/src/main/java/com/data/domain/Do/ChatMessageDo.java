@@ -13,7 +13,7 @@ public class ChatMessageDo {
     public String userId;
     public String content;
     // 时间(展示用)
-    public LocalDateTime chatTime;
+    public String chatTime;
     // 时间(排序用)
     public Long chatTimestamp = 0L;
     // 发送方: 0: agent, 1: user (相当于isUser ? 0 : 1)

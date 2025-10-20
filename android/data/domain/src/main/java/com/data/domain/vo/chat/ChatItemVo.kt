@@ -14,7 +14,7 @@ class ChatItemVo : Serializable{
 //    // 是否已读
 //    var isRead: Boolean = false
     // 发送消息类型
-    var viewType: Int = SendMessageTypeEnum.VIEW_TYPE_SENDER.value
+    var viewType: Int = SendMessageTypeEnum.VIEW_TYPE_USER.value
     // 消息类型
     var messageType: Int = MessageTypeEnum.TEXT.value
 }

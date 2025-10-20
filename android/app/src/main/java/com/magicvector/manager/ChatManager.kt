@@ -46,7 +46,11 @@ class ChatManager(val agentId: String) {
     // response -> view
     fun setResponsesToViews(responses: List<ChatMessageDo>){
         if (responses.isEmpty()){
+            Log.d(TAG, "response为空")
             return
+        }
+        else {
+            Log.d(TAG, "response.size = ${responses.size}")
         }
         /*
             http请求一定是批量的，chat记录是timestamp越大越靠前。
@@ -96,7 +100,8 @@ class ChatManager(val agentId: String) {
 //        ao.vo.imgUrl = response.imgUrl
         ao.vo.content = response.content
         ao.vo.time = runCatching {
-            DateUtils.yyyyMMddHHmmssToString(response.chatTime)
+//            DateUtils.yyyyMMddHHmmssToString(response.chatTime)
+            response.chatTime
         }.getOrElse {
             // 记录异常信息（可选）
             Log.e(TAG, "时间转换失败")
