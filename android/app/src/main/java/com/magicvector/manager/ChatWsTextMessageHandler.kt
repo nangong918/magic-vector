@@ -31,7 +31,7 @@ object ChatWsTextMessageHandler {
         }
 
         try {
-            chatManagerPointer.setWssToViews(listOf(response))
+            chatManagerPointer.setWsToViews(response)
         } catch (e: Exception){
             Log.e(TAG, "handleTextMessage::error: $message", e)
         }

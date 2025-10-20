@@ -19,6 +19,8 @@ import com.view.appview.recycler.UpdateRecyclerViewTypeEnum
  * 本地：
  *  1.Room
  *  2.MMKV
+ *
+ *  todo 使用DiffUtil优化性能
  */
 class ChatManager(val agentId: String) {
 
@@ -50,7 +52,11 @@ class ChatManager(val agentId: String) {
             http请求一定是批量的，chat记录是timestamp越大越靠前。
             插入之后偏移是向后偏移，所以只需要确定[Math(position_min), list.size - 1]
          */
-        var minPosition = viewChatMessageList.size - 1
+        var minPosition = if (viewChatMessageList.isEmpty()) {
+            0
+        } else {
+            viewChatMessageList.size - 1
+        }
         for (response in responses) {
             // 只有 ChatItemAo 中不包含此条消息才添加 (http的消息是唯一的)
             var viewIndex = -1
@@ -60,7 +66,7 @@ class ChatManager(val agentId: String) {
                     break
                 }
             }
-            // 不存在
+            // 不存在：插入
             if (viewIndex < 0) {
                 val view = responseToView(response)
                 // 降序二分查找适合的位置插入
@@ -69,7 +75,9 @@ class ChatManager(val agentId: String) {
                 // 最小左边界
                 minPosition = insertPosition.coerceAtMost(minPosition)
             }
+            // 存在：http请求的消息存在覆盖的情况，不需要更新view
         }
+        // 此处是插入之后的viewChatMessageList.size
         if (minPosition < viewChatMessageList.size - 1){
             val updateRecyclerViewItem = UpdateRecyclerViewItem()
             updateRecyclerViewItem.type = UpdateRecyclerViewTypeEnum.ID_TO_END_UPDATE
@@ -106,60 +114,10 @@ class ChatManager(val agentId: String) {
         return ao
     }
 
-    // ws -> view
-    fun setWssToViews(wss: List<RealtimeChatTextResponse>){
-        if (wss.isEmpty()){
-            return
-        }
-        else if (wss.size == 1){
-            setWsToViews(wss[0])
-            return
-        }
-
-        var minPosition = viewChatMessageList.size - 1
-        for (ws in wss) {
-            var viewIndex = -1
-            for (chatItemAo in viewChatMessageList){
-                if (chatItemAo.messageId == ws.messageId) {
-                    viewIndex = viewChatMessageList.indexOf(chatItemAo)
-                    break
-                }
-            }
-            // ChatItemAo 中不包含此条消息添加, 包含则覆盖
-            // 不存在
-            if (viewIndex < 0){
-                // 创建新视图
-                val view = wsToView(ws)
-                // 降序二分查找适合的位置插入
-                val insertPosition = SortUtil.descFindInsertPosition(view.getIndex(), viewChatMessageList)
-                viewChatMessageList.add(insertPosition, view)
-                // 更新最小左边界
-                minPosition = insertPosition.coerceAtMost(minPosition)
-            }
-            // 存在
-            else {
-                // 覆盖逻辑
-                val view = wsToView(ws)
-                viewChatMessageList[viewIndex] = view
-                val updateRecyclerViewItem = UpdateRecyclerViewItem()
-                updateRecyclerViewItem.type = UpdateRecyclerViewTypeEnum.SINGLE_ID_UPDATE
-                updateRecyclerViewItem.singleUpdateId = view.messageId
-                needUpdateQueue.add(updateRecyclerViewItem)
-            }
-        }
-        if (minPosition < viewChatMessageList.size - 1){
-            val updateRecyclerViewItem = UpdateRecyclerViewItem()
-            updateRecyclerViewItem.type = UpdateRecyclerViewTypeEnum.ID_TO_END_UPDATE
-            updateRecyclerViewItem.idToEndUpdateId = viewChatMessageList[minPosition].messageId
-            needUpdateQueue.add(updateRecyclerViewItem)
-        }
-        else {
-            Log.d(TAG, "全部都存在：minPosition: $minPosition > viewChatMessageList.size - 1: ${viewChatMessageList.size - 1}")
-        }
-    }
-
-    private fun setWsToViews(ws: RealtimeChatTextResponse){
+    // ws -> view (ws只会一个一个插入，不存在list的情况)
+    fun setWsToViews(ws: RealtimeChatTextResponse){
         var viewIndex = -1
+        // 存在检测：存在就覆盖，不存在就插入
         for (chatItemAo in viewChatMessageList){
             if (chatItemAo.messageId == ws.messageId) {
                 viewIndex = viewChatMessageList.indexOf(chatItemAo)
@@ -169,21 +127,17 @@ class ChatManager(val agentId: String) {
         // ChatItemAo 中不包含此条消息添加, 包含则覆盖
         // 不存在
         if (viewIndex < 0){
-            var minPosition = viewChatMessageList.size - 1
+
             // 创建新视图
             val view = wsToView(ws)
             // 降序二分查找适合的位置插入
             val insertPosition = SortUtil.descFindInsertPosition(view.getIndex(), viewChatMessageList)
             viewChatMessageList.add(insertPosition, view)
-            // 更新最小左边界
-            minPosition = insertPosition.coerceAtMost(minPosition)
-
-            if (minPosition < viewChatMessageList.size - 1){
-                val updateRecyclerViewItem = UpdateRecyclerViewItem()
-                updateRecyclerViewItem.type = UpdateRecyclerViewTypeEnum.ID_TO_END_UPDATE
-                updateRecyclerViewItem.idToEndUpdateId = viewChatMessageList[minPosition].messageId
-                needUpdateQueue.add(updateRecyclerViewItem)
-            }
+            // 更新runnable
+            val updateRecyclerViewItem = UpdateRecyclerViewItem()
+            updateRecyclerViewItem.type = UpdateRecyclerViewTypeEnum.SINGLE_ID_INSERT
+            updateRecyclerViewItem.singleInsertId = view.messageId
+            needUpdateQueue.add(updateRecyclerViewItem)
         }
         // 存在
         else {

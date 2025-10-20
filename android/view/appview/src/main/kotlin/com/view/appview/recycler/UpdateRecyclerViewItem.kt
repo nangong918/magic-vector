@@ -5,4 +5,5 @@ class UpdateRecyclerViewItem {
 
     var singleUpdateId: String? = null
     var idToEndUpdateId: String? = null
+    var singleInsertId: String? = null
 }

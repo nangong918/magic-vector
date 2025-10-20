@@ -181,8 +181,10 @@ class ChatActivity : BaseAppCompatVmActivity<ActivityChatBinding, ChatVm>(
                 }
                 for (updateInfo in updateInfos) {
                     when (updateInfo.type){
+                        // 单个覆盖更新
                         UpdateRecyclerViewTypeEnum.SINGLE_ID_UPDATE -> {
                             if (updateInfo.singleUpdateId == null){
+                                Log.w(TAG, "whereNeedUpdate: singleUpdateId is null")
                                 return
                             }
                             // 单个更新
@@ -199,6 +201,7 @@ class ChatActivity : BaseAppCompatVmActivity<ActivityChatBinding, ChatVm>(
                         }
                         UpdateRecyclerViewTypeEnum.ID_TO_END_UPDATE -> {
                             if (updateInfo.idToEndUpdateId == null){
+                                Log.w(TAG, "whereNeedUpdate: idToEndUpdateId is null")
                                 return
                             }
                             // 找到id当前的position然后更新
@@ -214,6 +217,23 @@ class ChatActivity : BaseAppCompatVmActivity<ActivityChatBinding, ChatVm>(
                                     viewIndex,
                                     endPosition
                                 )
+                            }
+                        }
+                        // 单个插入
+                        UpdateRecyclerViewTypeEnum.SINGLE_ID_INSERT -> {
+                            if (updateInfo.singleInsertId == null){
+                                Log.w(TAG, "whereNeedUpdate: singleInsertId is null")
+                                return
+                            }
+                            // 找到id当前的position然后更新
+                            var viewIndex = -1
+                            for (chatItemAo in vm.chatManagerPointer.getViewChatMessageList()){
+                                if (chatItemAo.messageId == updateInfo.idToEndUpdateId){
+                                    viewIndex = vm.chatManagerPointer.getViewChatMessageList().indexOf(chatItemAo)
+                                }
+                            }
+                            if (viewIndex >= 0) {
+                                vm.adapter.notifyItemInserted(viewIndex)
                             }
                         }
                     }
