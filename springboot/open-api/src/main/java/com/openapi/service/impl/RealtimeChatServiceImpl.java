@@ -469,10 +469,9 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
         responseMap.put(RealtimeDataTypeEnum.DATA, response);
 
         String startResponse = JSON.toJSONString(responseMap);
+        chatContextManager.session.sendMessage(new TextMessage(startResponse));
 
         llmStreamCall(userQuestion, chatContextManager, chatClient);
-
-        chatContextManager.session.sendMessage(new TextMessage(startResponse));
     }
 
 }

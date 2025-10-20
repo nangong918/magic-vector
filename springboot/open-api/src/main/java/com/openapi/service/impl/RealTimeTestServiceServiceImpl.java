@@ -328,4 +328,19 @@ public class RealTimeTestServiceServiceImpl implements RealTimeTestServiceServic
             }
         }
     }
+
+    @Override
+    public void startTextChat(@NotNull String userQuestion, @NotNull WebSocketSession session) throws IOException {
+        log.info("[websocket] 开始文本聊天：userQuestion={}", userQuestion);
+
+        // 前端传递过来再传递回去是因为需要分配messageId
+        Map<String, String> userAudioSttResponse = new HashMap<>();
+        userAudioSttResponse.put(RealtimeDataTypeEnum.TYPE, RealtimeDataTypeEnum.TEXT_MESSAGE.getType());
+        userAudioSttResponse.put(RealtimeDataTypeEnum.DATA, userQuestion);
+        String startResponse = JSON.toJSONString(userAudioSttResponse);
+
+        llmStreamCall(userQuestion, session);
+
+        session.sendMessage(new TextMessage(startResponse));
+    }
 }

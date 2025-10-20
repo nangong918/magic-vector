@@ -16,4 +16,6 @@ public interface RealTimeTestServiceService {
     void startChat(@NotNull AtomicBoolean stopRecording,
                    @NotNull Queue<byte[]> requestAudioBuffer,
                    @NotNull WebSocketSession session) throws IOException, InterruptedException, NoApiKeyException;
+
+    void startTextChat(@NotNull String userQuestion, @NotNull WebSocketSession session) throws IOException;
 }
