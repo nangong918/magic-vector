@@ -35,7 +35,8 @@ import com.core.baseutil.photo.SelectPhotoUtil
 import com.core.baseutil.ui.ToastUtils
 import com.data.domain.ao.message.MessageContactItemAo
 import com.data.domain.constant.BaseConstant
-import com.data.domain.constant.test.RealtimeDataTypeEnum
+import com.data.domain.constant.chat.RealtimeRequestDataTypeEnum
+import com.data.domain.constant.chat.RealtimeResponseDataTypeEnum
 import com.data.domain.dto.response.ChatMessageResponse
 import com.data.domain.dto.ws.RealtimeChatConnectRequest
 import com.data.domain.fragmentActivity.aao.ChatAAo
@@ -50,7 +51,6 @@ import com.view.appview.R
 import com.view.appview.recycler.RecyclerViewWhereNeedUpdate
 import com.view.appview.chat.ChatMessageAdapter
 import com.view.appview.chat.OnChatMessageClick
-import com.view.appview.recycler.UpdateRecyclerViewItem
 import okhttp3.Response
 import okhttp3.WebSocket
 import okhttp3.WebSocketListener
@@ -339,8 +339,8 @@ class ChatVm(
                     request.timestamp = System.currentTimeMillis()
 
                     val dataMap = mapOf(
-                        RealtimeDataTypeEnum.TYPE to RealtimeDataTypeEnum.CONNECT.type,
-                        RealtimeDataTypeEnum.DATA to GSON.toJson(request)
+                        RealtimeRequestDataTypeEnum.TYPE to RealtimeRequestDataTypeEnum.CONNECT.type,
+                        RealtimeRequestDataTypeEnum.DATA to GSON.toJson(request)
                     )
 
                     // 发送连接数据
@@ -354,12 +354,12 @@ class ChatVm(
         // text --GSON--> Map<String, String>
         val map: Map<String, String> = GSON.fromJson(text, object : TypeToken<Map<String, String>>() {}.type)
 
-        val typeStr = map[RealtimeDataTypeEnum.TYPE]
-        val type = RealtimeDataTypeEnum.getByType(typeStr)
+        val typeStr = map[RealtimeResponseDataTypeEnum.TYPE]
+        val type = RealtimeResponseDataTypeEnum.getByType(typeStr)
 
         when(type){
-            RealtimeDataTypeEnum.START -> {
-                Log.i(TAG, "handleTextMessage::START播放")
+            RealtimeResponseDataTypeEnum.START_TTS -> {
+                Log.i(TAG, "handleTextMessage::START_TTS播放")
                 // 开始接收数据
                 realtimeChatState.postValue(RealtimeChatState.Receiving)
                 // 清空播放缓存
@@ -367,8 +367,8 @@ class ChatVm(
                 // 开始播放
                 realtimeChatAudioTrack?.play()
             }
-            RealtimeDataTypeEnum.STOP -> {
-                Log.i(TAG, "handleTextMessage::STOP播放")
+            RealtimeResponseDataTypeEnum.STOP_TTS -> {
+                Log.i(TAG, "handleTextMessage::STOP_TTS播放")
                 // 结束接收数据
                 realtimeChatState.postValue(RealtimeChatState.InitializedConnected)
                 // 停止播放
@@ -376,18 +376,18 @@ class ChatVm(
                 // 清空播放缓存
                 realtimeChatAudioTrack?.flush()
             }
-            RealtimeDataTypeEnum.AUDIO_CHUNK -> {
+            RealtimeResponseDataTypeEnum.AUDIO_CHUNK -> {
                 // 音频数据
                 realtimeChatState.postValue(RealtimeChatState.Receiving)
-                val data = map[RealtimeDataTypeEnum.DATA]
+                val data = map[RealtimeResponseDataTypeEnum.DATA]
                 data?.let {
                     playBase64Audio(data)
                 }
             }
-            RealtimeDataTypeEnum.TEXT_MESSAGE -> {
+            RealtimeResponseDataTypeEnum.TEXT_CHAT_RESPONSE -> {
                 // 文本数据
                 realtimeChatState.postValue(RealtimeChatState.Receiving)
-                val data = map[RealtimeDataTypeEnum.DATA]
+                val data = map[RealtimeResponseDataTypeEnum.DATA]
                 if (data != null){
                     ChatWsTextMessageHandler.handleTextMessage(data, GSON, chatManagerPointer = chatManagerPointer)
                 }
@@ -395,9 +395,6 @@ class ChatVm(
                     Log.e(TAG, "handleTextMessage: data is null")
                 }
             }
-            // Android 向后端发送消息的数据类型，后端不会向Android传输这些类型的数据
-            RealtimeDataTypeEnum.CONNECT -> {}
-            RealtimeDataTypeEnum.DISCONNECT -> {}
         }
     }
 
@@ -425,8 +422,8 @@ class ChatVm(
 
         // 发送启动录音
         val dataMap = mapOf(
-            RealtimeDataTypeEnum.TYPE to RealtimeDataTypeEnum.START.type,
-            RealtimeDataTypeEnum.DATA to RealtimeDataTypeEnum.START.name
+            RealtimeRequestDataTypeEnum.TYPE to RealtimeRequestDataTypeEnum.START_AUDIO_RECORD.type,
+            RealtimeRequestDataTypeEnum.DATA to RealtimeRequestDataTypeEnum.START_AUDIO_RECORD.name
         )
         realtimeChatWsClient?.sendMessage(dataMap)
 
@@ -463,8 +460,8 @@ class ChatVm(
                 if (readSize > 0) {
                     val base64Audio = Base64.encodeToString(audioBuffer, 0, readSize, Base64.NO_WRAP)
                     val dataMap = mapOf(
-                        RealtimeDataTypeEnum.TYPE to RealtimeDataTypeEnum.AUDIO_CHUNK.type,
-                        RealtimeDataTypeEnum.DATA to base64Audio
+                        RealtimeRequestDataTypeEnum.TYPE to RealtimeRequestDataTypeEnum.AUDIO_CHUNK.type,
+                        RealtimeRequestDataTypeEnum.DATA to base64Audio
                     )
                     realtimeChatWsClient!!.sendMessage(dataMap)
 //                    Log.i(TAG, "发送数据:: 类型: ${dataMap[RealtimeDataTypeEnum.TYPE]}; 长度: ${base64Audio.length}; 数据: ${base64Audio.take(100)}")
@@ -479,8 +476,8 @@ class ChatVm(
 
             // 发送结束录音
             val dataMap = mapOf(
-                RealtimeDataTypeEnum.TYPE to RealtimeDataTypeEnum.STOP.type,
-                RealtimeDataTypeEnum.DATA to RealtimeDataTypeEnum.STOP.name
+                RealtimeRequestDataTypeEnum.TYPE to RealtimeRequestDataTypeEnum.STOP_AUDIO_RECORD.type,
+                RealtimeRequestDataTypeEnum.DATA to RealtimeRequestDataTypeEnum.STOP_AUDIO_RECORD.name
             )
             realtimeChatWsClient!!.sendMessage(dataMap)
 //            Log.i(TAG, "发送数据:: 类型: ${dataMap[RealtimeDataTypeEnum.TYPE]}")
@@ -563,8 +560,8 @@ class ChatVm(
         }
 
         val dataMap = mapOf(
-            RealtimeDataTypeEnum.TYPE to RealtimeDataTypeEnum.TEXT_MESSAGE.type,
-            RealtimeDataTypeEnum.DATA to inputText
+            RealtimeRequestDataTypeEnum.TYPE to RealtimeRequestDataTypeEnum.USER_TEXT_MESSAGE.type,
+            RealtimeRequestDataTypeEnum.DATA to inputText
         )
         realtimeChatWsClient!!.sendMessage(dataMap, true)
         // 发送的时候不用回显，因为此时还没拿到后端的messageId

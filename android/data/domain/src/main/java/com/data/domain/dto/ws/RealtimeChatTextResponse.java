@@ -3,7 +3,6 @@ package com.data.domain.dto.ws;
 
 import com.data.domain.constant.chat.RoleTypeEnum;
 
-import java.time.LocalDateTime;
 
 public class RealtimeChatTextResponse {
     // agentId也相当于会话Id

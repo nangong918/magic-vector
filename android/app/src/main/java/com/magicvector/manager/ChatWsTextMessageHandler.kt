@@ -14,8 +14,8 @@ object ChatWsTextMessageHandler {
         var response : RealtimeChatTextResponse
         try {
             Log.i(TAG, "handleTextMessage: $message")
-            val type = object : TypeToken<RealtimeChatTextResponse>() {}.type
-            response = GSON.fromJson(message, type)
+            response = GSON.fromJson(message,
+                RealtimeChatTextResponse::class.java)
         } catch (e: Exception){
             Log.e(TAG, "handleTextMessage: $message", e)
             return

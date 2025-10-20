@@ -19,7 +19,7 @@ import com.openapi.domain.ao.AgentAo;
 import com.openapi.domain.constant.ModelConstant;
 import com.openapi.domain.constant.error.AgentExceptions;
 import com.openapi.domain.constant.error.UserExceptions;
-import com.openapi.domain.constant.realtime.RealtimeDataTypeEnum;
+import com.openapi.domain.constant.realtime.RealtimeResponseDataTypeEnum;
 import com.openapi.domain.dto.ws.RealtimeChatTextResponse;
 import com.openapi.domain.exception.AppException;
 import com.openapi.domain.interfaces.OnSSTResultCallback;
@@ -121,8 +121,8 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
 
             // 发送给Client
             Map<String, String> responseMap = new HashMap<>();
-            responseMap.put(RealtimeDataTypeEnum.TYPE, RealtimeDataTypeEnum.TEXT_MESSAGE.getType());
-            responseMap.put(RealtimeDataTypeEnum.DATA, response);
+            responseMap.put(RealtimeResponseDataTypeEnum.TYPE, RealtimeResponseDataTypeEnum.TEXT_CHAT_RESPONSE.getType());
+            responseMap.put(RealtimeResponseDataTypeEnum.DATA, response);
 
             String startResponse = JSON.toJSONString(responseMap);
 
@@ -192,8 +192,8 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
         // 发送开始标识
         try {
             Map<String, String> responseMap = new HashMap<>();
-            responseMap.put(RealtimeDataTypeEnum.TYPE, RealtimeDataTypeEnum.START.getType());
-            responseMap.put(RealtimeDataTypeEnum.DATA, RealtimeDataTypeEnum.START.getType());
+            responseMap.put(RealtimeResponseDataTypeEnum.TYPE, RealtimeResponseDataTypeEnum.START_TTS.getType());
+            responseMap.put(RealtimeResponseDataTypeEnum.DATA, RealtimeResponseDataTypeEnum.START_TTS.getType());
             String startResponse = JSON.toJSONString(responseMap);
             chatContextManager.session.sendMessage(new TextMessage(startResponse));
         } catch (IOException e) {
@@ -216,8 +216,8 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
                     // 发送消息给Client
                     String agentFragmentResponseJson = JSON.toJSONString(agentFragmentResponse);
                     Map<String, String> responseMap = new HashMap<>();
-                    responseMap.put(RealtimeDataTypeEnum.TYPE, RealtimeDataTypeEnum.TEXT_MESSAGE.getType());
-                    responseMap.put(RealtimeDataTypeEnum.DATA, agentFragmentResponseJson);
+                    responseMap.put(RealtimeResponseDataTypeEnum.TYPE, RealtimeResponseDataTypeEnum.TEXT_CHAT_RESPONSE.getType());
+                    responseMap.put(RealtimeResponseDataTypeEnum.DATA, agentFragmentResponseJson);
                     String response = JSON.toJSONString(responseMap);
                     try {
                         chatContextManager.session.sendMessage(new TextMessage(response));
@@ -361,8 +361,8 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
                         // bytes -> base64Str
                         String b64Audio = Base64.getEncoder().encodeToString(audioBytes);
                         Map<String, String> responseMap = new HashMap<>();
-                        responseMap.put(RealtimeDataTypeEnum.TYPE, RealtimeDataTypeEnum.AUDIO_CHUNK.getType());
-                        responseMap.put(RealtimeDataTypeEnum.DATA, b64Audio);
+                        responseMap.put(RealtimeResponseDataTypeEnum.TYPE, RealtimeResponseDataTypeEnum.AUDIO_CHUNK.getType());
+                        responseMap.put(RealtimeResponseDataTypeEnum.DATA, b64Audio);
                         String response = JSON.toJSONString(responseMap);
                         try {
                             chatContextManager.session.sendMessage(new TextMessage(response));
@@ -379,8 +379,8 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
             try {
                 // 当前的合成音频播放完成之后不代表全合成音频都播放完成了, 因此此处不能发送EOF
                 Map<String, String> responseMap = new HashMap<>();
-                responseMap.put(RealtimeDataTypeEnum.TYPE, RealtimeDataTypeEnum.STOP.getType());
-                responseMap.put(RealtimeDataTypeEnum.DATA, RealtimeDataTypeEnum.STOP.getType());
+                responseMap.put(RealtimeResponseDataTypeEnum.TYPE, RealtimeResponseDataTypeEnum.STOP_TTS.getType());
+                responseMap.put(RealtimeResponseDataTypeEnum.DATA, RealtimeResponseDataTypeEnum.STOP_TTS.getType());
                 String endResponse = JSON.toJSONString(responseMap);
                 chatContextManager.session.sendMessage(new TextMessage(endResponse));
                 log.info("[LLM 流式响应结束]");
@@ -463,8 +463,8 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
 
         // 发送给Client
         Map<String, String> responseMap = new HashMap<>();
-        responseMap.put(RealtimeDataTypeEnum.TYPE, RealtimeDataTypeEnum.TEXT_MESSAGE.getType());
-        responseMap.put(RealtimeDataTypeEnum.DATA, response);
+        responseMap.put(RealtimeResponseDataTypeEnum.TYPE, RealtimeResponseDataTypeEnum.TEXT_CHAT_RESPONSE.getType());
+        responseMap.put(RealtimeResponseDataTypeEnum.DATA, response);
 
         String startResponse = JSON.toJSONString(responseMap);
         chatContextManager.session.sendMessage(new TextMessage(startResponse));

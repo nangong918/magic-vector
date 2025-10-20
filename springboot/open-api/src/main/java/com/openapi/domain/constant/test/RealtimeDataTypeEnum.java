@@ -1,4 +1,4 @@
-package com.openapi.domain.constant.realtime;
+package com.openapi.domain.constant.test;
 
 import lombok.Getter;
 import org.jetbrains.annotations.NotNull;

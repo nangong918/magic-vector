@@ -5,7 +5,8 @@ import com.alibaba.cloud.ai.dashscope.chat.DashScopeChatModel;
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.TypeReference;
 import com.openapi.component.manager.RealtimeChatContextManager;
-import com.openapi.domain.constant.realtime.RealtimeDataTypeEnum;
+import com.openapi.domain.constant.realtime.RealtimeRequestDataTypeEnum;
+import com.openapi.domain.constant.realtime.RealtimeResponseDataTypeEnum;
 import com.openapi.domain.dto.ws.RealtimeChatConnectRequest;
 import com.openapi.service.RealtimeChatService;
 import lombok.RequiredArgsConstructor;
@@ -70,17 +71,17 @@ public class RealtimeChatChannel extends TextWebSocketHandler {
     protected void handleTextMessage(@NotNull WebSocketSession session, TextMessage message) throws Exception {
 
         Map<String, String> messageMap = JSON.parseObject(message.getPayload(), new TypeReference<>() {});
-        String type = messageMap.get(RealtimeDataTypeEnum.TYPE);
+        String type = messageMap.get(RealtimeRequestDataTypeEnum.TYPE);
         if (!StringUtils.hasText(type)) {
             log.warn("[websocket warn] 收到消息，类型为空");
             return;
         }
 
-        RealtimeDataTypeEnum realtimeDataTypeEnum = RealtimeDataTypeEnum.getByType(type);
+        RealtimeRequestDataTypeEnum realtimeDataTypeEnum = RealtimeRequestDataTypeEnum.getByType(type);
         switch (realtimeDataTypeEnum) {
             case CONNECT -> {
                 log.info("[websocket] 连接，收集用户会话信息");
-                String connectMessage = messageMap.get(RealtimeDataTypeEnum.DATA);
+                String connectMessage = messageMap.get(RealtimeRequestDataTypeEnum.DATA);
                 try {
                     RealtimeChatConnectRequest connectRequest = JSON.parseObject(connectMessage, RealtimeChatConnectRequest.class);
                     // 重新连接就是新的会话信息
@@ -97,10 +98,7 @@ public class RealtimeChatChannel extends TextWebSocketHandler {
 //                    session.close();
                 }
             }
-            case DISCONNECT -> {
-                log.info("[websocket] 用户申请断开，开始结束会话信息");
-            }
-            case START -> {
+            case START_AUDIO_RECORD -> {
                 // 无VAD模式
                 // 开启新的一问一答
                 realtimeChatContextManager.newChatMessage();
@@ -117,8 +115,8 @@ public class RealtimeChatChannel extends TextWebSocketHandler {
                         realtimeChatContextManager.stopRecording.set(true);
                         log.error("[audioChat] 聊天处理异常", e);
                         Map<String, String> responseMap = new HashMap<>();
-                        responseMap.put(RealtimeDataTypeEnum.TYPE, RealtimeDataTypeEnum.STOP.getType());
-                        responseMap.put(RealtimeDataTypeEnum.DATA, "聊天处理异常" + e.getMessage());
+                        responseMap.put(RealtimeResponseDataTypeEnum.TYPE, RealtimeResponseDataTypeEnum.STOP_TTS.getType());
+                        responseMap.put(RealtimeResponseDataTypeEnum.DATA, "聊天处理异常" + e.getMessage());
                         String response = JSON.toJSONString(responseMap);
                         try {
                             session.sendMessage(new TextMessage(response));
@@ -128,23 +126,23 @@ public class RealtimeChatChannel extends TextWebSocketHandler {
                     }
                 });
             }
-            case STOP -> {
+            case STOP_AUDIO_RECORD -> {
                 log.info("[websocket] 停止录音");
                 realtimeChatContextManager.stopRecording.set(true);
             }
             case AUDIO_CHUNK -> {
                 log.info("[websocket] 收到音频块");
-                handleAudioChunk(messageMap.get(RealtimeDataTypeEnum.DATA));
+                handleAudioChunk(messageMap.get(RealtimeRequestDataTypeEnum.DATA));
             }
-            case TEXT_MESSAGE -> {
-                log.info("[websocket] 收到文本消息：{}", messageMap.get(RealtimeDataTypeEnum.DATA));
+            case USER_TEXT_MESSAGE -> {
+                log.info("[websocket] 收到文本消息：{}", messageMap.get(RealtimeRequestDataTypeEnum.DATA));
                 realtimeChatContextManager.newChatMessage();
                 realtimeChatContextManager.stopRecording.set(false);
                 chatFuture = taskExecutor.submit(() -> {
                     try {
                         // 启动text聊天
                         realtimeChatService.startTextChat(
-                                messageMap.get(RealtimeDataTypeEnum.DATA),
+                                messageMap.get(RealtimeRequestDataTypeEnum.DATA),
                                 realtimeChatContextManager,
                                 chatClient
                         );
@@ -152,8 +150,8 @@ public class RealtimeChatChannel extends TextWebSocketHandler {
                         realtimeChatContextManager.stopRecording.set(true);
                         log.error("[audioChat] 聊天处理异常", e);
                         Map<String, String> responseMap = new HashMap<>();
-                        responseMap.put(RealtimeDataTypeEnum.TYPE, RealtimeDataTypeEnum.STOP.getType());
-                        responseMap.put(RealtimeDataTypeEnum.DATA, "聊天处理异常" + e.getMessage());
+                        responseMap.put(RealtimeResponseDataTypeEnum.TYPE, RealtimeResponseDataTypeEnum.STOP_TTS.getType());
+                        responseMap.put(RealtimeResponseDataTypeEnum.DATA, "聊天处理异常" + e.getMessage());
                         String response = JSON.toJSONString(responseMap);
                         try {
                             session.sendMessage(new TextMessage(response));

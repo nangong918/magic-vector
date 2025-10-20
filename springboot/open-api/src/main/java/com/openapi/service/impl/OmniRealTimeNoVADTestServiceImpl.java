@@ -9,7 +9,7 @@ import com.alibaba.dashscope.exception.NoApiKeyException;
 import com.alibaba.fastjson.JSON;
 import com.google.gson.JsonObject;
 import com.openapi.config.ChatConfig;
-import com.openapi.domain.constant.realtime.RealtimeDataTypeEnum;
+import com.openapi.domain.constant.test.RealtimeDataTypeEnum;
 import com.openapi.service.OmniRealTimeNoVADTestService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
