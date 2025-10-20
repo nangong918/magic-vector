@@ -63,10 +63,12 @@ class TestActivity : BaseAppCompatVmActivity<ActivityTestBinding, TestVm>(
             val question = binding.editRealtimeChat2.text.toString()
             if (question.isEmpty()){
                 ToastUtils.showToastActivity(this, "请输入问题")
+                Log.i(TAG, "请输入问题")
                 return@setOnClickListener
             }
-            binding.editRealtimeChat2.text.clear()
+            Log.i(TAG, "question: $question")
             vm.sendQuestion(question)
+            binding.editRealtimeChat2.text.clear()
         }
 
         // realtime chat

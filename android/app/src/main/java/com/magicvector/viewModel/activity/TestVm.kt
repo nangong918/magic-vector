@@ -371,7 +371,7 @@ class TestVm(
             RealtimeDataTypeEnum.TYPE to RealtimeDataTypeEnum.TEXT_MESSAGE.type,
             RealtimeDataTypeEnum.DATA to question
         )
-        realtimeChatWsClient?.sendMessage(dataMap)
+        realtimeChat2WsClient?.sendMessage(dataMap)
     }
 
     // websocket realtime聊天
