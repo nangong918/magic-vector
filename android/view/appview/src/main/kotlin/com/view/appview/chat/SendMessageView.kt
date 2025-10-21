@@ -27,6 +27,8 @@ class SendMessageView : ConstraintLayout {
     )
 
     private fun init(context: Context) {
+        // 初始化view
+        binding.btnTakeAudio.text = context.getString(com.view.appview.R.string.press_to_record)
 
         // 点击事件
         binding.btnAudio.setOnClickListener {
