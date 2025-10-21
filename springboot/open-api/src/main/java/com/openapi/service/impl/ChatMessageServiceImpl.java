@@ -89,6 +89,19 @@ public class ChatMessageServiceImpl implements ChatMessageService {
         if (agentIds.isEmpty()){
             return new ArrayList<>();
         }
-        return chatMessageMapper.getMessageByAgentIds(agentIds, LocalDateTime.now(), ModelConstant.MEMORY_CONTEXT_LENGTH);
+
+        List<ChatMessageDo> chatMessageDos = chatMessageMapper.getMessageByAgentIds(agentIds, LocalDateTime.now(), ModelConstant.MEMORY_CONTEXT_LENGTH);
+        if (chatMessageDos.isEmpty()){
+            return new ArrayList<>();
+        }
+
+        List<List<ChatMessageDo>> chatMessageDosList = new ArrayList<>();
+        for (String agentId : agentIds) {
+            chatMessageDosList.add(
+                    chatMessageDos.stream()
+                            .filter(chatMessageDo -> chatMessageDo.getAgentId().equals(agentId))
+                            .toList());
+        }
+        return chatMessageDosList;
     }
 }
