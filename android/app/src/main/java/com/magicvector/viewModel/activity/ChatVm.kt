@@ -632,13 +632,15 @@ class ChatVm(
 
     // update Message
     fun updateMessage(){
-        val updateList = chatManagerPointer.getNeedUpdateList()
-        if (!updateList.isEmpty()){
-            recyclerViewWhereNeedUpdate.whereNeedUpdate(updateList)
-            Log.d(TAG, "handleGetChatHistory::待更新数据：${updateList.size} 条")
-        }
-        else {
-            Log.d(TAG, "handleGetChatHistory::没有待更新数据")
+        mainHandler.post {
+            val updateList = chatManagerPointer.getNeedUpdateList()
+            if (!updateList.isEmpty()){
+                recyclerViewWhereNeedUpdate.whereNeedUpdate(updateList)
+                Log.d(TAG, "handleGetChatHistory::待更新数据：${updateList.size} 条")
+            }
+            else {
+                Log.d(TAG, "handleGetChatHistory::没有待更新数据")
+            }
         }
     }
 }
