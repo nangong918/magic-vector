@@ -189,6 +189,9 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
         AtomicInteger fragmentCount = new AtomicInteger(0);
         AtomicLong startTime = new AtomicLong(System.currentTimeMillis());
 
+        // 设置Agent message Time
+        chatContextManager.currentAgentMessageTimestamp = System.currentTimeMillis();
+
         // 发送开始标识
         try {
             Map<String, String> responseMap = new HashMap<>();

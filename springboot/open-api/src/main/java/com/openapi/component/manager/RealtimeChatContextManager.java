@@ -39,13 +39,14 @@ public class RealtimeChatContextManager {
 
     // 当前聊天会话信息
     private String currentMessageId = String.valueOf(IdUtil.getSnowflake().nextId());
-    public long currentMessageTimestamp = System.currentTimeMillis();
+    public long currentUserMessageTimestamp = System.currentTimeMillis();
+    public long currentAgentMessageTimestamp = System.currentTimeMillis();
     public LocalDateTime currentMessageDateTime = LocalDateTime.now();
     public StringBuffer currentResponseStringBuffer = new StringBuffer();
     // 开启新的一问一答 todo 需要停止之前全部的模型消息和缓存
     public void newChatMessage(){
         currentMessageId = String.valueOf(IdUtil.getSnowflake().nextId());
-        currentMessageTimestamp = System.currentTimeMillis();
+        currentUserMessageTimestamp = System.currentTimeMillis();
         currentMessageDateTime = LocalDateTime.now();
         currentResponseStringBuffer = new StringBuffer();
     }
@@ -73,7 +74,7 @@ public class RealtimeChatContextManager {
         response.setRole(RoleTypeEnum.AGENT.getValue());
         response.setContent(currentResponseStringBuffer.toString());
         response.setMessageId(getCurrentAgentMessageId());
-        response.setTimestamp(currentMessageTimestamp);
+        response.setTimestamp(currentAgentMessageTimestamp);
         response.setChatTime(getCurrentMessageTimeStr());
         return response;
     }
@@ -86,7 +87,7 @@ public class RealtimeChatContextManager {
         response.setRole(RoleTypeEnum.USER.getValue());
         response.setContent(sstResult);
         response.setMessageId(getCurrentAgentMessageId());
-        response.setTimestamp(currentMessageTimestamp);
+        response.setTimestamp(currentUserMessageTimestamp);
         response.setChatTime(getCurrentMessageTimeStr());
         return response;
     }
@@ -99,7 +100,7 @@ public class RealtimeChatContextManager {
         response.setRole(RoleTypeEnum.USER.getValue());
         response.setContent(userChatText);
         response.setMessageId(getCurrentUserMessageId());
-        response.setTimestamp(currentMessageTimestamp);
+        response.setTimestamp(currentUserMessageTimestamp);
         response.setChatTime(getCurrentMessageTimeStr());
         return response;
     }
