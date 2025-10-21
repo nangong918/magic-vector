@@ -93,4 +93,33 @@ class SendMessageView : ConstraintLayout {
             binding.lyAudio.visibility = VISIBLE
         }
     }
+
+    private var isEnableSend = true
+    fun setIsEnableSend(isEnable: Boolean) {
+        isEnableSend = isEnable
+        binding.btnPicture.let {
+            it.setBackgroundResource(
+                if (isEnable) com.view.appview.R.drawable.background_chat_input
+                else com.view.appview.R.drawable.background_chat_not_input
+            )
+            it.isEnabled = isEnable
+        }
+        binding.btnSend.let {
+            it.setBackgroundResource(
+                if (isEnable) com.view.appview.R.drawable.background_chat_input
+                else com.view.appview.R.drawable.background_chat_not_input
+            )
+            it.isEnabled = isEnable
+        }
+        binding.btnTakeAudio.let {
+            it.setBackgroundResource(
+                if (isEnable) com.view.appview.R.drawable.round_corners_button2
+                else com.view.appview.R.drawable.round_corners_not_button2
+            )
+            it.isEnabled = isEnable
+        }
+    }
+    fun getIsEnableSend(): Boolean {
+        return isEnableSend
+    }
 }

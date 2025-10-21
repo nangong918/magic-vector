@@ -121,25 +121,34 @@ class ChatActivity : BaseAppCompatVmActivity<ActivityChatBinding, ChatVm>(
         vm.realtimeChatState.observe(this) { state ->
             when (state){
                 is RealtimeChatState.NotInitialized -> {
+                    binding.smSendMessage.setIsEnableSend(false)
                 }
                 is RealtimeChatState.Initializing -> {
+                    binding.smSendMessage.setIsEnableSend(false)
                 }
                 is RealtimeChatState.InitializedConnected -> {
                     binding.vVoiceWave.visibility = View.GONE
                     binding.vVoiceWave.stop()
 //                    binding.btnRecordAndSendRealtimeChat2.text = "开始录音 + 流式发送"
+
+                    binding.smSendMessage.setIsEnableSend(true)
                 }
                 is RealtimeChatState.RecordingAndSending -> {
                     binding.vVoiceWave.visibility = View.VISIBLE
                     binding.vVoiceWave.start()
 //                    binding.btnRecordAndSendRealtimeChat2.text = "结束录音 + 接收消息"
+
+                    binding.smSendMessage.setIsEnableSend(true)
                 }
                 is RealtimeChatState.Receiving -> {
+                    binding.smSendMessage.setIsEnableSend(false)
                 }
                 is RealtimeChatState.Disconnected -> {
+                    binding.smSendMessage.setIsEnableSend(false)
                 }
                 is RealtimeChatState.Error -> {
                     Log.e(TAG, "realtimeChatState: Error: ${state.message}")
+                    binding.smSendMessage.setIsEnableSend(false)
                 }
             }
         }
