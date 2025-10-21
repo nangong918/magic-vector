@@ -232,14 +232,7 @@ class ChatVm(
 
         response?.data?.chatMessages?.let {
             chatManagerPointer.setResponsesToViews(it)
-            val updateList = chatManagerPointer.getNeedUpdateList()
-            if (!updateList.isEmpty()){
-                recyclerViewWhereNeedUpdate.whereNeedUpdate(updateList)
-                Log.d(TAG, "handleGetChatHistory::待更新数据：${updateList.size} 条")
-            }
-            else {
-                Log.d(TAG, "handleGetChatHistory::没有待更新数据")
-            }
+            updateMessage()
         }
 
         callback.onAllRequestSuccess()
@@ -392,6 +385,7 @@ class ChatVm(
                 val data = map[RealtimeResponseDataTypeEnum.DATA]
                 if (data != null){
                     ChatWsTextMessageHandler.handleTextMessage(data, GSON, chatManagerPointer = chatManagerPointer)
+                    updateMessage()
                 }
                 else {
                     Log.e(TAG, "handleTextMessage: data is null")
@@ -636,4 +630,15 @@ class ChatVm(
         )
     }
 
+    // update Message
+    fun updateMessage(){
+        val updateList = chatManagerPointer.getNeedUpdateList()
+        if (!updateList.isEmpty()){
+            recyclerViewWhereNeedUpdate.whereNeedUpdate(updateList)
+            Log.d(TAG, "handleGetChatHistory::待更新数据：${updateList.size} 条")
+        }
+        else {
+            Log.d(TAG, "handleGetChatHistory::没有待更新数据")
+        }
+    }
 }
