@@ -54,4 +54,5 @@ include("data:domain")
 include("view:appview")
 include("vad:silero")
 include("vad:yamnet")
-//include("vad:webrtc")
+// 不迁移到VAD文件夹中：1.文件夹过长NDK无法编译 2.文件夹变化需要配置全部的JNI名称变化和Cpp头文件路径
+include(":webrtc")
