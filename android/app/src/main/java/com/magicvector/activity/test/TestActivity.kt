@@ -1,6 +1,7 @@
 package com.magicvector.activity.test
 
 import android.annotation.SuppressLint
+import android.content.Intent
 import android.util.Log
 import com.core.baseutil.ui.ToastUtils
 import com.data.domain.vo.test.AudioRecordPlayState
@@ -34,6 +35,12 @@ class TestActivity : BaseAppCompatVmActivity<ActivityTestBinding, TestVm>(
 
     override fun setListener() {
         super.setListener()
+        // vad
+        binding.btnStartToVad.setOnClickListener {
+            val intent = Intent(this, VADMainActivity::class.java)
+            startActivity(intent)
+        }
+
         // realtime chat2
         binding.btnInitRealtimeChat2.setOnClickListener {
             vm.initRealtimeChat2WsClient(this)
