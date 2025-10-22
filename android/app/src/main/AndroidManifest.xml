@@ -34,7 +34,10 @@
             android:name=".activity.CreateAgentActivity"
             android:exported="false" />
         <activity
-            android:name=".activity.TestActivity"
+            android:name=".activity.test.TestActivity"
+            android:exported="false" />
+        <activity
+            android:name=".activity.test.VADMainActivity"
             android:exported="false" />
         <activity
             android:name=".activity.ChatActivity"

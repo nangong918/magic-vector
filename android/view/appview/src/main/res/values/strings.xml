@@ -146,4 +146,13 @@
     <string name="agent_setting">Agent系统设定</string>
     <string name="agent_name_hint">为你的AI创建一个名字</string>
     <string name="agent_setting_hint">为你的AI设计独特的设定!</string>
+    <string name="vad_silero">VAD silero</string>
+    <string name="speech_detected">检测到说话</string>
+    <string name="noise_detected">检测到噪音</string>
+    <string name="vad_webrtc">VAD WebRTC</string>
+    <string name="vad_yamnet">VAD YamNet</string>
+    <string name="sample_rate">Sample Rate:</string>
+    <string name="frame_size">Frame Size:</string>
+    <string name="press_button_to_start">Press button to start VAD!</string>
+    <string name="mode">Mode:</string>
 </resources>

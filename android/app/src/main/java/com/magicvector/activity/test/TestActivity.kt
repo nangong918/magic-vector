@@ -1,17 +1,16 @@
-package com.magicvector.activity
-
+package com.magicvector.activity.test
 
 import android.annotation.SuppressLint
 import android.util.Log
 import com.core.baseutil.ui.ToastUtils
+import com.data.domain.vo.test.AudioRecordPlayState
 import com.data.domain.vo.test.ChatState
+import com.data.domain.vo.test.RealtimeChatState
 import com.data.domain.vo.test.TtsChatState
 import com.data.domain.vo.test.WebsocketState
 import com.magicvector.databinding.ActivityTestBinding
 import com.magicvector.utils.BaseAppCompatVmActivity
 import com.magicvector.viewModel.activity.TestVm
-import com.data.domain.vo.test.AudioRecordPlayState
-import com.data.domain.vo.test.RealtimeChatState
 
 class TestActivity : BaseAppCompatVmActivity<ActivityTestBinding, TestVm>(
     TestActivity::class,

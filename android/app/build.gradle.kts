@@ -95,6 +95,10 @@ dependencies {
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
 
+    //navigation
+    implementation(libs.androidx.navigation.fragment.ktx)
+    implementation(libs.androidx.navigation.ui.ktx)
+
     // 圆形的 ImageView 组件
     implementation(libs.circleimageview)
     implementation(libs.roundedimageview)
@@ -118,6 +122,10 @@ dependencies {
 
     // multidex
     implementation(libs.multidex)
+
+    // permission
+    implementation(libs.permissionsdispatcher)
+    kapt(libs.permissionsdispatcher.processor)
 
     /**
      * 自定义Module
