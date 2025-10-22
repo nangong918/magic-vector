@@ -7,14 +7,16 @@ plugins {
 
 android {
     namespace = "com.magicvector"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.magicvector"
         minSdk = 28
-        targetSdk = 35
+        targetSdk = 36
         versionCode = 1
         versionName = "1.0"
+
+        setProperty("archivesBaseName", "Android-VAD-v$versionName")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         externalNativeBuild {
@@ -36,7 +38,7 @@ android {
             )
         }
         debug {
-            isMinifyEnabled = true
+            isMinifyEnabled = false
             multiDexEnabled = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
@@ -64,6 +66,8 @@ android {
 }
 
 dependencies {
+
+    implementation(fileTree(mapOf("dir" to "libs", "include" to listOf("*.jar"))))
 
     // 基础
     implementation(libs.androidx.core.ktx)
@@ -136,4 +140,9 @@ dependencies {
     implementation(project(":core:appcore"))
     implementation(project(":data:dao"))
     implementation(project(":view:appview"))
+
+    // vad库
+    implementation(project(":vad:silero"))
+    implementation(project(":vad:yamnet"))
+//    implementation(project(":vad:webrtc"))
 }
