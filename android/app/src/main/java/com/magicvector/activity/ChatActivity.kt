@@ -1,12 +1,15 @@
 package com.magicvector.activity
 
 
+import android.Manifest
 import android.annotation.SuppressLint
 import android.os.Bundle
 import android.text.TextUtils
 import android.util.Log
 import android.view.View
 import androidx.recyclerview.widget.LinearLayoutManager
+import com.core.baseutil.permissions.GainPermissionCallback
+import com.core.baseutil.permissions.PermissionUtil
 import com.core.baseutil.ui.ToastUtils
 import com.data.domain.ao.message.MessageContactItemAo
 import com.data.domain.fragmentActivity.intentAo.ChatIntentAo
@@ -195,7 +198,24 @@ class ChatActivity : BaseAppCompatVmActivity<ActivityChatBinding, ChatVm>(
 
         // 开启语音通话
         binding.smSendMessage.setCallClickListener {
-            callDialog?.show()
+            // 语音通话权限获取
+            PermissionUtil.requestPermissionSelectX(this,
+                arrayOf(Manifest.permission.RECORD_AUDIO),
+                arrayOf(),
+                object : GainPermissionCallback{
+                    override fun allGranted() {
+                        // 显示语音通话
+                        callDialog?.show()
+                    }
+
+                    override fun notGranted(notGrantedPermissions: Array<String?>?) {
+                        ToastUtils.showToastActivity(this@ChatActivity,
+                            getString(com.view.appview.R.string.permission_denied))
+                    }
+
+                    override fun always() {
+                    }
+                })
         }
     }
 

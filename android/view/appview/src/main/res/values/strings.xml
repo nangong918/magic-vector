@@ -157,4 +157,5 @@
     <string name="mode">Mode:</string>
     <string name="test_vad_title">VAD语音活动检测demo</string>
     <string name="test_vad_desc">VAD语音活动检测：用于检测是user说话还是噪音。\n用于解决与AI语音通话中需要手动录音的问题。\nVAD可以替代手动录音，根据周围的声音判断是在说话还是噪声。\n奴前实现方案有三种，分别是：WebRTC、Silero 和 YAMNet VAD\nWebRTC是基于WebRTC的cpp代码使用JNI和NDK让Android直接调用Cpp功能。\nSilero是神经网络DNN训练的模型，效果更优秀。\nYAMNet是训练好的模型到处Tensorflow-Lite部署在Android上\n目前最推荐使用的是Silero</string>
+    <string name="permission_denied">设备系统权限不足</string>
 </resources>

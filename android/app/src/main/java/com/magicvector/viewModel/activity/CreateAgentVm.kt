@@ -3,7 +3,6 @@ package com.magicvector.viewModel.activity
 import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
-import android.net.Uri
 import android.util.Log
 import android.widget.ImageView
 import androidx.activity.result.ActivityResultLauncher
@@ -28,7 +27,6 @@ import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
 import okhttp3.RequestBody
 import java.io.File
-import java.util.concurrent.atomic.AtomicReference
 
 class CreateAgentVm(
 
