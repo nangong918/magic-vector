@@ -8,7 +8,8 @@ Spring 项目部署在Docker -> 上传到阿里云服务器 todo Docker，Nginx 
 简单的SpringAI智能体部署Docker + 内网穿透
 
 ### lv0(当前任务)
-完成VAD 功能
+VAD 集成项目代码
+实现Realtime语音通话功能
 
 研究esp32-sc; 构建身体（头部和底部两部分）
 
@@ -17,7 +18,7 @@ chat rag(向量)
 
 ### lv1(计划任务)
 联网mcp
-chat vad
+Silero VAD集成ESP32-S3
 chat 声纹识别（避免vad将自己的声音误认为输入）
 
 音频合成缓存，解决当前音频请求频率过高问题
@@ -55,3 +56,4 @@ chat app agent创建 + 聊天 (2025/10/19)
 **和 杨骞卉 ”分手“ (2025/10/20)**
 
 完成文本聊天 + 前端流式展示 (2025/10/21)
+Silero,WebRTC_Vad 集成 Android (2025/10/22) 
