@@ -3,7 +3,7 @@ package com.data.domain.constant
 open class VadChatState {
     // 静音中
     object Muted : VadChatState()
-    // 无声
+    // 无声音
     object Silent : VadChatState()
     // 用户说话
     object Speaking : VadChatState()

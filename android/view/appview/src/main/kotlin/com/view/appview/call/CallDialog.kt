@@ -3,6 +3,7 @@ package com.view.appview.call
 import android.annotation.SuppressLint
 import android.app.Dialog
 import android.graphics.Color
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.WindowManager
 import androidx.core.graphics.drawable.toDrawable
@@ -13,10 +14,10 @@ import com.view.appview.R
 import com.view.appview.databinding.CallDialogBinding
 
 class CallDialog(
-    fragmentActivity: FragmentActivity,
+    private val fragmentActivity: FragmentActivity,
     private val callAo: CallAo
 ) {
-
+    private val TAG = CallDialog::class.simpleName
     private val dialog: Dialog = Dialog(fragmentActivity)
     private val binding: CallDialogBinding = CallDialogBinding.inflate(
         LayoutInflater.from(fragmentActivity), null, false
@@ -53,6 +54,8 @@ class CallDialog(
                 )
             }
         }
+
+        binding.tvChatState.text = fragmentActivity.getString(R.string.muted)
     }
 
     @SuppressLint("ResourceType")
@@ -103,19 +106,20 @@ class CallDialog(
         vadChatState = state
         when (state) {
             is VadChatState.Muted -> {
-                TODO()
+                binding.tvChatState.text = fragmentActivity.getString(R.string.muted)
             }
             is VadChatState.Silent -> {
-                TODO()
-            }
-            is  VadChatState.Replying -> {
-                TODO()
+                binding.tvChatState.text = fragmentActivity.getString(R.string.silent)
             }
             is VadChatState.Speaking -> {
-                TODO()
+                binding.tvChatState.text = fragmentActivity.getString(R.string.user_speaking)
+            }
+            is  VadChatState.Replying -> {
+                binding.tvChatState.text = fragmentActivity.getString(R.string.agent_replying)
             }
             is VadChatState.Error -> {
-                TODO()
+                binding.tvChatState.text = fragmentActivity.getString(R.string.error)
+                Log.e(TAG, "setVadChatState: ${state.message}")
             }
         }
     }
