@@ -205,7 +205,7 @@ class ChatActivity : BaseAppCompatVmActivity<ActivityChatBinding, ChatVm>(
                 object : GainPermissionCallback{
                     override fun allGranted() {
                         // 显示语音通话
-                        callDialog?.show()
+                        showCallDialog()
                     }
 
                     override fun notGranted(notGrantedPermissions: Array<String?>?) {
@@ -309,14 +309,36 @@ class ChatActivity : BaseAppCompatVmActivity<ActivityChatBinding, ChatVm>(
     fun initCallDialog() {
         callDialog = CallDialog(
             this,
-            vm.getCallAo(null, null)
+            vm.getCallAo({
+                callDialog?.let {
+                    // 停止了再点击就开始录音
+                    if (it.getIsStopRecordAudio()){
+                        vm.startVadCall()
+                    }
+                    // 停止了再点击就开始录音
+                    else {
+                        vm.stopVadCall()
+                    }
+                }
+            }, {
+                callDialog?.dismiss()
+                vm.destroyVadCall()
+            })
         )
+    }
+
+    fun showCallDialog() {
+        // 初始化
+        vm.initVadCall(this)
+
+        // 展示
+        callDialog?.show()
     }
 
     override fun onDestroy() {
         super.onDestroy()
 
-        vm.stopRealtimeChat()
+        vm.destroy()
     }
 
 }

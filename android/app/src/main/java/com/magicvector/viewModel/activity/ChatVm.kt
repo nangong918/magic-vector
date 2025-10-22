@@ -46,6 +46,8 @@ import com.google.gson.reflect.TypeToken
 import com.magicvector.MainApplication
 import com.magicvector.manager.ChatManager
 import com.magicvector.manager.ChatWsTextMessageHandler
+import com.magicvector.manager.vad.VadDetectionCallback
+import com.magicvector.manager.vad.VadSileroManager
 import com.magicvector.utils.chat.RealtimeChatWsClient
 import com.view.appview.R
 import com.view.appview.call.CallAo
@@ -142,6 +144,67 @@ class ChatVm(
     private var realtimeChatWsClient: RealtimeChatWsClient? = null
     private var realtimeChatAudioRecord: AudioRecord? = null
     private var realtimeChatAudioTrack: AudioTrack? = null
+    private var vadSileroManager: VadSileroManager? = null
+
+    // 语音通话
+    fun initVadCall(context: Context){
+        vadSileroManager = VadSileroManager()
+
+        vadSileroManager!!.init(context, object : VadDetectionCallback{
+            override fun onStartSpeech(audioBuffer: ByteArray) {
+                // 发送启动录音
+                val dataMap = mapOf(
+                    RealtimeRequestDataTypeEnum.TYPE to RealtimeRequestDataTypeEnum.START_AUDIO_RECORD.type,
+                    RealtimeRequestDataTypeEnum.DATA to RealtimeRequestDataTypeEnum.START_AUDIO_RECORD.name
+                )
+                realtimeChatWsClient?.sendMessage(dataMap)
+
+                // 发送初次启动的数据
+                if (audioBuffer.isNotEmpty()) {
+                    val base64Audio = Base64.encodeToString(audioBuffer, 0, audioBuffer.size, Base64.NO_WRAP)
+                    val dataMap = mapOf(
+                        RealtimeRequestDataTypeEnum.TYPE to RealtimeRequestDataTypeEnum.AUDIO_CHUNK.type,
+                        RealtimeRequestDataTypeEnum.DATA to base64Audio
+                    )
+                    realtimeChatWsClient!!.sendMessage(dataMap)
+                }
+            }
+
+            override fun speeching(audioBuffer: ByteArray) {
+                // 直接发送数据
+                if (audioBuffer.isNotEmpty()) {
+                    val base64Audio = Base64.encodeToString(audioBuffer, 0, audioBuffer.size, Base64.NO_WRAP)
+                    val dataMap = mapOf(
+                        RealtimeRequestDataTypeEnum.TYPE to RealtimeRequestDataTypeEnum.AUDIO_CHUNK.type,
+                        RealtimeRequestDataTypeEnum.DATA to base64Audio
+                    )
+                    realtimeChatWsClient!!.sendMessage(dataMap)
+                }
+            }
+
+            override fun onStopSpeech() {
+                val dataMap = mapOf(
+                    RealtimeRequestDataTypeEnum.TYPE to RealtimeRequestDataTypeEnum.STOP_AUDIO_RECORD.type,
+                    RealtimeRequestDataTypeEnum.DATA to RealtimeRequestDataTypeEnum.STOP_AUDIO_RECORD.name
+                )
+                realtimeChatWsClient!!.sendMessage(dataMap)
+            }
+        })
+
+        vadSileroManager!!.startRecording()
+    }
+
+    fun startVadCall(){
+        vadSileroManager?.startRecording()
+    }
+
+    fun stopVadCall(){
+        vadSileroManager?.stopRecording()
+    }
+
+    fun destroyVadCall(){
+        vadSileroManager?.onDestroy()
+    }
 
     // ws
     fun initRealtimeChatWsClient(activity: FragmentActivity) {
@@ -656,5 +719,11 @@ class ChatVm(
         callAo.onCallEndClickRunnable = onCallEndClickRunnable
 
         return callAo
+    }
+
+    // 销毁
+    fun destroy(){
+        stopRealtimeChat()
+        vadSileroManager?.onDestroy()
     }
 }

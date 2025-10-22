@@ -97,6 +97,10 @@ class CallDialog(
 
     private var isStopRecordAudio = false
 
+    fun getIsStopRecordAudio(): Boolean {
+        return isStopRecordAudio
+    }
+
     fun show() {
         dialog.show()
     }

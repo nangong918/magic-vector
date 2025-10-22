@@ -1,14 +1,15 @@
 package com.magicvector.manager.vad
 
 import android.content.Context
-import android.os.CountDownTimer
-import com.data.domain.constant.BaseConstant
 import com.konovalov.vad.silero.Vad
 import com.konovalov.vad.silero.VadSilero
 import com.konovalov.vad.silero.config.FrameSize
 import com.konovalov.vad.silero.config.Mode
 import com.konovalov.vad.silero.config.SampleRate
 import com.magicvector.manager.vad.VoiceRecorder.AudioCallback
+import java.nio.ByteBuffer
+import java.nio.ByteOrder
+import kotlin.experimental.and
 
 class VadSileroManager {
 
@@ -51,7 +52,15 @@ class VadSileroManager {
                     // 之前不是语音
                     if (!isSpeechLastTime){
                         // 直接发送吧，前端不好做逻辑，后端自己去判断：如果当前正在接收数据流，然后再接收到Start就无视
-                        vadDetectionCallback?.onStartSpeech(audioData)
+
+                        vadDetectionCallback?.onStartSpeech(
+                            shortArrayToByteArray(audioData)
+                        )
+                    }
+                    else {
+                        vadDetectionCallback?.speeching(
+                            shortArrayToByteArray(audioData)
+                        )
                     }
 
                     // 语音活动时，重置计时器
@@ -98,12 +107,12 @@ class VadSileroManager {
 
     private var isRecording = false
 
-    private fun startRecording() {
+    fun startRecording() {
         isRecording = true
         recorder.start(vad.sampleRate.value, vad.frameSize.value)
     }
 
-    private fun stopRecording() {
+    fun stopRecording() {
         isRecording = false
         recorder.stop()
     }
@@ -111,5 +120,16 @@ class VadSileroManager {
     fun onDestroy() {
         recorder.stop()
         vad.close()
+    }
+
+    private fun shortArrayToByteArray(audioData: ShortArray): ByteArray {
+        val byteBuffer = ByteBuffer.allocate(audioData.size * 2) // 每个short占2字节
+        byteBuffer.order(ByteOrder.LITTLE_ENDIAN) // 根据你的音频数据格式选择字节序
+
+        audioData.forEach { shortValue ->
+            byteBuffer.putShort(shortValue)
+        }
+
+        return byteBuffer.array()
     }
 }
