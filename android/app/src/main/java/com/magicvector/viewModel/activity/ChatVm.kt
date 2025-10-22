@@ -48,6 +48,7 @@ import com.magicvector.manager.ChatManager
 import com.magicvector.manager.ChatWsTextMessageHandler
 import com.magicvector.utils.chat.RealtimeChatWsClient
 import com.view.appview.R
+import com.view.appview.call.CallAo
 import com.view.appview.recycler.RecyclerViewWhereNeedUpdate
 import com.view.appview.chat.ChatMessageAdapter
 import com.view.appview.chat.OnChatMessageClick
@@ -642,5 +643,18 @@ class ChatVm(
                 Log.d(TAG, "handleGetChatHistory::没有待更新数据")
             }
         }
+    }
+
+    // 语音通话
+    fun getCallAo(onMuteClickRunnable: Runnable?, onCallEndClickRunnable: Runnable?): CallAo{
+        val callAo = CallAo()
+        callAo.agentName = aao.nameLd.value
+        callAo.agentAvatar = aao.avatarUrlLd.value
+        callAo.agentId = aao.messageContactItemAo?.contactId
+
+        callAo.onMuteClickRunnable = onMuteClickRunnable
+        callAo.onCallEndClickRunnable = onCallEndClickRunnable
+
+        return callAo
     }
 }

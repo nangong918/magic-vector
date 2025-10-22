@@ -14,6 +14,7 @@ import com.data.domain.vo.test.RealtimeChatState
 import com.magicvector.databinding.ActivityChatBinding
 import com.magicvector.utils.BaseAppCompatVmActivity
 import com.magicvector.viewModel.activity.ChatVm
+import com.view.appview.call.CallDialog
 import com.view.appview.chat.OnChatMessageClick
 import com.view.appview.recycler.RecyclerViewWhereNeedUpdate
 import com.view.appview.recycler.UpdateRecyclerViewItem
@@ -160,6 +161,8 @@ class ChatActivity : BaseAppCompatVmActivity<ActivityChatBinding, ChatVm>(
         binding.smSendMessage.setKeyboardOpen(true)
         
         binding.vVoiceWave.init()
+
+        initCallDialog()
     }
 
     override fun setListener() {
@@ -189,6 +192,11 @@ class ChatActivity : BaseAppCompatVmActivity<ActivityChatBinding, ChatVm>(
                 vm.stopAndSendRealtimeChatAudio()
             }
         )
+
+        // 开启语音通话
+        binding.smSendMessage.setCallClickListener {
+            callDialog?.show()
+        }
     }
 
     fun getWhereNeedUpdate(): RecyclerViewWhereNeedUpdate {
@@ -272,6 +280,17 @@ class ChatActivity : BaseAppCompatVmActivity<ActivityChatBinding, ChatVm>(
                 }
             }
         }
+    }
+
+    //-----------------通话-----------------
+
+     var callDialog: CallDialog? = null
+
+    fun initCallDialog() {
+        callDialog = CallDialog(
+            this,
+            vm.getCallAo(null, null)
+        )
     }
 
     override fun onDestroy() {
