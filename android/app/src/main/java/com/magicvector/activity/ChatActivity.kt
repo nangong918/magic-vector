@@ -94,6 +94,12 @@ class ChatActivity : BaseAppCompatVmActivity<ActivityChatBinding, ChatVm>(
 
     @SuppressLint("NotifyDataSetChanged")
     fun observeData(){
+        // vad状态
+        vm.vadChatStateLd.observe(this) { state ->
+            callDialog?.setVadChatState(state)
+        }
+
+        // 加载状态
         vm.aao.isLoadingLd.observe(this){
             isLoading ->
             binding.progressBar.visibility = if (isLoading){

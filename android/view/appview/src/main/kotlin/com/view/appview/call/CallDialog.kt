@@ -8,6 +8,7 @@ import android.view.WindowManager
 import androidx.core.graphics.drawable.toDrawable
 import androidx.fragment.app.FragmentActivity
 import com.core.baseutil.image.ImageLoadUtil
+import com.data.domain.constant.VadChatState
 import com.view.appview.R
 import com.view.appview.databinding.CallDialogBinding
 
@@ -96,6 +97,28 @@ class CallDialog(
     }
 
     private var isStopRecordAudio = false
+    private var vadChatState = VadChatState()
+
+    fun setVadChatState(state: VadChatState){
+        vadChatState = state
+        when (state) {
+            is VadChatState.Muted -> {
+                TODO()
+            }
+            is VadChatState.Silent -> {
+                TODO()
+            }
+            is  VadChatState.Replying -> {
+                TODO()
+            }
+            is VadChatState.Speaking -> {
+                TODO()
+            }
+            is VadChatState.Error -> {
+                TODO()
+            }
+        }
+    }
 
     fun getIsStopRecordAudio(): Boolean {
         return isStopRecordAudio

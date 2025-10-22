@@ -35,6 +35,7 @@ import com.core.baseutil.photo.SelectPhotoUtil
 import com.core.baseutil.ui.ToastUtils
 import com.data.domain.ao.message.MessageContactItemAo
 import com.data.domain.constant.BaseConstant
+import com.data.domain.constant.VadChatState
 import com.data.domain.constant.chat.RealtimeRequestDataTypeEnum
 import com.data.domain.constant.chat.RealtimeResponseDataTypeEnum
 import com.data.domain.dto.response.ChatMessageResponse
@@ -145,6 +146,7 @@ class ChatVm(
     private var realtimeChatAudioRecord: AudioRecord? = null
     private var realtimeChatAudioTrack: AudioTrack? = null
     private var vadSileroManager: VadSileroManager? = null
+    val vadChatStateLd = MutableLiveData<VadChatState>(VadChatState.Muted)
 
     // 语音通话
     fun initVadCall(context: Context){
@@ -167,6 +169,8 @@ class ChatVm(
                         RealtimeRequestDataTypeEnum.DATA to base64Audio
                     )
                     realtimeChatWsClient!!.sendMessage(dataMap)
+
+                    vadChatStateLd.postValue(VadChatState.Speaking)
                 }
             }
 
@@ -179,6 +183,8 @@ class ChatVm(
                         RealtimeRequestDataTypeEnum.DATA to base64Audio
                     )
                     realtimeChatWsClient!!.sendMessage(dataMap)
+
+                    vadChatStateLd.postValue(VadChatState.Speaking)
                 }
             }
 
@@ -188,22 +194,28 @@ class ChatVm(
                     RealtimeRequestDataTypeEnum.DATA to RealtimeRequestDataTypeEnum.STOP_AUDIO_RECORD.name
                 )
                 realtimeChatWsClient!!.sendMessage(dataMap)
+
+                vadChatStateLd.postValue(VadChatState.Silent)
             }
         })
 
         vadSileroManager!!.startRecording()
+        vadChatStateLd.postValue(VadChatState.Muted)
     }
 
     fun startVadCall(){
         vadSileroManager?.startRecording()
+        vadChatStateLd.postValue(VadChatState.Silent)
     }
 
     fun stopVadCall(){
         vadSileroManager?.stopRecording()
+        vadChatStateLd.postValue(VadChatState.Muted)
     }
 
     fun destroyVadCall(){
         vadSileroManager?.onDestroy()
+        vadChatStateLd.postValue(VadChatState.Muted)
     }
 
     // ws
@@ -425,6 +437,7 @@ class ChatVm(
                 realtimeChatAudioTrack?.flush()
                 // 开始播放
                 realtimeChatAudioTrack?.play()
+                vadChatStateLd.postValue(VadChatState.Replying)
             }
             RealtimeResponseDataTypeEnum.STOP_TTS -> {
                 Log.i(TAG, "handleTextMessage::STOP_TTS播放")
@@ -434,6 +447,7 @@ class ChatVm(
                 realtimeChatAudioTrack?.stop()
                 // 清空播放缓存
                 realtimeChatAudioTrack?.flush()
+                vadChatStateLd.postValue(VadChatState.Silent)
             }
             RealtimeResponseDataTypeEnum.AUDIO_CHUNK -> {
                 // 音频数据
@@ -442,6 +456,7 @@ class ChatVm(
                 data?.let {
                     playBase64Audio(data)
                 }
+                vadChatStateLd.postValue(VadChatState.Replying)
             }
             RealtimeResponseDataTypeEnum.TEXT_CHAT_RESPONSE -> {
                 // 文本数据
