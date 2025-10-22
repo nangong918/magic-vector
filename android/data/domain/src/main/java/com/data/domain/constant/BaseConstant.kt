@@ -52,4 +52,8 @@ class BaseConstant {
         const val SUCCESS = 200
         const val SUCCESS_CODE: String = "200"
     }
+
+    object VAD {
+        const val SILENCE_DURATION_MS = 100L
+    }
 }

@@ -99,6 +99,7 @@ public class RealtimeChatChannel extends TextWebSocketHandler {
                 }
             }
             case START_AUDIO_RECORD -> {
+                // todo 配合前端逻辑：如果当前正在接收数据流，然后再接收到Start就无视
                 // 无VAD模式
                 // 开启新的一问一答
                 realtimeChatContextManager.newChatMessage();
