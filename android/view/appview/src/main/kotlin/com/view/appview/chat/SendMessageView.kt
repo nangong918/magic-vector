@@ -63,6 +63,12 @@ class SendMessageView : ConstraintLayout {
         }
     }
 
+    fun setCallClickListener(listener: OnClickListener?) {
+        listener?.let {
+            binding.btnCall.setOnClickListener(listener)
+        }
+    }
+
     @SuppressLint("ClickableViewAccessibility")
     fun setTakAudioOnTouchListener(startRecording: Runnable, stopRecording: Runnable){
         binding.btnTakeAudio.setOnTouchListener { v, event ->
@@ -107,6 +113,13 @@ class SendMessageView : ConstraintLayout {
             it.isEnabled = isEnable
         }
         binding.btnSend.let {
+            it.setBackgroundResource(
+                if (isEnable) com.view.appview.R.drawable.background_chat_input
+                else com.view.appview.R.drawable.background_chat_not_input
+            )
+            it.isEnabled = isEnable
+        }
+        binding.btnCall.let {
             it.setBackgroundResource(
                 if (isEnable) com.view.appview.R.drawable.background_chat_input
                 else com.view.appview.R.drawable.background_chat_not_input
