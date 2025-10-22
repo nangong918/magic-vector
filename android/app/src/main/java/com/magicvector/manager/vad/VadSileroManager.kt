@@ -18,7 +18,7 @@ class VadSileroManager {
     private val DEFAULT_SAMPLE_RATE = SampleRate.SAMPLE_RATE_8K
     private val DEFAULT_FRAME_SIZE = FrameSize.FRAME_SIZE_256
     private val DEFAULT_MODE = Mode.NORMAL
-    private val DEFAULT_SILENCE_DURATION_MS = 300
+    private val DEFAULT_SILENCE_DURATION_MS = 200
     private val DEFAULT_SPEECH_DURATION_MS = 50
 
     fun init(context: Context, vadDetectionCallback: VadDetectionCallback) {
@@ -55,16 +55,24 @@ class VadSileroManager {
                     }
 
                     // 语音活动时，重置计时器
-                    resetSpeechTimer()
+//                    resetSpeechTimer()
                 }
                 else {
                     // 延迟停止
                     isSpeech = false
+
+                    // 之前是语音
+                    if (isSpeechLastTime){
+                        // 发送停止语音
+                        vadDetectionCallback?.onStopSpeech()
+                    }
                 }
             }
         }
     }
+/*
 
+    // 为了防止VAD检测过程中多次出现静音横跳，应该设置一个倒计时100ms，如果超过限制时间之后不是Speech就判定为停止
     private var speechTimer: CountDownTimer? = null
     private fun resetSpeechTimer() {
         // 如果计时器已经在运行，先取消它
@@ -86,8 +94,7 @@ class VadSileroManager {
             }
         }.start()
     }
-
-    // 为了防止VAD检测过程中多次出现静音横跳，应该设置一个倒计时100ms，如果超过限制时间之后不是Speech就判定为停止
+*/
 
     private var isRecording = false
 
