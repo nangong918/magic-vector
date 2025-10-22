@@ -11,8 +11,8 @@ import android.widget.Spinner
 import android.widget.TextView
 import androidx.fragment.app.Fragment
 import com.google.android.material.floatingactionbutton.FloatingActionButton
-import com.magicvector.manager.recorder.VoiceRecorder
-import com.magicvector.manager.recorder.VoiceRecorder.AudioCallback
+import com.magicvector.manager.vad.VoiceRecorder
+import com.magicvector.manager.vad.VoiceRecorder.AudioCallback
 import com.konovalov.vad.silero.Vad
 import com.konovalov.vad.silero.VadSilero
 import com.konovalov.vad.silero.config.FrameSize
@@ -122,7 +122,7 @@ class VadSileroFragment : Fragment(),
     }
 
     private fun getSampleRates(): List<String> {
-        return SampleRate.values().map { it.name }.toList()
+        return SampleRate.entries.map { it.name }.toList()
     }
 
     private fun getFrameSizes(sampleRate: SampleRate): List<String> {
@@ -130,7 +130,7 @@ class VadSileroFragment : Fragment(),
     }
 
     private fun modes(): List<String> {
-        return Mode.values().map { it.name }.toList()
+        return Mode.entries.map { it.name }.toList()
     }
 
     private fun startRecording() {
