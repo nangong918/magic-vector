@@ -6,7 +6,7 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import com.czy.smartmedicine.utils.BaseAppCompatVmFragment
+import com.magicvector.utils.BaseAppCompatVmFragment
 import com.magicvector.activity.test.TestActivity
 import com.magicvector.databinding.FragmentMineBinding
 import com.magicvector.viewModel.fragment.MineVm

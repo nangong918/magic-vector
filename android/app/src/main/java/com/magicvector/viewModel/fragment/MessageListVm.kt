@@ -36,7 +36,6 @@ open class MessageListVm(
     }
 
     fun initResource(activity: FragmentActivity){
-        initCreateAgentLuncher(activity)
 
         NetworkLoadUtils.showDialog(activity)
         initNetworkRequest(activity, object : SyncRequestCallback {
@@ -81,7 +80,7 @@ open class MessageListVm(
         }
     }
 
-    private fun doGetLastAgentChatList(context: Context, callback: SyncRequestCallback){
+    fun doGetLastAgentChatList(context: Context, callback: SyncRequestCallback){
         MainApplication.getApiRequestImplInstance().getLastAgentChatList(
             MainApplication.getUserId(),
             object : OnSuccessCallback<BaseResponse<AgentLastChatListResponse>>{
@@ -120,41 +119,6 @@ open class MessageListVm(
     }
 
     //---------------------------Logic---------------------------
-
-    var createAgentLauncher: ActivityResultLauncher<Intent>? = null
-
-    fun turnToCreateAgent(activity: FragmentActivity) {
-        val intent = Intent(activity, CreateAgentActivity::class.java)
-        createAgentLauncher?.launch(intent)
-    }
-
-    fun initCreateAgentLuncher(activity: FragmentActivity){
-        createAgentLauncher = activity.registerForActivityResult(
-            ActivityResultContracts.StartActivityForResult()
-        ) { result ->
-            // 如果intent 返回值中包括ok，则表明创建成功，需要进行刷新list
-            val backIntent: Intent? = result.data
-            if (backIntent != null) {
-                val createResult: Boolean = backIntent.getBooleanExtra(
-                    CreateAgentActivity::class.simpleName,
-                    false
-                )
-                // 创建成功
-                if (createResult) {
-                    doGetLastAgentChatList(activity, object : SyncRequestCallback {
-                        override fun onThrowable(throwable: Throwable?) {
-                            NetworkLoadUtils.dismissDialogSafety(activity)
-                            Log.e(TAG, "initResource: onThrowable", throwable)
-                        }
-
-                        override fun onAllRequestSuccess() {
-                            NetworkLoadUtils.dismissDialogSafety(activity)
-                        }
-                    })
-                }
-            }
-        }
-    }
 
     fun startChatActivity(activity: FragmentActivity, successRunnable: Runnable) {
         PermissionUtil.requestPermissionSelectX(
