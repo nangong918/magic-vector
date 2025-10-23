@@ -5,12 +5,13 @@ import com.data.domain.constant.chat.RoleTypeEnum
 import com.data.domain.dto.ws.RealtimeChatTextResponse
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
+import com.magicvector.callback.VADCallTextCallback
 
 object ChatWsTextMessageHandler {
 
     const val TAG = "ChatWsTextMessageHandler"
 
-    fun handleTextMessage(message: String, GSON: Gson, chatManagerPointer: ChatManager){
+    fun handleTextMessage(message: String, GSON: Gson, chatManagerPointer: ChatManager, vadCallTextCallback: VADCallTextCallback){
         var response : RealtimeChatTextResponse
         try {
             Log.i(TAG, "handleTextMessage::receiveMessage: $message")
@@ -27,6 +28,7 @@ object ChatWsTextMessageHandler {
         }
 
         response.content?.let {
+            vadCallTextCallback.onText(it)
             Log.i(TAG, "handleTextMessage::content: $it")
         }
 

@@ -527,9 +527,13 @@ class ChatVm(
                 realtimeChatState.postValue(RealtimeChatState.Receiving)
                 val data = map[RealtimeResponseDataTypeEnum.DATA]
                 if (data != null){
-                    ChatWsTextMessageHandler.handleTextMessage(data, GSON, chatManagerPointer = chatManagerPointer)
+                    ChatWsTextMessageHandler.handleTextMessage(
+                        message = data,
+                        GSON = GSON,
+                        chatManagerPointer = chatManagerPointer,
+                        vadCallTextCallback = this.vadCallTextCallback
+                    )
                     updateMessage()
-                    this.vadCallTextCallback.onText(data)
                 }
                 else {
                     Log.e(TAG, "handleTextMessage: data is null")
