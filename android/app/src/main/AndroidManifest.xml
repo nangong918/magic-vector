@@ -45,12 +45,10 @@
         <activity
             android:name=".activity.MainActivity"
             android:exported="false"
-            android:label="@string/title_activity_main"
             android:theme="@style/Theme.MagicVector" />
         <activity
             android:name=".activity.StartActivity"
             android:exported="true"
-            android:label="@string/title_activity_start"
             android:theme="@style/Theme.MagicVector">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />

@@ -2,10 +2,7 @@ package com.magicvector.viewModel.fragment
 
 import android.Manifest
 import android.content.Context
-import android.content.Intent
 import android.util.Log
-import androidx.activity.result.ActivityResultLauncher
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.RequiresPermission
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.ViewModel
@@ -23,7 +20,6 @@ import com.data.domain.OnPositionItemClick
 import com.data.domain.dto.response.AgentLastChatListResponse
 import com.data.domain.fragmentActivity.fao.MessageFAo
 import com.magicvector.MainApplication
-import com.magicvector.activity.CreateAgentActivity
 import com.view.appview.message.MessageContactAdapter
 import kotlinx.coroutines.Runnable
 

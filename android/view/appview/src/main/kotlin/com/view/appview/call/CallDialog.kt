@@ -61,6 +61,9 @@ class CallDialog(
     @SuppressLint("ResourceType")
     private fun setListener(){
         binding.vClose.setOnClickListener {
+            // 不为空调用外部逻辑
+            callAo.onCallEndClickRunnable?.run()
+            // 内部逻辑
             dialog.dismiss()
         }
 
