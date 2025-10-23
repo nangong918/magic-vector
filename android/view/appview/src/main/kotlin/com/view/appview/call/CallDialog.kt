@@ -3,6 +3,8 @@ package com.view.appview.call
 import android.annotation.SuppressLint
 import android.app.Dialog
 import android.graphics.Color
+import android.os.Handler
+import android.os.Looper
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.WindowManager
@@ -23,6 +25,7 @@ class CallDialog(
     private val binding: CallDialogBinding = CallDialogBinding.inflate(
         LayoutInflater.from(fragmentActivity), null, false
     )
+    private val mainHandler: Handler = Handler(Looper.getMainLooper())
     // 是否正在通话
     val isCalling: AtomicBoolean = AtomicBoolean(false)
 
@@ -117,26 +120,38 @@ class CallDialog(
 
         when (state) {
             is VadChatState.Muted -> {
-                binding.tvChatState.text = fragmentActivity.getString(R.string.muted)
+                mainHandler.post {
+                    binding.tvChatState.text = fragmentActivity.getString(R.string.muted)
+                }
             }
             is VadChatState.Silent -> {
-                binding.tvChatState.text = fragmentActivity.getString(R.string.silent)
+                mainHandler.post {
+                    binding.tvChatState.text = fragmentActivity.getString(R.string.silent)
+                }
             }
             is VadChatState.Speaking -> {
-                binding.tvChatState.text = fragmentActivity.getString(R.string.user_speaking)
+                mainHandler.post {
+                    binding.tvChatState.text = fragmentActivity.getString(R.string.user_speaking)
+                }
             }
             is  VadChatState.Replying -> {
-                binding.tvChatState.text = fragmentActivity.getString(R.string.agent_replying)
+                mainHandler.post {
+                    binding.tvChatState.text = fragmentActivity.getString(R.string.agent_replying)
+                }
             }
             is VadChatState.Error -> {
-                binding.tvChatState.text = fragmentActivity.getString(R.string.error)
+                mainHandler.post {
+                    binding.tvChatState.text = fragmentActivity.getString(R.string.error)
+                }
                 Log.e(TAG, "setVadChatState: ${state.message}")
             }
         }
     }
 
     fun setChatMessage(message: String){
-        binding.tvChatMessage.text = message
+        mainHandler.post {
+            binding.tvChatMessage.text = message
+        }
     }
 
     fun getIsCloseMic(): Boolean {
