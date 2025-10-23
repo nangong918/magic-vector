@@ -61,6 +61,7 @@ import okhttp3.Response
 import okhttp3.WebSocket
 import okhttp3.WebSocketListener
 import okio.ByteString
+import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.math.sqrt
 
 
@@ -89,6 +90,12 @@ class ChatVm(
     lateinit var recyclerViewWhereNeedUpdate: RecyclerViewWhereNeedUpdate
     lateinit var vadCallTextCallback: VADCallTextCallback
     lateinit var onVadChatStateChange: OnVadChatStateChange
+    // 是否正在通话
+    var isCalling: AtomicBoolean? = null
+    fun initIsCalling(isCalling: AtomicBoolean) {
+        // 直接从CallDialog中拿到boolean的地址
+        this.isCalling = isCalling
+    }
 
     fun initResource(
         activity: FragmentActivity,
@@ -472,6 +479,18 @@ class ChatVm(
                 // 开始播放
                 realtimeChatAudioTrack?.play()
                 onVadChatStateChange.onChange(VadChatState.Replying)
+
+                // VAD:设置AI回复的时候不能说话
+                isCalling?.let {
+                    // 正在通话
+                    if (it.get()){
+                        vadSileroManager?.stopRecording()
+                        Log.d(TAG, "handleTextMessage:: 正在VAD通话:AI正在回复, 停止录音")
+                    }
+                    else {
+                        Log.d(TAG, "handleTextMessage:: 停止VAD通话: 不管理VAD录音")
+                    }
+                }
             }
             RealtimeResponseDataTypeEnum.STOP_TTS -> {
                 Log.i(TAG, "handleTextMessage::STOP_TTS播放")
@@ -482,6 +501,18 @@ class ChatVm(
                 // 清空播放缓存
                 realtimeChatAudioTrack?.flush()
                 onVadChatStateChange.onChange(VadChatState.Silent)
+
+                // VAD:设置AI回复结束的时候可以说话
+                isCalling?.let {
+                    // 正在通话
+                    if (it.get()){
+                        vadSileroManager?.startRecording()
+                        Log.d(TAG, "handleTextMessage:: 正在VAD通话:AI回复结束, 继续录音")
+                    }
+                    else {
+                        Log.d(TAG, "handleTextMessage:: 停止VAD通话: 不管理VAD录音")
+                    }
+                }
             }
             RealtimeResponseDataTypeEnum.AUDIO_CHUNK -> {
                 // 音频数据

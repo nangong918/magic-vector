@@ -177,6 +177,11 @@ class ChatActivity : BaseAppCompatVmActivity<ActivityChatBinding, ChatVm>(
         binding.vVoiceWave.init()
 
         initCallDialog()
+
+        // 共享boolean值
+        callDialog?.let {
+            vm.initIsCalling(it.isCalling)
+        }
     }
 
     override fun setListener() {

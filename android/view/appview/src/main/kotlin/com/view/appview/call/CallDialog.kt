@@ -12,6 +12,7 @@ import com.core.baseutil.image.ImageLoadUtil
 import com.data.domain.constant.VadChatState
 import com.view.appview.R
 import com.view.appview.databinding.CallDialogBinding
+import java.util.concurrent.atomic.AtomicBoolean
 
 class CallDialog(
     private val fragmentActivity: FragmentActivity,
@@ -22,6 +23,8 @@ class CallDialog(
     private val binding: CallDialogBinding = CallDialogBinding.inflate(
         LayoutInflater.from(fragmentActivity), null, false
     )
+    // 是否正在通话
+    val isCalling: AtomicBoolean = AtomicBoolean(false)
 
     init {
         initView()
@@ -170,10 +173,12 @@ class CallDialog(
 
     fun show() {
         dialog.show()
+        isCalling.set(true)
     }
 
     fun dismiss() {
         dialog.dismiss()
+        isCalling.set(false)
     }
 
 }
