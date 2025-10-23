@@ -1,7 +1,8 @@
 package com.magicvector.manager
 
+import android.text.TextUtils
 import android.util.Log
-import com.core.baseutil.date.DateUtils
+//import com.core.baseutil.date.DateUtils
 import com.core.baseutil.sort.SortUtil
 import com.data.domain.Do.ChatMessageDo
 import com.data.domain.ao.chat.ChatItemAo
@@ -147,8 +148,11 @@ class ChatManager(val agentId: String) {
         // 存在
         else {
             // 覆盖逻辑
-            val view = wsToView(ws)
-            viewChatMessageList[viewIndex] = view
+            val view = viewChatMessageList[viewIndex]
+            wsToExistView(
+                ws = ws,
+                ao = view
+            )
             val updateRecyclerViewItem = UpdateRecyclerViewItem()
             updateRecyclerViewItem.type = UpdateRecyclerViewTypeEnum.SINGLE_ID_UPDATE
             updateRecyclerViewItem.singleUpdateId = view.messageId
@@ -181,6 +185,34 @@ class ChatManager(val agentId: String) {
         ao.timestamp = ws.timestamp
 
         return ao
+    }
+
+    private fun wsToExistView(ws: RealtimeChatTextResponse, ao: ChatItemAo){
+        // view
+        // todo 暂时不支持发送图片
+//        ao.vo.imgUrl = ""
+        val existContent = if (TextUtils.isEmpty(ao.vo.content)) {
+            ""
+        } else {
+            ao.vo.content
+        }
+        ao.vo.content = existContent + ws.content
+        ao.vo.time = runCatching {
+//            DateUtils.yyyyMMddHHmmssToString(ws.chatTime)
+            ws.chatTime
+        }.getOrElse {
+            // 记录异常信息（可选）
+            Log.e(TAG, "时间转换失败")
+            ""
+        }
+        ao.vo.viewType = ws.role
+        ao.vo.messageType = MessageTypeEnum.TEXT.value
+
+        // data
+        ao.senderId = ws.agentId
+        ao.receiverId = ws.userId
+        ao.messageId = ws.messageId
+        ao.timestamp = ws.timestamp
     }
 
     fun clear(){
