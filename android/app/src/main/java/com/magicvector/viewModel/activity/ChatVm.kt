@@ -45,6 +45,7 @@ import com.data.domain.vo.test.RealtimeChatState
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import com.magicvector.MainApplication
+import com.magicvector.callback.VADCallTextCallback
 import com.magicvector.manager.ChatManager
 import com.magicvector.manager.ChatWsTextMessageHandler
 import com.magicvector.manager.vad.VadDetectionCallback
@@ -85,11 +86,13 @@ class ChatVm(
     }
 
     lateinit var recyclerViewWhereNeedUpdate: RecyclerViewWhereNeedUpdate
+    lateinit var vadCallTextCallback: VADCallTextCallback
 
-    fun initResource(activity: FragmentActivity, ao : MessageContactItemAo?, whereNeedUpdate: RecyclerViewWhereNeedUpdate) {
+    fun initResource(activity: FragmentActivity, ao : MessageContactItemAo?, whereNeedUpdate: RecyclerViewWhereNeedUpdate, vadCallTextCallback: VADCallTextCallback) {
         realtimeChatState.postValue(RealtimeChatState.NotInitialized)
 
         recyclerViewWhereNeedUpdate = whereNeedUpdate
+        this.vadCallTextCallback = vadCallTextCallback
 
         aao.messageContactItemAo = ao
         if (aao.messageContactItemAo?.contactId != null){
@@ -480,6 +483,7 @@ class ChatVm(
                 if (data != null){
                     ChatWsTextMessageHandler.handleTextMessage(data, GSON, chatManagerPointer = chatManagerPointer)
                     updateMessage()
+                    this.vadCallTextCallback.onText(data)
                 }
                 else {
                     Log.e(TAG, "handleTextMessage: data is null")

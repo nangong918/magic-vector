@@ -14,6 +14,7 @@ import com.core.baseutil.ui.ToastUtils
 import com.data.domain.ao.message.MessageContactItemAo
 import com.data.domain.fragmentActivity.intentAo.ChatIntentAo
 import com.data.domain.vo.test.RealtimeChatState
+import com.magicvector.callback.VADCallTextCallback
 import com.magicvector.databinding.ActivityChatBinding
 import com.magicvector.utils.BaseAppCompatVmActivity
 import com.magicvector.viewModel.activity.ChatVm
@@ -26,7 +27,7 @@ import com.view.appview.recycler.UpdateRecyclerViewTypeEnum
 class ChatActivity : BaseAppCompatVmActivity<ActivityChatBinding, ChatVm>(
     ChatActivity::class,
     ChatVm::class
-) {
+), VADCallTextCallback {
 
     private val tag = ChatActivity::class.simpleName
 
@@ -52,7 +53,12 @@ class ChatActivity : BaseAppCompatVmActivity<ActivityChatBinding, ChatVm>(
         }
 
         try {
-            vm.initResource(activity = this@ChatActivity, ao, getWhereNeedUpdate())
+            vm.initResource(
+                activity = this@ChatActivity,
+                ao = ao,
+                whereNeedUpdate = getWhereNeedUpdate(),
+                vadCallTextCallback = this@ChatActivity
+            )
         } catch (e: IllegalArgumentException){
             Log.e(TAG, "ChatActivity::initResource失败", e)
             ToastUtils.showToastActivity(this@ChatActivity,
@@ -331,6 +337,10 @@ class ChatActivity : BaseAppCompatVmActivity<ActivityChatBinding, ChatVm>(
                 vm.destroyVadCall()
             })
         )
+    }
+
+    override fun onText(text: String) {
+        callDialog?.setChatMessage(text)
     }
 
     fun showCallDialog() {

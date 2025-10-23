@@ -127,6 +127,10 @@ class CallDialog(
         }
     }
 
+    fun setChatMessage(message: String){
+        binding.tvChatMessage.text = message
+    }
+
     fun getIsStopRecordAudio(): Boolean {
         return isStopRecordAudio
     }

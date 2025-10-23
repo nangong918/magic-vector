@@ -13,7 +13,7 @@
         android:gravity="center_horizontal"
         app:layout_constraintBottom_toBottomOf="parent"
         android:layout_width="match_parent"
-        android:layout_height="600dp">
+        android:layout_height="650dp">
 
         <androidx.constraintlayout.widget.ConstraintLayout
             app:layout_constraintTop_toTopOf="parent"
@@ -61,7 +61,7 @@
             android:id="@+id/imvg_avatar"
             tools:src="@mipmap/logo"
             app:riv_corner_radius="25dp"
-            android:layout_marginTop="50dp"
+            android:layout_marginTop="30dp"
             android:layout_width="120dp"
             android:layout_height="120dp"/>
 
@@ -70,13 +70,31 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:maxLines="1"
-            android:layout_marginTop="30dp"
+            android:layout_marginTop="10dp"
             android:textSize="18sp"
             tools:text="用户正在讲话"
             android:textColor="@color/green_900"/>
 
+        <TextView
+            android:id="@+id/tv_chatMessage"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:maxLines="2"
+            android:gravity="center"
+            android:layout_marginStart="20dp"
+            android:layout_marginEnd="20dp"
+            android:layout_marginTop="20dp"
+            android:textSize="14sp"
+            tools:text="又见面了，真是麻烦。
+天气不错，要不要一起走走？
+别以为我会特意等你。
+快点跟上，别掉队了。
+……你要是敢走丢，我可不会去找你。"
+            android:textColor="@color/green_900"/>
+
         <com.view.appview.voice.VoiceWaveView
             android:id="@+id/v_userVoiceWave"
+            android:background="@color/green_10"
             android:layout_marginTop="30dp"
             android:layout_width="match_parent"
             android:layout_height="100dp"/>
