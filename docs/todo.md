@@ -12,12 +12,14 @@ Spring 项目部署在Docker -> 上传到阿里云服务器 todo Docker，Nginx 
 
 研究esp32-sc; 构建身体（头部和底部两部分）
 
+Silero VAD集成ESP32-S3
+
+联网mcp
+
 chat mcp(tools -> 本地测试)
 chat rag(向量)
 
 ### lv1(计划任务)
-联网mcp
-Silero VAD集成ESP32-S3
 chat 声纹识别（避免vad将自己的声音误认为输入）
 
 音频合成缓存，解决当前音频请求频率过高问题
