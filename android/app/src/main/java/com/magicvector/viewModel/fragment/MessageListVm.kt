@@ -97,7 +97,7 @@ open class MessageListVm(
             },
             object : OnThrowableCallback{
                 override fun callback(throwable: Throwable?) {
-                    callback(throwable)
+                    callback.onThrowable(throwable)
                 }
             }
         )

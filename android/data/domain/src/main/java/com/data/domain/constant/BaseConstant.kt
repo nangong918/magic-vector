@@ -11,11 +11,23 @@ class BaseConstant {
         const val BITMAP_MAX_SIZE_AVATAR: Int = 200
         const val PACKAGE_NAME: String = "com.magicvector"
 
+        const val CHAT_HISTORY_LIMIT_COUNT = 20
+        const val MAX_AGENT_NAME_LENGTH = 20
+    }
+
+    // http
+    object HttpConstant {
         // 请求是否加认证token前缀 最后要在拦截器检查去掉; 定义一些不像url的命名避免出现与后端路由重合
         const val AUTH_TOKEN_PREFIX: String = "/has-0!0-token"
 
-        const val CHAT_HISTORY_LIMIT_COUNT = 20
-        const val MAX_AGENT_NAME_LENGTH = 20
+        // 连接超时：5s
+        const val CONNECT_TIMEOUT = 5L
+        // 读取超时：10s
+        const val READ_TIMEOUT = 10L
+        // 写入超时：10s
+        const val WRITE_TIMEOUT = 10L
+        // 响应处理超时时间：30s
+        const val CALL_TIMEOUT = 30L
     }
 
     // url

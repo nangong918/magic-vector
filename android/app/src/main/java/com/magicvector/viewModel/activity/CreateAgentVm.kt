@@ -139,7 +139,7 @@ class CreateAgentVm(
             },
             object : OnThrowableCallback {
                 override fun callback(throwable: Throwable?) {
-                    callback(throwable)
+                    callback.onThrowable(throwable)
                 }
             }
         )
@@ -175,7 +175,7 @@ class CreateAgentVm(
             },
             object : OnThrowableCallback {
                 override fun callback(throwable: Throwable?) {
-                    callback(throwable)
+                    callback.onThrowable(throwable)
                 }
             }
         )
