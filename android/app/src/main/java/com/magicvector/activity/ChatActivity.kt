@@ -12,8 +12,10 @@ import com.core.baseutil.permissions.GainPermissionCallback
 import com.core.baseutil.permissions.PermissionUtil
 import com.core.baseutil.ui.ToastUtils
 import com.data.domain.ao.message.MessageContactItemAo
+import com.data.domain.constant.VadChatState
 import com.data.domain.fragmentActivity.intentAo.ChatIntentAo
 import com.data.domain.vo.test.RealtimeChatState
+import com.magicvector.callback.OnVadChatStateChange
 import com.magicvector.callback.VADCallTextCallback
 import com.magicvector.databinding.ActivityChatBinding
 import com.magicvector.utils.BaseAppCompatVmActivity
@@ -27,7 +29,7 @@ import com.view.appview.recycler.UpdateRecyclerViewTypeEnum
 class ChatActivity : BaseAppCompatVmActivity<ActivityChatBinding, ChatVm>(
     ChatActivity::class,
     ChatVm::class
-), VADCallTextCallback {
+), VADCallTextCallback, OnVadChatStateChange {
 
     private val tag = ChatActivity::class.simpleName
 
@@ -57,7 +59,8 @@ class ChatActivity : BaseAppCompatVmActivity<ActivityChatBinding, ChatVm>(
                 activity = this@ChatActivity,
                 ao = ao,
                 whereNeedUpdate = getWhereNeedUpdate(),
-                vadCallTextCallback = this@ChatActivity
+                vadCallTextCallback = this@ChatActivity,
+                onVadChatStateChange = this@ChatActivity
             )
         } catch (e: IllegalArgumentException){
             Log.e(TAG, "ChatActivity::initResource失败", e)
@@ -100,10 +103,6 @@ class ChatActivity : BaseAppCompatVmActivity<ActivityChatBinding, ChatVm>(
 
     @SuppressLint("NotifyDataSetChanged")
     fun observeData(){
-        // vad状态
-        vm.vadChatStateLd.observe(this) { state ->
-            callDialog?.setVadChatState(state)
-        }
 
         // 加载状态
         vm.aao.isLoadingLd.observe(this){
@@ -324,7 +323,7 @@ class ChatActivity : BaseAppCompatVmActivity<ActivityChatBinding, ChatVm>(
             vm.getCallAo({
                 callDialog?.let {
                     // 停止了再点击就开始录音
-                    if (it.getIsStopRecordAudio()){
+                    if (it.getIsCloseMic()){
                         vm.startVadCall()
                     }
                     // 停止了再点击就开始录音
@@ -341,6 +340,10 @@ class ChatActivity : BaseAppCompatVmActivity<ActivityChatBinding, ChatVm>(
 
     override fun onText(text: String) {
         callDialog?.setChatMessage(text)
+    }
+
+    override fun onChange(state: VadChatState) {
+        callDialog?.setVadChatState(state)
     }
 
     fun showCallDialog() {

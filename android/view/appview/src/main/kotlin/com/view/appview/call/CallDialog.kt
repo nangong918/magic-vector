@@ -65,33 +65,25 @@ class CallDialog(
             callAo.onCallEndClickRunnable?.run()
             // 内部逻辑
             dialog.dismiss()
+            setIsCloseMic(true)
         }
 
         // mic
         binding.ivMic.setOnClickListener {
-            // 不为空调用外部逻辑
+            // 不为空调用外部逻辑 (关闭、开启mic等逻辑)
             callAo.onMuteClickRunnable?.run()
             // 内部逻辑
-            binding.ivMic.setImageResource(
-                if (isStopRecordAudio) {
-                    // 停止录音：展示开始录音
-                    R.xml.mic_24px
-                }
-                else {
-                    // 开始录音：展示停止录音
-                    R.xml.mic_off_24px
-                }
-            )
-            binding.ivMic.setBackgroundResource(
-                if (isStopRecordAudio) {
-                    // 停止录音：展示开始录音
-                    R.drawable.round_grey_400
-                }
-                else {
-                    // 开始录音：展示停止录音
-                    R.drawable.round_grey_600
-                }
-            )
+            changeMicState()
+//            binding.ivMic.setBackgroundResource(
+//                if (isStopRecordAudio) {
+//                    // 停止录音：展示开始录音
+//                    R.drawable.round_grey_400
+//                }
+//                else {
+//                    // 开始录音：展示停止录音
+//                    R.drawable.round_grey_600
+//                }
+//            )
         }
         // call end
         binding.ivCallEnd.setOnClickListener {
@@ -99,14 +91,24 @@ class CallDialog(
             callAo.onCallEndClickRunnable?.run()
             // 内部逻辑
             dialog.dismiss()
+            setIsCloseMic(true)
         }
     }
 
-    private var isStopRecordAudio = false
+    // 是否关闭mic
+    private var isCloseMic = false
     private var vadChatState = VadChatState()
 
     fun setVadChatState(state: VadChatState){
         vadChatState = state
+
+        // 关闭mic之后就不存在Speaking和Silent了
+        if (isCloseMic){
+            if (vadChatState == VadChatState.Silent || vadChatState == VadChatState.Speaking){
+                vadChatState = VadChatState.Muted
+            }
+        }
+
         when (state) {
             is VadChatState.Muted -> {
                 binding.tvChatState.text = fragmentActivity.getString(R.string.muted)
@@ -131,8 +133,36 @@ class CallDialog(
         binding.tvChatMessage.text = message
     }
 
-    fun getIsStopRecordAudio(): Boolean {
-        return isStopRecordAudio
+    fun getIsCloseMic(): Boolean {
+        return isCloseMic
+    }
+
+    @SuppressLint("ResourceType")
+    fun setIsCloseMic(isStopRecordAudio: Boolean) {
+        // value
+        isCloseMic = isStopRecordAudio
+        // UI
+        binding.ivMic.setImageResource(
+            if (isCloseMic) {
+                // 停止录音：展示开始录音
+                R.xml.mic_24px
+            }
+            else {
+                // 开始录音：展示停止录音
+                R.xml.mic_off_24px
+            }
+        )
+        // logic
+        if (isCloseMic) {
+            setVadChatState(VadChatState.Muted)
+        }
+        else {
+            setVadChatState(VadChatState.Silent)
+        }
+    }
+
+    fun changeMicState(){
+        setIsCloseMic(!isCloseMic)
     }
 
     fun show() {

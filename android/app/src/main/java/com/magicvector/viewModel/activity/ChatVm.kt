@@ -45,6 +45,7 @@ import com.data.domain.vo.test.RealtimeChatState
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import com.magicvector.MainApplication
+import com.magicvector.callback.OnVadChatStateChange
 import com.magicvector.callback.VADCallTextCallback
 import com.magicvector.manager.ChatManager
 import com.magicvector.manager.ChatWsTextMessageHandler
@@ -87,12 +88,21 @@ class ChatVm(
 
     lateinit var recyclerViewWhereNeedUpdate: RecyclerViewWhereNeedUpdate
     lateinit var vadCallTextCallback: VADCallTextCallback
+    lateinit var onVadChatStateChange: OnVadChatStateChange
 
-    fun initResource(activity: FragmentActivity, ao : MessageContactItemAo?, whereNeedUpdate: RecyclerViewWhereNeedUpdate, vadCallTextCallback: VADCallTextCallback) {
+    fun initResource(
+        activity: FragmentActivity,
+        ao : MessageContactItemAo?,
+        whereNeedUpdate: RecyclerViewWhereNeedUpdate,
+        vadCallTextCallback: VADCallTextCallback,
+        onVadChatStateChange: OnVadChatStateChange
+    ) {
+
         realtimeChatState.postValue(RealtimeChatState.NotInitialized)
 
-        recyclerViewWhereNeedUpdate = whereNeedUpdate
+        this.recyclerViewWhereNeedUpdate = whereNeedUpdate
         this.vadCallTextCallback = vadCallTextCallback
+        this.onVadChatStateChange = onVadChatStateChange
 
         aao.messageContactItemAo = ao
         if (aao.messageContactItemAo?.contactId != null){
@@ -164,7 +174,6 @@ class ChatVm(
     private var realtimeChatAudioRecord: AudioRecord? = null
     private var realtimeChatAudioTrack: AudioTrack? = null
     private var vadSileroManager: VadSileroManager? = null
-    val vadChatStateLd = MutableLiveData<VadChatState>(VadChatState.Muted)
 
     // 语音通话
     fun initVadCall(context: Context){
@@ -188,7 +197,7 @@ class ChatVm(
                     )
                     realtimeChatWsClient!!.sendMessage(dataMap)
 
-                    vadChatStateLd.postValue(VadChatState.Speaking)
+                    onVadChatStateChange.onChange(VadChatState.Speaking)
                 }
             }
 
@@ -202,7 +211,7 @@ class ChatVm(
                     )
                     realtimeChatWsClient!!.sendMessage(dataMap)
 
-                    vadChatStateLd.postValue(VadChatState.Speaking)
+                    onVadChatStateChange.onChange(VadChatState.Speaking)
                 }
             }
 
@@ -213,27 +222,33 @@ class ChatVm(
                 )
                 realtimeChatWsClient!!.sendMessage(dataMap)
 
-                vadChatStateLd.postValue(VadChatState.Silent)
+                onVadChatStateChange.onChange(VadChatState.Silent)
             }
         })
 
         vadSileroManager!!.startRecording()
-        vadChatStateLd.postValue(VadChatState.Muted)
+        onVadChatStateChange.onChange(VadChatState.Muted)
     }
 
     fun startVadCall(){
-        vadSileroManager?.startRecording()
-        vadChatStateLd.postValue(VadChatState.Silent)
+        vadSileroManager?.let {
+            it.startRecording()
+            onVadChatStateChange.onChange(VadChatState.Silent)
+            Log.i(TAG, "startVadCall: ")
+        }
     }
 
     fun stopVadCall(){
-        vadSileroManager?.stopRecording()
-        vadChatStateLd.postValue(VadChatState.Muted)
+        vadSileroManager?.let {
+            it.stopRecording()
+            onVadChatStateChange.onChange(VadChatState.Muted)
+            Log.i(TAG, "stopVadCall: ")
+        }
     }
 
     fun destroyVadCall(){
         vadSileroManager?.onDestroy()
-        vadChatStateLd.postValue(VadChatState.Muted)
+        onVadChatStateChange.onChange(VadChatState.Muted)
     }
 
     // ws
@@ -455,7 +470,7 @@ class ChatVm(
                 realtimeChatAudioTrack?.flush()
                 // 开始播放
                 realtimeChatAudioTrack?.play()
-                vadChatStateLd.postValue(VadChatState.Replying)
+                onVadChatStateChange.onChange(VadChatState.Replying)
             }
             RealtimeResponseDataTypeEnum.STOP_TTS -> {
                 Log.i(TAG, "handleTextMessage::STOP_TTS播放")
@@ -465,7 +480,7 @@ class ChatVm(
                 realtimeChatAudioTrack?.stop()
                 // 清空播放缓存
                 realtimeChatAudioTrack?.flush()
-                vadChatStateLd.postValue(VadChatState.Silent)
+                onVadChatStateChange.onChange(VadChatState.Silent)
             }
             RealtimeResponseDataTypeEnum.AUDIO_CHUNK -> {
                 // 音频数据
@@ -474,7 +489,7 @@ class ChatVm(
                 data?.let {
                     playBase64Audio(data)
                 }
-                vadChatStateLd.postValue(VadChatState.Replying)
+                onVadChatStateChange.onChange(VadChatState.Replying)
             }
             RealtimeResponseDataTypeEnum.TEXT_CHAT_RESPONSE -> {
                 // 文本数据
