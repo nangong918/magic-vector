@@ -29,6 +29,7 @@ class CallDialog(
         setListener()
     }
 
+    @SuppressLint("ResourceType")
     private fun initView(){
         dialog.setContentView(binding.root)
         dialog.setCancelable(false)
@@ -56,6 +57,8 @@ class CallDialog(
         }
 
         binding.tvChatState.text = fragmentActivity.getString(R.string.muted)
+        // 关闭mic
+        binding.ivMic.setImageResource(R.xml.mic_off_24px)
     }
 
     @SuppressLint("ResourceType")

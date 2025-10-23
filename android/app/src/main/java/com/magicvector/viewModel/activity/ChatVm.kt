@@ -226,8 +226,7 @@ class ChatVm(
             }
         })
 
-        vadSileroManager!!.startRecording()
-        onVadChatStateChange.onChange(VadChatState.Muted)
+        startVadCall()
     }
 
     fun startVadCall(){
