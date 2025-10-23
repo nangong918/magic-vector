@@ -97,7 +97,7 @@
             agent_id = #{agentId} and
             chat_time &lt;= #{deadline}
         order by
-            chat_time DESC -- 时间从大到小排序
+            chat_timestamp DESC -- 根据 chat_timestamp 从大到小排序
         limit #{limit}
     </select>
     <select id="getAllMessagesByAgentId" resultType="com.openapi.domain.Do.ChatMessageDo">
@@ -108,7 +108,7 @@
         where
             agent_id = #{agentId}
         order by
-            chat_time DESC -- 时间从大到小排序
+            chat_timestamp DESC -- 根据 chat_timestamp 从大到小排序
     </select>
     <select id="getMessageByAgentIds" resultType="com.openapi.domain.Do.ChatMessageDo">
         SELECT
@@ -121,7 +121,7 @@
             #{agentId}
         </foreach>
         AND chat_time &lt;= #{deadline}
-        ORDER BY chat_time DESC -- 时间从大到小排序
+        ORDER BY chat_timestamp DESC -- 根据 chat_timestamp 从大到小排序
         LIMIT #{limit}
     </select>
 
