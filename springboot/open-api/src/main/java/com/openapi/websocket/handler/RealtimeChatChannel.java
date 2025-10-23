@@ -99,7 +99,11 @@ public class RealtimeChatChannel extends TextWebSocketHandler {
                 }
             }
             case START_AUDIO_RECORD -> {
-                // todo 配合前端逻辑：如果当前正在接收数据流，然后再接收到Start就无视
+                // 正在录音的话就返回
+                if (!realtimeChatContextManager.stopRecording.get()){
+                    log.warn("[websocket warn] 录音已开始，前端录音申请驳回");
+                    return;
+                }
                 // 无VAD模式
                 // 开启新的一问一答
                 realtimeChatContextManager.newChatMessage();
