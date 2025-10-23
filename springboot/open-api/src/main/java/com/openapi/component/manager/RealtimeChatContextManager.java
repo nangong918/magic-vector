@@ -86,7 +86,7 @@ public class RealtimeChatContextManager {
         response.setUserId(userId);
         response.setRole(RoleTypeEnum.USER.getValue());
         response.setContent(sstResult);
-        response.setMessageId(getCurrentAgentMessageId());
+        response.setMessageId(getCurrentUserMessageId());
         response.setTimestamp(currentUserMessageTimestamp);
         response.setChatTime(getCurrentMessageTimeStr());
         return response;
