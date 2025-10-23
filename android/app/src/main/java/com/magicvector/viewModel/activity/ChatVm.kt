@@ -75,7 +75,6 @@ import kotlin.math.sqrt
  *  公用AudioTrack
  *      接收到TTS_START之后就要启动
  *      接收到TTS_STOP之后就要关闭
- *  todo 文本改为流式碎片传递：1.提高性能 2.通话中展示文本
  */
 class ChatVm(
 

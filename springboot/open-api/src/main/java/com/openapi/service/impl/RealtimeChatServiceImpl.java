@@ -214,7 +214,8 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
 
                     // 发送当前fragment消息
                     chatContextManager.currentResponseStringBuffer.append(fragment);
-                    RealtimeChatTextResponse agentFragmentResponse = chatContextManager.getCurrentResponse();
+//                    RealtimeChatTextResponse agentFragmentResponse = chatContextManager.getCurrentResponse();
+                    RealtimeChatTextResponse agentFragmentResponse = chatContextManager.getCurrentFragmentResponse(fragment);
 
                     // 发送消息给Client
                     String agentFragmentResponseJson = JSON.toJSONString(agentFragmentResponse);

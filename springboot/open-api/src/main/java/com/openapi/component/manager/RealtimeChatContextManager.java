@@ -80,6 +80,19 @@ public class RealtimeChatContextManager {
     }
 
     @NonNull
+    public RealtimeChatTextResponse getCurrentFragmentResponse(@NonNull String fragmentText){
+        val response = new RealtimeChatTextResponse();
+        response.setAgentId(agentId);
+        response.setUserId(userId);
+        response.setRole(RoleTypeEnum.AGENT.getValue());
+        response.setContent(fragmentText);
+        response.setMessageId(getCurrentAgentMessageId());
+        response.setTimestamp(currentAgentMessageTimestamp);
+        response.setChatTime(getCurrentMessageTimeStr());
+        return response;
+    }
+
+    @NonNull
     public RealtimeChatTextResponse getSSTResultResponse(@NonNull String sstResult){
         val response = new RealtimeChatTextResponse();
         response.setAgentId(agentId);
