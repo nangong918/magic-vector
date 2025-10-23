@@ -1,6 +1,7 @@
 package com.magicvector.manager.vad
 
 import android.content.Context
+import android.util.Log
 import com.konovalov.vad.silero.Vad
 import com.konovalov.vad.silero.VadSilero
 import com.konovalov.vad.silero.config.FrameSize
@@ -12,6 +13,8 @@ import java.nio.ByteOrder
 import kotlin.experimental.and
 
 class VadSileroManager {
+
+    private val TAG = VadSileroManager::class.simpleName
 
     private lateinit var vad: VadSilero
     private lateinit var recorder: VoiceRecorder
@@ -118,8 +121,12 @@ class VadSileroManager {
     }
 
     fun onDestroy() {
-        recorder.stop()
-        vad.close()
+        try {
+            recorder.stop()
+            vad.close()
+        } catch (e: Exception){
+            Log.e(TAG, "onDestroy: ", e)
+        }
     }
 
     private fun shortArrayToByteArray(audioData: ShortArray): ByteArray {
