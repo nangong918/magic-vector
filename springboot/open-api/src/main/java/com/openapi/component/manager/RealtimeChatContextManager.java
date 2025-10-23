@@ -5,6 +5,7 @@ import com.openapi.domain.constant.RoleTypeEnum;
 import com.openapi.domain.dto.ws.RealtimeChatTextResponse;
 import com.openapi.utils.DateUtils;
 import lombok.NonNull;
+import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 import org.springframework.web.socket.WebSocketSession;
 
@@ -19,6 +20,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * 实时聊天的上下文管理器，一个连接一个，并非单例，不能使用@Component
  * 需求：1. 用户发送语音 + 回调显示用户语音 2. 流式音频回调 3. 流式文本持续回显 4. 聊天记录保存到mysql 5.下次会话的时候加载到ChatModel
  */
+@Slf4j
 public class RealtimeChatContextManager {
 
     // 音频数据
@@ -49,6 +51,7 @@ public class RealtimeChatContextManager {
         currentUserMessageTimestamp = System.currentTimeMillis();
         currentMessageDateTime = LocalDateTime.now();
         currentResponseStringBuffer = new StringBuffer();
+        log.info("开启新的message，MessageId是：{}", currentMessageId);
     }
 
     @NonNull

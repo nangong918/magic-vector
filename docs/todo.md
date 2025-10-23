@@ -8,8 +8,7 @@ Spring 项目部署在Docker -> 上传到阿里云服务器 todo Docker，Nginx 
 简单的SpringAI智能体部署Docker + 内网穿透
 
 ### lv0(当前任务)
-VAD 集成项目代码
-实现Realtime语音通话功能
+压测, 修复bug, 提高系统的鲁棒性
 
 研究esp32-sc; 构建身体（头部和底部两部分）
 
@@ -57,3 +56,4 @@ chat app agent创建 + 聊天 (2025/10/19)
 
 完成文本聊天 + 前端流式展示 (2025/10/21)
 Silero,WebRTC_Vad 集成 Android (2025/10/22) 
+实时语音通话 (2025/10/23)

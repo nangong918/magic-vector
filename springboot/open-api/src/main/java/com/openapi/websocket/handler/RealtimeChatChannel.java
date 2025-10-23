@@ -136,7 +136,6 @@ public class RealtimeChatChannel extends TextWebSocketHandler {
                 realtimeChatContextManager.stopRecording.set(true);
             }
             case AUDIO_CHUNK -> {
-                log.info("[websocket] 收到音频块");
                 handleAudioChunk(messageMap.get(RealtimeRequestDataTypeEnum.DATA));
             }
             case USER_TEXT_MESSAGE -> {
