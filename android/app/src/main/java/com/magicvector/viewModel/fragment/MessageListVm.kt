@@ -72,9 +72,12 @@ open class MessageListVm(
     fun initNetworkRequest(context: Context, callback: SyncRequestCallback){
         if (HttpRequestManager.getIsFirstOpen(TAG)){
             // 第一次打开，初始化
+            Log.i(TAG, "initNetworkRequest: 第一次打开")
             doGetLastAgentChatList(context, callback)
         }
         else {
+            Log.i(TAG, "initNetworkRequest: 不是第一次打开")
+            NetworkLoadUtils.dismissDialogSafety(context)
             val messageContactItemAos = MainApplication.getMessageListManager().messageContactItemAos
             fao.messageContactCountLd.postValue(messageContactItemAos.size)
         }

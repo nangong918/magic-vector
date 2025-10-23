@@ -129,13 +129,16 @@ class ChatVm(
     private fun initNetworkRequest(context: Context, callback: SyncRequestCallback){
         if (HttpRequestManager.getIsFirstOpen(TAG)){
             // 第一次打开，初始化
+            Log.i(TAG, "initNetworkRequest: 第一次打开")
             doGetLastChat(context, callback)
         }
         else {
+            Log.i(TAG, "initNetworkRequest: 重启viewModel了")
             // 重启viewModel了，全部更新
             mainHandler.post {
                 @SuppressLint("NotifyDataSetChanged")
                 adapter.notifyDataSetChanged()
+                NetworkLoadUtils.dismissDialogSafety(context)
             }
         }
     }
