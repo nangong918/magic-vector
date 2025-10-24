@@ -83,6 +83,7 @@
         android:layout_height="150dp"
         app:lineColor="@color/colorPrimary"
         app:waveMode="left_right"
+        android:visibility="gone"
         android:gravity="center" />
 
     <com.view.appview.chat.SendMessageView

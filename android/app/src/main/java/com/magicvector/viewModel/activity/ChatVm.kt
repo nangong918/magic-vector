@@ -311,7 +311,7 @@ class ChatVm(
             object : OnThrowableCallback{
                 override fun callback(throwable: Throwable?) {
                     Log.e(TAG, "doGetLastChat: onThrowable", throwable)
-                    callback(Throwable("Get ChatHistory Failed"))
+                    callback.onThrowable(Throwable("Get ChatHistory Failed"))
                 }
             }
         )
@@ -337,7 +337,7 @@ class ChatVm(
             object : OnThrowableCallback{
                 override fun callback(throwable: Throwable?) {
                     Log.e(TAG, "doGetTimeLimitChat: onThrowable", throwable)
-                    callback(Throwable("doGetTimeLimitChat: onThrowable"))
+                    callback.onThrowable(Throwable("doGetTimeLimitChat: onThrowable"))
                 }
             }
         )
