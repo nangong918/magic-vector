@@ -40,11 +40,13 @@ import org.springframework.ai.chat.memory.ChatMemory;
 import org.springframework.ai.chat.messages.Message;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
+import org.springframework.web.reactive.function.client.WebClientRequestException;
 import org.springframework.web.socket.TextMessage;
 import reactor.core.publisher.Flux;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.net.SocketException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Base64;
@@ -130,9 +132,22 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
 
             chatContextManager.session.sendMessage(new TextMessage(startResponse));
             /// llm
-            if (StringUtils.hasText(result)){
-                llmStreamCall(result, chatContextManager, chatClient);
+            if (StringUtils.hasText(result)) {
+                try {
+                    llmStreamCall(result, chatContextManager, chatClient);
+                } catch (Exception e) {
+                    log.error("[startChat] LLM 错误：{}", e.getMessage());
+                    // 只有连接重置错误才重试
+                    if (isConnectionResetError(e)) {
+                        reconnectSttStreamCall(result, chatContextManager, chatClient);
+                    }
+                    else {
+                        // 其他异常直接抛出
+                        throw e;
+                    }
+                }
             }
+
         });
     }
 
@@ -178,6 +193,45 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
                 );
     }
 
+    private void reconnectSttStreamCall(String sentence, @NotNull RealtimeChatContextManager chatContextManager, ChatClient chatClient) {
+        while (chatContextManager.llmConnectResetRetryCount.get() < ModelConstant.LLM_CONNECT_RESET_MAX_RETRY_COUNT) {
+            try {
+                int attempt = chatContextManager.llmConnectResetRetryCount.incrementAndGet();
+                log.warn("检测到连接重置，进行第{}次重试", attempt);
+
+                Thread.sleep(50); // 短暂延迟
+
+                llmStreamCall(sentence, chatContextManager, chatClient);
+                chatContextManager.llmConnectResetRetryCount.set(0);
+                return; // 成功则退出
+
+            } catch (InterruptedException ie) {
+                Thread.currentThread().interrupt();
+                throw new RuntimeException("重试被中断", ie);
+            } catch (Exception e) {
+                if (!isConnectionResetError(e)) {
+                    // 非连接重置错误，直接抛出
+                    chatContextManager.llmConnectResetRetryCount.set(0);
+                    throw e;
+                }
+                // 连接重置错误继续循环重试
+            }
+        }
+
+        // 重试次数耗尽
+        log.error("连接重置重试次数已达上限: {}", ModelConstant.LLM_CONNECT_RESET_MAX_RETRY_COUNT);
+        chatContextManager.llmConnectResetRetryCount.set(0);
+        throw new RuntimeException("LLM连接重试次数耗尽");
+    }
+
+    /**
+     * 判断是否为连接重置错误
+     */
+    private boolean isConnectionResetError(Throwable throwable) {
+        return throwable instanceof WebClientRequestException &&
+                throwable.getCause() instanceof SocketException &&
+                "Connection reset".equals(throwable.getCause().getMessage());
+    }
     private void llmStreamCall(String sentence, @NotNull RealtimeChatContextManager chatContextManager, ChatClient chatClient) {
         log.info("\n[LLM 开始] 输入内容: {}", sentence);
 

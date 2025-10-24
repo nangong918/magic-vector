@@ -13,6 +13,7 @@ import java.time.LocalDateTime;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * @author 13225
@@ -41,6 +42,8 @@ public class RealtimeChatContextManager {
     public final AtomicBoolean isFirstTTS = new AtomicBoolean(true);
     // 实现语音延迟
     public long lastTTSTimestamp = 0L;
+    // llm Connect Reset重试
+    public final AtomicInteger llmConnectResetRetryCount = new AtomicInteger(0);
 
 
     // 当前聊天会话信息
@@ -56,6 +59,7 @@ public class RealtimeChatContextManager {
         currentMessageDateTime = LocalDateTime.now();
         currentResponseStringBuffer = new StringBuffer();
         isFirstTTS.set(true);
+        llmConnectResetRetryCount.set(0);
         lastTTSTimestamp = 0L;
         log.info("开启新的message，MessageId是：{}", currentMessageId);
     }

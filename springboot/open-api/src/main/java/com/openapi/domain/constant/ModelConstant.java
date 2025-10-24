@@ -18,6 +18,9 @@ public interface ModelConstant {
     int MEMORY_CONTEXT_LENGTH = 10;
     int LIMIT_FETCH_CHAT_HISTORY_LENGTH = 50;
 
+    // llm connect reset 最大重连次数
+    int LLM_CONNECT_RESET_MAX_RETRY_COUNT = 3;
+
     String STT_Format = "pcm";
     int SST_SampleRate = 16000;
     String SYSTEM_PROMPT = "你是我的傲娇小女友，回答问题的时候暧昧一些。回答的之后只能输出正常语句, 不能使用表情等。对话精简一些，最好在3至5句话。";
