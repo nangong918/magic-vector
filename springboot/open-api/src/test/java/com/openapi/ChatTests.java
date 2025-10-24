@@ -449,4 +449,135 @@ public class ChatTests {
             throw new RuntimeException(e);
         }
     }
+
+    // 超时http connect reset 问题
+    @Test
+    public void chatConnectResetTest(){
+        ChatClient chatClient = ChatClient.builder(dashScopeChatModel)
+                .build();
+
+        String userQuestion = "你好啊，我叫czy，你是谁？";
+        log.info("开始第1次调用");
+        Flux<String> responseFlux1 = chatClient.prompt()
+                .user(userQuestion)
+                .stream()
+                .content();
+
+        responseFlux1.subscribe(
+                fragment -> {
+                    log.info("[LLM1 响应]: {}", fragment);
+                },
+                error -> {
+                    log.error("[LLM1 错误]", error);
+                },
+                () -> {
+                    log.info("[LLM1 流式响应完全结束]");
+                }
+        );
+
+        long sleepTime = 1_000 * 60 * 5;
+        try {
+            Thread.sleep(sleepTime);
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
+
+        log.info("开始第2次调用");
+        String userQuestion2 = "你还记得我叫什么名字吗？";
+        Flux<String> responseFlux2 = chatClient.prompt()
+                .user(userQuestion2)
+                .stream()
+                .content();
+
+        responseFlux2.subscribe(
+                fragment -> {
+                    log.info("[LLM2 响应]: {}", fragment);
+                },
+                error -> {
+                    log.error("[LLM2 错误]", error);
+                },
+                () -> {
+                    log.info("[LLM2 流式响应完全结束]");
+                }
+        );
+
+        try {
+            Thread.sleep(1_000);
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
+
+        String userQuestion3 = "你叫什么名字啊？";
+        log.info("开始第3次调用");
+        Flux<String> responseFlux3 = chatClient.prompt()
+                .user(userQuestion3)
+                .stream()
+                .content();
+
+        responseFlux3.subscribe(
+                fragment -> {
+                    log.info("[LLM3 响应]: {}", fragment);
+                },
+                error -> {
+                    log.error("[LLM3 错误]", error);
+                },
+                () -> {
+                    log.info("[LLM3 流式响应完全结束]");
+                }
+        );
+
+        try {
+            Thread.sleep(10_000);
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
+
+        /*
+2025-10-24T10:42:15.908+08:00  INFO 26940 --- [open-api] [           main] com.openapi.ChatTests                    : 开始第1次调用
+2025-10-24T10:42:16.970+08:00  INFO 26940 --- [open-api] [oundedElastic-1] com.openapi.ChatTests                    : [LLM1 响应]: 你好
+2025-10-24T10:42:16.972+08:00  INFO 26940 --- [open-api] [oundedElastic-1] com.openapi.ChatTests                    : [LLM1 响应]: 呀
+2025-10-24T10:42:16.974+08:00  INFO 26940 --- [open-api] [oundedElastic-1] com.openapi.ChatTests                    : [LLM1 响应]: ，
+2025-10-24T10:42:16.975+08:00  INFO 26940 --- [open-api] [oundedElastic-1] com.openapi.ChatTests                    : [LLM1 响应]: czy
+2025-10-24T10:42:16.975+08:00  INFO 26940 --- [open-api] [oundedElastic-1] com.openapi.ChatTests                    : [LLM1 响应]: ！👋 我
+2025-10-24T10:42:16.976+08:00  INFO 26940 --- [open-api] [oundedElastic-1] com.openapi.ChatTests                    : [LLM1 响应]: 是通义千
+2025-10-24T10:42:17.009+08:00  INFO 26940 --- [open-api] [oundedElastic-1] com.openapi.ChatTests                    : [LLM1 响应]: 问（Qwen
+2025-10-24T10:42:17.011+08:00  INFO 26940 --- [open-api] [oundedElastic-1] com.openapi.ChatTests                    : [LLM1 响应]: ），是阿里巴巴集团
+2025-10-24T10:42:17.055+08:00  INFO 26940 --- [open-api] [oundedElastic-1] com.openapi.ChatTests                    : [LLM1 响应]: 旗下的通义实验室
+2025-10-24T10:42:17.099+08:00  INFO 26940 --- [open-api] [oundedElastic-1] com.openapi.ChatTests                    : [LLM1 响应]: 自主研发的超大规模
+2025-10-24T10:42:17.151+08:00  INFO 26940 --- [open-api] [oundedElastic-1] com.openapi.ChatTests                    : [LLM1 响应]: 语言模型。你可以
+2025-10-24T10:42:17.160+08:00  INFO 26940 --- [open-api] [oundedElastic-1] com.openapi.ChatTests                    : [LLM1 响应]: 叫我Qwen，
+2025-10-24T10:42:17.189+08:00  INFO 26940 --- [open-api] [oundedElastic-1] com.openapi.ChatTests                    : [LLM1 响应]: 或者直接叫我小
+2025-10-24T10:42:17.291+08:00  INFO 26940 --- [open-api] [oundedElastic-1] com.openapi.ChatTests                    : [LLM1 响应]: 通也行～
+2025-10-24T10:42:17.476+08:00  INFO 26940 --- [open-api] [oundedElastic-1] com.openapi.ChatTests                    : [LLM1 响应]: 很高兴认识你！
+2025-10-24T10:42:17.516+08:00  INFO 26940 --- [open-api] [oundedElastic-1] com.openapi.ChatTests                    : [LLM1 响应]: ✨
+
+我特别
+2025-10-24T10:42:17.572+08:00  INFO 26940 --- [open-api] [oundedElastic-1] com.openapi.ChatTests                    : [LLM1 响应]: 喜欢和大家聊天
+2025-10-24T10:42:17.582+08:00  INFO 26940 --- [open-api] [oundedElastic-1] com.openapi.ChatTests                    : [LLM1 响应]: 、学习新知识
+2025-10-24T10:42:17.623+08:00  INFO 26940 --- [open-api] [oundedElastic-1] com.openapi.ChatTests                    : [LLM1 响应]: ，还能帮你写
+2025-10-24T10:42:17.678+08:00  INFO 26940 --- [open-api] [oundedElastic-1] com.openapi.ChatTests                    : [LLM1 响应]: 故事、写公
+2025-10-24T10:42:17.691+08:00  INFO 26940 --- [open-api] [oundedElastic-1] com.openapi.ChatTests                    : [LLM1 响应]: 文、写邮件
+2025-10-24T10:42:17.722+08:00  INFO 26940 --- [open-api] [oundedElastic-1] com.openapi.ChatTests                    : [LLM1 响应]: 、写剧本，
+2025-10-24T10:42:17.773+08:00  INFO 26940 --- [open-api] [oundedElastic-1] com.openapi.ChatTests                    : [LLM1 响应]: 甚至编程、做
+2025-10-24T10:42:17.783+08:00  INFO 26940 --- [open-api] [oundedElastic-1] com.openapi.ChatTests                    : [LLM1 响应]: 数学题都行
+2025-10-24T10:42:17.903+08:00  INFO 26940 --- [open-api] [oundedElastic-1] com.openapi.ChatTests                    : [LLM1 响应]: 哦！有什么我可以
+2025-10-24T10:42:17.919+08:00  INFO 26940 --- [open-api] [oundedElastic-1] com.openapi.ChatTests                    : [LLM1 响应]: 帮你的吗？
+2025-10-24T10:42:17.920+08:00  INFO 26940 --- [open-api] [oundedElastic-1] com.openapi.ChatTests                    : [LLM1 响应]: 😊
+2025-10-24T10:42:17.943+08:00  INFO 26940 --- [open-api] [oundedElastic-1] com.openapi.ChatTests                    : [LLM1 流式响应完全结束]
+2025-10-24T10:47:16.319+08:00  INFO 26940 --- [open-api] [           main] com.openapi.ChatTests                    : 开始第2次调用
+2025-10-24T10:47:17.323+08:00  INFO 26940 --- [open-api] [           main] com.openapi.ChatTests                    : 开始第3次调用
+2025-10-24T10:47:17.623+08:00  INFO 26940 --- [open-api] [oundedElastic-3] com.openapi.ChatTests                    : [LLM3 响应]: 我
+2025-10-24T10:47:17.640+08:00  INFO 26940 --- [open-api] [oundedElastic-3] com.openapi.ChatTests                    : [LLM3 响应]: 叫
+2025-10-24T10:47:17.644+08:00  INFO 26940 --- [open-api] [oundedElastic-3] com.openapi.ChatTests                    : [LLM3 响应]: 通
+2025-10-24T10:47:17.653+08:00  INFO 26940 --- [open-api] [oundedElastic-3] com.openapi.ChatTests                    : [LLM3 响应]: 义
+2025-10-24T10:47:17.681+08:00  INFO 26940 --- [open-api] [oundedElastic-3] com.openapi.ChatTests                    : [LLM3 响应]: 千问，英文
+2025-10-24T10:47:17.752+08:00  INFO 26940 --- [open-api] [oundedElastic-3] com.openapi.ChatTests                    : [LLM3 响应]: 名叫Qwen。
+2025-10-24T10:47:17.773+08:00  INFO 26940 --- [open-api] [oundedElastic-3] com.openapi.ChatTests                    : [LLM3 响应]: 你可以叫我Qwen
+2025-10-24T10:47:17.823+08:00  INFO 26940 --- [open-api] [oundedElastic-3] com.openapi.ChatTests                    : [LLM3 响应]: 。很高兴认识你
+2025-10-24T10:47:17.838+08:00  INFO 26940 --- [open-api] [oundedElastic-3] com.openapi.ChatTests                    : [LLM3 响应]: ！😊
+2025-10-24T10:47:17.865+08:00  INFO 26940 --- [open-api] [oundedElastic-3] com.openapi.ChatTests                    : [LLM3 流式响应完全结束]
+         */
+
+        // 上述可见第二次因为Connect Reset丢失了，然后第三次正常，所以如果Connect Reset之后需要立刻重试2~3次
+    }
 }
