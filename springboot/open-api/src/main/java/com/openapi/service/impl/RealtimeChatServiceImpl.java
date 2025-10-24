@@ -348,6 +348,7 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
                     // 检查是否有剩余的
                     String remainingText = optimizedSentenceDetector.extractAllCompleteSentences(textBuffer);
                     if (StringUtils.hasText(remainingText)) {
+                        log.info("[LLM -> TTS 剩余]: {}", remainingText);
                         chatContextManager.sentenceQueue.add(remainingText);
                         threadPoolConfig.taskExecutor().execute(
                                 () -> {
@@ -397,6 +398,9 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
             } catch (InterruptedException e) {
                 log.error("[TTS] 线程中断", e);
             }
+        }
+        else {
+            log.info("[TTS] 虚需模拟人语音停顿 已经耗时 {}ms", ttsGapTime);
         }
 
         // 全部取出
@@ -449,6 +453,8 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
                         subscription -> log.info("TTS开始"))
                 .doFinally(() -> {
                     chatContextManager.isTTSFinished.set(true);
+                    // 记录结束时间
+                    chatContextManager.lastTTSTimestamp = System.currentTimeMillis();
                     if (!chatContextManager.sentenceQueue.isEmpty()){
                         log.info("[TTS]自我调用, 剩余数据: {}", chatContextManager.sentenceQueue.size());
                         // 自我调用
