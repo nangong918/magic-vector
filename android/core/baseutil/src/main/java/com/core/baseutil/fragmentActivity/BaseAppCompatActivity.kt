@@ -11,6 +11,7 @@ import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import android.view.WindowInsets
+import android.view.WindowManager
 import android.view.inputmethod.InputMethodManager
 import android.widget.LinearLayout
 import androidx.appcompat.app.ActionBar
@@ -77,12 +78,19 @@ abstract class BaseAppCompatActivity<VB : ViewBinding>(
 //        );
 
 
-        if (supportActionBar != null){
-            supportActionBar?.hide()
-        }
-        else {
-            Log.i(BaseAppCompatActivity::class.simpleName,  "ActionBar is null")
-        }
+        // 隐藏标题导航栏
+        supportActionBar?.hide()
+
+        // 隐藏状态栏
+        window.setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN, WindowManager.LayoutParams.FLAG_FULLSCREEN)
+
+        // 隐藏导航栏
+        val decorView = window.decorView
+        decorView.systemUiVisibility = (
+                View.SYSTEM_UI_FLAG_FULLSCREEN
+                        or View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
+                        or View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
+                )
 
         setStatusBarColor(statusBarColorId)
     }
