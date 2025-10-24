@@ -37,6 +37,10 @@ public class RealtimeChatContextManager {
     public final Queue<String> sentenceQueue = new ConcurrentLinkedQueue<>();
     public final AtomicBoolean isTTSFinished = new AtomicBoolean(true);
     public final AtomicBoolean isLLMFinished = new AtomicBoolean(false);
+    // 用于记录是否是首次TTS，因为后续都是2+句话一个语音生成；而首次是单个句子
+    public final AtomicBoolean isFirstTTS = new AtomicBoolean(true);
+    // 实现语音延迟
+    public long lastTTSTimestamp = 0L;
 
 
     // 当前聊天会话信息
@@ -51,6 +55,8 @@ public class RealtimeChatContextManager {
         currentUserMessageTimestamp = System.currentTimeMillis();
         currentMessageDateTime = LocalDateTime.now();
         currentResponseStringBuffer = new StringBuffer();
+        isFirstTTS.set(true);
+        lastTTSTimestamp = 0L;
         log.info("开启新的message，MessageId是：{}", currentMessageId);
     }
 

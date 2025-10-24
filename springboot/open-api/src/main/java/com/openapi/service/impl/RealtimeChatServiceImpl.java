@@ -13,6 +13,7 @@ import com.openapi.component.manager.OptimizedSentenceDetector;
 import com.openapi.component.manager.RealtimeChatContextManager;
 import com.openapi.config.AgentConfig;
 import com.openapi.config.ChatConfig;
+import com.openapi.config.ThreadPoolConfig;
 import com.openapi.converter.ChatMessageConverter;
 import com.openapi.domain.Do.ChatMessageDo;
 import com.openapi.domain.ao.AgentAo;
@@ -74,6 +75,7 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
     private final AgentConfig agentConfig;
     private final UserService userService;
     private final AgentService agentService;
+    private final ThreadPoolConfig threadPoolConfig;
 
     @Override
     public void startChat(@NotNull RealtimeChatContextManager chatContextManager, @NotNull ChatClient chatClient) throws InterruptedException, NoApiKeyException {
@@ -238,20 +240,32 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
                     textBuffer.append(fragment);
                     log.info("[缓冲区累计]: {} 字符", textBuffer.length());
 
-                    // 尝试从缓冲区提取完整句子并输出
-                    String completeSentence;
-                    while ((completeSentence = optimizedSentenceDetector.detectAndExtractFirstSentence(textBuffer)) != null) {
-                        /// tts
-                        if (StringUtils.hasText(completeSentence)){
-                            chatContextManager.sentenceQueue.add(completeSentence);
-                            try {
-                                // todo 对话延迟：第一个消息要立刻回答，后面的消息要延迟300ms合成
-                                generateAudio(chatContextManager);
-                            } catch (NoApiKeyException e) {
-                                throw new RuntimeException(e);
-                            } catch (UploadFileException e) {
-                                throw new RuntimeException(e);
-                            }
+                    if (chatContextManager.isFirstTTS.compareAndSet(true, false)){
+                        // 首次tts
+                        log.info("[llm call] 首次tts");
+
+                        String complete1Sentence = optimizedSentenceDetector.detectAndExtractFirstSentence(textBuffer);
+                        if (StringUtils.hasText(complete1Sentence)){
+                            chatContextManager.sentenceQueue.add(complete1Sentence);
+                            threadPoolConfig.taskExecutor().execute(
+                                    () -> {
+                                        generateAudio(chatContextManager);
+                                    }
+                            );
+                        }
+                    }
+                    else {
+                        log.info("[llm call] 非首次tts");
+
+                        // 尝试从缓冲区提取2个完整句子并输出
+                        String complete2Sentence = optimizedSentenceDetector.detectAndExtractNeedSentences(textBuffer, 2);
+                        if (StringUtils.hasText(complete2Sentence)){
+                            chatContextManager.sentenceQueue.add(complete2Sentence);
+                            threadPoolConfig.taskExecutor().execute(
+                                    () -> {
+                                        generateAudio(chatContextManager);
+                                    }
+                            );
                         }
                     }
 
@@ -277,6 +291,17 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
                     log.info("\n[LLM 结束] 总耗时: {}ms, 片段总数: {}, 总字符数: {}",
                             totalTime, fragmentCount.get(), textBuffer.length());
 
+                    // 检查是否有剩余的
+                    String remainingText = optimizedSentenceDetector.extractAllCompleteSentences(textBuffer);
+                    if (StringUtils.hasText(remainingText)) {
+                        chatContextManager.sentenceQueue.add(remainingText);
+                        threadPoolConfig.taskExecutor().execute(
+                                () -> {
+                                    generateAudio(chatContextManager);
+                                }
+                        );
+                    }
+
                     // 存储消息到数据库
                     val realtimeChatTextResponse = chatContextManager.getCurrentResponse();
                     ChatMessageDo chatMessageDo = null;
@@ -297,6 +322,7 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
                     }
 
                     chatContextManager.isLLMFinished.set(true);
+                    // 发送结束符EOF（内部包含检查tts是否完成，不用担心）
                     sendEOF(chatContextManager);
                     log.info("[LLM 流式响应完全结束]");
                 }
@@ -304,9 +330,19 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
 
     }
 
-    private void generateAudio(@NotNull RealtimeChatContextManager chatContextManager) throws NoApiKeyException, UploadFileException {
+    private void generateAudio(@NotNull RealtimeChatContextManager chatContextManager) {
         if (!chatContextManager.isTTSFinished.get()){
             return;
+        }
+
+        long ttsGapTime = System.currentTimeMillis() - chatContextManager.lastTTSTimestamp;
+        if (ttsGapTime < ModelConstant.SENTENCE_INTERVAL){
+            try {
+                log.info("[TTS] 模拟人语音停顿 暂停 {}ms", ModelConstant.SENTENCE_INTERVAL - ttsGapTime);
+                Thread.sleep(ModelConstant.SENTENCE_INTERVAL - ttsGapTime);
+            } catch (InterruptedException e) {
+                log.error("[TTS] 线程中断", e);
+            }
         }
 
         // 全部取出
@@ -344,17 +380,33 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
                 .languageType(ModelConstant.TTS_LanguageType)
                 .build();
 
-        Flowable<MultiModalConversationResult> result = multiModalConversation.streamCall(param);
+        Flowable<MultiModalConversationResult> result = null;
+        try {
+            result = multiModalConversation.streamCall(param);
+        } catch (NoApiKeyException e) {
+            log.error("[tts] NoApiKeyException", e);
+            throw new RuntimeException(e);
+        } catch (UploadFileException e) {
+            log.error("[tts] UploadFileException", e);
+            throw new RuntimeException(e);
+        }
 
         result.doOnSubscribe(
                         subscription -> log.info("TTS开始"))
                 .doFinally(() -> {
                     chatContextManager.isTTSFinished.set(true);
-                    sendEOF(chatContextManager);
                     if (!chatContextManager.sentenceQueue.isEmpty()){
                         log.info("[TTS]自我调用, 剩余数据: {}", chatContextManager.sentenceQueue.size());
                         // 自我调用
-                        generateAudio(chatContextManager);
+                        threadPoolConfig.taskExecutor().execute(
+                                () -> {
+                                    generateAudio(chatContextManager);
+                                }
+                        );
+                    }
+                    else {
+                        log.info("[TTS]结束 发送EOF");
+                        sendEOF(chatContextManager);
                     }
                 })
                 .blockingForEach(r -> {
@@ -376,6 +428,8 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
                     }
                 });
     }
+
+
 
     private void sendEOF(@NotNull RealtimeChatContextManager chatContextManager){
         if (chatContextManager.isTTSFinished.get() && chatContextManager.isLLMFinished.get()) {
