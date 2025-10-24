@@ -400,6 +400,8 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
             log.info("[TTS] 输入内容: {}", sentence);
         }
 
+        /// @see RealtimeResponseDataTypeEnum.WHOLE_CHAT_RESPONSE; 整句回复在此处，暂时不开发
+
         MultiModalConversationParam param = MultiModalConversationParam.builder()
                 .model(ModelConstant.TTS_Model)
                 .apiKey(chatConfig.getApiKey())

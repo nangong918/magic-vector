@@ -27,6 +27,11 @@ public enum RealtimeResponseDataTypeEnum {
      * @see com.openapi.domain.dto.ws.RealtimeChatTextResponse
      */
     TEXT_CHAT_RESPONSE("text_chat_response"),
+    /**
+     * whole_chat_response 整句回复
+     * @see com.openapi.domain.dto.ws.RealtimeChatTextResponse
+     */
+    WHOLE_CHAT_RESPONSE("whole_chat_response"),
     ;
 
     public static final String TYPE = "type";
