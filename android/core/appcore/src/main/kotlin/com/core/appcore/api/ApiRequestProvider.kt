@@ -17,7 +17,7 @@ class ApiRequestProvider : BaseApiRequestProvider() {
             return apiRequest ?: synchronized(this) {
                 apiRequest ?: createApiRequest(
                     ApiRequest::class.java,
-                    ApiUrlConfig.getMainUrl(),
+                    ApiUrlConfig.getUrl(),
                     BaseConstant.HttpConstant.CONNECT_TIMEOUT,
                     BaseConstant.HttpConstant.READ_TIMEOUT,
                     BaseConstant.HttpConstant.WRITE_TIMEOUT,

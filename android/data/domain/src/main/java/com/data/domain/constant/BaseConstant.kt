@@ -46,7 +46,7 @@ class BaseConstant {
     }
 
     object WSConstantUrl {
-        const val AGENT_REALTIME_CHAT_URL = ConstantUrl.LOCAL_WS_URL + "/agent/realtime/chat"
+        const val AGENT_REALTIME_CHAT_URL = "/agent/realtime/chat"
     }
 
     object PermissionConstant {

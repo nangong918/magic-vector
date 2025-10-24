@@ -22,6 +22,7 @@ import androidx.annotation.RequiresPermission
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
+import com.core.appcore.api.ApiUrlConfig
 import com.core.appcore.api.handler.SyncRequestCallback
 import com.core.appcore.utils.AppResponseUtil
 import com.core.baseutil.cache.HttpRequestManager
@@ -262,7 +263,7 @@ class ChatVm(
     fun initRealtimeChatWsClient(activity: FragmentActivity) {
         realtimeChatWsClient = RealtimeChatWsClient(
             GSON,
-            BaseConstant.WSConstantUrl.AGENT_REALTIME_CHAT_URL
+            ApiUrlConfig.getWsMainUrl() + BaseConstant.WSConstantUrl.AGENT_REALTIME_CHAT_URL
         )
 
         PermissionUtil.requestPermissionSelectX(

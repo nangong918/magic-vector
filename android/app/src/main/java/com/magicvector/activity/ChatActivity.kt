@@ -50,6 +50,7 @@ class ChatActivity : BaseAppCompatVmActivity<ActivityChatBinding, ChatVm>(
         try {
             val intentAo = intent.getSerializableExtra(ChatIntentAo::class.simpleName) as ChatIntentAo
             ao = intentAo.ao
+            Log.d(tag, "intentAo: ${ChatVm.GSON.toJson(intentAo)}")
         } catch (e : Exception){
             Log.e(TAG, "ChatActivity::intentAo转换失败", e)
         }

@@ -57,11 +57,11 @@ class TestVm(
     companion object {
         val TAG: String = TestVm::class.java.name
         val GSON = Gson()
-        const val baseSseUrl = BaseConstant.ConstantUrl.LOCAL_URL + "/test/stream-sse"
-        const val baseSseTTSUrl = BaseConstant.ConstantUrl.LOCAL_URL + "/test/stream-tts-sse"
-        const val baseWebsocketUrl = BaseConstant.ConstantUrl.LOCAL_WS_URL + "/test-channel"
-        const val realtimeChatWsUrl = BaseConstant.ConstantUrl.LOCAL_WS_URL + "/realtime-no-vad-test"
-        const val realtimeChat2WsUrl = BaseConstant.ConstantUrl.LOCAL_WS_URL + "/realtime-test"
+        const val baseSseUrl = BaseConstant.ConstantUrl.TEST_URL + "/test/stream-sse"
+        const val baseSseTTSUrl = BaseConstant.ConstantUrl.TEST_URL + "/test/stream-tts-sse"
+        const val baseWebsocketUrl = BaseConstant.ConstantUrl.TEST_WS_URL + "/test-channel"
+        const val realtimeChatWsUrl = BaseConstant.ConstantUrl.TEST_WS_URL + "/realtime-no-vad-test"
+        const val realtimeChat2WsUrl = BaseConstant.ConstantUrl.TEST_WS_URL + "/realtime-test"
     }
 
     init {
