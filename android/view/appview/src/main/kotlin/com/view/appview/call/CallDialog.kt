@@ -5,6 +5,7 @@ import android.app.Dialog
 import android.graphics.Color
 import android.os.Handler
 import android.os.Looper
+import android.text.TextUtils
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.WindowManager
@@ -54,9 +55,12 @@ class CallDialog(
         // view
         callAo.let {
             binding.tvTitle.text = it.agentName?:""
-            it.agentAvatar?.let { agentAvatar ->
+            if (TextUtils.isEmpty(it.agentAvatar)){
+                binding.imvgAvatar.setImageResource(R.mipmap.logo)
+            }
+            else {
                 ImageLoadUtil.loadImageViewByResource(
-                    agentAvatar,
+                    it.agentAvatar,
                     binding.imvgAvatar
                 )
             }

@@ -120,8 +120,8 @@ class ChatVm(
             realtimeChatState.postValue(RealtimeChatState.Error("Agent Id is Null"))
             throw IllegalArgumentException("Agent Id is Null")
         }
-        aao.nameLd.postValue(ao?.vo?.name)
-        aao.avatarUrlLd.postValue(ao?.vo?.avatarUrl)
+        aao.nameLd.postValue(ao?.vo?.name?: "")
+        aao.avatarUrlLd.postValue(ao?.vo?.avatarUrl?: "")
 
         // 获取chatManager
         chatManagerPointer = MainApplication.getChatMapManager().getChatManager(
@@ -540,6 +540,7 @@ class ChatVm(
                     Log.e(TAG, "handleTextMessage: data is null")
                 }
             }
+            RealtimeResponseDataTypeEnum.WHOLE_CHAT_RESPONSE -> {}
         }
     }
 
