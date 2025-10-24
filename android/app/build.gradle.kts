@@ -127,6 +127,9 @@ dependencies {
     implementation(libs.permissionsdispatcher)
     kapt(libs.permissionsdispatcher.processor)
 
+    // 下拉刷新
+    implementation(libs.swiperefreshlayout)
+
     /**
      * 自定义Module
      * 基本依赖关系：

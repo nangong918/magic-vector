@@ -8,20 +8,16 @@ import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import androidx.activity.result.ActivityResultLauncher
-import androidx.activity.result.contract.ActivityResultContracts
-import androidx.fragment.app.FragmentActivity
 import com.core.appcore.api.handler.SyncRequestCallback
 import com.core.baseutil.network.networkLoad.NetworkLoadUtils
-import com.magicvector.utils.BaseAppCompatVmFragment
 import com.data.domain.OnPositionItemClick
 import com.data.domain.fragmentActivity.intentAo.ChatIntentAo
 import com.magicvector.MainApplication
 import com.magicvector.activity.ChatActivity
-import com.magicvector.activity.CreateAgentActivity
 import com.magicvector.activity.MainActivity
 import com.magicvector.callback.OnCreateAgentCallback
 import com.magicvector.databinding.FragmentMessageListBinding
+import com.magicvector.utils.BaseAppCompatVmFragment
 import com.magicvector.viewModel.fragment.MessageListVm
 import java.util.Optional
 
@@ -112,40 +108,32 @@ class MessageListFragment : BaseAppCompatVmFragment<
                 Log.w("MessageListFragment", "activity is not added")
             }
         }
-    }
 
-    var createAgentLauncher: ActivityResultLauncher<Intent>? = null
-
-    fun turnToCreateAgent(activity: FragmentActivity) {
-        val intent = Intent(activity, CreateAgentActivity::class.java)
-        createAgentLauncher?.launch(intent)
-    }
-
-    // activity launcher必须要在LifecycleOwner 的状态为 STARTED 或更早的状态时进行注册
-    fun initCreateAgentLuncher(activity: FragmentActivity){
-        createAgentLauncher = activity.registerForActivityResult(
-            ActivityResultContracts.StartActivityForResult()
-        ) { result ->
-            // 如果intent 返回值中包括ok，则表明创建成功，需要进行刷新list
-            val backIntent: Intent? = result.data
-            if (backIntent != null) {
-                val createResult: Boolean = backIntent.getBooleanExtra(
-                    CreateAgentActivity::class.simpleName,
-                    false
-                )
-                // 创建成功
-                if (createResult) {
-                    vm.doGetLastAgentChatList(activity, object : SyncRequestCallback {
-                        override fun onThrowable(throwable: Throwable?) {
-                            NetworkLoadUtils.dismissDialogSafety(activity)
-                            Log.e(TAG, "initResource: onThrowable", throwable)
+        binding.layoutMain.setOnRefreshListener{
+            if (isAdded) {
+                vm.doGetLastAgentChatList(requireActivity(), object : SyncRequestCallback {
+                    override fun onThrowable(throwable: Throwable?) {
+                        requireActivity().let {
+                            NetworkLoadUtils.dismissDialogSafety(it)
+                            it.runOnUiThread {
+                                binding.layoutMain.isRefreshing = false
+                            }
                         }
+                        Log.e(TAG, "initResource: onThrowable", throwable)
+                    }
 
-                        override fun onAllRequestSuccess() {
-                            NetworkLoadUtils.dismissDialogSafety(activity)
+                    override fun onAllRequestSuccess() {
+                        requireActivity().let {
+                            NetworkLoadUtils.dismissDialogSafety(it)
+                            it.runOnUiThread {
+                                binding.layoutMain.isRefreshing = false
+                            }
                         }
-                    })
-                }
+                    }
+                })
+            }
+            else {
+                Log.w("MessageListFragment", "activity is not added")
             }
         }
     }
