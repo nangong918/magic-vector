@@ -5,7 +5,7 @@
     android:id="@+id/main"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context=".activity.CreateAgentActivity">
+    tools:context=".activity.AgentInfoActivity">
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -51,12 +51,31 @@
             android:layout_marginBottom="20dp"
             android:layout_marginTop="33dp"
             android:gravity="center"
-            android:text="@string/create_agent"
+            android:text="@string/set_agent"
             android:textColor="@color/white"
             android:textSize="26sp"
             android:textStyle="bold"
             app:layout_constraintEnd_toEndOf="parent"
             android:background="@drawable/button_selected"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@+id/ly_confirm_password" />
+
+        <androidx.appcompat.widget.AppCompatButton
+            android:id="@+id/btn_delete"
+            android:layout_width="match_parent"
+            android:layout_marginStart="30dp"
+            android:layout_marginEnd="30dp"
+            android:layout_height="70dp"
+            android:textAllCaps="false"
+            android:layout_marginBottom="20dp"
+            android:layout_marginTop="33dp"
+            android:gravity="center"
+            android:text="@string/delete_agent"
+            android:textColor="@color/white"
+            android:textSize="26sp"
+            android:textStyle="bold"
+            app:layout_constraintEnd_toEndOf="parent"
+            android:background="@drawable/button_selected_red"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@+id/ly_confirm_password" />
 

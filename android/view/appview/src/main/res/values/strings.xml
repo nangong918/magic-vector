@@ -163,4 +163,8 @@
     <string name="user_speaking">用户正在说话</string>
     <string name="agent_replying">Agent正在回复</string>
     <string name="error">异常</string>
+    <string name="set_agent">设置Agent</string>
+    <string name="delete_agent">删除Agent</string>
+    <string name="under_development">开发中…</string>
+    <string name="agent_is_not_found">未找到Agent</string>
 </resources>

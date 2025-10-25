@@ -4,11 +4,13 @@ import android.net.Uri
 import androidx.lifecycle.MutableLiveData
 import java.util.concurrent.atomic.AtomicReference
 
-class CreateAgentAAo {
+class AgentInfoAAo {
 
     val avatarAtomicUri : AtomicReference<Uri> = AtomicReference(null)
     val nameLd = MutableLiveData("")
     val descriptionLd = MutableLiveData("")
+    val avatarUrlLd = MutableLiveData("")
+    var agentId : String? = null
 
-    var isCreateSuccess: Boolean = false
+    var isSetSuccess: Boolean = false
 }

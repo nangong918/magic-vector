@@ -81,10 +81,10 @@ class CreateAgentVm(
         var filePart: MultipartBody.Part? = null
 
         // 上传头像的情况下
-        if (aao.avatarAtomicUrl.get() != null){
+        if (aao.avatarAtomicUri.get() != null){
             Log.d(TAG, "uri不为null，上传图像img资源")
             var bitmap: Bitmap? = MainApplication.getImageManager()!!.
-            uriToBitmapMediaStore(context, aao.avatarAtomicUrl.get())
+            uriToBitmapMediaStore(context, aao.avatarAtomicUri.get())
 
             bitmap = MainApplication.getImageManager()!!.
             processImage(bitmap, BaseConstant.Constant.BITMAP_MAX_SIZE_AVATAR)
@@ -94,7 +94,7 @@ class CreateAgentVm(
             // 确保您在这里传入正确的 Uri
 //        Uri uri = Uri.fromFile(new File(Environment.getExternalStorageDirectory(), imageName));
             imageFile = MainApplication.getImageManager()!!.
-            bitmapToFile(bitmap, aao.avatarAtomicUrl.get(), context)
+            bitmapToFile(bitmap, aao.avatarAtomicUri.get(), context)
 
             if (imageFile == null || !imageFile.exists()) {
                 // 处理文件未创建或路径不正确的情况
@@ -159,33 +159,6 @@ class CreateAgentVm(
         callback.onAllRequestSuccess()
     }
 
-    // 查询Agent
-    fun doGetAgentInfo(context: Context, agentId: String, callback: SyncRequestCallback){
-        api.getAgentInfo(
-            agentId,
-            object : OnSuccessCallback<BaseResponse<AgentResponse>> {
-                override fun onResponse(response: BaseResponse<AgentResponse>?) {
-                    AppResponseUtil.handleSyncResponseEx(
-                        response,
-                        context,
-                        callback,
-                        ::handleGetAgentInfo
-                    )
-                }
-            },
-            object : OnThrowableCallback {
-                override fun callback(throwable: Throwable?) {
-                    callback.onThrowable(throwable)
-                }
-            }
-        )
-    }
-
-    private fun handleGetAgentInfo(response: BaseResponse<AgentResponse>?,
-                                  context: Context,
-                                  callback: SyncRequestCallback) {
-
-    }
 
     //---------------------Logic---------------------
 
@@ -225,7 +198,7 @@ class CreateAgentVm(
             val data: Intent? = result.data
             if (data != null) {
                 val imageUri = data.data
-                aao.avatarAtomicUrl.set(imageUri)
+                aao.avatarAtomicUri.set(imageUri)
                 val bitmap: Bitmap? = MainApplication.getImageManager()
                     ?.uriToBitmapMediaStore(activity, imageUri)
                 if (bitmap != null) {
