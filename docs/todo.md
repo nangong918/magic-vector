@@ -38,6 +38,8 @@ chat 声纹识别（避免vad将自己的声音误认为输入）
 视频视觉 / WebRTC
 VAD 实时打断 + 3D-Speaker声纹识别
 
+性能分析：了解新能分析工具，分别对后端、前端、嵌入式进行性能分析
+
 ### lv3(无关紧要)
 部分View改用Jetpack compose
 最后升级Flutter, 打通IOS用户

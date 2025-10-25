@@ -15,7 +15,7 @@ public interface ModelConstant {
     AudioParameters.Voice TTS_Voice = AudioParameters.Voice.CHERRY;
     String TTS_LanguageType = "Chinese";
     // 记忆上下文长度
-    int MEMORY_CONTEXT_LENGTH = 10;
+    int MEMORY_CONTEXT_LENGTH = 8;
     int LIMIT_FETCH_CHAT_HISTORY_LENGTH = 50;
 
     // llm connect reset 最大重连次数
