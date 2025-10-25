@@ -26,6 +26,7 @@ import com.openapi.domain.exception.AppException;
 import com.openapi.domain.interfaces.OnSSTResultCallback;
 import com.openapi.service.AgentService;
 import com.openapi.service.ChatMessageService;
+import com.openapi.service.PromptService;
 import com.openapi.service.RealtimeChatService;
 import com.openapi.service.UserService;
 import io.reactivex.BackpressureStrategy;
@@ -43,11 +44,14 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.reactive.function.client.WebClientRequestException;
 import org.springframework.web.socket.TextMessage;
 import reactor.core.publisher.Flux;
+import reactor.util.retry.Retry;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.net.SocketException;
 import java.nio.ByteBuffer;
+import java.sql.Time;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.Comparator;
@@ -55,6 +59,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -78,6 +83,7 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
     private final UserService userService;
     private final AgentService agentService;
     private final ThreadPoolConfig threadPoolConfig;
+    private final PromptService promptService;
 
     @Override
     public void startChat(@NotNull RealtimeChatContextManager chatContextManager, @NotNull ChatClient chatClient) throws InterruptedException, NoApiKeyException {
@@ -181,14 +187,16 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
                 );
     }
 
-    private void llmStreamCall(String sentence, @NotNull RealtimeChatContextManager chatContextManager, ChatClient chatClient) throws WebClientRequestException{
+    private void llmStreamCall(String sentence, @NotNull RealtimeChatContextManager chatContextManager, ChatClient chatClient) /*throws WebClientRequestException*/ {
         log.info("\n[LLM 开始] 输入内容: {}", sentence);
 
         Flux<String> responseFlux = chatClient.prompt()
                 .user(sentence)
                 .advisors(a -> a.param(ChatMemory.CONVERSATION_ID, chatContextManager.agentId))
                 .stream()
-                .content();
+                .content()
+                // 3500ms未响应则判定超时，进行重连尝试
+                .timeout(Duration.ofMillis(ModelConstant.LLM_CONNECT_TIMEOUT_MILLIS));
 
         StringBuffer textBuffer = new StringBuffer();
         AtomicInteger fragmentCount = new AtomicInteger(0);
@@ -286,9 +294,11 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
                     long totalTime = System.currentTimeMillis() - startTime.get();
                     log.error("\n[LLM 错误] 总耗时: {}ms, 片段总数: {}", totalTime, fragmentCount.get(), error);
 
-                    // 尝试再次带哦用
-                    if (error instanceof WebClientRequestException){
-                        // 再次自调用
+                    // (待优化A1)长时间未连接之后再次连接会发生Connect Reset目前采用的是递归的方式重试，可能造成堆栈溢出。考虑改为循环调用的方式
+                    // 尝试再次自我调用
+                    if (error instanceof WebClientRequestException || error instanceof TimeoutException){
+                        log.error("[LLM 错误] 尝试再次自我调用；错误信息, 错误类型: ", error);
+//                        // 再次自调用
                         if (chatContextManager.llmConnectResetRetryCount.get() < ModelConstant.LLM_CONNECT_RESET_MAX_RETRY_COUNT){
                             int attempt = chatContextManager.llmConnectResetRetryCount.incrementAndGet();
                             log.warn("检测到连接重置，进行第{}次重试", attempt);
@@ -510,7 +520,8 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
 
         ChatClient chatClient = ChatClient.builder(chatModel)
                 .defaultAdvisors(MessageChatMemoryAdvisor.builder(chatMemory).build())
-                .defaultSystem(description)
+                // 此处的defaultSystem存在问题，傻逼openAI会将其视为用户的输入，需要设计提示词工程
+                .defaultSystem(promptService.getSystemPrompt(description))
                 .build();
 
         // 预先加载10条历史聊天记录

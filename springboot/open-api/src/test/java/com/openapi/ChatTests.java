@@ -18,11 +18,16 @@ import com.openapi.domain.exception.AppException;
 import com.openapi.service.AgentService;
 import com.openapi.service.ChatMessageService;
 import lombok.extern.slf4j.Slf4j;
+import lombok.val;
 import org.junit.jupiter.api.Test;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.client.advisor.MessageChatMemoryAdvisor;
 import org.springframework.ai.chat.memory.ChatMemory;
 import org.springframework.ai.chat.messages.Message;
+import org.springframework.ai.chat.messages.SystemMessage;
+import org.springframework.ai.chat.messages.UserMessage;
+import org.springframework.ai.chat.model.ChatResponse;
+import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
@@ -579,5 +584,51 @@ public class ChatTests {
          */
 
         // 上述可见第二次因为Connect Reset丢失了，然后第三次正常，所以如果Connect Reset之后需要立刻重试2~3次
+    }
+
+    // 提示词测试
+    @Test
+    public void promptTest() {
+        String systemPrompt = "你是我的智能助手悠米，回复的时候态度好一些";
+        String userMessage = "你是谁";
+
+        List<Message> messages = new ArrayList<>();
+        messages.add(new SystemMessage(systemPrompt));
+        messages.add(new UserMessage(userMessage));
+
+        val prompt1 = new Prompt(messages);
+
+        val prompt2 = new Prompt();
+        prompt2.augmentSystemMessage(systemPrompt);
+        prompt2.augmentUserMessage(userMessage);
+
+        ChatClient chatClient = ChatClient.builder(dashScopeChatModel)
+                .build();
+
+        String response1 = chatClient.prompt(prompt1).call().content();
+        System.out.println("response1: " + response1);
+        String response2 = chatClient.prompt(prompt2).call().content();
+        System.out.println("response2: " + response2);
+
+        /*
+         经过测试：只有第一种方法是正确的，第二种方式是错误的：
+
+         response1: 你好呀~我是悠米，你的智能小助手！✨ 很高兴认识你呢～我可以帮你解答问题、提供信息，或者只是陪你聊聊天。有什么我可以帮到你的吗？(•̀ᴗ•́)و
+
+java.lang.IllegalArgumentException: Prompt messages must not be empty
+
+	at org.springframework.util.Assert.isTrue(Assert.java:116)
+	at com.alibaba.cloud.ai.dashscope.chat.DashScopeChatModel.call(DashScopeChatModel.java:168)
+	at org.springframework.ai.chat.client.advisor.ChatModelCallAdvisor.adviseCall(ChatModelCallAdvisor.java:54)
+	at org.springframework.ai.chat.client.advisor.DefaultAroundAdvisorChain.lambda$nextCall$1(DefaultAroundAdvisorChain.java:110)
+	at io.micrometer.observation.Observation.observe(Observation.java:565)
+	at org.springframework.ai.chat.client.advisor.DefaultAroundAdvisorChain.nextCall(DefaultAroundAdvisorChain.java:110)
+	at org.springframework.ai.chat.client.DefaultChatClient$DefaultCallResponseSpec.lambda$doGetObservableChatClientResponse$1(DefaultChatClient.java:469)
+	at io.micrometer.observation.Observation.observe(Observation.java:565)
+	at org.springframework.ai.chat.client.DefaultChatClient$DefaultCallResponseSpec.doGetObservableChatClientResponse(DefaultChatClient.java:467)
+	at org.springframework.ai.chat.client.DefaultChatClient$DefaultCallResponseSpec.doGetObservableChatClientResponse(DefaultChatClient.java:446)
+	at org.springframework.ai.chat.client.DefaultChatClient$DefaultCallResponseSpec.content(DefaultChatClient.java:441)
+	at com.openapi.ChatTests.promptTest(ChatTests.java:610)
+         */
     }
 }

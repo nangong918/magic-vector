@@ -3,14 +3,10 @@
 
 ## 待优化
 
-(!!)长时间未连接之后再次连接会发生Connect Reset，这个唤醒判断时间太长了，高达19s，需要学习SpringAI ChatClient的源码，将其超时时间改为3~5s，然后快速重试。
-
+(待优化A1)长时间未连接之后再次连接会发生Connect Reset目前采用的是递归的方式重试，可能造成堆栈溢出。考虑改为循环调用的方式
 Agent的设定改变: 新增Agent详情页面, 可以编辑Agent的设定
-Agent设定存在问题，Agent会错误的把系统级别设定认为是用户的对话内容
-
 
 ## 待解决
-
 
 
 ## 已解决
@@ -40,10 +36,32 @@ Android 端存在问题: 后端发送EOF表示发送完成，并不代表前端�
 Android端回显存在问题：转换成功之后将消息发给前端的消息是上一条内容，内容是错误的
 检查聊天记录顺序, 聊天记录顺序可能存在问题 (Android端的排序问题)
 
+Agent设定存在问题，Agent会错误的把系统级别设定认为是用户的对话内容
+(!!)长时间未连接之后再次连接会发生Connect Reset，这个唤醒判断时间太长了，高达19s，需要学习SpringAI ChatClient的源码，将其超时时间改为3~5s，然后快速重试。: (通过设置timeout并捕获重新调用解决)
+```java
+        Flux<String> responseFlux = chatClient.prompt()
+                .user(sentence)
+                .advisors(a -> a.param(ChatMemory.CONVERSATION_ID, chatContextManager.agentId))
+                .stream()
+                .content()
+                // 3500ms未响应则判定超时，进行重连尝试
+                .timeout(Duration.ofMillis(ModelConstant.LLM_CONNECT_TIMEOUT_MILLIS));
+```
+
 ## 待定
 
 全流式碎片发送导致文本可视性差, 改为使用整句发送接收
 (*)minio存储文件异常 -> 完成minio文件存储以及资源反向代理 -> url展示
 (*)Android View展示: CallDialog数据不全
+
+tts的文本长度限制未(0, 600]: 
+```text
+Exception in thread "AudioChat-3" com.alibaba.dashscope.exception.ApiException: 
+{"statusCode":400,"message":"<400> InternalError.Algo.InvalidParameter: 
+Range of input length should be [0, 600]","code":"InvalidParameter","isJson":true,
+"requestId":"c3779a6d-0936-4ba7-9710-a1aa1007d7d2"}; 
+status body:{"statusCode":400,"message":"<400> InternalError.Algo.InvalidParameter: Range of input length should be [0, 600]","code":"InvalidParameter",
+"isJson":true,"requestId":"c3779a6d-0936-4ba7-9710-a1aa1007d7d2"}
+```
 
 

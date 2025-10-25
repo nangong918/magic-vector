@@ -20,6 +20,8 @@ public interface ModelConstant {
 
     // llm connect reset 最大重连次数
     int LLM_CONNECT_RESET_MAX_RETRY_COUNT = 3;
+    // 模型响应超时时间
+    long LLM_CONNECT_TIMEOUT_MILLIS = 3500;
 
     String STT_Format = "pcm";
     int SST_SampleRate = 16000;
