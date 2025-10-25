@@ -10,6 +10,12 @@ Spring 项目部署在Docker -> 上传到阿里云服务器 todo Docker，Nginx 
 ### lv0(当前任务)
 压测, 修复bug, 提高系统的鲁棒性
 
+开发板对比；资料学习；给出对比列表以及分析可执行方案：
+ * VAD部署可行性
+ * Github开源代码量
+ * 淘宝上产品 -> 可行性分析
+ * 方案：ESP32-S3? 树莓派4B? Arduino?
+
 研究esp32-sc; 构建身体（头部和底部两部分）
 
 Silero VAD集成ESP32-S3

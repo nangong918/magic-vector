@@ -1,5 +1,6 @@
 package com.view.appview.message
 
+import android.text.TextUtils
 import androidx.recyclerview.widget.RecyclerView
 import com.core.baseutil.image.ImageLoadUtil
 import com.data.domain.OnPositionItemClick
@@ -21,10 +22,15 @@ class MessageCardItemViewHolder : RecyclerView.ViewHolder {
         messageContactItemAo = ao
 
         // bind vo
-        ImageLoadUtil.loadImageViewByResource(
-            ao.vo.avatarUrl,
-            binding.imvgAvatar
-        )
+        if (TextUtils.isEmpty(ao.vo.avatarUrl)){
+            binding.imvgAvatar.setImageResource(com.view.appview.R.mipmap.logo)
+        }
+        else {
+            ImageLoadUtil.loadImageViewByResource(
+                ao.vo.avatarUrl,
+                binding.imvgAvatar
+            )
+        }
         binding.tvName.text = ao.vo.name
         binding.tvMessagePreview.text = ao.vo.getMessagePreview()
         binding.tvTime.text = ao.vo.time
