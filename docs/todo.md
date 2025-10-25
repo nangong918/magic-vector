@@ -16,16 +16,18 @@ Spring 项目部署在Docker -> 上传到阿里云服务器 todo Docker，Nginx 
   VAD部署可行性
   Github开源代码量
    淘宝上产品 -> 可行性分析
-   方案：ESP32-S3? 树莓派4B? Arduino?
+   方案：ESP32-S3? 树莓派4B? Arduino? RK3566?
 
    学习Esp32-S3 + ESP-IDF开发实验
    联网部署ESP32-S3
    构建头部VAD，表情等
 
 2. 如果无法推进则
-
    Android Emoji + video人脸识别，动态眼睛，表情
+   Android设备部署：视觉活动检测YOLOv8（目标检测）、OpenCV（帧活动检测）；视频活动检测：类似VAD音频活动检测
 
+
+体验视觉模型，思考能做的事情
 
 
 研究esp32-sc; 构建身体（头部和底部两部分）
