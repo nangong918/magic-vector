@@ -167,4 +167,6 @@
     <string name="delete_agent">删除Agent</string>
     <string name="under_development">开发中…</string>
     <string name="agent_is_not_found">未找到Agent</string>
+    <string name="test_yolov8_title">YOLOv8目标检测</string>
+    <string name="test_yolov8_desc">用于AI对视频流进行目标检测，\n可用于检测可视范围内是否包含目标。\n对于人脸检测有两种方法，OpenCV和YOLO。\n关于嵌入式设备检测视频活物移动并警报，应该使用OpenCV的帧比较，\nYOLO目标检测相比性能要求更高</string>
 </resources>

@@ -1,8 +1,11 @@
 package com.magicvector.activity.test
 
+import android.Manifest
 import android.annotation.SuppressLint
 import android.content.Intent
 import android.util.Log
+import com.core.baseutil.permissions.GainPermissionCallback
+import com.core.baseutil.permissions.PermissionUtil
 import com.core.baseutil.ui.ToastUtils
 import com.data.domain.vo.test.AudioRecordPlayState
 import com.data.domain.vo.test.ChatState
@@ -35,6 +38,28 @@ class TestActivity : BaseAppCompatVmActivity<ActivityTestBinding, TestVm>(
 
     override fun setListener() {
         super.setListener()
+        // YOLOv8
+        binding.btnStartToYolov8.setOnClickListener {
+            val startYOLOv8Intent = Intent(this, YOLOv8Activity::class.java)
+
+            PermissionUtil.requestPermissionSelectX(this,
+                arrayOf(Manifest.permission.CAMERA),
+                arrayOf(),
+                object : GainPermissionCallback {
+                    override fun allGranted() {
+                        startActivity(startYOLOv8Intent)
+                    }
+
+                    override fun notGranted(notGrantedPermissions: Array<String?>?) {
+                        ToastUtils.showToastActivity(this@TestActivity, "请允许相机权限")
+                    }
+
+                    override fun always() {
+                    }
+                })
+
+        }
+
         // vad
         binding.btnStartToVad.setOnClickListener {
             val intent = Intent(this, VADMainActivity::class.java)
