@@ -130,6 +130,12 @@ dependencies {
     // 下拉刷新
     implementation(libs.swiperefreshlayout)
 
+    // camera
+    val cameraxVersion = "1.4.0-beta02"
+    implementation("androidx.camera:camera-camera2:${cameraxVersion}")
+    implementation("androidx.camera:camera-lifecycle:${cameraxVersion}")
+    implementation("androidx.camera:camera-view:${cameraxVersion}")
+
     /**
      * 自定义Module
      * 基本依赖关系：
