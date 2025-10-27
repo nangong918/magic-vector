@@ -27,6 +27,7 @@ import java.util.concurrent.Executors
 import kotlin.use
 import androidx.core.graphics.createBitmap
 import com.detection.yolov8.R
+import com.detection.yolov8.targetPoint.YOLOv8TargetPointGenerator
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 
@@ -212,8 +213,16 @@ class YOLOv8Activity : AppCompatActivity() , Detector.DetectorListener{
                 invalidate()
             }
         }
-        if (!boundingBoxes.isEmpty()){
-            Log.d(TAG, GSON.toJson(boundingBoxes[0]))
-        }
+        val allTargetPoint = YOLOv8TargetPointGenerator.generateAllTargetPoint(boundingBoxes)
+        val maxTargetPoint = YOLOv8TargetPointGenerator.generateMaxTargetPoint(boundingBoxes)
+        // 0代表person
+        val specificTargetPoint = YOLOv8TargetPointGenerator.generateSpecificTargetPoint(boundingBoxes, 0)
+        // 除了person之外的
+        val maxTargetPointExcludeSpecificClass = YOLOv8TargetPointGenerator.generateMaxTargetPointExcludeSpecificClass(boundingBoxes, 0)
+        Log.d(TAG, "目标点生成测试：" +
+                "\n生成全目标中心点: ${GSON.toJson(allTargetPoint)} " +
+                "\n生成最大目标中心点: ${GSON.toJson(maxTargetPoint)} " +
+                "\n生成特定目标中心点: ${GSON.toJson(specificTargetPoint)} " +
+                "\n生成最大目标中心点（排除特定类）: ${GSON.toJson(maxTargetPointExcludeSpecificClass)}")
     }
 }

@@ -2,7 +2,7 @@ package com.detection.yolov8.targetPoint
 
 import com.detection.yolov8.BoundingBox
 
-class YOLOv8TargetPointGenerator {
+object YOLOv8TargetPointGenerator {
 
     /**
      * 生成全目标中心点
