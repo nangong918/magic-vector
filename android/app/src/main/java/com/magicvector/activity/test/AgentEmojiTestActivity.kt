@@ -114,6 +114,7 @@ class AgentEmojiTestActivity : BaseAppCompatActivity<ActivityAgentEmojiTestBindi
                     EyesMoveManager.moveLayoutToTargetPoint(targetPoint, screenWidth, screenHeight, binding.lyEmoji, false)
                 }
             }
+            println("count % 5:: ${count % 5}")
             count++
         }
     }

@@ -72,13 +72,9 @@ object EyesMoveManager {
         val layoutWidth = layout.width
         val layoutHeight = layout.height
 
-        // 计算距离
-        val gapX = (screenWidth - layoutWidth) * (0.5f - targetPoint.x)
-        val gapY = (screenHeight - layoutHeight) * (0.5f - targetPoint.y)
-
         // 计算左上角坐标
-        var targetLeft = layout.x + gapX
-        var targetTop = layout.y + gapY
+        var targetLeft = (targetPoint.x * screenWidth) - (layoutWidth / 2)
+        var targetTop = (targetPoint.y * screenHeight) - (layoutHeight / 2)
 
         /*
             边界处理：
