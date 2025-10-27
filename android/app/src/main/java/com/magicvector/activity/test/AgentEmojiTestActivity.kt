@@ -101,8 +101,25 @@ class AgentEmojiTestActivity : BaseAppCompatActivity<ActivityAgentEmojiTestBindi
         val layoutHeight = binding.lyEmoji.measuredHeight
 
         // 计算左上角坐标
-        val left = (targetPoint.x * screenWidth) - (layoutWidth / 2)
-        val top = (targetPoint.y * screenHeight) - (layoutHeight / 2)
+        var left = (targetPoint.x * screenWidth) - (layoutWidth / 2)
+        var top = (targetPoint.y * screenHeight) - (layoutHeight / 2)
+
+        /*
+          边界处理：
+          left < 0 -> left = 0; left + layoutWidth > screenWidth -> left = screenWidth - layoutWidth
+          top < 0 -> top = 0; top + layoutHeight > screenHeight -> top = screenHeight - layoutHeight
+         */
+        if (left < 0) {
+            left = 0f
+        } else if (left + layoutWidth > screenWidth) {
+            left = (screenWidth - layoutWidth).toFloat()
+        }
+
+        if (top < 0) {
+            top = 0f
+        } else if (top + layoutHeight > screenHeight) {
+            top = (screenHeight - layoutHeight).toFloat()
+        }
 
         // 设置布局的位置
         binding.lyEmoji.x = left
