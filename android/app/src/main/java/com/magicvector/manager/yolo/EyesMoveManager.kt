@@ -2,24 +2,30 @@ package com.magicvector.manager.yolo
 
 import android.os.Handler
 import android.os.Looper
+import android.util.Log
 import android.view.View
 import com.detection.yolov8.targetPoint.TargetPoint
+import kotlinx.coroutines.Runnable
 import kotlin.math.abs
 
 object EyesMoveManager {
 
+    const val TAG = "EyesMoveManager"
     // 移动相关参数
     private const val SMOOTH_FACTOR = 0.2f
     private const val MIN_DISTANCE = 2f
+    private const val FPS = 30
+    private const val FRAME_DELAY = 1000L / FPS // 每帧延迟时间
+    private var moveRunnable: Runnable? = null
 
     // 复位相关参数
     private const val RESET_DELAY = 2000L // 2秒无调用后开始复位
     private val RESET_TARGET = TargetPoint(0.5f, 0.5f, null, null)
+    private var currentTargetPoint: TargetPoint = RESET_TARGET
 
-    private var currentLeft = 0f
-    private var currentTop = 0f
     private var isInitialized = false
     private var isResetting = false
+    private var isMoving = false
 
     // 计时器相关
     private val handler = Handler(Looper.getMainLooper())
@@ -31,16 +37,33 @@ object EyesMoveManager {
         screenWidth: Int,
         screenHeight: Int,
         layout: View,
-        isNeedReset: Boolean
+        isThisReset: Boolean
     ) {
-        // 更新最后调用时间
-        updateLastMoveTime()
-
-        // 如果正在复位，取消复位
-        if (isResetting) {
-            cancelReset()
+        // 正在移动，返回任务
+        if (isMoving){
+            updateLastMoveTime()
+            return
         }
 
+        // 更新最后调用时间
+        updateLastMoveTime()
+        // 取消复位
+        cancelReset()
+
+        // 记录targetPoint
+        currentTargetPoint = targetPoint
+
+        // 启动移动循环
+        startMoveLoop(screenWidth, screenHeight, layout, isThisReset)
+    }
+
+    private fun moveToTargetPoint(
+        targetPoint: TargetPoint,
+        screenWidth: Int,
+        screenHeight: Int,
+        layout: View,
+        isThisReset: Boolean
+    ) {
         layout.measure(
             View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED),
             View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED)
@@ -69,29 +92,86 @@ object EyesMoveManager {
             else -> targetTop
         }
 
-        // 初始化当前位置
-        if (!isInitialized) {
-            currentLeft = layout.x
-            currentTop = layout.y
-            isInitialized = true
-        }
-
         // 计算平滑移动
-        currentLeft = smoothMove(currentLeft, targetLeft)
-        currentTop = smoothMove(currentTop, targetTop)
+        layout.x = smoothMove(layout.x, targetLeft)
+        layout.y = smoothMove(layout.y, targetTop)
 
-        // 更新位置
-        layout.x = currentLeft
-        layout.y = currentTop
+        // 检查是否移动结束
+        val isFinishMove = abs(layout.x - targetLeft) < MIN_DISTANCE && abs(layout.y - targetTop) < MIN_DISTANCE
+        if (isFinishMove) {
+            isMoving = false
 
-        // 根据参数决定是否启动复位计时器
-        if (isNeedReset) {
-            scheduleReset(screenWidth, screenHeight, layout)
+            // 当前是否是reset操作
+            if (isThisReset){
+                Log.d(TAG, "当前就是reset操作，不进行复位")
+                return
+            }
+
+            resetRunnable = Runnable {
+                // 移动结束，开始复位
+                moveLayoutToTargetPoint(
+                    RESET_TARGET,
+                    screenWidth,
+                    screenHeight,
+                    layout,
+                    true
+                )
+            }
+            // 开始调用延迟检查
+            handler.postDelayed(
+                resetRunnable!!,
+                RESET_DELAY
+            )
         }
-        else {
-            // 如果不需要复位，取消可能存在的复位任务
-            cancelReset()
+    }
+
+    private fun startMoveLoop(
+        screenWidth: Int,
+        screenHeight: Int,
+        layout: View,
+        isThisReset: Boolean
+    ) {
+        if (isMoving) return
+
+        isMoving = true
+        moveRunnable = object : Runnable {
+            override fun run() {
+                if (!isMoving) return
+
+                moveToTargetPoint(
+                    currentTargetPoint,
+                    screenWidth,
+                    screenHeight,
+                    layout,
+                    isThisReset
+                )
+
+                // 如果移动未完成，继续下一帧
+                if (isMoving) {
+                    handler.postDelayed(this, FRAME_DELAY)
+                }
+            }
         }
+
+        // 立即执行第一帧
+        handler.post(moveRunnable!!)
+    }
+
+    private fun stopMoveLoop() {
+        isMoving = false
+        moveRunnable?.let {
+            handler.removeCallbacks(it)
+            moveRunnable = null
+        }
+    }
+
+    private fun cancelReset() {
+        resetRunnable?.let {
+            handler.removeCallbacks(it)
+            resetRunnable = null
+        }
+        isResetting = false
+        isMoving = false
     }
 
     private fun smoothMove(current: Float, target: Float): Float {
@@ -104,94 +184,6 @@ object EyesMoveManager {
 
         // 弹簧阻尼效果：距离越远移动越快，越近移动越慢
         return current + distance * SMOOTH_FACTOR
-    }
-
-    private fun scheduleReset(screenWidth: Int, screenHeight: Int, layout: View) {
-        // 取消之前的复位任务
-        cancelReset()
-
-        // 创建新的复位任务
-        resetRunnable = Runnable {
-            val currentTime = System.currentTimeMillis()
-            if (currentTime - lastMoveTime >= RESET_DELAY) {
-                startReset(screenWidth, screenHeight, layout)
-            } else {
-                // 如果还没到时间，重新调度
-                scheduleReset(screenWidth, screenHeight, layout)
-            }
-        }
-
-        handler.postDelayed(resetRunnable!!, RESET_DELAY)
-    }
-
-    private fun startReset(screenWidth: Int, screenHeight: Int, layout: View) {
-        isResetting = true
-
-        layout.measure(
-            View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED),
-            View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED)
-        )
-
-        val layoutWidth = layout.measuredWidth
-        val layoutHeight = layout.measuredHeight
-
-        // 计算复位目标位置 (0.5, 0.5)
-        var resetLeft = (RESET_TARGET.x * screenWidth) - (layoutWidth / 2)
-        var resetTop = (RESET_TARGET.y * screenHeight) - (layoutHeight / 2)
-
-        // 边界处理
-        resetLeft = when {
-            resetLeft < 0 -> 0f
-            resetLeft + layoutWidth > screenWidth -> (screenWidth - layoutWidth).toFloat()
-            else -> resetLeft
-        }
-
-        resetTop = when {
-            resetTop < 0 -> 0f
-            resetTop + layoutHeight > screenHeight -> (screenHeight - layoutHeight).toFloat()
-            else -> resetTop
-        }
-
-        // 平滑移动到复位位置
-        currentLeft = smoothMove(currentLeft, resetLeft)
-        currentTop = smoothMove(currentTop, resetTop)
-
-        layout.x = currentLeft
-        layout.y = currentTop
-
-        // 检查是否到达复位位置
-        val dx = resetLeft - currentLeft
-        val dy = resetTop - currentTop
-        val distance = Math.sqrt((dx * dx + dy * dy).toDouble()).toFloat()
-
-        if (distance > MIN_DISTANCE) {
-            // 如果还没到达，继续复位
-            handler.postDelayed({
-                startReset(screenWidth, screenHeight, layout)
-            }, 16) // 约60帧
-        } else {
-            // 复位完成
-            isResetting = false
-        }
-    }
-
-    private fun cancelReset() {
-        resetRunnable?.let {
-            handler.removeCallbacks(it)
-            resetRunnable = null
-        }
-        isResetting = false
-    }
-
-    // 公共方法：手动触发复位
-    fun triggerReset(screenWidth: Int, screenHeight: Int, layout: View) {
-        updateLastMoveTime() // 更新时间为现在，避免自动复位干扰
-        startReset(screenWidth, screenHeight, layout)
-    }
-
-    // 公共方法：强制停止复位
-    fun stopReset() {
-        cancelReset()
     }
 
     // 重置状态
@@ -209,6 +201,7 @@ object EyesMoveManager {
     // 清理资源
     fun destroy() {
         cancelReset()
+        isMoving = false
         handler.removeCallbacksAndMessages(null)
     }
 

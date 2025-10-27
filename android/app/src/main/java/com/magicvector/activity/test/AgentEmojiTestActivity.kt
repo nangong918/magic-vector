@@ -241,7 +241,7 @@ class AgentEmojiTestActivity : BaseAppCompatActivity<ActivityAgentEmojiTestBindi
             screenWidth = screenWidth,
             screenHeight = screenHeight,
             layout = binding.lyEmoji,
-            isNeedReset = true
+            isThisReset = false
         )
     }
 
