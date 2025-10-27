@@ -1,6 +1,7 @@
 package com.magicvector.activity.test
 
 import android.Manifest
+import android.annotation.SuppressLint
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.Matrix
@@ -24,8 +25,14 @@ import com.magicvector.databinding.ActivityYolov8Binding
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import kotlin.use
+import androidx.core.graphics.createBitmap
+import com.detection.yolov8.R
+import com.detection.yolov8.targetPoint.YOLOv8TargetPointGenerator
+import com.google.gson.Gson
+import com.google.gson.GsonBuilder
 
 class YOLOv8Activity : AppCompatActivity() , Detector.DetectorListener{
+
     private lateinit var binding: ActivityYolov8Binding
     private val isFrontCamera = false
 
@@ -34,6 +41,7 @@ class YOLOv8Activity : AppCompatActivity() , Detector.DetectorListener{
     private var camera: Camera? = null
     private var cameraProvider: ProcessCameraProvider? = null
     private var detector: Detector? = null
+
 
     private lateinit var cameraExecutor: ExecutorService
 
@@ -66,9 +74,9 @@ class YOLOv8Activity : AppCompatActivity() , Detector.DetectorListener{
                     detector?.restart(isGpu = isChecked)
                 }
                 if (isChecked) {
-                    buttonView.setBackgroundColor(ContextCompat.getColor(baseContext, com.detection.yolov8.R.color.orange))
+                    buttonView.setBackgroundColor(ContextCompat.getColor(baseContext, R.color.orange))
                 } else {
-                    buttonView.setBackgroundColor(ContextCompat.getColor(baseContext, com.detection.yolov8.R.color.gray))
+                    buttonView.setBackgroundColor(ContextCompat.getColor(baseContext, R.color.gray))
                 }
             }
         }
@@ -105,15 +113,13 @@ class YOLOv8Activity : AppCompatActivity() , Detector.DetectorListener{
             .build()
 
         imageAnalyzer?.setAnalyzer(cameraExecutor) { imageProxy ->
+            // 获取bitmap
             val bitmapBuffer =
-                Bitmap.createBitmap(
-                    imageProxy.width,
-                    imageProxy.height,
-                    Bitmap.Config.ARGB_8888
-                )
+                createBitmap(imageProxy.width, imageProxy.height)
             imageProxy.use { bitmapBuffer.copyPixelsFromBuffer(imageProxy.planes[0].buffer) }
             imageProxy.close()
 
+            // 构建变换矩阵
             val matrix = Matrix().apply {
                 postRotate(imageProxy.imageInfo.rotationDegrees.toFloat())
 
@@ -127,11 +133,13 @@ class YOLOv8Activity : AppCompatActivity() , Detector.DetectorListener{
                 }
             }
 
+            // 生成旋转后的位图
             val rotatedBitmap = Bitmap.createBitmap(
                 bitmapBuffer, 0, 0, bitmapBuffer.width, bitmapBuffer.height,
                 matrix, true
             )
 
+            // 识别
             detector?.detect(rotatedBitmap)
         }
 
@@ -182,11 +190,12 @@ class YOLOv8Activity : AppCompatActivity() , Detector.DetectorListener{
     }
 
     companion object {
-        private const val TAG = "Camera"
+        private const val TAG = "YOLOv8Activity"
         private const val REQUEST_CODE_PERMISSIONS = 10
         private val REQUIRED_PERMISSIONS = mutableListOf (
             Manifest.permission.CAMERA
         ).toTypedArray()
+        val GSON: Gson = GsonBuilder().setPrettyPrinting().create()
     }
 
     override fun onEmptyDetect() {
@@ -197,11 +206,23 @@ class YOLOv8Activity : AppCompatActivity() , Detector.DetectorListener{
 
     override fun onDetect(boundingBoxes: List<BoundingBox>, inferenceTime: Long) {
         runOnUiThread {
-            binding.inferenceTime.text = "${inferenceTime}ms"
+            val inferenceTimeStr = "${inferenceTime}ms"
+            binding.inferenceTime.text = inferenceTimeStr
             binding.overlay.apply {
                 setResults(boundingBoxes)
                 invalidate()
             }
         }
+        val allTargetPoint = YOLOv8TargetPointGenerator.generateAllTargetPoint(boundingBoxes)
+        val maxTargetPoint = YOLOv8TargetPointGenerator.generateMaxTargetPoint(boundingBoxes)
+        // 0代表person
+        val specificTargetPoint = YOLOv8TargetPointGenerator.generateSpecificTargetPoint(boundingBoxes, 0)
+        // 除了person之外的
+        val maxTargetPointExcludeSpecificClass = YOLOv8TargetPointGenerator.generateMaxTargetPointExcludeSpecificClass(boundingBoxes, 0)
+        Log.d(TAG, "目标点生成测试：" +
+                "\n生成全目标中心点: ${GSON.toJson(allTargetPoint)} " +
+                "\n生成最大目标中心点: ${GSON.toJson(maxTargetPoint)} " +
+                "\n生成特定目标中心点: ${GSON.toJson(specificTargetPoint)} " +
+                "\n生成最大目标中心点（排除特定类）: ${GSON.toJson(maxTargetPointExcludeSpecificClass)}")
     }
 }

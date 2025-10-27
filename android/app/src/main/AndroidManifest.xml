@@ -14,9 +14,9 @@
     <uses-permission android:name="android.permission.ACCESS_MEDIA_LOCATION" /> <!-- 针对 Android 11 (API 30) 及以上版本 -->
     <uses-permission
         android:name="android.permission.MANAGE_EXTERNAL_STORAGE"
-        tools:ignore="AllFilesAccessPolicy,ScopedStorage" />
-    <!-- 相机权限 -->
+        tools:ignore="AllFilesAccessPolicy,ScopedStorage" /> <!-- 相机权限 -->
     <uses-feature android:name="android.hardware.camera" />
+
     <uses-permission android:name="android.permission.CAMERA" />
 
     <application
@@ -31,6 +31,10 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.MagicVector"
         tools:targetApi="31">
+        <activity
+            android:name=".activity.test.AgentEmojiTestActivity"
+            android:exported="false"
+            android:screenOrientation="landscape" /> <!-- 设置为不可旋转的横屏 -->
         <activity
             android:name=".activity.test.YOLOv8Activity"
             android:exported="false" />

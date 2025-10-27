@@ -15,6 +15,7 @@ import org.tensorflow.lite.support.common.ops.NormalizeOp
 import org.tensorflow.lite.support.image.ImageProcessor
 import org.tensorflow.lite.support.image.TensorImage
 import org.tensorflow.lite.support.tensorbuffer.TensorBuffer
+import androidx.core.graphics.scale
 
 class Detector(
     private val context: Context,
@@ -49,12 +50,14 @@ class Detector(
             }
         }
 
+        // 加载yolo模型 MappedByteBuffer
         val model = FileUtil.loadMappedFile(context, modelPath)
         interpreter = Interpreter(model, options)
 
         val inputShape = interpreter.getInputTensor(0)?.shape()
         val outputShape = interpreter.getOutputTensor(0)?.shape()
 
+        // 加载全部标签
         labels.addAll(extractNamesFromMetadata(model))
         if (labels.isEmpty()) {
             if (labelPath == null) {
@@ -109,8 +112,7 @@ class Detector(
         var inferenceTime = SystemClock.uptimeMillis()
 
 
-
-        val resizedBitmap = Bitmap.createScaledBitmap(frame, tensorWidth, tensorHeight, false)
+        val resizedBitmap = frame.scale(tensorWidth, tensorHeight, false)
 
         val tensorImage = TensorImage(INPUT_IMAGE_TYPE)
         tensorImage.load(resizedBitmap)
@@ -121,8 +123,10 @@ class Detector(
         println("numElements: $numElements")
 
         val output = TensorBuffer.createFixedSize(intArrayOf(1, numChannel, numElements), OUTPUT_IMAGE_TYPE)
+        // 模型推理
         interpreter.run(imageBuffer, output.buffer)
 
+        // 处理输出
         val bestBoxes = bestBox(output.floatArray)
         inferenceTime = SystemClock.uptimeMillis() - inferenceTime
 
@@ -131,6 +135,7 @@ class Detector(
             return
         }
 
+        // 结果调用
         detectorListener.onDetect(bestBoxes, inferenceTime)
     }
 
