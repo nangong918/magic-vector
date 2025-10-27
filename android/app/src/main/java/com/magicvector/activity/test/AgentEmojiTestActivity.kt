@@ -24,6 +24,7 @@ import com.detection.yolov8.targetPoint.YOLOv8TargetPointGenerator
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import com.magicvector.databinding.ActivityAgentEmojiTestBinding
+import com.magicvector.manager.yolo.EyesMoveManager
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 
@@ -230,7 +231,17 @@ class AgentEmojiTestActivity : BaseAppCompatActivity<ActivityAgentEmojiTestBindi
         }
         val maxTargetPoint = YOLOv8TargetPointGenerator.generateMaxTargetPoint(boundingBoxes)
         Log.d(TAG, "生成最大目标中心点: ${GSON.toJson(maxTargetPoint)}")
-        moveLayoutToTargetPoint(maxTargetPoint)
+
+        // 获取屏幕宽高
+        val screenWidth = resources.displayMetrics.widthPixels
+        val screenHeight = resources.displayMetrics.heightPixels
+        // 移动布局
+        EyesMoveManager.moveLayoutToTargetPoint(
+            maxTargetPoint,
+            screenWidth,
+            screenHeight,
+            binding.lyEmoji
+        )
     }
 
     override fun onDestroy() {
