@@ -73,7 +73,7 @@
         android:id="@+id/btn_show_video"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="展示识别"
+        android:text="显示识别"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent" />
 

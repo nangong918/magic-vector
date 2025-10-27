@@ -5,6 +5,7 @@ import android.graphics.Bitmap
 import android.graphics.Matrix
 import android.os.Bundle
 import android.util.Log
+import android.view.View
 import android.widget.Toast
 import androidx.camera.core.AspectRatio
 import androidx.camera.core.Camera
@@ -17,8 +18,8 @@ import androidx.core.graphics.createBitmap
 import com.core.baseutil.fragmentActivity.BaseAppCompatActivity
 import com.detection.yolov8.BoundingBox
 import com.detection.yolov8.Detector
-import com.detection.yolov8.R
 import com.detection.yolov8.YOLOv8Constants
+import com.detection.yolov8.targetPoint.TargetPoint
 import com.detection.yolov8.targetPoint.YOLOv8TargetPointGenerator
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
@@ -46,6 +47,8 @@ class AgentEmojiTestActivity : BaseAppCompatActivity<ActivityAgentEmojiTestBindi
     private var cameraProvider: ProcessCameraProvider? = null
     private var detector: Detector? = null
 
+    private var isShowVideo = true
+
     private lateinit var cameraExecutor: ExecutorService
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -64,8 +67,47 @@ class AgentEmojiTestActivity : BaseAppCompatActivity<ActivityAgentEmojiTestBindi
 
     override fun setListener() {
         super.setListener()
+
+        binding.btnShowVideo.setOnClickListener {
+            isShowVideo = !isShowVideo
+            if (isShowVideo) {
+                binding.lyVideo.visibility = View.VISIBLE
+                binding.viewFinder.visibility = View.VISIBLE
+                binding.overlay.visibility = View.VISIBLE
+
+                binding.btnShowVideo.text = "隐藏识别"
+            }
+            else {
+                binding.lyVideo.visibility = View.GONE
+                binding.viewFinder.visibility = View.GONE
+                binding.overlay.visibility = View.GONE
+
+                binding.btnShowVideo.text = "显示识别"
+            }
+        }
     }
 
+    private fun moveLayoutToTargetPoint(targetPoint: TargetPoint) {
+        // 获取屏幕宽高
+        val screenWidth = resources.displayMetrics.widthPixels
+        val screenHeight = resources.displayMetrics.heightPixels
+
+        // 获取布局的宽高
+        binding.lyEmoji.measure(
+            View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED),
+            View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED)
+        )
+        val layoutWidth = binding.lyEmoji.measuredWidth
+        val layoutHeight = binding.lyEmoji.measuredHeight
+
+        // 计算左上角坐标
+        val left = (targetPoint.x * screenWidth) - (layoutWidth / 2)
+        val top = (targetPoint.y * screenHeight) - (layoutHeight / 2)
+
+        // 设置布局的位置
+        binding.lyEmoji.x = left
+        binding.lyEmoji.y = top
+    }
 
     private fun toast(message: String) {
         runOnUiThread {
@@ -169,18 +211,9 @@ class AgentEmojiTestActivity : BaseAppCompatActivity<ActivityAgentEmojiTestBindi
                 invalidate()
             }
         }
-        val allTargetPoint = YOLOv8TargetPointGenerator.generateAllTargetPoint(boundingBoxes)
         val maxTargetPoint = YOLOv8TargetPointGenerator.generateMaxTargetPoint(boundingBoxes)
-        // 0代表person
-        val specificTargetPoint = YOLOv8TargetPointGenerator.generateSpecificTargetPoint(boundingBoxes, 0)
-        // 除了person之外的
-        val maxTargetPointExcludeSpecificClass = YOLOv8TargetPointGenerator.generateMaxTargetPointExcludeSpecificClass(boundingBoxes, 0)
-        Log.d(
-            TAG, "目标点生成测试：" +
-                "\n生成全目标中心点: ${      GSON.toJson(allTargetPoint)} " +
-                "\n生成最大目标中心点: ${      GSON.toJson(maxTargetPoint)} " +
-                "\n生成特定目标中心点: ${      GSON.toJson(specificTargetPoint)} " +
-                "\n生成最大目标中心点（排除特定类）: ${      GSON.toJson(maxTargetPointExcludeSpecificClass)}")
+        Log.d(TAG, "生成最大目标中心点: ${GSON.toJson(maxTargetPoint)}")
+        moveLayoutToTargetPoint(maxTargetPoint)
     }
 
     override fun onDestroy() {

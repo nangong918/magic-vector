@@ -38,6 +38,29 @@ class TestActivity : BaseAppCompatVmActivity<ActivityTestBinding, TestVm>(
 
     override fun setListener() {
         super.setListener()
+        // emoji test
+        binding.btnStartToEmojiTest.setOnClickListener{
+            val startEmojiTestIntent = Intent(this, AgentEmojiTestActivity::class.java)
+
+            PermissionUtil.requestPermissionSelectX(
+                this,
+                arrayOf(Manifest.permission.CAMERA),
+                arrayOf(),
+                object : GainPermissionCallback {
+                    override fun allGranted() {
+                        startActivity(startEmojiTestIntent)
+                    }
+
+                    override fun notGranted(notGrantedPermissions: Array<String?>?) {
+                        ToastUtils.showToastActivity(this@TestActivity, "请允许相机权限")
+                    }
+
+                    override fun always() {
+                    }
+                }
+            )
+        }
+
         // YOLOv8
         binding.btnStartToYolov8.setOnClickListener {
             val startYOLOv8Intent = Intent(this, YOLOv8Activity::class.java)
