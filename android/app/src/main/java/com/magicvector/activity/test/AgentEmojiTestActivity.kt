@@ -66,6 +66,8 @@ class AgentEmojiTestActivity : BaseAppCompatActivity<ActivityAgentEmojiTestBindi
 
     }
 
+    private var count = 0
+
     override fun setListener() {
         super.setListener()
 
@@ -86,45 +88,34 @@ class AgentEmojiTestActivity : BaseAppCompatActivity<ActivityAgentEmojiTestBindi
                 binding.btnShowVideo.text = "显示识别"
             }
         }
-    }
 
-    private fun moveLayoutToTargetPoint(targetPoint: TargetPoint) {
-        // 获取屏幕宽高
-        val screenWidth = resources.displayMetrics.widthPixels
-        val screenHeight = resources.displayMetrics.heightPixels
-
-        // 获取布局的宽高
-        binding.lyEmoji.measure(
-            View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED),
-            View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED)
-        )
-        val layoutWidth = binding.lyEmoji.measuredWidth
-        val layoutHeight = binding.lyEmoji.measuredHeight
-
-        // 计算左上角坐标
-        var left = (targetPoint.x * screenWidth) - (layoutWidth / 2)
-        var top = (targetPoint.y * screenHeight) - (layoutHeight / 2)
-
-        /*
-          边界处理：
-          left < 0 -> left = 0; left + layoutWidth > screenWidth -> left = screenWidth - layoutWidth
-          top < 0 -> top = 0; top + layoutHeight > screenHeight -> top = screenHeight - layoutHeight
-         */
-        if (left < 0) {
-            left = 0f
-        } else if (left + layoutWidth > screenWidth) {
-            left = (screenWidth - layoutWidth).toFloat()
+        binding.btnMoveTest.setOnClickListener {
+            val screenWidth = resources.displayMetrics.widthPixels
+            val screenHeight = resources.displayMetrics.heightPixels
+            when (count % 5){
+                0 -> {
+                    val targetPoint = TargetPoint(0.5f, 0.5f, null, null)
+                    EyesMoveManager.moveLayoutToTargetPoint(targetPoint, screenWidth, screenHeight, binding.lyEmoji, false)
+                }
+                1 -> {
+                    val targetPoint = TargetPoint(0f, 0f, null, null)
+                    EyesMoveManager.moveLayoutToTargetPoint(targetPoint, screenWidth, screenHeight, binding.lyEmoji, false)
+                }
+                2 -> {
+                    val targetPoint = TargetPoint(0f, 1f, null, null)
+                    EyesMoveManager.moveLayoutToTargetPoint(targetPoint, screenWidth, screenHeight, binding.lyEmoji, false)
+                }
+                3 -> {
+                    val targetPoint = TargetPoint(1f, 0f, null, null)
+                    EyesMoveManager.moveLayoutToTargetPoint(targetPoint, screenWidth, screenHeight, binding.lyEmoji, false)
+                }
+                4 -> {
+                    val targetPoint = TargetPoint(1f, 1f, null, null)
+                    EyesMoveManager.moveLayoutToTargetPoint(targetPoint, screenWidth, screenHeight, binding.lyEmoji, false)
+                }
+            }
+            count++
         }
-
-        if (top < 0) {
-            top = 0f
-        } else if (top + layoutHeight > screenHeight) {
-            top = (screenHeight - layoutHeight).toFloat()
-        }
-
-        // 设置布局的位置
-        binding.lyEmoji.x = left
-        binding.lyEmoji.y = top
     }
 
     private fun toast(message: String) {

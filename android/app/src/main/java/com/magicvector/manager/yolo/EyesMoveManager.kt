@@ -1,5 +1,5 @@
 package com.magicvector.manager.yolo
-
+// todo: 1. 修改一直调用导致的不平滑移动；2.定位位置好像有偏差，复位的位置有点偏向右下角；3.顶部有点眼睛遮挡
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
@@ -69,12 +69,16 @@ object EyesMoveManager {
             View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED)
         )
 
-        val layoutWidth = layout.measuredWidth
-        val layoutHeight = layout.measuredHeight
+        val layoutWidth = layout.width
+        val layoutHeight = layout.height
+
+        // 计算距离
+        val gapX = (screenWidth - layoutWidth) * (0.5f - targetPoint.x)
+        val gapY = (screenHeight - layoutHeight) * (0.5f - targetPoint.y)
 
         // 计算左上角坐标
-        var targetLeft = (targetPoint.x * screenWidth) - (layoutWidth / 2)
-        var targetTop = (targetPoint.y * screenHeight) - (layoutHeight / 2)
+        var targetLeft = layout.x + gapX
+        var targetTop = layout.y + gapY
 
         /*
             边界处理：
