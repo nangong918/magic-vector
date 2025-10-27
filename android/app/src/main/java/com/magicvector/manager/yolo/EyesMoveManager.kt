@@ -1,5 +1,5 @@
 package com.magicvector.manager.yolo
-// todo: 1. 修改一直调用导致的不平滑移动；2.定位位置好像有偏差，复位的位置有点偏向右下角；3.顶部有点眼睛遮挡
+
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
