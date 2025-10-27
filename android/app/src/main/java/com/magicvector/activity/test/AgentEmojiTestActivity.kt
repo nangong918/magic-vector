@@ -237,10 +237,11 @@ class AgentEmojiTestActivity : BaseAppCompatActivity<ActivityAgentEmojiTestBindi
         val screenHeight = resources.displayMetrics.heightPixels
         // 移动布局
         EyesMoveManager.moveLayoutToTargetPoint(
-            maxTargetPoint,
-            screenWidth,
-            screenHeight,
-            binding.lyEmoji
+            targetPoint = maxTargetPoint,
+            screenWidth = screenWidth,
+            screenHeight = screenHeight,
+            layout = binding.lyEmoji,
+            isNeedReset = true
         )
     }
 
