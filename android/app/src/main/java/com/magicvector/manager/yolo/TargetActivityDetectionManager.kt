@@ -25,6 +25,8 @@ import kotlin.math.sqrt
  * 倒计时Runnable, 在指定时间没有移动则是为静止状态
  * 类似VAD: 起始 -> 结束
  * 存在识别闪烁的问题 (人物触发条件底, 物品触发条件高)
+ * 设计一个优先级list判断功能，eye会根据优先级来判断
+ * 设计一个eye MCP，实现：让AI看哪里，它就持续看哪里
  */
 object TargetActivityDetectionManager {
 

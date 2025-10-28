@@ -49,9 +49,12 @@ Silero VAD集成ESP32-S3
 chat mcp(tools -> 本地测试)
 chat rag(向量)
 
+设计一个优先级list判断功能，eye会根据优先级来判断
 ### lv1(计划任务)
 增加一个HttpClient解决http请求资源复用问题
 音频合成缓存，解决当前音频请求频率过高问题
+
+设计一个eye MCP，实现：让AI看哪里，它就持续看哪里
 
 图片视觉
 
@@ -59,6 +62,7 @@ chat rag(向量)
 
 ### lv2(研究性任务)
 (*)YOLOv8实现了目标检测，但是没有视频活动检测；目前是对YOLOv8的输出直接用kotlin代码判断是否有活动检测，可以考虑使用tensorflow训练tflite模型交给Android调用（规则集并不完善，并且存在考虑不到的维度问题，交给模型处理效果更好）
+
 chat 声纹识别（避免vad将自己的声音误认为输入）
 研究FFmpeg并集成在Android
 人格系统：人格 = 记忆 + 算法（意图产生，态度倾向）
