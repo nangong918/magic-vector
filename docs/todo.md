@@ -9,7 +9,6 @@ Spring 项目部署在Docker -> 上传到阿里云服务器 todo Docker，Nginx 
 压测, 修复bug, 提高系统的鲁棒性
 
 ### lv0(当前任务)
-检测person然后算出一个眼睛应该移动的向量
 AI Emoji Activity
 
 阿里百炼视觉理解模型
@@ -92,3 +91,6 @@ chat app agent创建 + 聊天 (2025/10/19)
 Silero,WebRTC_Vad 集成 Android (2025/10/22) 
 实时语音通话 (2025/10/23)
 修复tts频繁调用 + ChatClient Connect Reset bug (2025/10/25)
+YOLOv8集成Android(2025/10/26)
+YOLOv8的Emoji追踪目标 (2025/10/27)
+摄像头反转 (2025/10/28)
