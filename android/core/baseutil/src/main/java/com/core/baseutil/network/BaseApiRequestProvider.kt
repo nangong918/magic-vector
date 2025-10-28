@@ -65,10 +65,10 @@ open class BaseApiRequestProvider {
             // 创建 OkHttpClient.Builder
             val builder = OkHttpClient.Builder()
                 .retryOnConnectionFailure(false) // 不重复请求
-                .connectTimeout(connectTimeOut, TimeUnit.SECONDS)
-                .readTimeout(readTimeOut, TimeUnit.SECONDS)
-                .writeTimeout(writeTimeOut, TimeUnit.SECONDS)
-                .callTimeout(callTimeOut, TimeUnit.SECONDS)
+                .connectTimeout(connectTimeOut, TimeUnit.MILLISECONDS)
+                .readTimeout(readTimeOut, TimeUnit.MILLISECONDS)
+                .writeTimeout(writeTimeOut, TimeUnit.MILLISECONDS)
+                .callTimeout(callTimeOut, TimeUnit.MILLISECONDS)
                 .cache(cache)
                 .addInterceptor(loggingInterceptor) // OkHttp3 日志拦截器
                 .proxy(Proxy.NO_PROXY)
