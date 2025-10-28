@@ -214,7 +214,12 @@ object YOLOv8TargetPointGenerator {
         }
     }
 
-    // 人物优先, 其次物品, 过滤大小
+    /**
+     * 人物优先, 其次物品, 过滤大小
+     * @param boundingBoxes 边界框列表
+     * @param filterSize 过滤尺寸
+     * @return TargetPoint 目标中心点
+     */
     fun generateTargetPoint(boundingBoxes: List<BoundingBox>, filterSize: Float = 0f): TargetPoint {
         val resetTargetPoint = TargetPoint(
             x = 0.5F,

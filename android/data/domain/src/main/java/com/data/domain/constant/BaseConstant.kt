@@ -33,7 +33,7 @@ class BaseConstant {
     // url
     object ConstantUrl {
         private const val LOCAL_ADDRESS = "192.168.1.7:48888"
-        private const val TEST_ADDRESS = "192.168.101.176:48888"
+        private const val TEST_ADDRESS = "192.168.1.7:48888"
 
 
         const val LOCAL_URL = "http://$LOCAL_ADDRESS";
@@ -67,5 +67,16 @@ class BaseConstant {
 
     object VAD {
         const val SILENCE_DURATION_MS = 100L
+    }
+
+    object YOLO {
+        const val FILTER_SIZE = 0.1f * 0.1f
+        const val PERSON_CLS = 0
+
+        const val OBJECT_SDIFF_W = 0.1f
+        const val PERSON_COUNT_W = 0.1f
+        const val OBJECT_COUNT_W = 0.05f
+
+        const val THRESHOLD_VALUE = 0.10f
     }
 }

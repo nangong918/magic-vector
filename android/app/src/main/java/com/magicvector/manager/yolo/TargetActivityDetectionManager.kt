@@ -1,6 +1,8 @@
 package com.magicvector.manager.yolo
 
+import android.util.Log
 import com.core.baseutil.debug.DebugEnvironment
+import com.data.domain.constant.BaseConstant
 import com.detection.yolov8.BoundingBox
 import com.detection.yolov8.targetPoint.TargetPoint
 import com.magicvector.MainApplication
@@ -21,6 +23,7 @@ import kotlin.math.sqrt
  * m_person: [abs(m)...n] * 10 * k
  * 倒计时Runnable, 在指定时间没有移动则是为静止状态
  * 类似VAD: 起始 -> 结束
+ * 存在识别闪烁的问题
  */
 object TargetActivityDetectionManager {
 
@@ -31,29 +34,18 @@ object TargetActivityDetectionManager {
     private var lastMaxPersonS: Float = 0f
 
     // 上一帧中心点
-    private var lastObjTargetPoint: TargetPoint? = TargetPoint(0.5f, 0.5f, null, null)
-    private var lastPersonTargetPoint: TargetPoint? = TargetPoint(0.5f, 0.5f, null, null)
+    private var lastTargetPoint: TargetPoint? = TargetPoint(0.5f, 0.5f, null, null)
 
     // 数量变化
     private val lastBoxCountMap = mutableMapOf<Int, Int>()
 
     fun detect(
-        boundingBoxes: List<BoundingBox>?,
-        objectTargetPoint: TargetPoint?,
-        personTargetPoint: TargetPoint?
-    ) {
+        boundingBoxes: List<BoundingBox>,
+        targetPoint: TargetPoint
+    ) : Boolean {
 
         // 计算位移差
-        val objDistance = if (objectTargetPoint == null){
-            0f
-        } else {
-            getDistance(lastObjTargetPoint, objectTargetPoint)
-        }
-        val personDistance = if (personTargetPoint == null){
-            0f
-        } else {
-            getDistance(lastPersonTargetPoint, personTargetPoint)
-        }
+        val targetDistance = getDistance(lastTargetPoint, targetPoint)
 
         // 计算对象数量差距
         val boxCountDifferences = calculateBoxCountDifference(boundingBoxes)
@@ -66,20 +58,14 @@ object TargetActivityDetectionManager {
         var maxPersonS = 0f
 
         // 获取最大物品面积
-        boundingBoxes?.let {
-            var isHaveObj = false
-            var isHavePerson = false
-
+        boundingBoxes.let {
             for (box in it) {
-                if (box.cls == 0) {
-                    isHavePerson = true
+                if (box.cls == BaseConstant.YOLO.PERSON_CLS) {
                     val personS = box.w * box.h
                     if (personS > maxPersonS){
                         maxPersonS = personS
                     }
-                }
-                else {
-                    isHaveObj = true
+                } else {
                     val objS = box.w * box.h
                     if (objS > maxObjS){
                         maxObjS = objS
@@ -98,18 +84,27 @@ object TargetActivityDetectionManager {
 
         if (DebugEnvironment.LOG_DEBUG) {
             println("$TAG::detect")
-            println("$TAG: objDistance: $objDistance")
-            println("$TAG: personDistance: $personDistance")
-            println("$TAG: boxCountDifferences: ${MainApplication.GSON.toJson(boxCountDifferences)}")
+            println("$TAG: targetDistance: $targetDistance")
+            Log.i(TAG,"boxCountDifferences: ${MainApplication.GSON.toJson(boxCountDifferences)}")
             println("$TAG: objSdiff: $objSdiff")
             println("$TAG: personSdiff: $personSdiff")
+
+            val sDiff = 1 + objSdiff * BaseConstant.YOLO.OBJECT_SDIFF_W + personSdiff
+            val personCountW = 1 + boxCountDifferences[0] * BaseConstant.YOLO.PERSON_COUNT_W
+            val objCountW = 1 + boxCountDifferences[1] * BaseConstant.YOLO.OBJECT_COUNT_W
+            val score = targetDistance * sDiff * personCountW * objCountW
+            println("$TAG: score: $score")
+            if (score > BaseConstant.YOLO.THRESHOLD_VALUE) {
+                Log.d(TAG, "detect: true score: $score")
+            }
         }
 
         // 最后记录
-        lastObjTargetPoint = objectTargetPoint
-        lastPersonTargetPoint = personTargetPoint
+        lastTargetPoint = targetPoint
         lastMaxObjS = maxObjS
         lastMaxPersonS = maxPersonS
+
+        return false
     }
 
     // 计算距离

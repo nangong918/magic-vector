@@ -16,6 +16,7 @@ import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.core.content.ContextCompat
 import androidx.core.graphics.createBitmap
 import com.core.baseutil.fragmentActivity.BaseAppCompatActivity
+import com.data.domain.constant.BaseConstant
 import com.detection.yolov8.BoundingBox
 import com.detection.yolov8.Detector
 import com.detection.yolov8.YOLOv8Constants
@@ -25,6 +26,7 @@ import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import com.magicvector.databinding.ActivityAgentEmojiTestBinding
 import com.magicvector.manager.yolo.EyesMoveManager
+import com.magicvector.manager.yolo.TargetActivityDetectionManager
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicBoolean
@@ -270,19 +272,29 @@ class AgentEmojiTestActivity : BaseAppCompatActivity<ActivityAgentEmojiTestBindi
                 invalidate()
             }
         }
-        val maxTargetPoint = YOLOv8TargetPointGenerator.generateMaxTargetPoint(boundingBoxes)
-        Log.d(TAG, "生成最大目标中心点: ${GSON.toJson(maxTargetPoint)}")
+
+//        val maxTargetPoint = YOLOv8TargetPointGenerator.generateMaxTargetPoint(boundingBoxes)
+        val maxTarget = YOLOv8TargetPointGenerator.generateTargetPoint(
+            boundingBoxes,
+            BaseConstant.YOLO.FILTER_SIZE
+        )
 
         // 获取屏幕宽高
         val screenWidth = resources.displayMetrics.widthPixels
         val screenHeight = resources.displayMetrics.heightPixels
         // 移动布局
         EyesMoveManager.moveLayoutToTargetPoint(
-            targetPoint = maxTargetPoint,
+            targetPoint = maxTarget,
             screenWidth = screenWidth,
             screenHeight = screenHeight,
             layout = binding.lyEmoji,
             isThisReset = false
+        )
+
+        // 活动检测
+        TargetActivityDetectionManager.detect(
+            boundingBoxes,
+            maxTarget
         )
     }
 
