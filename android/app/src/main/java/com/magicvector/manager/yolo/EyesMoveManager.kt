@@ -37,7 +37,8 @@ object EyesMoveManager {
         screenWidth: Int,
         screenHeight: Int,
         layout: View,
-        isThisReset: Boolean
+        isThisReset: Boolean,
+        onResetCallback: OnResetCallback?
     ) {
         // 正在移动，返回任务
         if (isMoving){
@@ -54,7 +55,7 @@ object EyesMoveManager {
         currentTargetPoint = targetPoint
 
         // 启动移动循环
-        startMoveLoop(screenWidth, screenHeight, layout, isThisReset)
+        startMoveLoop(screenWidth, screenHeight, layout, isThisReset, onResetCallback)
     }
 
     private fun moveToTargetPoint(
@@ -62,7 +63,8 @@ object EyesMoveManager {
         screenWidth: Int,
         screenHeight: Int,
         layout: View,
-        isThisReset: Boolean
+        isThisReset: Boolean,
+        onResetCallback: OnResetCallback?
     ) {
         layout.measure(
             View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED),
@@ -104,17 +106,21 @@ object EyesMoveManager {
             // 当前是否是reset操作
             if (isThisReset){
                 Log.d(TAG, "当前就是reset操作，不进行复位")
+                // 复位结束
+                onResetCallback?.onFinishReset()
                 return
             }
 
             resetRunnable = Runnable {
                 // 移动结束，开始复位
+                onResetCallback?.onStartReset()
                 moveLayoutToTargetPoint(
                     RESET_TARGET,
                     screenWidth,
                     screenHeight,
                     layout,
-                    true
+                    true,
+                    onResetCallback
                 )
             }
             // 开始调用延迟检查
@@ -129,7 +135,8 @@ object EyesMoveManager {
         screenWidth: Int,
         screenHeight: Int,
         layout: View,
-        isThisReset: Boolean
+        isThisReset: Boolean,
+        onResetCallback: OnResetCallback?
     ) {
         if (isMoving) return
 
@@ -143,7 +150,8 @@ object EyesMoveManager {
                     screenWidth,
                     screenHeight,
                     layout,
-                    isThisReset
+                    isThisReset,
+                    onResetCallback
                 )
 
                 // 如果移动未完成，继续下一帧

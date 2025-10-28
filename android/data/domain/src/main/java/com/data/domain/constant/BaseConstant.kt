@@ -77,6 +77,7 @@ class BaseConstant {
         const val PERSON_COUNT_W = 0.1f
         const val OBJECT_COUNT_W = 0.05f
 
-        const val THRESHOLD_VALUE = 0.10f
+        const val PERSON_THRESHOLD_VALUE = 0.10f
+        const val OBJECT_THRESHOLD_VALUE = 0.40f
     }
 }

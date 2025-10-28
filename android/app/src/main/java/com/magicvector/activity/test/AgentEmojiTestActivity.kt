@@ -26,6 +26,7 @@ import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import com.magicvector.databinding.ActivityAgentEmojiTestBinding
 import com.magicvector.manager.yolo.EyesMoveManager
+import com.magicvector.manager.yolo.OnResetCallback
 import com.magicvector.manager.yolo.TargetActivityDetectionManager
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
@@ -102,23 +103,23 @@ class AgentEmojiTestActivity : BaseAppCompatActivity<ActivityAgentEmojiTestBindi
             when (count % 5){
                 0 -> {
                     val targetPoint = TargetPoint(0.5f, 0.5f, null, null)
-                    EyesMoveManager.moveLayoutToTargetPoint(targetPoint, screenWidth, screenHeight, binding.lyEmoji, false)
+                    EyesMoveManager.moveLayoutToTargetPoint(targetPoint, screenWidth, screenHeight, binding.lyEmoji, false, null)
                 }
                 1 -> {
                     val targetPoint = TargetPoint(0f, 0f, null, null)
-                    EyesMoveManager.moveLayoutToTargetPoint(targetPoint, screenWidth, screenHeight, binding.lyEmoji, false)
+                    EyesMoveManager.moveLayoutToTargetPoint(targetPoint, screenWidth, screenHeight, binding.lyEmoji, false, null)
                 }
                 2 -> {
                     val targetPoint = TargetPoint(0f, 1f, null, null)
-                    EyesMoveManager.moveLayoutToTargetPoint(targetPoint, screenWidth, screenHeight, binding.lyEmoji, false)
+                    EyesMoveManager.moveLayoutToTargetPoint(targetPoint, screenWidth, screenHeight, binding.lyEmoji, false, null)
                 }
                 3 -> {
                     val targetPoint = TargetPoint(1f, 0f, null, null)
-                    EyesMoveManager.moveLayoutToTargetPoint(targetPoint, screenWidth, screenHeight, binding.lyEmoji, false)
+                    EyesMoveManager.moveLayoutToTargetPoint(targetPoint, screenWidth, screenHeight, binding.lyEmoji, false, null)
                 }
                 4 -> {
                     val targetPoint = TargetPoint(1f, 1f, null, null)
-                    EyesMoveManager.moveLayoutToTargetPoint(targetPoint, screenWidth, screenHeight, binding.lyEmoji, false)
+                    EyesMoveManager.moveLayoutToTargetPoint(targetPoint, screenWidth, screenHeight, binding.lyEmoji, false, null)
                 }
             }
             println("count % 5:: ${count % 5}")
@@ -279,24 +280,65 @@ class AgentEmojiTestActivity : BaseAppCompatActivity<ActivityAgentEmojiTestBindi
             BaseConstant.YOLO.FILTER_SIZE
         )
 
+        // 活动检测
+        val result = TargetActivityDetectionManager.detect(
+            boundingBoxes,
+            targetPoint = maxTarget
+        )
+
+        result.let {
+            if (it.result){
+                if (it.detectionType != null) {
+                    when (it.detectionType) {
+                        0 -> {
+                            binding.vMoveDetect.setBackgroundResource(com.view.appview.R.color.gold)
+                        }
+                        1 -> {
+                            binding.vMoveDetect.setBackgroundResource(com.view.appview.R.color.red)
+                        }
+                        else -> {
+                            binding.vMoveDetect.setBackgroundResource(com.view.appview.R.color.light_blue_600)
+                        }
+                    }
+                }
+                else {
+                    binding.vMoveDetect.setBackgroundResource(com.view.appview.R.color.light_blue_600)
+                }
+            }
+            else {
+                binding.vMoveDetect.setBackgroundResource(com.view.appview.R.color.light_blue_600)
+            }
+        }
+
         // 获取屏幕宽高
         val screenWidth = resources.displayMetrics.widthPixels
         val screenHeight = resources.displayMetrics.heightPixels
+
         // 移动布局
         EyesMoveManager.moveLayoutToTargetPoint(
             targetPoint = maxTarget,
             screenWidth = screenWidth,
             screenHeight = screenHeight,
             layout = binding.lyEmoji,
-            isThisReset = false
-        )
-
-        // 活动检测
-        TargetActivityDetectionManager.detect(
-            boundingBoxes,
-            maxTarget
+            isThisReset = false,
+            onResetCallback = onResetCallback
         )
     }
+
+
+    // 复位回调
+    val onResetCallback = object : OnResetCallback {
+        override fun onStartReset() {
+            Log.i(TAG, "开始复位")
+            binding.vMoveDetect.setBackgroundResource(com.view.appview.R.color.a1_100)
+        }
+
+        override fun onFinishReset() {
+            Log.i(TAG, "复位完成")
+            binding.vMoveDetect.setBackgroundResource(com.view.appview.R.color.light_blue_600)
+        }
+    }
+
 
     override fun onDestroy() {
         super.onDestroy()
