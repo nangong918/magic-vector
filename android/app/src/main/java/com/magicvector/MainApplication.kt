@@ -6,6 +6,8 @@ import com.core.appcore.api.ApiRequest
 import com.core.appcore.api.ApiRequestProvider
 import com.core.baseutil.image.ImageManager
 import com.data.dao.api.ApiRequestImpl
+import com.google.gson.Gson
+import com.google.gson.GsonBuilder
 import com.magicvector.manager.ChatMapManager
 import com.magicvector.manager.MessageListManager
 
@@ -30,6 +32,9 @@ class MainApplication : Application() {
     }
 
     companion object {
+
+        val GSON: Gson = GsonBuilder().setPrettyPrinting().create()
+
         //==========ApiRequest
 
         private var apiRequestInstance: ApiRequest? = null
@@ -83,6 +88,7 @@ class MainApplication : Application() {
     }
 
     //----------------------------utils----------------------------
+
 
 
     //----------------------------APP终止的时候调用----------------------------
