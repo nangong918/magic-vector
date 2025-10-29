@@ -541,6 +541,7 @@ class ChatVm(
                 }
             }
             RealtimeResponseDataTypeEnum.WHOLE_CHAT_RESPONSE -> {}
+            RealtimeResponseDataTypeEnum.TEXT_SYSTEM_RESPONSE -> {}
         }
     }
 

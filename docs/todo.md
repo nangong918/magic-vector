@@ -76,7 +76,7 @@ VAD 实时打断 + 3D-Speaker声纹识别
 性能分析：了解新能分析工具，分别对后端、前端、嵌入式进行性能分析
 
 ### lv3(无关紧要)
-部分View改用Jetpack compose
+部分View改用Jetpack compose: Chat页面和Emoji页面切换用compose相比xml更好
 最后升级Flutter, 打通IOS用户
 spring的线程池升级为虚拟线程
 (*)spring ai -> golang + python + langchain
