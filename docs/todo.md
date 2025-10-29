@@ -9,7 +9,7 @@ Spring 项目部署在Docker -> 上传到阿里云服务器 todo Docker，Nginx 
 压测, 修复bug, 提高系统的鲁棒性
 
 ### lv0(当前任务)
-YOLOv8实现视频流目标活动检测 -> 用于未来调用视频流模型
+实现websocket进行单个图片视觉，后续升级为Http上图片组和视频流
 
 调用阿里百炼视觉模型
 视频流传输考虑使用FFmpeg进行压缩, 节省带宽和模型token
@@ -104,3 +104,4 @@ Silero,WebRTC_Vad 集成 Android (2025/10/22)
 YOLOv8集成Android(2025/10/26)
 YOLOv8的Emoji追踪目标 (2025/10/27)
 摄像头反转 (2025/10/28)
+YOLOv8实现视频流目标活动检测 -> 用于未来调用视频流模型 (2025/10/29)
