@@ -11,6 +11,7 @@ public interface ModelConstant {
     String STT_Model = "fun-asr-realtime";
     String TTS_Model = "qwen3-tts-flash";
     String Chat_Model = "qwen-flash";
+    String Vision_Model = "qwen3-vl-flash";
     long SENTENCE_INTERVAL = 200;
     AudioParameters.Voice TTS_Voice = AudioParameters.Voice.CHERRY;
     String TTS_LanguageType = "Chinese";
