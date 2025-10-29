@@ -1,8 +1,14 @@
 package com.magicvector.activity.test
 
+import android.Manifest
+import android.content.ContentValues
+import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.Matrix
+import android.os.Build
 import android.os.Bundle
+import android.os.Environment
+import android.provider.MediaStore
 import android.util.Log
 import android.view.View
 import android.view.WindowManager
@@ -16,6 +22,8 @@ import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.core.content.ContextCompat
 import androidx.core.graphics.createBitmap
 import com.core.baseutil.fragmentActivity.BaseAppCompatActivity
+import com.core.baseutil.permissions.GainPermissionCallback
+import com.core.baseutil.permissions.PermissionUtil
 import com.data.domain.constant.BaseConstant
 import com.detection.yolov8.BoundingBox
 import com.detection.yolov8.Detector
@@ -28,6 +36,7 @@ import com.magicvector.databinding.ActivityAgentEmojiTestBinding
 import com.magicvector.manager.yolo.EyesMoveManager
 import com.magicvector.manager.yolo.OnResetCallback
 import com.magicvector.manager.yolo.TargetActivityDetectionManager
+import okio.IOException
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicBoolean
@@ -74,6 +83,11 @@ class AgentEmojiTestActivity : BaseAppCompatActivity<ActivityAgentEmojiTestBindi
 
     override fun setListener() {
         super.setListener()
+
+        // 照相测试
+        binding.btnTakePhoto.setOnClickListener {
+            takePhoto()
+        }
 
         binding.btnSwitchCamera.setOnClickListener {
             switchCamera()
@@ -224,6 +238,9 @@ class AgentEmojiTestActivity : BaseAppCompatActivity<ActivityAgentEmojiTestBindi
                     matrix, true
                 )
 
+                // 缓存一帧
+                currentFrameBitmap = rotatedBitmap
+
                 // 识别
                 detector?.detect(rotatedBitmap)
             }
@@ -338,6 +355,75 @@ class AgentEmojiTestActivity : BaseAppCompatActivity<ActivityAgentEmojiTestBindi
             Log.i(TAG, "复位完成")
             binding.vMoveDetect.setBackgroundResource(com.view.appview.R.color.light_blue_600)
         }
+    }
+
+    // 添加一个变量来保存当前帧的Bitmap
+    private var currentFrameBitmap: Bitmap? = null
+    private val bitmapLock = Any()
+    fun takePhoto(){
+        PermissionUtil.requestPermissionSelectX(
+            this,
+            arrayOf(Manifest.permission.CAMERA),
+            arrayOf(Manifest.permission.WRITE_EXTERNAL_STORAGE),
+            object : GainPermissionCallback {
+                override fun allGranted() {
+                    // 保存当前帧用于拍照
+                    savePhoto()
+                }
+
+                override fun notGranted(notGrantedPermissions: Array<String?>?) {
+                    println("$TAG 没有权限: ${notGrantedPermissions?.toList()}")
+                }
+
+                override fun always() {
+                }
+            }
+        )
+    }
+
+    // 实现拍照方法
+    private fun savePhoto() {
+        synchronized(bitmapLock) {
+            currentFrameBitmap?.let { bitmap ->
+                try {
+                    // 这里可以保存图片到相册或进行其他处理
+                    saveBitmapToGallery(bitmap)
+                    toast("照片已保存")
+                } catch (e: Exception) {
+                    Log.e(TAG, "保存照片失败", e)
+                    toast("保存照片失败")
+                }
+            } ?: run {
+                toast("当前没有可用的图像帧")
+            }
+        }
+    }
+
+    private fun saveBitmapToGallery(bitmap: Bitmap) {
+        val fileName = "AgentEmoji_${System.currentTimeMillis()}.jpg"
+        val contentValues = ContentValues().apply {
+            put(MediaStore.Images.Media.DISPLAY_NAME, fileName)
+            put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg")
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                put(MediaStore.Images.Media.RELATIVE_PATH, Environment.DIRECTORY_PICTURES)
+            }
+        }
+
+        val uri = contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, contentValues)
+        uri?.let { imageUri ->
+            contentResolver.openOutputStream(imageUri)?.use { outputStream ->
+                if (!bitmap.compress(Bitmap.CompressFormat.JPEG, 95, outputStream)) {
+                    throw IOException("图片压缩失败")
+                }
+            }
+
+            // 通知相册更新
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
+                val intent = Intent(Intent.ACTION_MEDIA_SCANNER_SCAN_FILE)
+                intent.data = imageUri
+                sendBroadcast(intent)
+            }
+        } ?: throw IOException("创建文件失败")
     }
 
 
