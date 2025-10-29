@@ -77,7 +77,7 @@ VAD 实时打断 + 3D-Speaker声纹识别
 部分View改用Jetpack compose
 最后升级Flutter, 打通IOS用户
 spring的线程池升级为虚拟线程
-
+(*)spring ai -> golang + python + langchain
 
 ## 已完成
 
