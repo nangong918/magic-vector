@@ -9,6 +9,7 @@ import com.openapi.domain.constant.realtime.RealtimeRequestDataTypeEnum;
 import com.openapi.domain.constant.realtime.RealtimeResponseDataTypeEnum;
 import com.openapi.domain.dto.ws.RealtimeChatConnectRequest;
 import com.openapi.service.RealtimeChatService;
+import com.openapi.websocket.config.SessionConfig;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
@@ -39,6 +40,7 @@ public class RealtimeChatChannel extends TextWebSocketHandler {
     private final RealtimeChatService realtimeChatService;
     private final DashScopeChatModel dashScopeChatModel;
     private ChatClient chatClient;
+    private final SessionConfig sessionConfig;
 
 
     @Override
@@ -93,6 +95,10 @@ public class RealtimeChatChannel extends TextWebSocketHandler {
 
                     // 初始化chatClient
                     chatClient = realtimeChatService.initChatClient(realtimeChatContextManager, dashScopeChatModel);
+
+                    // 将session存储到sessionMap
+                    sessionConfig.sessionMap().put(realtimeChatContextManager.agentId, session);
+
                 } catch (Exception e){
                     log.warn("[websocket warn] 断开连接，参数错误");
 //                    session.close();

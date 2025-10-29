@@ -1,4 +1,4 @@
-package com.openapi.service;
+package com.openapi.service.test;
 
 import com.alibaba.dashscope.audio.omni.OmniRealtimeConversation;
 import com.alibaba.dashscope.exception.NoApiKeyException;

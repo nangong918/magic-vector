@@ -28,6 +28,11 @@ public enum RealtimeResponseDataTypeEnum {
      */
     TEXT_CHAT_RESPONSE("text_chat_response"),
     /**
+     * text_system_response
+     * @see com.openapi.domain.dto.ws.SystemTextResponse
+     */
+    TEXT_SYSTEM_RESPONSE("text_system_response"),
+    /**
      * whole_chat_response 整句回复
      * @see com.openapi.domain.dto.ws.RealtimeChatTextResponse
      */

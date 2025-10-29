@@ -1,4 +1,4 @@
-package com.openapi.websocket.handler;
+package com.openapi.websocket.handler.test;
 
 import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;

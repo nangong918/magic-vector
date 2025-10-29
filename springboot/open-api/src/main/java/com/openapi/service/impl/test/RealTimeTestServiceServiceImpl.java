@@ -1,4 +1,4 @@
-package com.openapi.service.impl;
+package com.openapi.service.impl.test;
 
 import com.alibaba.cloud.ai.dashscope.chat.DashScopeChatModel;
 import com.alibaba.dashscope.aigc.multimodalconversation.AudioParameters;
@@ -26,7 +26,7 @@ import com.openapi.domain.exception.AppException;
 import com.openapi.domain.interfaces.OnSSTResultCallback;
 import com.openapi.service.AgentService;
 import com.openapi.service.ChatMessageService;
-import com.openapi.service.RealTimeTestServiceService;
+import com.openapi.service.test.RealTimeTestServiceService;
 import io.reactivex.BackpressureStrategy;
 import io.reactivex.Flowable;
 import lombok.RequiredArgsConstructor;

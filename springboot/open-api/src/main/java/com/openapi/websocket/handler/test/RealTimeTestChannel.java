@@ -1,4 +1,4 @@
-package com.openapi.websocket.handler;
+package com.openapi.websocket.handler.test;
 
 import com.alibaba.cloud.ai.dashscope.chat.DashScopeChatModel;
 import com.alibaba.fastjson.JSON;
@@ -6,7 +6,7 @@ import com.alibaba.fastjson.TypeReference;
 import com.openapi.component.manager.RealtimeChatContextManager;
 import com.openapi.domain.constant.test.RealtimeDataTypeEnum;
 import com.openapi.domain.dto.ws.RealtimeChatConnectRequest;
-import com.openapi.service.RealTimeTestServiceService;
+import com.openapi.service.test.RealTimeTestServiceService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;

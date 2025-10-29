@@ -1,4 +1,4 @@
-package com.openapi.service;
+package com.openapi.service.test;
 
 import com.alibaba.cloud.ai.dashscope.chat.DashScopeChatModel;
 import com.alibaba.dashscope.exception.NoApiKeyException;

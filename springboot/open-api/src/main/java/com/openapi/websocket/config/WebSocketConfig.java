@@ -2,13 +2,13 @@ package com.openapi.websocket.config;
 
 import com.alibaba.cloud.ai.dashscope.chat.DashScopeChatModel;
 import com.openapi.config.ThreadPoolConfig;
-import com.openapi.service.OmniRealTimeNoVADTestService;
-import com.openapi.service.RealTimeTestServiceService;
+import com.openapi.service.test.OmniRealTimeNoVADTestService;
+import com.openapi.service.test.RealTimeTestServiceService;
 import com.openapi.service.RealtimeChatService;
-import com.openapi.websocket.handler.OmniRealTimeNoVADTestChannel;
-import com.openapi.websocket.handler.RealTimeTestChannel;
+import com.openapi.websocket.handler.test.OmniRealTimeNoVADTestChannel;
+import com.openapi.websocket.handler.test.RealTimeTestChannel;
 import com.openapi.websocket.handler.RealtimeChatChannel;
-import com.openapi.websocket.handler.TestChannel;
+import com.openapi.websocket.handler.test.TestChannel;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.socket.config.annotation.EnableWebSocket;
@@ -29,6 +29,7 @@ public class WebSocketConfig implements WebSocketConfigurer {
     private final RealTimeTestServiceService realTimeTestServiceService;
     private final RealtimeChatService realtimeChatService;
     private final DashScopeChatModel dashScopeChatModel;
+    private final SessionConfig sessionConfig;
 
     /**
      * 注册 WebSocket 处理器
@@ -50,7 +51,8 @@ public class WebSocketConfig implements WebSocketConfigurer {
                 .addHandler(new RealtimeChatChannel(
                                 threadPoolConfig.taskExecutor(),
                                 realtimeChatService,
-                                dashScopeChatModel
+                                dashScopeChatModel,
+                                sessionConfig
                         ),
                         "/agent/realtime/chat")
                 .setAllowedOrigins("*"); // 根据需要设置允许的源
