@@ -31,6 +31,28 @@ Android端异常断开, Spring端会抛出异常: (本质上是无害影响，�
 java.io.EOFException: null
 ```
 
+Android 在退出CameraX预览之后出现崩溃:
+```text
+[SurfaceView[com.magicvector/com.magicvector.activity.test.AgentEmojiTestActivity]#5(BLAST Consumer)5](id:2eed00000009,api:4,p:2371,c:12013) queueBuffer: BufferQueue has been abandoned
+```
+解决方案: 因为SurfaceView可能在onStop之前销毁, 所以需要在onPause中停止分析(从被抛弃的Buffer中继续获取数据)
+```kotlin
+    // 由于surface可能在onStop销毁，所以分析器要在onPause中提前结束
+    private val cameraLock = Any()
+    override fun onPause() {
+        super.onPause()
+        // 线程同步，避免在Surface销毁的时候还从Buffer中获取数据
+        synchronized(cameraLock){
+            // 停止线程池行为
+            cameraExecutor.shutdownNow()
+            // 停止分析器
+            imageAnalyzer?.clearAnalyzer()
+            // 停止相机
+            cameraProvider?.unbindAll()
+        }
+    }
+```
+
 
 ## 暂时未再次复现bug
 messageId主键插入异常: 重复主键Id

@@ -174,10 +174,27 @@ class YOLOv8Activity : AppCompatActivity() , Detector.DetectorListener{
         }
     }
 
+
+    // 由于surface可能在onStop销毁，所以分析器要在onPause中提前结束
+    private val cameraLock = Any()
+    override fun onPause() {
+        super.onPause()
+        // 线程同步，避免在Surface销毁的时候还从Buffer中获取数据
+        synchronized(cameraLock){
+            // 停止线程池行为
+            cameraExecutor.shutdownNow()
+            // 停止分析器
+            imageAnalyzer?.clearAnalyzer()
+            // 停止相机
+            cameraProvider?.unbindAll()
+        }
+    }
+
+
     override fun onDestroy() {
         super.onDestroy()
         detector?.close()
-        cameraExecutor.shutdown()
+        cameraExecutor.shutdownNow()
     }
 
     override fun onResume() {

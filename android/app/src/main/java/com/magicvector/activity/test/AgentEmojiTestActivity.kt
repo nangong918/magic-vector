@@ -21,6 +21,7 @@ import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.core.content.ContextCompat
 import androidx.core.graphics.createBitmap
+import androidx.lifecycle.LifecycleOwner
 import com.core.baseutil.fragmentActivity.BaseAppCompatActivity
 import com.core.baseutil.permissions.GainPermissionCallback
 import com.core.baseutil.permissions.PermissionUtil
@@ -214,6 +215,7 @@ class AgentEmojiTestActivity : BaseAppCompatActivity<ActivityAgentEmojiTestBindi
                 // 获取bitmap
                 val bitmapBuffer =
                     createBitmap(imageProxy.width, imageProxy.height)
+
                 imageProxy.use { bitmapBuffer.copyPixelsFromBuffer(imageProxy.planes[0].buffer) }
                 imageProxy.close()
 
@@ -249,7 +251,7 @@ class AgentEmojiTestActivity : BaseAppCompatActivity<ActivityAgentEmojiTestBindi
 
             try {
                 camera = cameraProvider.bindToLifecycle(
-                    this,
+                    this as LifecycleOwner,
                     cameraSelector,
                     preview,
                     imageAnalyzer
@@ -305,26 +307,28 @@ class AgentEmojiTestActivity : BaseAppCompatActivity<ActivityAgentEmojiTestBindi
         )
 
         result.let {
-            if (it.result){
-                if (it.detectionType != null) {
-                    when (it.detectionType) {
-                        0 -> {
-                            binding.vMoveDetect.setBackgroundResource(com.view.appview.R.color.gold)
+            runOnUiThread {
+                if (it.result){
+                    if (it.detectionType != null) {
+                        when (it.detectionType) {
+                            0 -> {
+                                binding.vMoveDetect.setBackgroundResource(com.view.appview.R.color.gold)
+                            }
+                            1 -> {
+                                binding.vMoveDetect.setBackgroundResource(com.view.appview.R.color.red)
+                            }
+                            else -> {
+                                binding.vMoveDetect.setBackgroundResource(com.view.appview.R.color.light_blue_600)
+                            }
                         }
-                        1 -> {
-                            binding.vMoveDetect.setBackgroundResource(com.view.appview.R.color.red)
-                        }
-                        else -> {
-                            binding.vMoveDetect.setBackgroundResource(com.view.appview.R.color.light_blue_600)
-                        }
+                    }
+                    else {
+                        binding.vMoveDetect.setBackgroundResource(com.view.appview.R.color.light_blue_600)
                     }
                 }
                 else {
                     binding.vMoveDetect.setBackgroundResource(com.view.appview.R.color.light_blue_600)
                 }
-            }
-            else {
-                binding.vMoveDetect.setBackgroundResource(com.view.appview.R.color.light_blue_600)
             }
         }
 
@@ -348,12 +352,16 @@ class AgentEmojiTestActivity : BaseAppCompatActivity<ActivityAgentEmojiTestBindi
     val onResetCallback = object : OnResetCallback {
         override fun onStartReset() {
             Log.i(TAG, "开始复位")
-            binding.vMoveDetect.setBackgroundResource(com.view.appview.R.color.a1_100)
+            runOnUiThread {
+                binding.vMoveDetect.setBackgroundResource(com.view.appview.R.color.a1_100)
+            }
         }
 
         override fun onFinishReset() {
             Log.i(TAG, "复位完成")
-            binding.vMoveDetect.setBackgroundResource(com.view.appview.R.color.light_blue_600)
+            runOnUiThread {
+                binding.vMoveDetect.setBackgroundResource(com.view.appview.R.color.light_blue_600)
+            }
         }
     }
 
@@ -426,11 +434,28 @@ class AgentEmojiTestActivity : BaseAppCompatActivity<ActivityAgentEmojiTestBindi
         } ?: throw IOException("创建文件失败")
     }
 
+    // 由于surface可能在onStop销毁，所以分析器要在onPause中提前结束
+    private val cameraLock = Any()
+    override fun onPause() {
+        super.onPause()
+        // 线程同步，避免在Surface销毁的时候还从Buffer中获取数据
+        synchronized(cameraLock){
+            // 停止线程池行为
+            cameraExecutor.shutdownNow()
+            // 停止分析器
+            imageAnalyzer?.clearAnalyzer()
+            // 停止相机
+            cameraProvider?.unbindAll()
+        }
+    }
 
     override fun onDestroy() {
         super.onDestroy()
         detector?.close()
-        cameraExecutor.shutdown()
+        cameraExecutor.shutdownNow()
+
+        // 眼睛
+        EyesMoveManager.destroy()
 
         // 清除标志位
         window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
