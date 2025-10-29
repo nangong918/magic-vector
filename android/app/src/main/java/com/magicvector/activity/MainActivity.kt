@@ -151,7 +151,7 @@ class MainActivity : BaseAppCompatVmActivity<ActivityMainBinding, MainVm>(
 //                    com.view.appview.R.color.green_90
 //                )
                 Log.i(TAG, "changeFragment::切换到HOME")
-                this.setBaseBarColorRes(com.view.appview.R.color.green_0)
+                this.setBaseBarColorRes(com.view.appview.R.color.s1_10)
                 turnToTargetFragment(MainSelectItemEnum.HOME, MessageListFragment::class.java, null)
             }
             MainSelectItemEnum.APPLY -> {}
@@ -159,7 +159,7 @@ class MainActivity : BaseAppCompatVmActivity<ActivityMainBinding, MainVm>(
 //                setStatusBarColor(
 //                    com.view.appview.R.color.green_90
 //                )
-                this.setBaseBarColorRes(com.view.appview.R.color.green_0)
+                this.setBaseBarColorRes(com.view.appview.R.color.s1_10)
                 turnToTargetFragment(MainSelectItemEnum.MINE, MineFragment::class.java, null)
             }
         }

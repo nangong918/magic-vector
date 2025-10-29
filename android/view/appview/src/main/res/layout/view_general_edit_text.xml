@@ -12,8 +12,8 @@
         android:layout_height="wrap_content"
         tools:text="标题"
         android:textStyle="bold"
-        android:textSize="16sp"
-        android:textColor="@color/green_900"
+        android:textSize="17sp"
+        android:textColor="@color/s1_800"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         android:layout_marginStart="16dp"/>
@@ -24,7 +24,7 @@
         android:background="@drawable/round_corners_bg_grey"
         android:layout_marginStart="16dp"
         android:layout_marginEnd="16dp"
-        android:layout_marginTop="2dp">
+        android:layout_marginTop="5dp">
 
         <androidx.appcompat.widget.AppCompatEditText
             android:id="@+id/edtv_info"
@@ -35,7 +35,7 @@
             android:layout_marginStart="6dp"
             android:layout_marginEnd="50dp"
             android:layout_marginTop="2dp"
-            android:textColor="@color/green_900"
+            android:textColor="@color/s1_800"
             android:background="@android:color/transparent"
             android:textColorHint="@color/green_100"
             android:textSize="16sp"

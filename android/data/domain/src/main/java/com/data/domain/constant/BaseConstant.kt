@@ -6,7 +6,7 @@ class BaseConstant {
 
     // 常量
     object Constant {
-        const val START_DELAY_TIME = 1500L
+        const val START_DELAY_TIME = 1200L
         // 头像最大大小 200 * 200 = 160 KB
         const val BITMAP_MAX_SIZE_AVATAR: Int = 200
         const val PACKAGE_NAME: String = "com.magicvector"

@@ -39,7 +39,7 @@
                         android:layout_height="30dp"
                         android:layout_marginStart="15dp"
                         android:src="@xml/notifications_unread_24px"
-                        app:tint="@color/green_900" />
+                        app:tint="@color/s1_800" />
 
                     <TextView
                         app:layout_constraintStart_toStartOf="parent"
@@ -49,7 +49,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="@string/new_notification"
-                        android:textColor="@color/green_900"
+                        android:textColor="@color/s1_800"
                         android:textSize="16sp" />
 
                     <com.view.appview.message.MessagePromptView
@@ -68,7 +68,7 @@
                     app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    tools:background="@color/green_90" />
+                    tools:background="@color/s1_300" />
 
             </LinearLayout>
         </androidx.core.widget.NestedScrollView>
@@ -90,14 +90,14 @@
                 android:layout_width="40dp"
                 android:layout_height="40dp"
                 android:src="@xml/raven_24px"
-                app:tint="@color/green_900" />
+                app:tint="@color/s1_800" />
 
             <TextView
                 android:layout_marginStart="10dp"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="@string/have_no_message_now"
-                android:textColor="@color/green_900"
+                android:textColor="@color/s1_800"
                 android:textSize="20sp" />
 
         </LinearLayout>
@@ -109,8 +109,8 @@
             android:layout_marginBottom="50dp"
             android:layout_marginEnd="24dp"
             android:src="@xml/add_24px"
-            android:backgroundTint="@color/green_90"
-            app:tint="@color/green_900"
+            android:backgroundTint="@color/s1_200"
+            app:tint="@color/s1_800"
             android:foregroundGravity="center"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent" />

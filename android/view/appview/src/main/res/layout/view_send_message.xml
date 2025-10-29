@@ -23,7 +23,7 @@
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toStartOf="@+id/btn_audio"
             app:layout_constraintTop_toTopOf="parent"
-            app:tint="@color/green_900" />
+            app:tint="@color/s1_800" />
 
         <androidx.appcompat.widget.AppCompatImageView
             android:id="@+id/btn_audio"
@@ -36,7 +36,7 @@
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toStartOf="@+id/btn_send"
             app:layout_constraintTop_toTopOf="parent"
-            app:tint="@color/green_900" />
+            app:tint="@color/s1_800" />
 
         <androidx.appcompat.widget.AppCompatImageView
             android:id="@+id/btn_send"
@@ -49,7 +49,7 @@
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintTop_toTopOf="parent"
             android:src="@xml/send_24px"
-            app:tint="@color/green_900" />
+            app:tint="@color/s1_800" />
 
         <EditText
             android:id="@+id/edtv"
@@ -65,8 +65,8 @@
             android:inputType="text"
             android:paddingStart="15dp"
             android:paddingEnd="15dp"
-            android:textColor="@color/green_900"
-            android:textColorHint="@color/green_900"
+            android:textColor="@color/s1_800"
+            android:textColorHint="@color/s1_800"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toStartOf="@+id/btn_picture"
             app:layout_constraintStart_toStartOf="parent"
@@ -86,7 +86,7 @@
             android:layout_height="50dp"
             android:background="@drawable/round_corners_button2"
             android:gravity="center"
-            android:textColor="@color/green_900"
+            android:textColor="@color/s1_800"
             android:textSize="18sp"
             android:layout_marginStart="10dp"
             android:layout_marginEnd="10dp"
@@ -107,7 +107,7 @@
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toStartOf="@+id/btn_keyboard"
             app:layout_constraintTop_toTopOf="parent"
-            app:tint="@color/green_900" />
+            app:tint="@color/s1_800" />
 
         <androidx.appcompat.widget.AppCompatImageView
             android:id="@+id/btn_keyboard"
@@ -120,7 +120,7 @@
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintTop_toTopOf="parent"
-            app:tint="@color/green_900" />
+            app:tint="@color/s1_800" />
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 

@@ -27,7 +27,7 @@
                 android:layout_marginTop="15dp"
                 android:layout_marginEnd="15dp"
                 android:src="@xml/close_24px"
-                android:tint="@color/green_900"
+                android:tint="@color/s1_800"
                 app:layout_constraintTop_toTopOf="parent"
                 app:layout_constraintEnd_toEndOf="parent"
                 tools:ignore="UseAppTint" />
@@ -73,7 +73,7 @@
             android:layout_marginTop="10dp"
             android:textSize="18sp"
             tools:text="用户正在讲话"
-            android:textColor="@color/green_900"/>
+            android:textColor="@color/s1_800"/>
 
         <TextView
             android:id="@+id/tv_chatMessage"
@@ -90,7 +90,7 @@
 别以为我会特意等你。
 快点跟上，别掉队了。
 ……你要是敢走丢，我可不会去找你。"
-            android:textColor="@color/green_900"/>
+            android:textColor="@color/s1_800"/>
 
         <com.view.appview.voice.VoiceWaveView
             android:id="@+id/v_userVoiceWave"

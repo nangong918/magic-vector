@@ -2,16 +2,16 @@
     <!-- Base application theme. -->
     <style name="Theme.MagicVector" parent="Theme.Material3.DayNight.NoActionBar">
         <!-- Primary brand color. -->
-        <item name="colorPrimary">@color/purple_500</item>
-        <item name="colorPrimaryVariant">@color/purple_700</item>
+        <item name="colorPrimary">@color/s1_400</item>
+        <item name="colorPrimaryVariant">@color/s1_550</item>
         <item name="colorOnPrimary">@color/white</item>
         <!-- Secondary brand color. -->
-        <item name="colorSecondary">@color/teal_200</item>
-        <item name="colorSecondaryVariant">@color/teal_700</item>
+        <item name="colorSecondary">@color/a1_200</item>
+        <item name="colorSecondaryVariant">@color/a1_600</item>
         <item name="colorOnSecondary">@color/black</item>
         <!-- Customize your theme here. -->
         <!-- 设置窗口背景颜色 -->
-        <item name="android:windowBackground">@color/green_0</item>
+        <item name="android:windowBackground">@color/s1_0</item>
         <!-- 沉浸式 -->
         <item name="android:windowTranslucentStatus">false</item>
         <item name="android:windowDrawsSystemBarBackgrounds">true</item>
@@ -26,7 +26,7 @@
         <item name="android:layout_height">match_parent</item>
         <item name="android:layout_gravity">start</item>
         <item name="android:background">@drawable/shape_navi_view</item>
-        <item name="itemTextColor">@color/green_500</item> <!-- 设置字体颜色为黑色 -->
-        <item name="itemIconTint">@color/green_500</item> <!-- 设置图标颜色为黑色 -->
+        <item name="itemTextColor">@color/s1_800</item> <!-- 设置字体颜色为黑色 -->
+        <item name="itemIconTint">@color/s1_800</item> <!-- 设置图标颜色为黑色 -->
     </style>
 </resources>

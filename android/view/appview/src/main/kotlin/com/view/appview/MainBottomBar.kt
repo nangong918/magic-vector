@@ -52,8 +52,8 @@ class MainBottomBar : ConstraintLayout {
         for (i in imageViews.indices) {
 
             val color: Int = if (isClick[i])
-                R.color.green_300 else
-                R.color.green_900
+                R.color.s1_300 else
+                R.color.s1_800
             imageViews[i].setColorFilter(
                 ContextCompat.getColor(context, color),
                 PorterDuff.Mode.SRC_IN
