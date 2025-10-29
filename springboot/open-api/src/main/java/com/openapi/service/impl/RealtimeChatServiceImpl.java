@@ -29,6 +29,7 @@ import com.openapi.service.ChatMessageService;
 import com.openapi.service.PromptService;
 import com.openapi.service.RealtimeChatService;
 import com.openapi.service.UserService;
+import com.openapi.service.VisionToolService;
 import io.reactivex.BackpressureStrategy;
 import io.reactivex.Flowable;
 import lombok.RequiredArgsConstructor;
@@ -81,6 +82,7 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
     private final AgentService agentService;
     private final ThreadPoolConfig threadPoolConfig;
     private final PromptService promptService;
+    private final VisionToolService visionToolService;
 
     @Override
     public void startChat(@NotNull RealtimeChatContextManager chatContextManager, @NotNull ChatClient chatClient) throws InterruptedException, NoApiKeyException {
@@ -190,6 +192,8 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
         Flux<String> responseFlux = chatClient.prompt()
                 .user(sentence)
                 .advisors(a -> a.param(ChatMemory.CONVERSATION_ID, chatContextManager.agentId))
+                // 添加工具Function Call; MCP
+                .tools(visionToolService)
                 .stream()
                 .content()
                 // 3500ms未响应则判定超时，进行重连尝试
@@ -467,8 +471,6 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
                     }
                 });
     }
-
-
 
     private void sendEOF(@NotNull RealtimeChatContextManager chatContextManager){
         if (chatContextManager.isTTSFinished.get() && chatContextManager.isLLMFinished.get()) {

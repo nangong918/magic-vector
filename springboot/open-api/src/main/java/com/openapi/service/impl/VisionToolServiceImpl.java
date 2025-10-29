@@ -26,7 +26,7 @@ public class VisionToolServiceImpl implements VisionToolService {
     private final ApplicationEventPublisher eventPublisher;
 
     // 识别意图，意图是进行视觉识别
-    @Tool(description = "用于告知前端传递一张当前相机的照片。当用户问Agent看看当前摄像头前是什么之类的问题，就调用此方法。")
+    @Tool(description = "用于告知前端传递一张当前相机的照片。当用户问Agent看看当前摄像头前是什么，或者询问Agent能看到用户给Agent展示的物品的时候之类的问题，就调用此方法。")
     public void tellFrontTakePhoto(
             @ToolParam(description = "agentId") String agentId,
             @ToolParam(description = "用户Id") String userId,
