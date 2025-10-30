@@ -8,6 +8,10 @@ Spring 项目部署在Docker -> 上传到阿里云服务器 todo Docker，Nginx 
 简单的SpringAI智能体部署Docker + 内网穿透
 压测, 修复bug, 提高系统的鲁棒性
 
+先暂时不开嵌入式模块, AI模块制作完成就好好学习计算机理论 + SpringBoot技术 + Android技术(包括Jetpack Compose) -> 优化代码, 提高系统的鲁棒性
+
+研究树莓派
+
 ### lv0(当前任务)
 实现websocket进行单个图片视觉，后续升级为Http上图片组和视频流
 
