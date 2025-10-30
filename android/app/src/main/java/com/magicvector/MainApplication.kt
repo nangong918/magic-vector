@@ -9,6 +9,7 @@ import com.data.dao.api.ApiRequestImpl
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import com.magicvector.manager.ChatMapManager
+import com.magicvector.manager.ChatMessageHandler
 import com.magicvector.manager.MessageListManager
 
 class MainApplication : Application() {
@@ -84,6 +85,15 @@ class MainApplication : Application() {
         private val chatMapManager = ChatMapManager()
         fun getChatMapManager(): ChatMapManager {
             return chatMapManager
+        }
+
+        // 聊天资源管理
+        private val chatMessageHandler: ChatMessageHandler? = null
+        fun getChatMessageHandler(): ChatMessageHandler {
+            if (chatMessageHandler == null) {
+                return ChatMessageHandler()
+            }
+            return chatMessageHandler
         }
     }
 

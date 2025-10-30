@@ -65,6 +65,10 @@ class BaseConstant {
         const val SUCCESS_CODE: String = "200"
     }
 
+    object AUDIO {
+        const val REALTIME_CHAT_SAMPLE_RATE = 24_000
+    }
+
     object VAD {
         const val SILENCE_DURATION_MS = 100L
     }
