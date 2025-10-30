@@ -234,6 +234,7 @@ class ChatMessageHandler {
         Log.i(TAG, "播放音频数据::: ${audioBytes.take(50)}")
     }
 
+    // 按下录制音频
     fun startRecordRealtimeChatAudio() {
         // 录制音频 -> 音频流bytes实时转为Base64的PCM格式 -> 调用websocket的sendAudioMessage
         val bufferSize = AudioRecord.getMinBufferSize(
@@ -307,6 +308,7 @@ class ChatMessageHandler {
         }.start()
     }
 
+    // 松手发送音频
     fun stopAndSendRealtimeChatAudio(){
         realtimeChatState.postValue(RealtimeChatState.InitializedConnected)
     }
@@ -355,7 +357,10 @@ class ChatMessageHandler {
 
     // 语音通话
     fun initVadCall(context: Context){
-        vadSileroManager = VadSileroManager()
+        // 改为单例
+        if (vadSileroManager == null){
+            vadSileroManager = VadSileroManager()
+        }
 
         vadSileroManager!!.init(context, object : VadDetectionCallback{
             override fun onStartSpeech(audioBuffer: ByteArray) {
@@ -524,15 +529,17 @@ class ChatMessageHandler {
                 onVadChatStateChange?.onChange(VadChatState.Replying)
 
                 // VAD:设置AI回复的时候不能说话
-                isChatCalling?.let {
-                    // 正在通话
-                    if (it.get()){
-                        vadSileroManager?.stopRecording()
-                        Log.d(TAG, "handleTextMessage:: 正在VAD通话:AI正在回复, 停止录音")
-                    }
-                    else {
-                        Log.d(TAG, "handleTextMessage:: 停止VAD通话: 不管理VAD录音")
-                    }
+                // 首先检查是不是Emoji状态
+                if (currentIsEmoji.get()){
+                    vadSileroManager?.stopRecording()
+                    Log.d(TAG, "handleTextMessage:: 正在Emoji VAD通话:AI正在回复, 停止录音")
+                }
+                else if (isChatCalling?.get() == true) {
+                    vadSileroManager?.startRecording()
+                    Log.d(TAG, "handleTextMessage:: 正在VAD通话:AI正在回复, 停止录音")
+                }
+                else {
+                    Log.d(TAG, "handleTextMessage:: 停止VAD通话: 不管理VAD录音")
                 }
             }
             RealtimeResponseDataTypeEnum.STOP_TTS -> {
@@ -546,15 +553,16 @@ class ChatMessageHandler {
                 onVadChatStateChange?.onChange(VadChatState.Silent)
 
                 // VAD:设置AI回复结束的时候可以说话
-                isChatCalling?.let {
-                    // 正在通话
-                    if (it.get()){
-                        vadSileroManager?.startRecording()
-                        Log.d(TAG, "handleTextMessage:: 正在VAD通话:AI回复结束, 继续录音")
-                    }
-                    else {
-                        Log.d(TAG, "handleTextMessage:: 停止VAD通话: 不管理VAD录音")
-                    }
+                if (currentIsEmoji.get()) {
+                    vadSileroManager?.startRecording()
+                    Log.d(TAG, "handleTextMessage:: 正在Emoji VAD通话:AI回复结束, 继续录音")
+                }
+                else if (isChatCalling?.get() == true){
+                    vadSileroManager?.startRecording()
+                    Log.d(TAG, "handleTextMessage:: 正在VAD通话:AI回复结束, 继续录音")
+                }
+                else {
+                    Log.d(TAG, "handleTextMessage:: 停止VAD通话: 不管理VAD录音")
                 }
             }
             RealtimeResponseDataTypeEnum.AUDIO_CHUNK -> {

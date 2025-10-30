@@ -7,6 +7,7 @@ import com.data.domain.constant.BaseConstant
 import com.data.domain.constant.chat.RealtimeRequestDataTypeEnum
 import com.data.domain.constant.chat.RealtimeSystemEventEnum
 import com.data.domain.dto.ws.request.UploadPhotoRequest
+import com.data.domain.vo.test.RealtimeChatState
 import com.detection.yolov8.BoundingBox
 import com.detection.yolov8.Detector
 import com.detection.yolov8.targetPoint.YOLOv8TargetPointGenerator
@@ -55,6 +56,38 @@ class AgentEmojiActivity : BaseAppCompatVmActivity<ActivityAgentEmojiBinding, Ag
             listener = getDetectListener(),
             lifecycleOwner = this as LifecycleOwner
         )
+
+        observeData()
+    }
+
+    fun observeData(){
+        chatMessageHandler.realtimeChatState.observe(this) {
+            runOnUiThread {
+                when (it) {
+                    RealtimeChatState.NotInitialized -> {
+                        binding.tvCallStatue.text = "未初始化"
+                    }
+                    RealtimeChatState.Initializing -> {
+                        binding.tvCallStatue.text = "正在初始化"
+                    }
+                    RealtimeChatState.InitializedConnected -> {
+                        binding.tvCallStatue.text = "已初始化并连接"
+                    }
+                    RealtimeChatState.RecordingAndSending -> {
+                        binding.tvCallStatue.text = "正在记录消息"
+                    }
+                    RealtimeChatState.Receiving -> {
+                        binding.tvCallStatue.text = "正在接收消息"
+                    }
+                    RealtimeChatState.Disconnected -> {
+                        binding.tvCallStatue.text = "已断开连接"
+                    }
+                    is RealtimeChatState.Error -> {
+                        binding.tvCallStatue.text = "错误"
+                    }
+                }
+            }
+        }
     }
 
     override fun initView() {
@@ -220,6 +253,7 @@ class AgentEmojiActivity : BaseAppCompatVmActivity<ActivityAgentEmojiBinding, Ag
         visionManager.onResume(window = window)
         // 启动VAD录音
         chatMessageHandler.initVadCall(this@AgentEmojiActivity)
+        chatMessageHandler.currentIsEmoji.set(true)
     }
 
     // 暂停
@@ -228,6 +262,7 @@ class AgentEmojiActivity : BaseAppCompatVmActivity<ActivityAgentEmojiBinding, Ag
         visionManager.onPause()
         // 关闭VAD录音
         chatMessageHandler.stopVadCall()
+        chatMessageHandler.currentIsEmoji.set(false)
     }
 
     // 销毁

@@ -407,7 +407,7 @@ class ChatActivity : BaseAppCompatVmActivity<ActivityChatBinding, ChatVm>(
 
     fun showCallDialog() {
         // 初始化
-        chatMessageHandler.initVadCall(this)
+        chatMessageHandler.initVadCall(this@ChatActivity)
 
         // 展示
         callDialog?.show()
