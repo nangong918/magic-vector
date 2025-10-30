@@ -83,7 +83,7 @@ class ChatVm(
 
     companion object {
         val TAG: String = ChatVm::class.java.name
-        val GSON = Gson()
+        val GSON = MainApplication.GSON
         val mainHandler: Handler = Handler(Looper.getMainLooper())
     }
 

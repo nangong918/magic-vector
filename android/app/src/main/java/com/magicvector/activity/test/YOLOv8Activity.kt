@@ -30,6 +30,7 @@ import com.detection.yolov8.R
 import com.detection.yolov8.targetPoint.YOLOv8TargetPointGenerator
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
+import com.magicvector.MainApplication
 
 class YOLOv8Activity : AppCompatActivity() , Detector.DetectorListener{
 
@@ -212,7 +213,7 @@ class YOLOv8Activity : AppCompatActivity() , Detector.DetectorListener{
         private val REQUIRED_PERMISSIONS = mutableListOf (
             Manifest.permission.CAMERA
         ).toTypedArray()
-        val GSON: Gson = GsonBuilder().setPrettyPrinting().create()
+        val GSON = MainApplication.GSON
     }
 
     override fun onEmptyDetect() {

@@ -56,7 +56,7 @@ class TestVm(
 
     companion object {
         val TAG: String = TestVm::class.java.name
-        val GSON = Gson()
+        val GSON = MainApplication.GSON
         const val baseSseUrl = BaseConstant.ConstantUrl.TEST_URL + "/test/stream-sse"
         const val baseSseTTSUrl = BaseConstant.ConstantUrl.TEST_URL + "/test/stream-tts-sse"
         const val baseWebsocketUrl = BaseConstant.ConstantUrl.TEST_WS_URL + "/test-channel"

@@ -3,6 +3,7 @@ package com.magicvector.activity
 
 import android.Manifest
 import android.annotation.SuppressLint
+import android.content.Intent
 import android.os.Bundle
 import android.text.TextUtils
 import android.util.Log
@@ -233,6 +234,39 @@ class ChatActivity : BaseAppCompatVmActivity<ActivityChatBinding, ChatVm>(
                     override fun always() {
                     }
                 })
+        }
+
+        // 开启视频通话
+        binding.smSendMessage.setAudioClickListener {
+            // 语音，权限获取
+            PermissionUtil.requestPermissionSelectX(
+                this@ChatActivity,
+                arrayOf(
+                    Manifest.permission.RECORD_AUDIO,
+                    Manifest.permission.CAMERA
+                ),
+                arrayOf(
+                    // 静态可能不需要拿
+                    Manifest.permission.WRITE_EXTERNAL_STORAGE
+                ),
+                object : GainPermissionCallback{
+                    override fun allGranted() {
+                        // 跳转页面
+                        val intent = Intent(this@ChatActivity, AgentEmojiActivity::class.java)
+                        intent.putExtra("agentId", vm.aao.messageContactItemAo?.contactId?: "")
+                        intent.putExtra("agentName", vm.aao.messageContactItemAo?.vo?.name?: "")
+                        startActivity(intent)
+                    }
+
+                    override fun notGranted(notGrantedPermissions: Array<String?>?) {
+                        ToastUtils.showToastActivity(this@ChatActivity,
+                            getString(com.view.appview.R.string.permission_denied))
+                    }
+
+                    override fun always() {
+                    }
+                }
+            )
         }
     }
 

@@ -51,12 +51,13 @@
             android:src="@xml/send_24px"
             app:tint="@color/s1_800" />
 
-        <EditText
+        <androidx.appcompat.widget.AppCompatEditText
             android:id="@+id/edtv"
             android:layout_marginTop="15dp"
             android:layout_marginBottom="15dp"
             android:layout_width="0dp"
             android:layout_height="45dp"
+            android:gravity="center"
             android:layout_marginStart="10dp"
             android:layout_marginEnd="10dp"
             android:background="@drawable/background_chat_input"
@@ -103,6 +104,19 @@
             android:background="@drawable/background_chat_input"
             android:padding="8dp"
             android:src="@xml/call_24px"
+            android:layout_marginEnd="10dp"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toStartOf="@+id/btn_video_call"
+            app:layout_constraintTop_toTopOf="parent"
+            app:tint="@color/s1_800" />
+
+        <androidx.appcompat.widget.AppCompatImageView
+            android:id="@+id/btn_video_call"
+            android:layout_width="37dp"
+            android:layout_height="37dp"
+            android:background="@drawable/background_chat_input"
+            android:padding="8dp"
+            android:src="@xml/videocam_24px"
             android:layout_marginEnd="10dp"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toStartOf="@+id/btn_keyboard"

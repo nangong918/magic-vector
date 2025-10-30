@@ -3,8 +3,7 @@
     xmlns:tools="http://schemas.android.com/tools">
     <!-- 互联网权限 -->
     <uses-permission android:name="android.permission.INTERNET" /> <!-- 音频录制和播放权限 -->
-    <uses-permission android:name="android.permission.RECORD_AUDIO" />
-    <!-- 文件读写权限 -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" /> <!-- 文件读写权限 -->
     <uses-permission
         android:name="android.permission.WRITE_EXTERNAL_STORAGE"
         android:maxSdkVersion="32"
@@ -16,10 +15,8 @@
     <uses-permission
         android:name="android.permission.MANAGE_EXTERNAL_STORAGE"
         tools:ignore="AllFilesAccessPolicy,ScopedStorage" /> <!-- 相机权限 -->
-    <uses-feature android:name="android.hardware.camera" />
-    <!-- 保持屏幕常亮 -->
+    <uses-feature android:name="android.hardware.camera" /> <!-- 保持屏幕常亮 -->
     <uses-permission android:name="android.permission.WAKE_LOCK" />
-
     <uses-permission android:name="android.permission.CAMERA" />
 
     <application
@@ -34,6 +31,10 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.MagicVector"
         tools:targetApi="31">
+        <activity
+            android:name=".activity.AgentEmojiActivity"
+            android:exported="false"
+            android:screenOrientation="landscape" /> <!-- 设置为不可旋转的横屏 -->
         <activity
             android:name=".activity.test.AgentEmojiTestActivity"
             android:exported="false"
@@ -79,7 +80,7 @@
 
         <uses-native-library
             android:name="libOpenCL.so"
-            android:required="false"/>
+            android:required="false" />
         <uses-native-library
             android:name="libOpenCL-pixel.so"
             android:required="false" />

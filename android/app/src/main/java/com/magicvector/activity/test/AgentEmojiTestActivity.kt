@@ -33,6 +33,7 @@ import com.detection.yolov8.targetPoint.TargetPoint
 import com.detection.yolov8.targetPoint.YOLOv8TargetPointGenerator
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
+import com.magicvector.MainApplication
 import com.magicvector.databinding.ActivityAgentEmojiTestBinding
 import com.magicvector.manager.yolo.EyesMoveManager
 import com.magicvector.manager.yolo.OnResetCallback
@@ -47,7 +48,7 @@ class AgentEmojiTestActivity : BaseAppCompatActivity<ActivityAgentEmojiTestBindi
 ) , Detector.DetectorListener{
 
     companion object {
-        val GSON: Gson = GsonBuilder().setPrettyPrinting().create()
+        val GSON = MainApplication.GSON
     }
     
     override fun initBinding(): ActivityAgentEmojiTestBinding {
