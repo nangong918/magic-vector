@@ -1,9 +1,11 @@
 package com.magicvector.activity
 
+import android.annotation.SuppressLint
 import android.os.Bundle
 import android.util.Log
 import androidx.lifecycle.LifecycleOwner
 import com.data.domain.constant.BaseConstant
+import com.data.domain.constant.VadChatState
 import com.data.domain.constant.chat.RealtimeRequestDataTypeEnum
 import com.data.domain.constant.chat.RealtimeSystemEventEnum
 import com.data.domain.dto.ws.request.UploadPhotoRequest
@@ -12,6 +14,7 @@ import com.detection.yolov8.BoundingBox
 import com.detection.yolov8.Detector
 import com.detection.yolov8.targetPoint.YOLOv8TargetPointGenerator
 import com.magicvector.MainApplication
+import com.magicvector.callback.OnVadChatStateChange
 import com.magicvector.databinding.ActivityAgentEmojiBinding
 import com.magicvector.manager.mcp.HandleSystemResponse
 import com.magicvector.manager.mcp.VisionMcpManager
@@ -20,11 +23,12 @@ import com.magicvector.manager.yolo.OnResetCallback
 import com.magicvector.manager.yolo.TargetActivityDetectionManager
 import com.magicvector.utils.BaseAppCompatVmActivity
 import com.magicvector.viewModel.activity.AgentEmojiVm
+import com.view.appview.R
 
 class AgentEmojiActivity : BaseAppCompatVmActivity<ActivityAgentEmojiBinding, AgentEmojiVm>(
     AgentEmojiActivity::class,
     AgentEmojiVm::class
-), HandleSystemResponse {
+), HandleSystemResponse, OnVadChatStateChange {
 
     companion object {
         val GSON = MainApplication.GSON
@@ -61,7 +65,7 @@ class AgentEmojiActivity : BaseAppCompatVmActivity<ActivityAgentEmojiBinding, Ag
     }
 
     fun observeData(){
-        chatMessageHandler.realtimeChatState.observe(this) {
+/*        chatMessageHandler.realtimeChatState.observe(this) {
             runOnUiThread {
                 when (it) {
                     RealtimeChatState.NotInitialized -> {
@@ -87,11 +91,91 @@ class AgentEmojiActivity : BaseAppCompatVmActivity<ActivityAgentEmojiBinding, Ag
                     }
                 }
             }
-        }
+        }*/
     }
 
     override fun initView() {
         super.initView()
+
+        setIsCloseMic(isCloseMic)
+    }
+
+    // 是否关闭mic
+    private var isCloseMic = false
+    @SuppressLint("ResourceType")
+    fun setIsCloseMic(isStopRecordAudio: Boolean) {
+        // value
+        isCloseMic = isStopRecordAudio
+        // UI
+        binding.ivMic.setImageResource(
+            if (isCloseMic) {
+                // 停止录音：展示开始录音
+                R.xml.mic_24px
+            }
+            else {
+                // 开始录音：展示停止录音
+                R.xml.mic_off_24px
+            }
+        )
+        // logic
+        if (isCloseMic) {
+            setVadChatState(VadChatState.Muted)
+        }
+        else {
+            setVadChatState(VadChatState.Silent)
+        }
+    }
+
+    fun changeMicState(){
+        setIsCloseMic(!isCloseMic)
+
+        // 关闭了Mic
+        if (isCloseMic) {
+            chatMessageHandler.stopVadCall()
+        }
+        else {
+            chatMessageHandler.startVadCall()
+        }
+    }
+
+    private var vadChatState = VadChatState()
+    fun setVadChatState(state: VadChatState){
+
+        if (state == VadChatState.Replying) {
+            Log.i("AgentEmojiActivity", "setVadChatState: Replying")
+        }
+        else if (state == VadChatState.Speaking) {
+            Log.i("AgentEmojiActivity", "setVadChatState: Speaking")
+        }
+
+
+        // 关闭mic之后就不存在Speaking和Silent了
+        if (isCloseMic){
+            if (vadChatState == VadChatState.Silent || vadChatState == VadChatState.Speaking){
+                vadChatState = VadChatState.Muted
+            }
+        }
+
+        runOnUiThread {
+            when (state) {
+                is VadChatState.Muted -> {
+                    binding.tvCallStatue.text = getString(R.string.muted)
+                }
+                is VadChatState.Silent -> {
+                    binding.tvCallStatue.text = getString(R.string.silent)
+                }
+                is VadChatState.Speaking -> {
+                    binding.tvCallStatue.text = getString(R.string.user_speaking)
+                }
+                is  VadChatState.Replying -> {
+                    binding.tvCallStatue.text = getString(R.string.agent_replying)
+                }
+                is VadChatState.Error -> {
+                    binding.tvCallStatue.text = getString(R.string.error)
+                    Log.e(TAG, "setVadChatState: ${state.message}")
+                }
+            }
+        }
     }
 
     override fun setListener() {
@@ -104,6 +188,31 @@ class AgentEmojiActivity : BaseAppCompatVmActivity<ActivityAgentEmojiBinding, Ag
                 lifecycleOwner = this as LifecycleOwner
             )
         }
+
+        binding.ivMic.setOnClickListener {
+            if (isCloseMic) {
+                // 停止录音：展示开始录音
+                R.xml.mic_24px
+            }
+            else {
+                // 开始录音：展示停止录音
+                R.xml.mic_off_24px
+            }
+            changeMicState()
+        }
+
+        // logic
+        if (isCloseMic) {
+            setVadChatState(VadChatState.Muted)
+        }
+        else {
+            setVadChatState(VadChatState.Silent)
+        }
+    }
+
+    // 监听VAD状态
+    override fun onChange(state: VadChatState) {
+        setVadChatState(state)
     }
 
     private fun getDetectListener(): Detector.DetectorListener {
@@ -254,6 +363,7 @@ class AgentEmojiActivity : BaseAppCompatVmActivity<ActivityAgentEmojiBinding, Ag
         // 启动VAD录音
         chatMessageHandler.initVadCall(this@AgentEmojiActivity)
         chatMessageHandler.currentIsEmoji.set(true)
+        chatMessageHandler.setCurrentVADStateChange(this)
     }
 
     // 暂停

@@ -70,7 +70,11 @@ class ChatMessageHandler {
     var onVadChatStateChange: OnVadChatStateChange? = null
     val realtimeChatState: MutableLiveData<RealtimeChatState> = MutableLiveData(RealtimeChatState.NotInitialized)
 //    val realtimeChatVolume = MutableLiveData(0f)
-    
+
+    fun setCurrentVADStateChange(callback: OnVadChatStateChange) {
+        onVadChatStateChange = callback
+    }
+
     // 设置isChatCalling指针
     fun initIsChatCalling(isCalling: AtomicBoolean) {
         isChatCalling = isCalling
@@ -642,7 +646,7 @@ class ChatMessageHandler {
         // 3. 清空回调
         recyclerViewWhereNeedUpdate = null
         vadCallTextCallback = null
-        onVadChatStateChange = null
+//        onVadChatStateChange = null
         realtimeChatState.postValue(RealtimeChatState.NotInitialized)
 //        realtimeChatVolume.postValue(0f)
         chatManagerPointer = null

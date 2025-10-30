@@ -79,6 +79,7 @@ public class RealtimeChatChannel extends TextWebSocketHandler {
             return;
         }
 
+        // todo 处理Android传递的image信息，然后交给多模态，拿到消息之后将消息交还给chatModel然后进行返回
         RealtimeRequestDataTypeEnum realtimeDataTypeEnum = RealtimeRequestDataTypeEnum.getByType(type);
         switch (realtimeDataTypeEnum) {
             case CONNECT -> {

@@ -50,6 +50,11 @@ class ChatActivity : BaseAppCompatVmActivity<ActivityChatBinding, ChatVm>(
         chatMessageHandler = MainApplication.getChatMessageHandler()
     }
 
+    override fun onResume() {
+        super.onResume()
+        chatMessageHandler.setCurrentVADStateChange(this)
+    }
+
     override fun initViewModel() {
         super.initViewModel()
 
