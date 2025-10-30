@@ -82,18 +82,21 @@ class MainApplication : Application() {
         }
 
         // chatMapManager
-        private val chatMapManager = ChatMapManager()
+        private var chatMapManager: ChatMapManager? = null
         fun getChatMapManager(): ChatMapManager {
-            return chatMapManager
+            if (chatMapManager == null) {
+                chatMapManager = ChatMapManager()
+            }
+            return chatMapManager!!
         }
 
         // 聊天资源管理
-        private val chatMessageHandler: ChatMessageHandler? = null
+        private var chatMessageHandler: ChatMessageHandler? = null
         fun getChatMessageHandler(): ChatMessageHandler {
             if (chatMessageHandler == null) {
-                return ChatMessageHandler()
+                chatMessageHandler = ChatMessageHandler() // 关键：要赋值！
             }
-            return chatMessageHandler
+            return chatMessageHandler!!
         }
     }
 

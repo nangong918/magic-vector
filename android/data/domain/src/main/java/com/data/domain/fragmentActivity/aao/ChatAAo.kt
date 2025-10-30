@@ -9,6 +9,6 @@ class ChatAAo {
     val nameLd: MutableLiveData<String> = MutableLiveData("")
     val isLoadingLd: MutableLiveData<Boolean> = MutableLiveData(false)
 
-    var messageContactItemAo : MessageContactItemAo? = null
+//    var messageContactItemAo : MessageContactItemAo? = null
     val inputTextLd : MutableLiveData<String> = MutableLiveData("")
 }

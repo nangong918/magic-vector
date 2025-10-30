@@ -16,6 +16,7 @@ import com.data.domain.ao.message.MessageContactItemAo
 import com.data.domain.constant.VadChatState
 import com.data.domain.fragmentActivity.intentAo.ChatIntentAo
 import com.data.domain.vo.test.RealtimeChatState
+import com.magicvector.MainApplication
 import com.magicvector.callback.OnVadChatStateChange
 import com.magicvector.callback.VADCallTextCallback
 import com.magicvector.databinding.ActivityChatBinding
@@ -33,6 +34,10 @@ class ChatActivity : BaseAppCompatVmActivity<ActivityChatBinding, ChatVm>(
 ), VADCallTextCallback, OnVadChatStateChange {
 
     private val tag = ChatActivity::class.simpleName
+
+    companion object {
+        val chatMessageHandler = MainApplication.getChatMessageHandler()
+    }
 
     override fun initBinding(): ActivityChatBinding {
         return ActivityChatBinding.inflate(layoutInflater)
@@ -135,7 +140,7 @@ class ChatActivity : BaseAppCompatVmActivity<ActivityChatBinding, ChatVm>(
 
         // 录制状态
         // 状态
-        vm.realtimeChatState.observe(this) { state ->
+        chatMessageHandler.realtimeChatState.observe(this) { state ->
             when (state){
                 is RealtimeChatState.NotInitialized -> {
                     binding.smSendMessage.setIsEnableSend(false)
@@ -182,7 +187,9 @@ class ChatActivity : BaseAppCompatVmActivity<ActivityChatBinding, ChatVm>(
 
         // 共享boolean值
         callDialog?.let {
-            vm.initIsCalling(it.isCalling)
+            MainApplication.getChatMessageHandler().initIsChatCalling(
+                it.isCalling
+            )
         }
     }
 
@@ -206,11 +213,11 @@ class ChatActivity : BaseAppCompatVmActivity<ActivityChatBinding, ChatVm>(
         binding.smSendMessage.setTakAudioOnTouchListener(
             {
                 // 开始录制
-                vm.startRecordRealtimeChatAudio()
+                chatMessageHandler.startRecordRealtimeChatAudio()
             },
             {
                 // 结束录制
-                vm.stopAndSendRealtimeChatAudio()
+                chatMessageHandler.stopAndSendRealtimeChatAudio()
             }
         )
 
@@ -251,11 +258,20 @@ class ChatActivity : BaseAppCompatVmActivity<ActivityChatBinding, ChatVm>(
                 ),
                 object : GainPermissionCallback{
                     override fun allGranted() {
-                        // 跳转页面
-                        val intent = Intent(this@ChatActivity, AgentEmojiActivity::class.java)
-                        intent.putExtra("agentId", vm.aao.messageContactItemAo?.contactId?: "")
-                        intent.putExtra("agentName", vm.aao.messageContactItemAo?.vo?.name?: "")
-                        startActivity(intent)
+                        if (chatMessageHandler.messageContactItemAo != null){
+                            // 跳转页面
+                            val intent = Intent(this@ChatActivity, AgentEmojiActivity::class.java)
+                            intent.putExtra("agentId", chatMessageHandler.messageContactItemAo?.contactId?: "")
+                            intent.putExtra("agentName", chatMessageHandler.messageContactItemAo?.vo?.name?: "")
+                            startActivity(intent)
+                        }
+                        else {
+                            Log.w(tag, "whereNeedUpdate: messageContactItemAo is null")
+                            ToastUtils.showToastActivity(
+                                this@ChatActivity,
+                                getString(com.view.appview.R.string.system_error)
+                            )
+                        }
                     }
 
                     override fun notGranted(notGrantedPermissions: Array<String?>?) {
@@ -277,7 +293,7 @@ class ChatActivity : BaseAppCompatVmActivity<ActivityChatBinding, ChatVm>(
                     Log.d(tag, "whereNeedUpdate: updateInfos is empty")
                     return
                 }
-                Log.d(tag, "当前的chatList长度为：${vm.chatManagerPointer.getViewChatMessageList().size}")
+                Log.d(tag, "当前的chatList长度为：${chatMessageHandler.getChatManagerPointer().getViewChatMessageList().size}")
                 for (updateInfo in updateInfos) {
                     when (updateInfo.type){
                         // 单个覆盖更新
@@ -289,9 +305,9 @@ class ChatActivity : BaseAppCompatVmActivity<ActivityChatBinding, ChatVm>(
                             // 单个更新
                             // 找到id当前的position然后更新
                             var viewIndex = -1
-                            for (chatItemAo in vm.chatManagerPointer.getViewChatMessageList()){
+                            for (chatItemAo in chatMessageHandler.getChatManagerPointer().getViewChatMessageList()){
                                 if (chatItemAo.messageId == updateInfo.singleUpdateId){
-                                    viewIndex = vm.chatManagerPointer.getViewChatMessageList().indexOf(chatItemAo)
+                                    viewIndex = chatMessageHandler.getChatManagerPointer().getViewChatMessageList().indexOf(chatItemAo)
                                 }
                             }
                             if (viewIndex != -1){
@@ -309,13 +325,13 @@ class ChatActivity : BaseAppCompatVmActivity<ActivityChatBinding, ChatVm>(
                             }
                             // 找到id当前的position然后更新
                             var viewIndex = -1
-                            for (chatItemAo in vm.chatManagerPointer.getViewChatMessageList()){
+                            for (chatItemAo in chatMessageHandler.getChatManagerPointer().getViewChatMessageList()){
                                 if (chatItemAo.messageId == updateInfo.idToEndUpdateId){
-                                    viewIndex = vm.chatManagerPointer.getViewChatMessageList().indexOf(chatItemAo)
+                                    viewIndex = chatMessageHandler.getChatManagerPointer().getViewChatMessageList().indexOf(chatItemAo)
                                 }
                             }
                             if (viewIndex >= 0){
-                                val endPosition = vm.chatManagerPointer.getViewChatMessageList().size - 1
+                                val endPosition = chatMessageHandler.getChatManagerPointer().getViewChatMessageList().size - 1
                                 vm.adapter.notifyItemRangeChanged(
                                     viewIndex,
                                     endPosition
@@ -334,9 +350,9 @@ class ChatActivity : BaseAppCompatVmActivity<ActivityChatBinding, ChatVm>(
                             }
                             // 找到id当前的position然后更新
                             var viewIndex = -1
-                            for (chatItemAo in vm.chatManagerPointer.getViewChatMessageList()){
+                            for (chatItemAo in chatMessageHandler.getChatManagerPointer().getViewChatMessageList()){
                                 if (chatItemAo.messageId == updateInfo.idToEndUpdateId){
-                                    viewIndex = vm.chatManagerPointer.getViewChatMessageList().indexOf(chatItemAo)
+                                    viewIndex = chatMessageHandler.getChatManagerPointer().getViewChatMessageList().indexOf(chatItemAo)
                                 }
                             }
                             if (viewIndex >= 0) {
@@ -364,16 +380,16 @@ class ChatActivity : BaseAppCompatVmActivity<ActivityChatBinding, ChatVm>(
                 callDialog?.let {
                     // 停止了再点击就开始录音
                     if (it.getIsCloseMic()){
-                        vm.startVadCall()
+                        chatMessageHandler.startVadCall()
                     }
                     // 停止了再点击就开始录音
                     else {
-                        vm.stopVadCall()
+                        chatMessageHandler.stopVadCall()
                     }
                 }
             }, {
                 callDialog?.dismiss()
-                vm.destroyVadCall()
+                chatMessageHandler.destroyVadCall()
             })
         )
     }
@@ -388,7 +404,7 @@ class ChatActivity : BaseAppCompatVmActivity<ActivityChatBinding, ChatVm>(
 
     fun showCallDialog() {
         // 初始化
-        vm.initVadCall(this)
+        chatMessageHandler.initVadCall(this)
 
         // 展示
         callDialog?.show()

@@ -1,6 +1,7 @@
 package com.magicvector.manager
 
 import android.Manifest
+import android.content.Context
 import android.media.AudioFormat
 import android.media.AudioManager
 import android.media.AudioRecord
@@ -14,8 +15,6 @@ import androidx.annotation.RequiresPermission
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.MutableLiveData
 import com.core.appcore.api.ApiUrlConfig
-import com.core.appcore.api.handler.SyncRequestCallback
-import com.core.baseutil.network.networkLoad.NetworkLoadUtils
 import com.core.baseutil.permissions.GainPermissionCallback
 import com.core.baseutil.permissions.PermissionUtil
 import com.core.baseutil.ui.ToastUtils
@@ -29,8 +28,10 @@ import com.data.domain.fragmentActivity.aao.ChatAAo
 import com.data.domain.vo.test.RealtimeChatState
 import com.google.gson.reflect.TypeToken
 import com.magicvector.MainApplication
+import com.magicvector.activity.Logo
 import com.magicvector.callback.OnVadChatStateChange
 import com.magicvector.callback.VADCallTextCallback
+import com.magicvector.manager.vad.VadDetectionCallback
 import com.magicvector.manager.vad.VadSileroManager
 import com.magicvector.utils.chat.RealtimeChatWsClient
 import com.magicvector.viewModel.activity.ChatVm
@@ -187,7 +188,7 @@ class ChatMessageHandler {
     //---------------------------Logic---------------------------
 
     //===========音频
-    private var realtimeChatWsClient: RealtimeChatWsClient? = null
+    var realtimeChatWsClient: RealtimeChatWsClient? = null
     private var realtimeChatAudioRecord: AudioRecord? = null
     private var realtimeChatAudioTrack: AudioTrack? = null
     private var vadSileroManager: VadSileroManager? = null
@@ -354,10 +355,87 @@ class ChatMessageHandler {
         return minOf(1.0f, (rms / 32767.0).toFloat())
     }
 
+    // 语音通话
+    fun initVadCall(context: Context){
+        vadSileroManager = VadSileroManager()
+
+        vadSileroManager!!.init(context, object : VadDetectionCallback{
+            override fun onStartSpeech(audioBuffer: ByteArray) {
+                // 发送启动录音
+                val dataMap = mapOf(
+                    RealtimeRequestDataTypeEnum.TYPE to RealtimeRequestDataTypeEnum.START_AUDIO_RECORD.type,
+                    RealtimeRequestDataTypeEnum.DATA to RealtimeRequestDataTypeEnum.START_AUDIO_RECORD.name
+                )
+                realtimeChatWsClient?.sendMessage(dataMap)
+
+                // 发送初次启动的数据
+                if (audioBuffer.isNotEmpty()) {
+                    val base64Audio = Base64.encodeToString(audioBuffer, 0, audioBuffer.size, Base64.NO_WRAP)
+                    val dataMap = mapOf(
+                        RealtimeRequestDataTypeEnum.TYPE to RealtimeRequestDataTypeEnum.AUDIO_CHUNK.type,
+                        RealtimeRequestDataTypeEnum.DATA to base64Audio
+                    )
+                    realtimeChatWsClient!!.sendMessage(dataMap)
+
+                    onVadChatStateChange?.onChange(VadChatState.Speaking)
+                }
+            }
+
+            override fun speeching(audioBuffer: ByteArray) {
+                // 直接发送数据
+                if (audioBuffer.isNotEmpty()) {
+                    val base64Audio = Base64.encodeToString(audioBuffer, 0, audioBuffer.size, Base64.NO_WRAP)
+                    val dataMap = mapOf(
+                        RealtimeRequestDataTypeEnum.TYPE to RealtimeRequestDataTypeEnum.AUDIO_CHUNK.type,
+                        RealtimeRequestDataTypeEnum.DATA to base64Audio
+                    )
+                    realtimeChatWsClient!!.sendMessage(dataMap)
+
+                    onVadChatStateChange?.onChange(VadChatState.Speaking)
+                }
+            }
+
+            override fun onStopSpeech() {
+                val dataMap = mapOf(
+                    RealtimeRequestDataTypeEnum.TYPE to RealtimeRequestDataTypeEnum.STOP_AUDIO_RECORD.type,
+                    RealtimeRequestDataTypeEnum.DATA to RealtimeRequestDataTypeEnum.STOP_AUDIO_RECORD.name
+                )
+                realtimeChatWsClient!!.sendMessage(dataMap)
+
+                onVadChatStateChange?.onChange(VadChatState.Silent)
+            }
+        })
+
+        startVadCall()
+    }
+
+    fun startVadCall(){
+        vadSileroManager?.let {
+            it.startRecording()
+            onVadChatStateChange?.onChange(VadChatState.Silent)
+            Log.i(TAG, "startVadCall: ")
+        }
+    }
+
+    fun stopVadCall(){
+        vadSileroManager?.let {
+            it.stopRecording()
+            onVadChatStateChange?.onChange(VadChatState.Muted)
+            Log.i(TAG, "stopVadCall: ")
+        }
+    }
+
+    fun destroyVadCall(){
+        vadSileroManager?.onDestroy()
+        onVadChatStateChange?.onChange(VadChatState.Muted)
+    }
 
     //===========chatHistory
 
-    var chatManagerPointer: ChatManager? = null
+    private var chatManagerPointer: ChatManager? = null
+    fun getChatManagerPointer(): ChatManager {
+        return chatManagerPointer!!
+    }
 
     fun initResource(
         chatActivity: FragmentActivity,
@@ -395,9 +473,8 @@ class ChatMessageHandler {
 
         // 获取chatManager
         chatManagerPointer = MainApplication.getChatMapManager().getChatManager(
-            chatAAo.messageContactItemAo!!.contactId!!
+            messageContactItemAo!!.contactId!!
         )
-
         // 初始化网络请求
         initNetworkRunnable.run()
     }
@@ -570,6 +647,8 @@ class ChatMessageHandler {
                 Log.e(TAG, "releaseAllResource::vadSileroManager error", e)
             }
         }
+
+        Log.i(TAG, "releaseAllResource::releaseAllResource")
     }
 
     // 销毁
