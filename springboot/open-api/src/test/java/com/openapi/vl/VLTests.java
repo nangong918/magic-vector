@@ -1,6 +1,7 @@
 package com.openapi.vl;
 
 
+import com.alibaba.cloud.ai.dashscope.chat.DashScopeChatModel;
 import com.alibaba.dashscope.exception.NoApiKeyException;
 import com.alibaba.dashscope.exception.UploadFileException;
 import com.alibaba.fastjson.JSON;
@@ -9,11 +10,16 @@ import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 import com.openapi.MainApplication;
 import com.openapi.config.ChatConfig;
+import com.openapi.domain.constant.ModelConstant;
 import com.openapi.service.VisionChatService;
+import com.openapi.service.VisionToolService;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.Test;
+import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.ai.chat.memory.ChatMemory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import reactor.core.publisher.Flux;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -22,6 +28,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.time.Duration;
 import java.util.Base64;
 
 /**
@@ -107,6 +114,56 @@ public class VLTests {
         }
         */
         System.out.println("result = " + result);
+    }
+
+    @Autowired
+    private VisionToolService visionToolService;
+
+    @Test
+    public void visionFunctionCallTest(@Autowired DashScopeChatModel chatModel) {
+        ChatClient chatClient = ChatClient.builder(chatModel)
+                .defaultSystem("你是我的智能助手niger")
+                .build();
+
+        String sentence = "你看得到我手上拿的是什么吗？";
+
+        Flux<String> responseFlux = chatClient.prompt()
+                .user(sentence)
+                // 添加工具Function Call; MCP
+                .tools(visionToolService)
+                .stream()
+                .content()
+                // 3500ms未响应则判定超时，进行重连尝试
+                .timeout(Duration.ofMillis(ModelConstant.LLM_CONNECT_TIMEOUT_MILLIS));
+
+        responseFlux.subscribe(
+                System.out::println,
+                System.err::println,
+                () -> System.out.println("完成")
+        );
+
+        try {
+            Thread.sleep(5_000);
+        } catch (Exception e){
+            log.error("e: ", e);
+        }
+    }
+
+    @Test
+    public void chatClientFunctionCallTest(@Autowired DashScopeChatModel chatModel) {
+        ChatClient chatClient = ChatClient.builder(chatModel)
+                .defaultSystem("你是我的智能助手")
+                .build();
+
+        String sentence = "请查询一下aibo多少钱，还有多少库存？";
+
+        String result = chatClient.prompt()
+                .user(sentence)
+                .tools(visionToolService)
+                .call()
+                .content();
+
+        log.info("result: {}", result);
     }
 
 }

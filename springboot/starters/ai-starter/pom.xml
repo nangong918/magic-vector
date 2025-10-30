@@ -22,6 +22,7 @@
         <!-- Install Spring AI Alibaba in your local. -->
         <spring-ai-alibaba.version>1.0.0.3</spring-ai-alibaba.version>
         <spring-ai-alibaba.dashscope.version>2.21.11</spring-ai-alibaba.dashscope.version>
+        <jsonschema-generator.version>4.32.0</jsonschema-generator.version>
     </properties>
 
     <dependencyManagement>
@@ -107,6 +108,19 @@
         <dependency>
             <groupId>com.hankcs</groupId>
             <artifactId>hanlp</artifactId>
+        </dependency>
+
+        <!-- JSON Schema 生成器 -->
+        <dependency>
+            <groupId>com.github.victools</groupId>
+            <artifactId>jsonschema-generator</artifactId>
+            <version>${jsonschema-generator.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.github.victools</groupId>
+            <artifactId>jsonschema-module-jackson</artifactId>
+            <version>${jsonschema-generator.version}</version>
         </dependency>
 
         <!-- Test -->
