@@ -27,9 +27,10 @@ class AgentEmojiActivity : BaseAppCompatVmActivity<ActivityAgentEmojiBinding, Ag
 
     companion object {
         val GSON = MainApplication.GSON
-        val visionManager = MainApplication.getVisionManager()
-        val chatMessageHandler = MainApplication.getChatMessageHandler()
     }
+
+    var visionManager = MainApplication.getVisionManager()
+    var chatMessageHandler = MainApplication.getChatMessageHandler()
 
     override fun initBinding(): ActivityAgentEmojiBinding {
         return ActivityAgentEmojiBinding.inflate(layoutInflater)
@@ -37,6 +38,9 @@ class AgentEmojiActivity : BaseAppCompatVmActivity<ActivityAgentEmojiBinding, Ag
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        visionManager = MainApplication.getVisionManager()
+        chatMessageHandler = MainApplication.getChatMessageHandler()
     }
 
     override fun initViewModel() {
@@ -214,12 +218,16 @@ class AgentEmojiActivity : BaseAppCompatVmActivity<ActivityAgentEmojiBinding, Ag
     override fun onResume() {
         super.onResume()
         visionManager.onResume(window = window)
+        // 启动VAD录音
+        chatMessageHandler.initVadCall(this@AgentEmojiActivity)
     }
 
     // 暂停
     override fun onPause() {
         super.onPause()
         visionManager.onPause()
+        // 关闭VAD录音
+        chatMessageHandler.stopVadCall()
     }
 
     // 销毁

@@ -36,8 +36,9 @@ class ChatActivity : BaseAppCompatVmActivity<ActivityChatBinding, ChatVm>(
     private val tag = ChatActivity::class.simpleName
 
     companion object {
-        val chatMessageHandler = MainApplication.getChatMessageHandler()
     }
+
+    var chatMessageHandler = MainApplication.getChatMessageHandler()
 
     override fun initBinding(): ActivityChatBinding {
         return ActivityChatBinding.inflate(layoutInflater)
@@ -45,6 +46,8 @@ class ChatActivity : BaseAppCompatVmActivity<ActivityChatBinding, ChatVm>(
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        chatMessageHandler = MainApplication.getChatMessageHandler()
     }
 
     override fun initViewModel() {
@@ -244,7 +247,7 @@ class ChatActivity : BaseAppCompatVmActivity<ActivityChatBinding, ChatVm>(
         }
 
         // 开启视频通话
-        binding.smSendMessage.setAudioClickListener {
+        binding.smSendMessage.setVideoClickListener {
             // 语音，权限获取
             PermissionUtil.requestPermissionSelectX(
                 this@ChatActivity,

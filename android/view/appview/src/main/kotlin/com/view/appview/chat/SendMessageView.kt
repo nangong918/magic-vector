@@ -69,9 +69,9 @@ class SendMessageView : ConstraintLayout {
         }
     }
 
-    fun setAudioClickListener(listener: OnClickListener?) {
+    fun setVideoClickListener(listener: OnClickListener?) {
         listener?.let {
-            binding.btnAudio.setOnClickListener(listener)
+            binding.btnVideoCall.setOnClickListener(listener)
         }
     }
 

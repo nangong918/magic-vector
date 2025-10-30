@@ -408,18 +408,24 @@ class ChatMessageHandler {
     }
 
     fun startVadCall(){
-        vadSileroManager?.let {
-            it.startRecording()
+        if (vadSileroManager != null) {
+            vadSileroManager!!.startRecording()
             onVadChatStateChange?.onChange(VadChatState.Silent)
             Log.i(TAG, "startVadCall: ")
+        }
+        else {
+            Log.e(TAG, "startVadCall: vadSileroManager == null")
         }
     }
 
     fun stopVadCall(){
-        vadSileroManager?.let {
-            it.stopRecording()
+        if (vadSileroManager != null) {
+            vadSileroManager!!.stopRecording()
             onVadChatStateChange?.onChange(VadChatState.Muted)
             Log.i(TAG, "stopVadCall: ")
+        }
+        else {
+            Log.e(TAG, "stopVadCall: vadSileroManager == null")
         }
     }
 

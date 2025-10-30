@@ -59,8 +59,9 @@ class ChatVm(
         val TAG: String = ChatVm::class.java.name
         val GSON = MainApplication.GSON
         val mainHandler: Handler = Handler(Looper.getMainLooper())
-        val chatMessageHandler = MainApplication.getChatMessageHandler()
     }
+
+    var chatMessageHandler = MainApplication.getChatMessageHandler()
 
     fun initResource(
         activity: FragmentActivity,
@@ -69,6 +70,7 @@ class ChatVm(
         vadCallTextCallback: VADCallTextCallback,
         onVadChatStateChange: OnVadChatStateChange
     ) {
+        chatMessageHandler = MainApplication.getChatMessageHandler()
 
         // 初始化网络请求
         val initNetworkRunnable = {
