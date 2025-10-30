@@ -2,7 +2,7 @@ package com.openapi.listener;
 
 import com.alibaba.fastjson.JSON;
 import com.openapi.domain.constant.realtime.RealtimeResponseDataTypeEnum;
-import com.openapi.domain.dto.ws.SystemTextResponse;
+import com.openapi.domain.dto.ws.response.SystemTextResponse;
 import com.openapi.domain.evnet.TakePhotoEvent;
 import com.openapi.websocket.config.SessionConfig;
 import lombok.RequiredArgsConstructor;

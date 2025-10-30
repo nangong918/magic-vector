@@ -23,18 +23,16 @@ import com.data.domain.constant.BaseConstant
 import com.data.domain.constant.VadChatState
 import com.data.domain.constant.chat.RealtimeRequestDataTypeEnum
 import com.data.domain.constant.chat.RealtimeResponseDataTypeEnum
-import com.data.domain.dto.ws.RealtimeChatConnectRequest
+import com.data.domain.dto.ws.request.RealtimeChatConnectRequest
 import com.data.domain.fragmentActivity.aao.ChatAAo
 import com.data.domain.vo.test.RealtimeChatState
 import com.google.gson.reflect.TypeToken
 import com.magicvector.MainApplication
-import com.magicvector.activity.Logo
 import com.magicvector.callback.OnVadChatStateChange
 import com.magicvector.callback.VADCallTextCallback
 import com.magicvector.manager.vad.VadDetectionCallback
 import com.magicvector.manager.vad.VadSileroManager
 import com.magicvector.utils.chat.RealtimeChatWsClient
-import com.magicvector.viewModel.activity.ChatVm
 import com.view.appview.recycler.RecyclerViewWhereNeedUpdate
 import okhttp3.Response
 import okhttp3.WebSocket
@@ -585,10 +583,36 @@ class ChatMessageHandler {
                 }
             }
             RealtimeResponseDataTypeEnum.WHOLE_CHAT_RESPONSE -> {}
-            RealtimeResponseDataTypeEnum.TEXT_SYSTEM_RESPONSE -> {}
+            RealtimeResponseDataTypeEnum.TEXT_SYSTEM_RESPONSE -> {
+                val data = map[RealtimeResponseDataTypeEnum.DATA]
+                data?.let {
+                    handleSystemMessage(it)
+                }
+                /*
+                    agentEmoji注册system事件回调。
+                    接收system消息，handle system消息，分类处理mcp消息：MCP handler：VisionHandler，EmojiHandler。
+                    找到要求拍照的消息，调用回调。
+                    回调调用拍摄照片，转为base64，组成json加入message消息，传递给后端 -> 等待响应。
+                 */
+            }
         }
     }
 
+    private fun handleSystemMessage(data: String){
+        if (data.isEmpty()){
+            Log.w(TAG, "handleSystemMessage: data is empty")
+            return
+        }
+        try {
+            val map: Map<String, String> = GSON.fromJson(data, object : TypeToken<Map<String, String>>() {}.type)
+            if (map["event"] == null) {
+                Log.w(TAG, "handleSystemMessage: event is null")
+                return
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "handleSystemMessage: parse error", e)
+        }
+    }
 
     //--------------------------LifeCycle---------------------------
 

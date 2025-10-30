@@ -7,7 +7,7 @@ import com.alibaba.fastjson.TypeReference;
 import com.openapi.component.manager.RealtimeChatContextManager;
 import com.openapi.domain.constant.realtime.RealtimeRequestDataTypeEnum;
 import com.openapi.domain.constant.realtime.RealtimeResponseDataTypeEnum;
-import com.openapi.domain.dto.ws.RealtimeChatConnectRequest;
+import com.openapi.domain.dto.ws.request.RealtimeChatConnectRequest;
 import com.openapi.service.RealtimeChatService;
 import com.openapi.websocket.config.SessionConfig;
 import lombok.RequiredArgsConstructor;

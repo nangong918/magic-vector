@@ -2,11 +2,10 @@ package com.openapi.converter;
 
 import com.openapi.domain.Do.ChatMessageDo;
 import com.openapi.domain.constant.RoleTypeEnum;
-import com.openapi.domain.dto.ws.RealtimeChatTextResponse;
+import com.openapi.domain.dto.ws.response.RealtimeChatTextResponse;
 import com.openapi.utils.DateUtils;
 import lombok.NonNull;
 import org.mapstruct.Mapper;
-import org.mapstruct.Mapping;
 import org.mapstruct.MappingConstants;
 import org.mapstruct.factory.Mappers;
 import org.springframework.ai.chat.messages.AssistantMessage;

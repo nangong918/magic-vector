@@ -4,11 +4,16 @@ import android.os.Bundle
 import android.util.Log
 import androidx.lifecycle.LifecycleOwner
 import com.data.domain.constant.BaseConstant
+import com.data.domain.constant.chat.RealtimeRequestDataTypeEnum
+import com.data.domain.constant.chat.RealtimeSystemEventEnum
+import com.data.domain.dto.ws.request.UploadPhotoRequest
 import com.detection.yolov8.BoundingBox
 import com.detection.yolov8.Detector
 import com.detection.yolov8.targetPoint.YOLOv8TargetPointGenerator
 import com.magicvector.MainApplication
 import com.magicvector.databinding.ActivityAgentEmojiBinding
+import com.magicvector.manager.mcp.HandleSystemResponse
+import com.magicvector.manager.mcp.VisionMcpManager
 import com.magicvector.manager.yolo.EyesMoveManager
 import com.magicvector.manager.yolo.OnResetCallback
 import com.magicvector.manager.yolo.TargetActivityDetectionManager
@@ -18,11 +23,12 @@ import com.magicvector.viewModel.activity.AgentEmojiVm
 class AgentEmojiActivity : BaseAppCompatVmActivity<ActivityAgentEmojiBinding, AgentEmojiVm>(
     AgentEmojiActivity::class,
     AgentEmojiVm::class
-) {
+), HandleSystemResponse {
 
     companion object {
         val GSON = MainApplication.GSON
         val visionManager = MainApplication.getVisionManager()
+        val chatMessageHandler = MainApplication.getChatMessageHandler()
     }
 
     override fun initBinding(): ActivityAgentEmojiBinding {
@@ -53,6 +59,14 @@ class AgentEmojiActivity : BaseAppCompatVmActivity<ActivityAgentEmojiBinding, Ag
 
     override fun setListener() {
         super.setListener()
+
+        // 切换摄像头的方法
+        binding.btnSwitchCamera.setOnClickListener {
+            visionManager.switchCamera(
+                previewView = binding.viewFinder,
+                lifecycleOwner = this as LifecycleOwner
+            )
+        }
     }
 
     private fun getDetectListener(): Detector.DetectorListener {
@@ -94,15 +108,15 @@ class AgentEmojiActivity : BaseAppCompatVmActivity<ActivityAgentEmojiBinding, Ag
                             var displayColor = light_blue_600
                             if (it.result) {
                                 if (it.detectionType != null) {
-                                    when (it.detectionType) {
+                                    displayColor = when (it.detectionType) {
                                         0 -> {
-                                            displayColor = gold
+                                            gold
                                         }
                                         1 -> {
-                                            displayColor = red
+                                            red
                                         }
                                         else -> {
-                                            displayColor = light_blue_600
+                                            light_blue_600
                                         }
                                     }
                                 }
@@ -130,6 +144,53 @@ class AgentEmojiActivity : BaseAppCompatVmActivity<ActivityAgentEmojiBinding, Ag
         }
     }
 
+    override fun handleSystemResponse(map: Map<String, String>) {
+        val agentId = map["agentId"]
+        val userId = MainApplication.getUserId()
+        val messageId = map["messageId"]
+        // 上传图片的指令
+        if (map["event"] == RealtimeSystemEventEnum.UPLOAD_PHOTO.code) {
+            val bitmap = visionManager.getCurrentFrameBitmap()
+            if (bitmap == null) {
+                // 传递无图片的响应给服务器
+                val uploadPhotoRequest = UploadPhotoRequest()
+                uploadPhotoRequest.agentId = agentId
+                uploadPhotoRequest.userId = userId
+                uploadPhotoRequest.messageId = messageId
+                uploadPhotoRequest.isHavePhoto = false
+
+                val uploadPhotoRequestJson = GSON.toJson(uploadPhotoRequest)
+                val dataMap = mapOf(
+                    RealtimeRequestDataTypeEnum.TYPE to RealtimeRequestDataTypeEnum.SYSTEM_MESSAGE.type,
+                    RealtimeRequestDataTypeEnum.DATA to uploadPhotoRequestJson
+                )
+
+                chatMessageHandler.realtimeChatWsClient?.sendMessage(dataMap)
+            }
+            else {
+                // bitmap -> base64
+                val base64Str = VisionMcpManager.bitmapToBase64(
+                    bitmap = bitmap
+                )
+
+                val uploadPhotoRequest = UploadPhotoRequest()
+                uploadPhotoRequest.agentId = agentId
+                uploadPhotoRequest.userId = userId
+                uploadPhotoRequest.messageId = messageId
+                uploadPhotoRequest.isHavePhoto = true
+                uploadPhotoRequest.photoBase64 = base64Str
+
+                val uploadPhotoRequestJson = GSON.toJson(uploadPhotoRequest)
+                val dataMap = mapOf(
+                    RealtimeRequestDataTypeEnum.TYPE to RealtimeRequestDataTypeEnum.SYSTEM_MESSAGE.type,
+                    RealtimeRequestDataTypeEnum.DATA to uploadPhotoRequestJson
+                )
+
+                chatMessageHandler.realtimeChatWsClient?.sendMessage(dataMap)
+            }
+        }
+    }
+
     // 复位回调
     val onResetCallback = object : OnResetCallback {
         override fun onStartReset() {
@@ -145,6 +206,26 @@ class AgentEmojiActivity : BaseAppCompatVmActivity<ActivityAgentEmojiBinding, Ag
                 binding.vMoveDetect.setBackgroundResource(com.view.appview.R.color.light_blue_600)
             }
         }
+    }
+
+    //----------------生命周期----------------
+
+    // 恢复
+    override fun onResume() {
+        super.onResume()
+        visionManager.onResume(window = window)
+    }
+
+    // 暂停
+    override fun onPause() {
+        super.onPause()
+        visionManager.onPause()
+    }
+
+    // 销毁
+    override fun onDestroy() {
+        super.onDestroy()
+        visionManager.onDestroy(window = window)
     }
 
 }

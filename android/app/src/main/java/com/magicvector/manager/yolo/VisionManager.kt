@@ -42,6 +42,9 @@ class VisionManager {
 
     // 添加一个变量来保存当前帧的Bitmap
     private var currentFrameBitmap: Bitmap? = null
+    fun getCurrentFrameBitmap(): Bitmap? {
+        return currentFrameBitmap
+    }
 
     private lateinit var cameraExecutor: ExecutorService
 

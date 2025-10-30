@@ -21,8 +21,8 @@ import com.core.baseutil.permissions.PermissionUtil
 import com.core.baseutil.ui.ToastUtils
 import com.data.domain.constant.BaseConstant
 import com.data.domain.constant.test.RealtimeDataTypeEnum
-import com.data.domain.dto.ws.RealtimeChatConnectRequest
-import com.data.domain.dto.ws.RealtimeChatTextResponse
+import com.data.domain.dto.ws.request.RealtimeChatConnectRequest
+import com.data.domain.dto.ws.reponse.RealtimeChatTextResponse
 import com.data.domain.event.WebSocketMessageEvent
 import com.data.domain.event.WebsocketEventTypeEnum
 import com.data.domain.vo.test.AudioRecordPlayState
@@ -30,7 +30,6 @@ import com.data.domain.vo.test.ChatState
 import com.data.domain.vo.test.RealtimeChatState
 import com.data.domain.vo.test.TtsChatState
 import com.data.domain.vo.test.WebsocketState
-import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import com.magicvector.MainApplication
 import com.magicvector.utils.test.SSEClient

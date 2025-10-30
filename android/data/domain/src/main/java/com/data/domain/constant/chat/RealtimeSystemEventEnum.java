@@ -10,7 +10,10 @@ import androidx.annotation.NonNull;
 public enum RealtimeSystemEventEnum {
     // null
     NULL("null", "NULL"),
-    // 上传照片
+    /**
+     * 上传照片
+     * @see com.data.domain.dto.ws.reponse.SystemTextResponse
+     */
     UPLOAD_PHOTO("vision.upload.photo", "上传照片"),
     ;
 

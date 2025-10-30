@@ -1,5 +1,8 @@
 package com.data.domain.constant.chat;
 
+import com.data.domain.dto.ws.reponse.RealtimeChatTextResponse;
+import com.data.domain.dto.ws.reponse.SystemTextResponse;
+
 import org.jetbrains.annotations.NotNull;
 
 /**
@@ -24,17 +27,17 @@ public enum RealtimeResponseDataTypeEnum {
     AUDIO_CHUNK("audio_chunk"),
     /**
      * text_chat_response（user response、fragment回复）
-     * @see com.data.domain.dto.ws.RealtimeChatTextResponse
+     * @see RealtimeChatTextResponse
      */
     TEXT_CHAT_RESPONSE("text_chat_response"),
     /**
      * text_system_response
-     * @see com.data.domain.dto.ws.SystemTextResponse
+     * @see SystemTextResponse
      */
     TEXT_SYSTEM_RESPONSE("text_system_response"),
     /**
      * whole_chat_response 整句回复
-     * @see com.data.domain.dto.ws.RealtimeChatTextResponse
+     * @see RealtimeChatTextResponse
      */
     WHOLE_CHAT_RESPONSE("whole_chat_response"),
     ;

@@ -1,4 +1,4 @@
-package com.openapi.domain.dto.ws;
+package com.openapi.domain.dto.ws.response;
 
 import com.openapi.domain.constant.realtime.RealtimeSystemEventEnum;
 import lombok.AllArgsConstructor;

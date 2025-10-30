@@ -1,6 +1,6 @@
 package com.openapi.domain.evnet.body;
 
-import com.openapi.domain.dto.ws.SystemTextResponse;
+import com.openapi.domain.dto.ws.response.SystemTextResponse;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;

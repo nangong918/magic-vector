@@ -1,5 +1,6 @@
 package com.openapi.domain.constant.realtime;
 
+import com.openapi.domain.dto.ws.request.RealtimeChatConnectRequest;
 import org.jetbrains.annotations.NotNull;
 
 /**
@@ -9,7 +10,7 @@ import org.jetbrains.annotations.NotNull;
 public enum RealtimeRequestDataTypeEnum {
     /**
      * connect
-     * @see com.openapi.domain.dto.ws.RealtimeChatConnectRequest
+     * @see RealtimeChatConnectRequest
      */
     CONNECT("connect"),
 //    // disconnect
@@ -34,6 +35,10 @@ public enum RealtimeRequestDataTypeEnum {
      * String: userQuestion
      */
     USER_TEXT_MESSAGE("user_text_message"),
+    /**
+     * system message
+     */
+    SYSTEM_MESSAGE("system_message"),
     ;
 
     public static final String TYPE = "type";

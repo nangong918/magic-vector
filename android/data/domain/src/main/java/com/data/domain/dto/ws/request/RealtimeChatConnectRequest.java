@@ -1,4 +1,4 @@
-package com.data.domain.dto.ws;
+package com.data.domain.dto.ws.request;
 
 
 /**

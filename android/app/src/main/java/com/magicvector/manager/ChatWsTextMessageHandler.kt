@@ -2,9 +2,8 @@ package com.magicvector.manager
 
 import android.util.Log
 import com.data.domain.constant.chat.RoleTypeEnum
-import com.data.domain.dto.ws.RealtimeChatTextResponse
+import com.data.domain.dto.ws.reponse.RealtimeChatTextResponse
 import com.google.gson.Gson
-import com.google.gson.reflect.TypeToken
 import com.magicvector.callback.VADCallTextCallback
 
 object ChatWsTextMessageHandler {

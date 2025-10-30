@@ -7,7 +7,7 @@ import com.core.baseutil.sort.SortUtil
 import com.data.domain.Do.ChatMessageDo
 import com.data.domain.ao.chat.ChatItemAo
 import com.data.domain.constant.chat.MessageTypeEnum
-import com.data.domain.dto.ws.RealtimeChatTextResponse
+import com.data.domain.dto.ws.reponse.RealtimeChatTextResponse
 import com.view.appview.recycler.UpdateRecyclerViewItem
 import com.view.appview.recycler.UpdateRecyclerViewTypeEnum
 

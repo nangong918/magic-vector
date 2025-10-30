@@ -1,4 +1,4 @@
-package com.data.domain.dto.ws;
+package com.data.domain.dto.ws.reponse;
 
 
 import com.data.domain.constant.chat.RealtimeSystemEventEnum;

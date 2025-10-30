@@ -21,7 +21,7 @@ import com.openapi.domain.constant.ModelConstant;
 import com.openapi.domain.constant.error.AgentExceptions;
 import com.openapi.domain.constant.error.UserExceptions;
 import com.openapi.domain.constant.realtime.RealtimeResponseDataTypeEnum;
-import com.openapi.domain.dto.ws.RealtimeChatTextResponse;
+import com.openapi.domain.dto.ws.response.RealtimeChatTextResponse;
 import com.openapi.domain.exception.AppException;
 import com.openapi.domain.interfaces.OnSSTResultCallback;
 import com.openapi.service.AgentService;

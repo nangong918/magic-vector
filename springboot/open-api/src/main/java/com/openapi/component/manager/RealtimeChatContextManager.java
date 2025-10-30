@@ -2,7 +2,7 @@ package com.openapi.component.manager;
 
 import cn.hutool.core.util.IdUtil;
 import com.openapi.domain.constant.RoleTypeEnum;
-import com.openapi.domain.dto.ws.RealtimeChatTextResponse;
+import com.openapi.domain.dto.ws.response.RealtimeChatTextResponse;
 import com.openapi.utils.DateUtils;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;

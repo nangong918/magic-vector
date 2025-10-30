@@ -1,11 +1,9 @@
-package com.openapi.domain.dto.ws;
+package com.data.domain.dto.ws.reponse;
 
-import com.openapi.domain.constant.RoleTypeEnum;
-import lombok.Data;
 
-import java.time.LocalDateTime;
+import com.data.domain.constant.chat.RoleTypeEnum;
 
-@Data
+
 public class RealtimeChatTextResponse {
     // agentId也相当于会话Id
     public String agentId;

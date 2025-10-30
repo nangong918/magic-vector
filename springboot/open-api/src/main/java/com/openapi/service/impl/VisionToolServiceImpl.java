@@ -1,7 +1,7 @@
 package com.openapi.service.impl;
 
 import com.openapi.domain.constant.realtime.RealtimeSystemEventEnum;
-import com.openapi.domain.dto.ws.SystemTextResponse;
+import com.openapi.domain.dto.ws.response.SystemTextResponse;
 import com.openapi.domain.evnet.TakePhotoEvent;
 import com.openapi.domain.evnet.body.TakePhotoEventBody;
 import com.openapi.service.VisionToolService;
