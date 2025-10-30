@@ -31,8 +31,6 @@ import com.detection.yolov8.Detector
 import com.detection.yolov8.YOLOv8Constants
 import com.detection.yolov8.targetPoint.TargetPoint
 import com.detection.yolov8.targetPoint.YOLOv8TargetPointGenerator
-import com.google.gson.Gson
-import com.google.gson.GsonBuilder
 import com.magicvector.MainApplication
 import com.magicvector.databinding.ActivityAgentEmojiTestBinding
 import com.magicvector.manager.yolo.EyesMoveManager
@@ -150,7 +148,7 @@ class AgentEmojiTestActivity : BaseAppCompatActivity<ActivityAgentEmojiTestBindi
         // 隐藏状态栏
         window.setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN, WindowManager.LayoutParams.FLAG_FULLSCREEN)
         // 保持屏幕常亮
-        window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         // 隐藏导航栏
         val decorView = window.decorView
         decorView.systemUiVisibility = (
@@ -459,7 +457,7 @@ class AgentEmojiTestActivity : BaseAppCompatActivity<ActivityAgentEmojiTestBindi
         EyesMoveManager.destroy()
 
         // 清除标志位
-        window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
     }
 
     override fun onResume() {

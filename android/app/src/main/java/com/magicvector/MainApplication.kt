@@ -11,6 +11,7 @@ import com.google.gson.GsonBuilder
 import com.magicvector.manager.ChatMapManager
 import com.magicvector.manager.ChatMessageHandler
 import com.magicvector.manager.MessageListManager
+import com.magicvector.manager.yolo.VisionManager
 
 class MainApplication : Application() {
 
@@ -97,6 +98,15 @@ class MainApplication : Application() {
                 chatMessageHandler = ChatMessageHandler() // 关键：要赋值！
             }
             return chatMessageHandler!!
+        }
+
+        // VisionManager
+        private var visionManager: VisionManager? = null
+        fun getVisionManager(): VisionManager {
+            if (visionManager == null) {
+                visionManager = VisionManager()
+            }
+            return visionManager!!
         }
     }
 
