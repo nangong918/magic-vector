@@ -11,7 +11,7 @@ object ChatWsTextMessageHandler {
 
     const val TAG = "ChatWsTextMessageHandler"
 
-    fun handleTextMessage(message: String, GSON: Gson, chatManagerPointer: ChatManager, vadCallTextCallback: VADCallTextCallback){
+    fun handleTextMessage(message: String, GSON: Gson, chatManagerPointer: ChatManager, vadCallTextCallback: VADCallTextCallback?){
         var response : RealtimeChatTextResponse
         try {
             Log.i(TAG, "handleTextMessage::receiveMessage: $message")
@@ -28,7 +28,7 @@ object ChatWsTextMessageHandler {
         }
 
         response.content?.let {
-            vadCallTextCallback.onText(it)
+            vadCallTextCallback?.onText(it)
             Log.i(TAG, "handleTextMessage::content: $it")
         }
 

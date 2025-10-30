@@ -66,9 +66,9 @@ class ChatMessageHandler {
     val currentIsEmoji: AtomicBoolean = AtomicBoolean(false)
     // 当前是否在通话中（仅仅用于chatActivity中的Call；至于是null是因为这个是指针，对象直接从CallDialog中获取）
     var isChatCalling: AtomicBoolean? = null
-    lateinit var recyclerViewWhereNeedUpdate: RecyclerViewWhereNeedUpdate
-    lateinit var vadCallTextCallback: VADCallTextCallback
-    lateinit var onVadChatStateChange: OnVadChatStateChange
+    var recyclerViewWhereNeedUpdate: RecyclerViewWhereNeedUpdate? = null
+    var vadCallTextCallback: VADCallTextCallback? = null
+    var onVadChatStateChange: OnVadChatStateChange? = null
     val realtimeChatState: MutableLiveData<RealtimeChatState> = MutableLiveData(RealtimeChatState.NotInitialized)
 //    val realtimeChatVolume = MutableLiveData(0f)
     
@@ -357,7 +357,7 @@ class ChatMessageHandler {
 
     //===========chatHistory
 
-    lateinit var chatManagerPointer: ChatManager
+    var chatManagerPointer: ChatManager? = null
 
     fun initResource(
         chatActivity: FragmentActivity,
@@ -368,6 +368,12 @@ class ChatMessageHandler {
         vadCallTextCallback: VADCallTextCallback,
         onVadChatStateChange: OnVadChatStateChange
     ) {
+        // 在初始化之前先清理全部资源
+        try {
+            releaseAllResource()
+        } catch (e: Exception){
+            Log.e(TAG, "initResource: ${e.message}")
+        }
 
         realtimeChatState.postValue(RealtimeChatState.NotInitialized)
 
@@ -398,15 +404,21 @@ class ChatMessageHandler {
 
     // update Message
     fun updateMessage(){
-        mainHandler.post {
-            val updateList = chatManagerPointer.getNeedUpdateList()
-            if (!updateList.isEmpty()){
-                recyclerViewWhereNeedUpdate.whereNeedUpdate(updateList)
-                Log.d(TAG, "handleGetChatHistory::待更新数据：${updateList.size} 条")
+        if (chatManagerPointer != null && recyclerViewWhereNeedUpdate != null){
+            mainHandler.post {
+                val updateList = chatManagerPointer!!.getNeedUpdateList()
+                if (!updateList.isEmpty()){
+                    recyclerViewWhereNeedUpdate!!.whereNeedUpdate(updateList)
+                    Log.d(TAG, "handleGetChatHistory::待更新数据：${updateList.size} 条")
+                }
+                else {
+                    Log.d(TAG, "handleGetChatHistory::没有待更新数据")
+                }
             }
-            else {
-                Log.d(TAG, "handleGetChatHistory::没有待更新数据")
-            }
+        }
+        else {
+            Log.w(TAG, "更新失败，chatManagerPointer：$chatManagerPointer, " +
+                    "recyclerViewWhereNeedUpdate: $recyclerViewWhereNeedUpdate")
         }
     }
 
@@ -428,7 +440,7 @@ class ChatMessageHandler {
                 realtimeChatAudioTrack?.flush()
                 // 开始播放
                 realtimeChatAudioTrack?.play()
-                onVadChatStateChange.onChange(VadChatState.Replying)
+                onVadChatStateChange?.onChange(VadChatState.Replying)
 
                 // VAD:设置AI回复的时候不能说话
                 isChatCalling?.let {
@@ -450,7 +462,7 @@ class ChatMessageHandler {
                 realtimeChatAudioTrack?.stop()
                 // 清空播放缓存
                 realtimeChatAudioTrack?.flush()
-                onVadChatStateChange.onChange(VadChatState.Silent)
+                onVadChatStateChange?.onChange(VadChatState.Silent)
 
                 // VAD:设置AI回复结束的时候可以说话
                 isChatCalling?.let {
@@ -471,20 +483,25 @@ class ChatMessageHandler {
                 data?.let {
                     playBase64Audio(data)
                 }
-                onVadChatStateChange.onChange(VadChatState.Replying)
+                onVadChatStateChange?.onChange(VadChatState.Replying)
             }
             RealtimeResponseDataTypeEnum.TEXT_CHAT_RESPONSE -> {
                 // 文本数据
                 realtimeChatState.postValue(RealtimeChatState.Receiving)
                 val data = map[RealtimeResponseDataTypeEnum.DATA]
                 if (data != null){
-                    ChatWsTextMessageHandler.handleTextMessage(
-                        message = data,
-                        GSON = GSON,
-                        chatManagerPointer = chatManagerPointer,
-                        vadCallTextCallback = this.vadCallTextCallback
-                    )
-                    updateMessage()
+                    if (chatManagerPointer != null){
+                        ChatWsTextMessageHandler.handleTextMessage(
+                            message = data,
+                            GSON = GSON,
+                            chatManagerPointer = chatManagerPointer!!,
+                            vadCallTextCallback = this.vadCallTextCallback
+                        )
+                        updateMessage()
+                    }
+                    else {
+                        Log.w(TAG, "handleTextMessage:更新文本数据异常 chatManagerPointer is null")
+                    }
                 }
                 else {
                     Log.e(TAG, "handleTextMessage: data is null")
@@ -498,10 +515,66 @@ class ChatMessageHandler {
 
     //--------------------------LifeCycle---------------------------
 
+    // 释放全部资源
+    fun releaseAllResource(){
+        // 1. 状态值重置
+        currentIsEmoji.set(false)
+        isChatCalling = null
+
+        // 2. 清空数据
+        messageContactItemAo = null
+
+        // 3. 清空回调
+        recyclerViewWhereNeedUpdate = null
+        vadCallTextCallback = null
+        onVadChatStateChange = null
+        realtimeChatState.postValue(RealtimeChatState.NotInitialized)
+//        realtimeChatVolume.postValue(0f)
+        chatManagerPointer = null
+
+        // 4. 清理资源
+        realtimeChatWsClient?.let {
+            // 考虑到已经关闭的情况
+            try {
+                it.close()
+                realtimeChatWsClient = null
+            } catch (e: Exception){
+                Log.e(TAG, "releaseAllResource::realtimeChatWsClient error", e)
+            }
+        }
+        realtimeChatAudioRecord?.let {
+            // 考虑到已经关闭的情况或者释放资源的情况
+            try {
+                it.stop()
+                it.release()
+                realtimeChatAudioRecord = null
+            } catch (e: Exception){
+                Log.e(TAG, "releaseAllResource::realtimeChatAudioRecord error", e)
+            }
+        }
+        realtimeChatAudioTrack?.let {
+            // 考虑到已经关闭的情况或者释放资源的情况
+            try {
+                it.stop()
+                it.release()
+                realtimeChatAudioTrack = null
+            } catch (e: Exception){
+                Log.e(TAG, "releaseAllResource::realtimeChatAudioTrack error", e)
+            }
+        }
+        vadSileroManager?.let {
+            try {
+                it.onDestroy()
+                vadSileroManager = null
+            } catch (e: Exception){
+                Log.e(TAG, "releaseAllResource::vadSileroManager error", e)
+            }
+        }
+    }
+
     // 销毁
     fun destroy(){
-        stopRealtimeChat()
-        vadSileroManager?.onDestroy()
+        releaseAllResource()
     }
 
 }
