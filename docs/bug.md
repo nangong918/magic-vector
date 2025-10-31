@@ -25,6 +25,17 @@ AI模型调用都有HttpClient超时;出现了说话然后语音识别不出来�
 
 Android 消息二分插入排序存在问题
 
+无论我说什么Agent总是会调用MCP接口
+
+传递图片流存在问题: 图片的base64流过大, 导致websocket断开:
+```text
+[websocket] 连接断开：id=a780c38c-abd2-d111-6b61-0226a2d03498，reason=CloseStatus[code=1009, reason=The decoded text message was too big for the output buffer and the endpoint does not support partial messages]
+```
+解决方案: 暂时使用Http传输照片, 如果需要实时传递图片可以考虑使用UDP/WebRTC/RTP/RTCP/RTMP
+todo1: 好好学习网络协议,ws;tcp,udp,rtmp等。实现使用udp/WebRTC/RTMP实现视频通话
+todo2: 学习计算机组成原理, 学习分段字节流和循环冗余校验, 实现不用Base64传递数据, 而是直接使用拆分的字节流.
+
+
 ## 已解决
 
 语音的延迟调用: 1.语音真实效果, 2.批量转换 3. 触发API请求频繁
