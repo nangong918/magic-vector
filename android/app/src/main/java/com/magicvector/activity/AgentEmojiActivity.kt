@@ -7,9 +7,8 @@ import androidx.lifecycle.LifecycleOwner
 import com.data.domain.constant.BaseConstant
 import com.data.domain.constant.VadChatState
 import com.data.domain.constant.chat.RealtimeRequestDataTypeEnum
-import com.data.domain.constant.chat.RealtimeSystemEventEnum
+import com.data.domain.constant.chat.RealtimeSystemResponseEventEnum
 import com.data.domain.dto.ws.request.UploadPhotoRequest
-import com.data.domain.vo.test.RealtimeChatState
 import com.detection.yolov8.BoundingBox
 import com.detection.yolov8.Detector
 import com.detection.yolov8.targetPoint.YOLOv8TargetPointGenerator
@@ -295,7 +294,7 @@ class AgentEmojiActivity : BaseAppCompatVmActivity<ActivityAgentEmojiBinding, Ag
         val userId = MainApplication.getUserId()
         val messageId = map["messageId"]
         // 上传图片的指令
-        if (map["event"] == RealtimeSystemEventEnum.UPLOAD_PHOTO.code) {
+        if (map[RealtimeSystemResponseEventEnum.EVENT_KET] == RealtimeSystemResponseEventEnum.UPLOAD_PHOTO.code) {
             val bitmap = visionManager.getCurrentFrameBitmap()
             if (bitmap == null) {
                 // 传递无图片的响应给服务器

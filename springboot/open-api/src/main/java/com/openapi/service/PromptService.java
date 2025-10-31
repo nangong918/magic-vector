@@ -11,5 +11,5 @@ import org.springframework.ai.chat.prompt.Prompt;
  */
 public interface PromptService {
     @NotNull String getSystemPrompt(@NotNull String systemPrompt);
-    @Nullable Prompt getChatPromptWhitSystemPrompt(@NotNull String userMessage, @NotNull String systemPrompt);
+    @Nullable Prompt getChatPromptWhitSystemPrompt(@NotNull String userMessage, String systemPrompt);
 }

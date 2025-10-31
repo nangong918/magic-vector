@@ -9,5 +9,6 @@ import org.jetbrains.annotations.NotNull;
  * @date 2025/10/29 15:51
  */
 public interface VisionChatService {
+    @NotNull
     String callWithFileBase64(@NotNull String base64Image, @NotNull String userQuestion) throws NoApiKeyException, UploadFileException;
 }

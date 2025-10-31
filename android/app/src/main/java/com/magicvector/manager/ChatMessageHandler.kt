@@ -23,6 +23,7 @@ import com.data.domain.constant.BaseConstant
 import com.data.domain.constant.VadChatState
 import com.data.domain.constant.chat.RealtimeRequestDataTypeEnum
 import com.data.domain.constant.chat.RealtimeResponseDataTypeEnum
+import com.data.domain.constant.chat.RealtimeSystemResponseEventEnum
 import com.data.domain.dto.ws.request.RealtimeChatConnectRequest
 import com.data.domain.fragmentActivity.aao.ChatAAo
 import com.data.domain.vo.test.RealtimeChatState
@@ -623,7 +624,7 @@ class ChatMessageHandler {
         }
         try {
             val map: Map<String, String> = GSON.fromJson(data, object : TypeToken<Map<String, String>>() {}.type)
-            if (map["event"] == null) {
+            if (map[RealtimeSystemResponseEventEnum.EVENT_KET] == null) {
                 Log.w(TAG, "handleSystemMessage: event is null")
                 return
             }

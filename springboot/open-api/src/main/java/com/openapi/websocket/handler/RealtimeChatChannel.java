@@ -4,10 +4,13 @@ package com.openapi.websocket.handler;
 import com.alibaba.cloud.ai.dashscope.chat.DashScopeChatModel;
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.TypeReference;
+import com.google.gson.Gson;
 import com.openapi.component.manager.RealtimeChatContextManager;
 import com.openapi.domain.constant.realtime.RealtimeRequestDataTypeEnum;
 import com.openapi.domain.constant.realtime.RealtimeResponseDataTypeEnum;
+import com.openapi.domain.constant.realtime.RealtimeSystemRequestEventEnum;
 import com.openapi.domain.dto.ws.request.RealtimeChatConnectRequest;
+import com.openapi.domain.dto.ws.request.UploadPhotoRequest;
 import com.openapi.service.RealtimeChatService;
 import com.openapi.websocket.config.SessionConfig;
 import lombok.RequiredArgsConstructor;
@@ -27,6 +30,7 @@ import java.io.IOException;
 import java.util.Base64;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.Future;
 
 @Slf4j
@@ -36,6 +40,7 @@ public class RealtimeChatChannel extends TextWebSocketHandler {
 
     private final ThreadPoolTaskExecutor taskExecutor;
     private volatile Future<?> chatFuture;
+    private volatile Future<?> visionChatFuture;
     private RealtimeChatContextManager realtimeChatContextManager = new RealtimeChatContextManager();
     private final RealtimeChatService realtimeChatService;
     private final DashScopeChatModel dashScopeChatModel;
@@ -146,7 +151,7 @@ public class RealtimeChatChannel extends TextWebSocketHandler {
                 handleAudioChunk(messageMap.get(RealtimeRequestDataTypeEnum.DATA));
             }
             case USER_TEXT_MESSAGE -> {
-                log.info("[websocket] 收到文本消息：{}", messageMap.get(RealtimeRequestDataTypeEnum.DATA));
+                log.info("[websocket] 收到文本消息：{}", messageMap.get(RealtimeRequestDataTypeEnum.DATA).length());
                 realtimeChatContextManager.newChatMessage();
                 realtimeChatContextManager.stopRecording.set(false);
                 chatFuture = taskExecutor.submit(() -> {
@@ -171,6 +176,55 @@ public class RealtimeChatChannel extends TextWebSocketHandler {
                         }
                     }
                 });
+            }
+            case SYSTEM_MESSAGE -> {
+                String responseJson = messageMap.get(RealtimeRequestDataTypeEnum.DATA);
+                log.info("[websocket] 收到前端System消息：{}", responseJson.length());
+                // 系统消息 -> 拍摄了照片 / 拍摄照片失败
+                try {
+                    // 使用 TypeReference 指定 Map 的类型
+                    Map<String, String> responseMap = JSON.parseObject(responseJson, new TypeReference<>() {});
+                    String eventType = responseMap.get(RealtimeSystemRequestEventEnum.EVENT_KET);
+                    if (eventType.equals(RealtimeSystemRequestEventEnum.UPLOAD_PHOTO.getCode())){
+                        /**
+                         * 获取图片Map<String, String>
+                         * @see com.openapi.domain.dto.ws.request.UploadPhotoRequest
+                         */
+                        UploadPhotoRequest systemRequest = JSON.parseObject(responseJson, UploadPhotoRequest.class);
+                        if (systemRequest.isHavePhoto) {
+                            log.info("[websocket] 获取图片成功, 照片长度: {}", Optional.ofNullable(systemRequest.photoBase64).map(String::length).orElse(0));
+                            // 成功获取图片
+                        }
+                        else {
+                            log.info("[websocket] 获取图片失败, 无照片");
+                            // 未获取到图片 -> 调用AI，告诉用户没有看到照片
+                        }
+                        visionChatFuture = taskExecutor.submit(() -> {
+                            try {
+                                // 启动vision聊天
+                                realtimeChatService.startVisionChat(
+                                        systemRequest.photoBase64,
+                                        realtimeChatContextManager,
+                                        chatClient
+                                );
+                            } catch (Exception e) {
+                                realtimeChatContextManager.stopRecording.set(true);
+                                log.error("[vision chat] 聊天处理异常", e);
+                                Map<String, String> responseErrorMap = new HashMap<>();
+                                responseErrorMap.put(RealtimeResponseDataTypeEnum.TYPE, RealtimeResponseDataTypeEnum.STOP_TTS.getType());
+                                responseErrorMap.put(RealtimeResponseDataTypeEnum.DATA, "聊天处理异常" + e.getMessage());
+                                String response = JSON.toJSONString(responseErrorMap);
+                                try {
+                                    session.sendMessage(new TextMessage(response));
+                                } catch (IOException ex) {
+                                    log.error("[websocket error] 响应消息异常", ex);
+                                }
+                            }
+                        });
+                    }
+                } catch (Exception e) {
+                    log.error("[SYSTEM_MESSAGE] error 解析失败", e);
+                }
             }
             default -> log.warn("[websocket warn] 忽略未知类型消息：{}", type);
         }

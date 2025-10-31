@@ -1,7 +1,7 @@
 package com.data.domain.dto.ws.reponse;
 
 
-import com.data.domain.constant.chat.RealtimeSystemEventEnum;
+import com.data.domain.constant.chat.RealtimeSystemResponseEventEnum;
 
 /**
  * @author 13225
@@ -17,7 +17,7 @@ public class SystemTextResponse {
     public String messageId;
     /**
      * event
-     * @see RealtimeSystemEventEnum
+     * @see RealtimeSystemResponseEventEnum
      */
-    public String event = RealtimeSystemEventEnum.NULL.getCode();
+    public String event = RealtimeSystemResponseEventEnum.NULL.getCode();
 }

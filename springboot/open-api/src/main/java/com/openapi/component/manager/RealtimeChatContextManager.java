@@ -4,7 +4,9 @@ import cn.hutool.core.util.IdUtil;
 import com.openapi.domain.constant.RoleTypeEnum;
 import com.openapi.domain.dto.ws.response.RealtimeChatTextResponse;
 import com.openapi.utils.DateUtils;
+import lombok.Getter;
 import lombok.NonNull;
+import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 import org.springframework.web.socket.WebSocketSession;
@@ -45,6 +47,10 @@ public class RealtimeChatContextManager {
     // llm Connect Reset重试
     public final AtomicInteger llmConnectResetRetryCount = new AtomicInteger(0);
 
+    // userQuestion
+    @Getter
+    @Setter
+    private String userQuestion = "";
 
     // 当前聊天会话信息
     private String currentMessageId = String.valueOf(IdUtil.getSnowflake().nextId());
@@ -54,6 +60,7 @@ public class RealtimeChatContextManager {
     public StringBuffer currentResponseStringBuffer = new StringBuffer();
     // 开启新的一问一答 todo 需要停止之前全部的模型消息和缓存
     public void newChatMessage(){
+        userQuestion = "";
         currentMessageId = String.valueOf(IdUtil.getSnowflake().nextId());
         currentUserMessageTimestamp = System.currentTimeMillis();
         currentMessageDateTime = LocalDateTime.now();
@@ -107,6 +114,7 @@ public class RealtimeChatContextManager {
 
     @NonNull
     public RealtimeChatTextResponse getSSTResultResponse(@NonNull String sstResult){
+        setUserQuestion(sstResult);
         val response = new RealtimeChatTextResponse();
         response.setAgentId(agentId);
         response.setUserId(userId);
@@ -120,6 +128,7 @@ public class RealtimeChatContextManager {
 
     @NonNull
     public RealtimeChatTextResponse getUserTextResponse(@NonNull String userChatText){
+        setUserQuestion(userChatText);
         val response = new RealtimeChatTextResponse();
         response.setAgentId(agentId);
         response.setUserId(userId);

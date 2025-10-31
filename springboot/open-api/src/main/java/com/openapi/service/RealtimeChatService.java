@@ -2,9 +2,11 @@ package com.openapi.service;
 
 import com.alibaba.cloud.ai.dashscope.chat.DashScopeChatModel;
 import com.alibaba.dashscope.exception.NoApiKeyException;
+import com.alibaba.dashscope.exception.UploadFileException;
 import com.openapi.component.manager.RealtimeChatContextManager;
 import com.openapi.domain.exception.AppException;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.springframework.ai.chat.client.ChatClient;
 
 import java.io.IOException;
@@ -19,4 +21,6 @@ public interface RealtimeChatService {
     ChatClient initChatClient(@NotNull RealtimeChatContextManager chatContextManager, @NotNull DashScopeChatModel chatModel) throws AppException;
 
     void startTextChat(@NotNull String userQuestion, @NotNull RealtimeChatContextManager chatContextManager, @NotNull ChatClient chatClient) throws AppException, IOException;
+
+    void startVisionChat(@Nullable String imageBase64, @NotNull RealtimeChatContextManager chatContextManager, @NotNull ChatClient chatClient) throws NoApiKeyException, UploadFileException;
 }

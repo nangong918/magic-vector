@@ -29,6 +29,7 @@ import com.openapi.service.ChatMessageService;
 import com.openapi.service.PromptService;
 import com.openapi.service.RealtimeChatService;
 import com.openapi.service.UserService;
+import com.openapi.service.VisionChatService;
 import com.openapi.service.VisionToolService;
 import io.reactivex.BackpressureStrategy;
 import io.reactivex.Flowable;
@@ -36,10 +37,12 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.client.advisor.MessageChatMemoryAdvisor;
 import org.springframework.ai.chat.memory.ChatMemory;
 import org.springframework.ai.chat.messages.Message;
+import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import org.springframework.web.reactive.function.client.WebClientRequestException;
@@ -83,6 +86,7 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
     private final ThreadPoolConfig threadPoolConfig;
     private final PromptService promptService;
     private final VisionToolService visionToolService;
+    private final VisionChatService visionChatService;
 
     @Override
     public void startChat(@NotNull RealtimeChatContextManager chatContextManager, @NotNull ChatClient chatClient) throws InterruptedException, NoApiKeyException {
@@ -572,4 +576,205 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
         llmStreamCall(userQuestion, chatContextManager, chatClient);
     }
 
+    @Override
+    public void startVisionChat(@Nullable String imageBase64, @NotNull RealtimeChatContextManager chatContextManager, @NotNull ChatClient chatClient) throws NoApiKeyException, UploadFileException {
+        if (imageBase64 != null) {
+            String result = visionChatService.callWithFileBase64(imageBase64, chatContextManager.getUserQuestion());
+            visionResultLLMStreamCall(result, chatContextManager, chatClient);
+        }
+        else {
+            visionResultLLMStreamCall(null, chatContextManager, chatClient);
+        }
+    }
+
+    // todo 优化代码，将visionLLM和原先的llm相同逻辑合并管理
+    private void visionResultLLMStreamCall(@Nullable String result, @NotNull RealtimeChatContextManager chatContextManager, @NotNull ChatClient chatClient){
+        log.info("\n[vision LLM 开始] vision识别内容: {}", result);
+
+        String systemPrompt = chatConfig.getVisionLLMPrompt(result);
+
+        Prompt prompt = promptService.getChatPromptWhitSystemPrompt(
+                chatContextManager.getUserQuestion(),
+                systemPrompt
+        );
+        log.info("[vision LLM 提示词] {}", prompt);
+
+        if (prompt == null){
+            log.error("[vision LLM 提示词] 获取失败");
+            sendEOF(chatContextManager);
+            return;
+        }
+
+        Flux<String> responseFlux = chatClient.prompt(prompt)
+                .advisors(a -> a.param(ChatMemory.CONVERSATION_ID, chatContextManager.agentId))
+                .stream()
+                .content()
+                // 3500ms未响应则判定超时，进行重连尝试
+                .timeout(Duration.ofMillis(ModelConstant.LLM_CONNECT_TIMEOUT_MILLIS));
+
+        StringBuffer textBuffer = new StringBuffer();
+        AtomicInteger fragmentCount = new AtomicInteger(0);
+        AtomicLong startTime = new AtomicLong(System.currentTimeMillis());
+
+        // 设置Agent message Time
+        chatContextManager.currentAgentMessageTimestamp = System.currentTimeMillis();
+
+        // 发送开始标识
+        try {
+            Map<String, String> responseMap = new HashMap<>();
+            responseMap.put(RealtimeResponseDataTypeEnum.TYPE, RealtimeResponseDataTypeEnum.START_TTS.getType());
+            responseMap.put(RealtimeResponseDataTypeEnum.DATA, RealtimeResponseDataTypeEnum.START_TTS.getType());
+            String startResponse = JSON.toJSONString(responseMap);
+            chatContextManager.session.sendMessage(new TextMessage(startResponse));
+        } catch (IOException e) {
+            log.error("[websocket error] 发送开始消息异常", e);
+        }
+        // 订阅流式响应并处理
+        responseFlux.subscribe(
+
+                // 处理每个流片段
+                fragment -> {
+                    log.info("[LLM] 片段: {}", fragment);
+                    chatContextManager.isLLMFinished.set(false);
+                    int currentCount = fragmentCount.incrementAndGet();
+                    long fragmentTime = System.currentTimeMillis() - startTime.get();
+
+                    // 发送当前fragment消息
+                    chatContextManager.currentResponseStringBuffer.append(fragment);
+//                    RealtimeChatTextResponse agentFragmentResponse = chatContextManager.getCurrentResponse();
+                    RealtimeChatTextResponse agentFragmentResponse = chatContextManager.getCurrentFragmentResponse(fragment);
+
+                    // 发送消息给Client
+                    String agentFragmentResponseJson = JSON.toJSONString(agentFragmentResponse);
+                    Map<String, String> responseMap = new HashMap<>();
+                    responseMap.put(RealtimeResponseDataTypeEnum.TYPE, RealtimeResponseDataTypeEnum.TEXT_CHAT_RESPONSE.getType());
+                    responseMap.put(RealtimeResponseDataTypeEnum.DATA, agentFragmentResponseJson);
+                    String response = JSON.toJSONString(responseMap);
+                    try {
+                        chatContextManager.session.sendMessage(new TextMessage(response));
+                    } catch (IOException e) {
+                        log.error("[websocket error] 响应消息异常", e);
+                    }
+
+                    // 观察片段信息
+                    log.info("\n[LLM 片段 #{}, 耗时: {}ms]", currentCount, fragmentTime);
+                    log.info("[片段内容]: {}", fragment);
+                    log.info("[片段长度]: {} 字符", fragment.length());
+
+                    // 将新片段添加到缓冲区
+                    textBuffer.append(fragment);
+                    log.info("[缓冲区累计]: {} 字符", textBuffer.length());
+
+                    if (chatContextManager.isFirstTTS.compareAndSet(true, false)){
+                        // 首次tts
+                        log.info("[llm call] 首次tts");
+
+                        String complete1Sentence = optimizedSentenceDetector.detectAndExtractFirstSentence(textBuffer);
+                        if (StringUtils.hasText(complete1Sentence)){
+                            chatContextManager.sentenceQueue.add(complete1Sentence);
+                            threadPoolConfig.taskExecutor().execute(
+                                    () -> {
+                                        generateAudio(chatContextManager);
+                                    }
+                            );
+                        }
+                    }
+                    else {
+                        log.info("[llm call] 非首次tts");
+
+                        // 尝试从缓冲区提取2个完整句子并输出
+                        String complete2Sentence = optimizedSentenceDetector.detectAndExtractNeedSentences(textBuffer, 2);
+                        if (StringUtils.hasText(complete2Sentence)){
+                            chatContextManager.sentenceQueue.add(complete2Sentence);
+                            threadPoolConfig.taskExecutor().execute(
+                                    () -> {
+                                        generateAudio(chatContextManager);
+                                    }
+                            );
+                        }
+                    }
+
+                    // 显示当前缓冲区剩余内容
+                    if (!textBuffer.isEmpty()) {
+                        log.info("[缓冲区剩余]: {}", textBuffer);
+                    }
+
+                    // 更新最后活跃时间
+                    startTime.set(System.currentTimeMillis());
+                },
+
+                // 处理错误
+                error -> {
+                    long totalTime = System.currentTimeMillis() - startTime.get();
+                    log.error("\n[LLM 错误] 总耗时: {}ms, 片段总数: {}", totalTime, fragmentCount.get(), error);
+
+                    // (待优化A1)长时间未连接之后再次连接会发生Connect Reset目前采用的是递归的方式重试，可能造成堆栈溢出。考虑改为循环调用的方式
+                    // 尝试再次自我调用
+                    if (error instanceof WebClientRequestException || error instanceof TimeoutException){
+                        log.error("[LLM 错误] 尝试再次自我调用；错误信息, 错误类型: ", error);
+//                        // 再次自调用
+                        if (chatContextManager.llmConnectResetRetryCount.get() < ModelConstant.LLM_CONNECT_RESET_MAX_RETRY_COUNT){
+                            int attempt = chatContextManager.llmConnectResetRetryCount.incrementAndGet();
+                            log.warn("检测到连接重置，进行第{}次重试", attempt);
+
+                            visionResultLLMStreamCall(result, chatContextManager, chatClient);
+                        }
+                        else {
+                            log.error("[LLM 错误] 连接重置次数过多，已尝试{}次，放弃重试", chatContextManager.llmConnectResetRetryCount.get());
+                            chatContextManager.isLLMFinished.set(true);
+                        }
+                    }
+                    else {
+                        log.error("[LLM 错误] 错误信息, 并非WebClientRequestException问题", error);
+                        chatContextManager.isLLMFinished.set(true);
+                    }
+
+                    // 重置重连次数
+                    chatContextManager.llmConnectResetRetryCount.set(0);
+                },
+
+                // 处理完成
+                () -> {
+                    long totalTime = System.currentTimeMillis() - startTime.get();
+                    log.info("\n[LLM 结束] 总耗时: {}ms, 片段总数: {}, 总字符数: {}",
+                            totalTime, fragmentCount.get(), textBuffer.length());
+
+                    // 检查是否有剩余的
+                    String remainingText = optimizedSentenceDetector.extractAllCompleteSentences(textBuffer);
+                    if (StringUtils.hasText(remainingText)) {
+                        log.info("[LLM -> TTS 剩余]: {}", remainingText);
+                        chatContextManager.sentenceQueue.add(remainingText);
+                        threadPoolConfig.taskExecutor().execute(
+                                () -> {
+                                    generateAudio(chatContextManager);
+                                }
+                        );
+                    }
+
+                    // 存储消息到数据库
+                    val realtimeChatTextResponse = chatContextManager.getCurrentResponse();
+                    ChatMessageDo chatMessageDo = null;
+                    try {
+                        chatMessageDo = chatMessageConverter.realtimeChatTextResponseToChatMessageDo(
+                                realtimeChatTextResponse,
+                                realtimeChatTextResponse.getChatTime()
+                        );
+                        String messageId = chatMessageService.insertOne(chatMessageDo);
+                        log.info("成功将LLM插入消息，消息Id: {}", messageId);
+                    } catch (Exception e) {
+                        log.error("[LLM 错误] 存储消息异常", e);
+                    }
+
+                    // 处理缓冲区中可能剩余的不完整内容
+                    if (!textBuffer.isEmpty()) {
+                        log.info("[最终剩余未完成内容]: {}", textBuffer);
+                    }
+
+                    chatContextManager.isLLMFinished.set(true);
+                    // 发送结束符EOF（内部包含检查tts是否完成，不用担心）
+                    sendEOF(chatContextManager);
+                    log.info("[LLM 流式响应完全结束]");
+                }
+        );
+    }
 }

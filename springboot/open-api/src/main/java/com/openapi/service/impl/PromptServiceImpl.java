@@ -10,6 +10,7 @@ import org.springframework.ai.chat.messages.SystemMessage;
 import org.springframework.ai.chat.messages.UserMessage;
 import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -53,12 +54,12 @@ public class PromptServiceImpl implements PromptService {
      */
     @Nullable
     @Override
-    public Prompt getChatPromptWhitSystemPrompt(@NotNull String userMessage, @NotNull String systemPrompt) {
+    public Prompt getChatPromptWhitSystemPrompt(@NotNull String userMessage, String systemPrompt) {
         if (userMessage.isEmpty()){
             return null;
         }
         List<Message> messages = new ArrayList<>();
-        if (!systemPrompt.isEmpty()){
+        if (StringUtils.hasText(systemPrompt)){
             messages.add(new SystemMessage(systemPrompt));
         }
         messages.add(new UserMessage(userMessage));

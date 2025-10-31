@@ -1,6 +1,6 @@
 package com.openapi.service.impl;
 
-import com.openapi.domain.constant.realtime.RealtimeSystemEventEnum;
+import com.openapi.domain.constant.realtime.RealtimeSystemResponseEventEnum;
 import com.openapi.domain.dto.ws.response.SystemTextResponse;
 import com.openapi.domain.evnet.TakePhotoEvent;
 import com.openapi.domain.evnet.body.TakePhotoEventBody;
@@ -36,7 +36,7 @@ public class VisionToolServiceImpl implements VisionToolService {
                 agentId,
                 userId,
                 messageId,
-                RealtimeSystemEventEnum.UPLOAD_PHOTO.getCode()
+                RealtimeSystemResponseEventEnum.UPLOAD_PHOTO.getCode()
         );
 
         // 发送Spring Event

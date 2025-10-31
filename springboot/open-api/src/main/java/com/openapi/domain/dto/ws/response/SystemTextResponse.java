@@ -1,6 +1,6 @@
 package com.openapi.domain.dto.ws.response;
 
-import com.openapi.domain.constant.realtime.RealtimeSystemEventEnum;
+import com.openapi.domain.constant.realtime.RealtimeSystemResponseEventEnum;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -21,7 +21,7 @@ public class SystemTextResponse {
     public String messageId;
     /**
      * event
-     * @see com.openapi.domain.constant.realtime.RealtimeSystemEventEnum
+     * @see com.openapi.domain.constant.realtime.RealtimeSystemResponseEventEnum
      */
-    public String event = RealtimeSystemEventEnum.NULL.getCode();
+    public String event = RealtimeSystemResponseEventEnum.NULL.getCode();
 }

@@ -1,25 +1,26 @@
-package com.data.domain.constant.chat;
+package com.openapi.domain.constant.realtime;
 
 
-import androidx.annotation.NonNull;
+import lombok.NonNull;
 
 /**
  * @author 13225
  * @date 2025/10/29 14:32
  */
-public enum RealtimeSystemEventEnum {
+public enum RealtimeSystemRequestEventEnum {
     // null
     NULL("null", "NULL"),
     /**
      * 上传照片
-     * @see com.data.domain.dto.ws.reponse.SystemTextResponse
+     * @see com.openapi.domain.dto.ws.request.UploadPhotoRequest
      */
     UPLOAD_PHOTO("vision.upload.photo", "上传照片"),
     ;
 
+    public static final String EVENT_KET = "event";
     private final String code;
     private final String message;
-    RealtimeSystemEventEnum(String code, String message) {
+    RealtimeSystemRequestEventEnum(String code, String message) {
         this.code = code;
         this.message = message;
     }
@@ -31,8 +32,8 @@ public enum RealtimeSystemEventEnum {
     }
 
     @NonNull
-    public static RealtimeSystemEventEnum getByCode(String code) {
-        for (RealtimeSystemEventEnum value : RealtimeSystemEventEnum.values()) {
+    public static RealtimeSystemRequestEventEnum getByCode(String code) {
+        for (RealtimeSystemRequestEventEnum value : RealtimeSystemRequestEventEnum.values()) {
             if (value.getCode().equals(code)) {
                 return value;
             }
