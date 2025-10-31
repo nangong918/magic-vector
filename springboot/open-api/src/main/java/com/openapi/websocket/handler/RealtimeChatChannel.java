@@ -63,6 +63,10 @@ public class RealtimeChatChannel extends TextWebSocketHandler {
             // true 表示中断正在执行的任务
             chatFuture.cancel(true);
         }
+        if (visionChatFuture != null) {
+            // true 表示中断正在执行的任务
+            visionChatFuture.cancel(true);
+        }
         super.afterConnectionClosed(session, status);
     }
 
@@ -230,7 +234,7 @@ public class RealtimeChatChannel extends TextWebSocketHandler {
         }
     }
 
-
+    // todo 视觉对话测试
     @Override
     protected void handleBinaryMessage(@NotNull WebSocketSession session, BinaryMessage message) {
         log.info("[websocket] 收到二进制消息，长度：{}", message.getPayloadLength());
