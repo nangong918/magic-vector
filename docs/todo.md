@@ -88,6 +88,36 @@ VAD 实时打断 + 3D-Speaker声纹识别
 最后升级Flutter, 打通IOS用户
 spring的线程池升级为虚拟线程
 (*)spring ai -> golang + python + langchain
+(*)docker容器化
+
+Android User管理登录页面
+Android AgentList Fragment, Agent详情Activity，抽离Emoji和chat的逻辑，实现打开Emoji页面不需要先打开Chat页面，研究Java设计模式。
+Android本地缓存功能
+
+研究计算机网络：考虑websocket，mqtt性能瓶颈，学习不同网络协议
+
+Spring，Android多级缓存，解决频繁请求
+
+多线程重新设计：Spring：websocket的调用线程创建；Android：Camera和Audio获取的线程创建
+
+数据库性能分析与设计：Spring存储聊天记录
+
+数据结构与算法设计：Android端聊天记录多数据源插入排序方法，（嵌入式）Cpp的STL最快数据结构分析与设计
+
+内存，动态运行性能，内存泄漏分析：Android创建与开销，性能分析，内存泄漏检查。Spring内存分析，JSON等数据结构化反射性能开销。图片压缩，流传递。
+
+### lv4 学习型任务
+
+研究计算机网络
+研究Java设计模式
+多线程重新学习
+多级缓存设计
+数据库性能分析与设计
+数据结构与算法设计
+内存，动态运行性能，内存泄漏分析
+(*)计算机组成原理
+语言复习：Java，Cpp
+框架复习：Android，树莓派，Spring（非微服务，分布式，那部分理解就好）
 
 ## 已完成
 
