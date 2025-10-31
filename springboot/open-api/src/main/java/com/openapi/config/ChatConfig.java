@@ -6,6 +6,7 @@ import com.alibaba.dashscope.aigc.multimodalconversation.MultiModalConversation;
 import com.alibaba.dashscope.audio.asr.recognition.Recognition;
 import com.google.gson.Gson;
 import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
 import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.ai.chat.client.ChatClient;
@@ -54,7 +55,7 @@ public class ChatConfig {
     @Bean("visionPrompt")
     public com.google.gson.JsonObject getVisionPrompt() {
         // 读取JSON文件
-        String jsonFilePath = "ai/visionPrompt.json";
+        String jsonFilePath = "/ai/visionPrompt.json";
         try (InputStream inputStream = getClass().getResourceAsStream(jsonFilePath)) {
             if (inputStream == null){
                 log.warn("JSON文件不存在: {}", jsonFilePath);
@@ -74,7 +75,7 @@ public class ChatConfig {
 
     public String getVisionLLMPrompt(String visionResult) {
         // 读取JSON文件
-        String jsonFilePath = "ai/visionLLMPrompt.json";
+        String jsonFilePath = "/ai/visionLLMPrompt.json";
         try (InputStream inputStream = getClass().getResourceAsStream(jsonFilePath)) {
             if (inputStream == null){
                 log.warn("JSON文件不存在: {}", jsonFilePath);
@@ -105,7 +106,7 @@ public class ChatConfig {
 
     public String getTextFunctionCallPrompt(String param) {
         // 读取JSON文件
-        String jsonFilePath = "ai/textPrompt.json";
+        String jsonFilePath = "/ai/textPrompt.json";
         try (InputStream inputStream = getClass().getResourceAsStream(jsonFilePath)) {
             if (inputStream == null){
                 log.warn("JSON文件不存在: {}", jsonFilePath);
@@ -134,5 +135,29 @@ public class ChatConfig {
             log.error("JSON文件解析错误", e);
         }
         return null;
+    }
+
+    // 文件读取测试
+    public static void main(String[] args) {
+        String jsonFilePath = "/ai/visionPrompt.json";
+        try (InputStream inputStream = ChatConfig.class.getResourceAsStream(jsonFilePath)) {
+            if (inputStream == null){
+                System.err.println("JSON文件不存在");
+                return;
+            }
+            try (InputStreamReader reader = new InputStreamReader(inputStream, StandardCharsets.UTF_8)) {
+                // 使用Gson解析JSON
+                Gson gson = new Gson();
+                JsonObject jsonObject = gson.fromJson(reader, JsonObject.class);
+
+                // 获取systemPrompt字段
+                String systemPrompt = jsonObject.get("systemPrompt").getAsString();
+
+                System.out.println("systemPrompt: " + systemPrompt);
+                System.out.println("提示词长度: " + systemPrompt.length() + "字");
+            }
+        } catch (Exception e) {
+            System.err.println(e.getMessage());
+        }
     }
 }

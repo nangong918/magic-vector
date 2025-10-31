@@ -15,6 +15,8 @@ YOLOv8实现视频流目标活动检测调参 + 物品阈值增加，person阈�
 
 解决Test代码占用正式性能的问题, Spring通过配置参数进行懒加载
 
+Android 使用DiffUtil优化Adapter性能
+
 当前的agent提示词参数是通过每次提交实现，后续需要改为专门的提示词function call，在调用mcp之前先去调用获取提示词方法
 
 ## 待解决
