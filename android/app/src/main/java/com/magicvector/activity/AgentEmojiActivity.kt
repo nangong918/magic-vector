@@ -366,6 +366,8 @@ class AgentEmojiActivity : BaseAppCompatVmActivity<ActivityAgentEmojiBinding, Ag
         chatMessageHandler.initVadCall(this@AgentEmojiActivity)
         chatMessageHandler.currentIsEmoji.set(true)
         chatMessageHandler.setCurrentVADStateChange(this)
+        // 系统回调
+        chatMessageHandler.setHandleSystemResponse(this)
     }
 
     // 暂停
@@ -375,6 +377,8 @@ class AgentEmojiActivity : BaseAppCompatVmActivity<ActivityAgentEmojiBinding, Ag
         // 关闭VAD录音
         chatMessageHandler.stopVadCall()
         chatMessageHandler.currentIsEmoji.set(false)
+        // 取消系统回调
+        chatMessageHandler.setHandleSystemResponse(null)
     }
 
     // 销毁

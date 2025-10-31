@@ -31,6 +31,7 @@ import com.google.gson.reflect.TypeToken
 import com.magicvector.MainApplication
 import com.magicvector.callback.OnVadChatStateChange
 import com.magicvector.callback.VADCallTextCallback
+import com.magicvector.manager.mcp.HandleSystemResponse
 import com.magicvector.manager.vad.VadDetectionCallback
 import com.magicvector.manager.vad.VadSileroManager
 import com.magicvector.utils.chat.RealtimeChatWsClient
@@ -617,6 +618,11 @@ class ChatMessageHandler {
         }
     }
 
+    private var handleSystemResponse: HandleSystemResponse? = null
+    fun setHandleSystemResponse(handleSystemResponse: HandleSystemResponse?) {
+        this.handleSystemResponse = handleSystemResponse
+    }
+
     private fun handleSystemMessage(data: String){
         if (data.isEmpty()){
             Log.w(TAG, "handleSystemMessage: data is empty")
@@ -627,6 +633,13 @@ class ChatMessageHandler {
             if (map[RealtimeSystemResponseEventEnum.EVENT_KET] == null) {
                 Log.w(TAG, "handleSystemMessage: event is null")
                 return
+            }
+            if (handleSystemResponse != null){
+                Log.d(TAG, "handleSystemMessage: 正在处理系统消息:: system message: $data")
+                handleSystemResponse!!.handleSystemResponse(map)
+            }
+            else {
+                Log.w(TAG, "handleSystemMessage: 无法处理系统消息，因为：handleSystemResponse is null")
             }
         } catch (e: Exception) {
             Log.e(TAG, "handleSystemMessage: parse error", e)
