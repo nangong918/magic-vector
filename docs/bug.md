@@ -117,6 +117,7 @@ Caused by: java.lang.ClassNotFoundException: com.github.victools.jsonschema.gene
 </dependency>
 ```
 
+文本理解,没有调用function call: 经过测试, 问题不在代码, 而是傻逼qwen-flash很蠢, 应该使用qwen-plus
 
 ## 暂时未再次复现bug
 messageId主键插入异常: 重复主键Id

@@ -11,12 +11,18 @@ import com.google.gson.JsonObject;
 import com.openapi.MainApplication;
 import com.openapi.config.ChatConfig;
 import com.openapi.domain.constant.ModelConstant;
+import com.openapi.service.PromptService;
 import com.openapi.service.VisionChatService;
 import com.openapi.service.VisionToolService;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.Test;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.memory.ChatMemory;
+import org.springframework.ai.chat.prompt.ChatOptions;
+import org.springframework.ai.chat.prompt.Prompt;
+import org.springframework.ai.model.tool.ToolCallingChatOptions;
+import org.springframework.ai.support.ToolCallbacks;
+import org.springframework.ai.tool.ToolCallback;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import reactor.core.publisher.Flux;
@@ -30,6 +36,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Duration;
 import java.util.Base64;
+import java.util.Map;
 
 /**
  * Qwen VL 视觉理解测试
@@ -149,8 +156,11 @@ public class VLTests {
         }
     }
 
+    @Autowired
+    private DashScopeChatModel chatModel;
+
     @Test
-    public void chatClientFunctionCallTest(@Autowired DashScopeChatModel chatModel) {
+    public void chatClientFunctionCallTest() {
         ChatClient chatClient = ChatClient.builder(chatModel)
                 .defaultSystem("你是我的智能助手")
                 .build();
@@ -164,6 +174,136 @@ public class VLTests {
                 .content();
 
         log.info("result: {}", result);
+    }
+
+    private String getCurrentContextParam(){
+        Map<String, String> param = Map.of(
+                "userId", "test_user",
+                "agentId", "1234567890",
+                "messageId", "1097654321"/*,
+                "timestamp", currentMessageDateTime.toString(),
+                "userQuestion", userQuestion*/
+        );
+        return JSON.toJSONString(param);
+    }
+
+    @Autowired
+    private PromptService promptService;
+
+    @Test
+    public void functionCallTest2() {
+        ChatClient chatClient = ChatClient.builder(chatModel)
+                .defaultSystem("你是我的智能助理ciallo，可以帮我管理我的机械设备")
+                .build();
+
+        String sentence1 = "你可以听到我说话吗？";
+
+//        String result1 = chatClient.prompt()
+//                .user(sentence1)
+//                .tools(visionToolService)
+//                .call()
+//                .content();
+//
+//        /*
+//         result1: 当然可以听到，我在这里为你提供帮助。你有什么需要管理的机械设备问题吗？
+//         */
+//        log.info("result1: {}", result1);
+
+        String sentence2 = "你可以听到我说话吗？";
+        String systemPrompt = chatConfig.getTextFunctionCallPrompt(getCurrentContextParam());
+
+        log.info("systemPrompt: {}", systemPrompt);
+
+        Prompt prompt2 = promptService.getChatPromptWhitSystemPrompt(sentence2, systemPrompt);
+        assert prompt2 != null;
+//        String result2 = chatClient.prompt(prompt2)
+//                .tools(visionToolService)
+//                .call()
+//                .content();
+//        /*
+//         result2: 我能够接收并理解您的语音输入，但目前无法直接“听到”您说话。如果您有任何问题或需要帮助，请随时告诉我，我会尽力协助您！
+//         */
+//        log.info("result2: {}", result2);
+
+        /*
+         result3: 我可以听到你说的话。有什么我可以帮助你的吗？
+         */
+//        String result3 = chatClient.prompt()
+//                .system(systemPrompt)
+//                .user(sentence2)
+//                .tools(visionToolService)
+//                .call()
+//                .content();
+//        log.info("result3: {}", result3);
+
+        String sentence4 = "你可以看到我吗？";
+        String result4 = chatClient.prompt()
+                .system(systemPrompt)
+                .user(sentence4)
+                .tools(visionToolService)
+                .call()
+                .content();
+        /*
+         result4: 我来看看，请稍等。
+         */
+        log.info("result4: {}", result4);
+
+        Prompt prompt3 = promptService.getChatPromptWhitSystemPrompt(sentence4, systemPrompt);
+        assert prompt3 != null;
+
+        ToolCallback[] toolCallbacks = ToolCallbacks.from(visionToolService);
+        ChatOptions chatOptions = ToolCallingChatOptions.builder()
+                .toolCallbacks(toolCallbacks)
+                .build();
+        String result5 = chatClient.prompt(prompt3)
+                .options(chatOptions)
+//                .tools(visionToolService)
+                .call()
+                .content();
+        /*
+         result4: 我已经成功获取了当前摄像头的画面。你现在的样子我可以看到啦！有什么我可以帮你的吗？
+         */
+        log.info("result5: {}", result5);
+
+        try {
+            Thread.sleep(5_000);
+        } catch (Exception e){
+            log.error("e: ", e);
+        }
+    }
+
+    @Test
+    public void visionCallTest(){
+        ChatClient chatClient = ChatClient.builder(chatModel)
+                .defaultSystem("你是我的智能助理ciallo，可以帮我管理我的机械设备")
+                .build();
+
+        String sentence4 = "你可以看到我吗？";
+
+        String systemPrompt = "我提供你一些参数，是可以用于Function Call调用的参数。是否调用要根据语境意图判断。如果是视觉任内务就调用[调用请求调用前端摄像头]方法，并且在调用此方法之后你只能回复：“我来看看请稍等”。可以用于FunctionCall参数: <{\"messageId\":\"1097654321\",\"userId\":\"test_user\",\"agentId\":\"1234567890\"}>";
+
+        Prompt prompt3 = promptService.getChatPromptWhitSystemPrompt(sentence4, systemPrompt);
+        assert prompt3 != null;
+
+        ToolCallback[] toolCallbacks = ToolCallbacks.from(visionToolService);
+        ChatOptions chatOptions = ToolCallingChatOptions.builder()
+                .toolCallbacks(toolCallbacks)
+                .build();
+        String result5 = chatClient.prompt(prompt3)
+                .options(chatOptions)
+//                .tools(visionToolService)
+                .call()
+                .content();
+        /*
+         result4: 我已经成功获取了当前摄像头的画面。你现在的样子我可以看到啦！有什么我可以帮你的吗？
+         */
+        log.info("result5: {}", result5);
+
+        try {
+            Thread.sleep(5_000);
+        } catch (Exception e){
+            log.error("e: ", e);
+        }
     }
 
 }
