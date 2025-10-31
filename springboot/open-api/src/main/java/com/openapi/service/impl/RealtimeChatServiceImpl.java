@@ -193,8 +193,21 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
     private void llmStreamCall(String sentence, @NotNull RealtimeChatContextManager chatContextManager, ChatClient chatClient) /*throws WebClientRequestException*/ {
         log.info("\n[LLM 开始] 输入内容: {}", sentence);
 
-        Flux<String> responseFlux = chatClient.prompt()
-                .user(sentence)
+        String param = chatContextManager.getCurrentContextParam();
+        String systemPrompt = chatConfig.getTextFunctionCallPrompt(param);
+        Prompt prompt = promptService.getChatPromptWhitSystemPrompt(
+                sentence,
+                systemPrompt
+        );
+
+        if (prompt == null){
+            log.error("[LLM 提示词] 获取失败");
+            sendEOF(chatContextManager);
+            return;
+        }
+
+        Flux<String> responseFlux = chatClient.prompt(prompt)
+//                .user(sentence)
                 .advisors(a -> a.param(ChatMemory.CONVERSATION_ID, chatContextManager.agentId))
                 // 添加工具Function Call; MCP
                 .tools(visionToolService)

@@ -1,9 +1,9 @@
 package com.data.domain.dto.ws.request;
 
-import com.data.domain.constant.chat.RealtimeSystemResponseEventEnum;
+import com.data.domain.constant.chat.RealtimeSystemRequestEventEnum;
 
 public class UploadPhotoRequest {
-    public String event = RealtimeSystemResponseEventEnum.UPLOAD_PHOTO.getCode();
+    public String event = RealtimeSystemRequestEventEnum.UPLOAD_PHOTO.getCode();
     public String agentId;
     public String userId;
     public String messageId;

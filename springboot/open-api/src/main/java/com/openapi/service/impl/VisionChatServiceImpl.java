@@ -49,7 +49,7 @@ public class VisionChatServiceImpl implements VisionChatService {
                 )).build();
 
         String systemPrompt = Optional.ofNullable(chatConfig.getVisionPrompt())
-                .map(it -> it.get("systemPrompt"))
+                .map(it -> it.get(ChatConfig.SYSTEM_PROMPT_KEY))
                 .map(JsonElement::getAsString)
                 .orElse("");
         MultiModalMessage systemMessage = MultiModalMessage.builder()

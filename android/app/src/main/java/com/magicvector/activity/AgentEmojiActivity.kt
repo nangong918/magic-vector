@@ -4,6 +4,7 @@ import android.annotation.SuppressLint
 import android.os.Bundle
 import android.util.Log
 import androidx.lifecycle.LifecycleOwner
+import com.core.baseutil.ui.ToastUtils
 import com.data.domain.constant.BaseConstant
 import com.data.domain.constant.VadChatState
 import com.data.domain.constant.chat.RealtimeRequestDataTypeEnum
@@ -311,6 +312,7 @@ class AgentEmojiActivity : BaseAppCompatVmActivity<ActivityAgentEmojiBinding, Ag
                 )
 
                 chatMessageHandler.realtimeChatWsClient?.sendMessage(dataMap)
+                ToastUtils.showToastActivity(this, getString(R.string.fetch_photo_fail))
             }
             else {
                 // bitmap -> base64
@@ -332,6 +334,7 @@ class AgentEmojiActivity : BaseAppCompatVmActivity<ActivityAgentEmojiBinding, Ag
                 )
 
                 chatMessageHandler.realtimeChatWsClient?.sendMessage(dataMap)
+                ToastUtils.showToastActivity(this, getString(R.string.fetch_photo_success))
             }
         }
     }

@@ -1,6 +1,7 @@
 package com.openapi.component.manager;
 
 import cn.hutool.core.util.IdUtil;
+import com.alibaba.fastjson.JSON;
 import com.openapi.domain.constant.RoleTypeEnum;
 import com.openapi.domain.dto.ws.response.RealtimeChatTextResponse;
 import com.openapi.utils.DateUtils;
@@ -12,6 +13,7 @@ import lombok.val;
 import org.springframework.web.socket.WebSocketSession;
 
 import java.time.LocalDateTime;
+import java.util.Map;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -69,6 +71,17 @@ public class RealtimeChatContextManager {
         llmConnectResetRetryCount.set(0);
         lastTTSTimestamp = 0L;
         log.info("开启新的message，MessageId是：{}", currentMessageId);
+    }
+
+    public String getCurrentContextParam(){
+        Map<String, String> param = Map.of(
+                "userId", userId,
+                "agentId", agentId,
+                "messageId", currentMessageId/*,
+                "timestamp", currentMessageDateTime.toString(),
+                "userQuestion", userQuestion*/
+        );
+        return JSON.toJSONString(param);
     }
 
     @NonNull

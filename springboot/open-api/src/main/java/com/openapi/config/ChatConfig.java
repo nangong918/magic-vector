@@ -49,6 +49,8 @@ public class ChatConfig {
         return new MultiModalConversation();
     }
 
+    public static final String SYSTEM_PROMPT_KEY = "systemPrompt";
+
     @Bean("visionPrompt")
     public com.google.gson.JsonObject getVisionPrompt() {
         // 读取JSON文件
@@ -82,7 +84,7 @@ public class ChatConfig {
                 // 使用Gson解析JSON
                 Gson gson = new Gson();
                 String systemPrompt = Optional.ofNullable(gson.fromJson(reader, com.google.gson.JsonObject.class))
-                        .map(it -> it.get("systemPrompt"))
+                        .map(it -> it.get(SYSTEM_PROMPT_KEY))
                         .map(JsonElement::getAsString)
                         .orElse("");
                 if (systemPrompt.isEmpty()) {
@@ -101,4 +103,36 @@ public class ChatConfig {
         return null;
     }
 
+    public String getTextFunctionCallPrompt(String param) {
+        // 读取JSON文件
+        String jsonFilePath = "ai/textPrompt.json";
+        try (InputStream inputStream = getClass().getResourceAsStream(jsonFilePath)) {
+            if (inputStream == null){
+                log.warn("JSON文件不存在: {}", jsonFilePath);
+                return null;
+            }
+            try (InputStreamReader reader = new InputStreamReader(inputStream, StandardCharsets.UTF_8)) {
+                // 使用Gson解析JSON
+                Gson gson = new Gson();
+                String systemPrompt = Optional.ofNullable(gson.fromJson(reader, com.google.gson.JsonObject.class))
+                        .map(it -> it.get(SYSTEM_PROMPT_KEY))
+                        .map(JsonElement::getAsString)
+                        .orElse("");
+
+                if (systemPrompt.isEmpty()) {
+                    log.warn("textPrompt.json文件内容为空");
+                    return systemPrompt + "visionAgent识别结果: <前端获取照片失败，无识别结果>";
+                }
+                else if (!StringUtils.hasText(param)) {
+                    log.warn("param为空");
+                }
+                return systemPrompt + "可以用于FunctionCall参数: <" + param + ">";
+            } catch (Exception e) {
+                log.error("JSON文件解析错误", e);
+            }
+        } catch (Exception e){
+            log.error("JSON文件解析错误", e);
+        }
+        return null;
+    }
 }
