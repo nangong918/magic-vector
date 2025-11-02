@@ -10,12 +10,12 @@ Spring 项目部署在Docker -> 上传到阿里云服务器 todo Docker，Nginx 
 
 先暂时不开嵌入式模块, AI模块制作完成就好好学习计算机理论 + SpringBoot技术 + Android技术(包括Jetpack Compose) -> 优化代码, 提高系统的鲁棒性
 
-研究树莓派
+Android端优化, 暂时不开启树莓派 -> 研究树莓派
 
 ### lv0(当前任务)
 实现websocket进行单个图片视觉，后续升级为Http上图片组和视频流
 
-Android端优化, 暂时不开启树莓派
+研究降低token的方法
 
 调用阿里百炼视觉模型
 视频流传输考虑使用FFmpeg进行压缩, 节省带宽和模型token
