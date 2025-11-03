@@ -100,19 +100,19 @@ public class ChatController {
      */
     @PostMapping("/vision/upload/img")
     public BaseResponse<String> uploadVisionImg(
-            @RequestParam("img") MultipartFile img,
+            @RequestParam("image") MultipartFile image,
             @RequestParam("agentId") String agentId,
             @RequestParam("userId") String userId,
             @RequestParam("messageId") String messageId
     ){
-        if (img == null || img.isEmpty() || !StringUtils.hasText(agentId) || !StringUtils.hasText(userId) || !StringUtils.hasText(messageId)){
+        if (image == null || image.isEmpty() || !StringUtils.hasText(agentId) || !StringUtils.hasText(userId) || !StringUtils.hasText(messageId)){
             return BaseResponse.LogBackError(CommonExceptions.PARAM_ERROR);
         }
 
         // MultipartFile -> Base64
         String base64Str;
         try {
-            base64Str = FileUtils.multipartFileToBase64(img);
+            base64Str = FileUtils.multipartFileToBase64(image);
         } catch (Exception e) {
             log.error("提供给前端上传视觉图片的接口：MultipartFile -> base64Str error: ", e);
             return BaseResponse.LogBackError(CommonExceptions.MULTIPART_FILE_TO_BASE64_ERROR);

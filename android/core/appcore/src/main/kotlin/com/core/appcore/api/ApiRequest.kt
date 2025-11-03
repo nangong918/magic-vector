@@ -90,4 +90,20 @@ interface ApiRequest {
         // max 50
         @Query("limit") limit: Int,
     ): BaseResponse<ChatMessageResponse>
+
+    /**
+     * http上传image的vision任务
+     * @param image         image
+     * @param agentId       agentId
+     * @param userId        userId
+     * @param messageId     messageId
+     */
+    @Multipart
+    @POST("/vision/upload/img")
+    suspend fun uploadImageVision(
+        @Part image: MultipartBody.Part,
+        @Part("agentId") agentId: RequestBody,
+        @Part("userId") userId: RequestBody,
+        @Part("messageId") messageId: RequestBody,
+    ): BaseResponse<String>
 }

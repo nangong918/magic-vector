@@ -146,4 +146,34 @@ open class ApiRequestImpl(apiRequest: ApiRequest) : BaseApiRequestImpl() {
             throwableCallback = throwableCallback
         )
     }
+
+    //    @Multipart
+    //    @POST("/vision/upload/img")
+    //    suspend fun uploadImageVision(
+    //        @Part image: MultipartBody.Part,
+    //        @Part("agentId") agentId: RequestBody,
+    //        @Part("userId") userId: RequestBody,
+    //        @Part("messageId") messageId: RequestBody,
+    //    ): BaseResponse<String>
+    fun uploadImageVision(
+        image: MultipartBody.Part,
+        agentId: RequestBody,
+        userId: RequestBody,
+        messageId: RequestBody,
+        onSuccessCallback: OnSuccessCallback<BaseResponse<String>>?,
+        throwableCallback: OnThrowableCallback?
+    ){
+        sendRequestCallback(
+            apiCall = {
+                mApi.uploadImageVision(
+                    image,
+                    agentId,
+                    userId,
+                    messageId
+                )
+            },
+            successCallback = onSuccessCallback,
+            throwableCallback = throwableCallback
+        )
+    }
 }

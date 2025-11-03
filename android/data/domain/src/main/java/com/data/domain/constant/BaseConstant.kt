@@ -1,6 +1,8 @@
 package com.data.domain.constant
 
 import android.Manifest
+import com.data.domain.constant.chat.VisionTypeEnum
+import com.data.domain.constant.chat.VisionUploadTypeEnum
 
 class BaseConstant {
 
@@ -83,5 +85,11 @@ class BaseConstant {
 
         const val PERSON_THRESHOLD_VALUE = 0.10f
         const val OBJECT_THRESHOLD_VALUE = 0.40f
+    }
+
+    object VISION {
+        // vision上传方法: http, ws-fragment, rtmp
+        val UPLOAD_METHOD = VisionUploadTypeEnum.HTTP
+        val VISION_TYPE = VisionTypeEnum.IMAGE
     }
 }
