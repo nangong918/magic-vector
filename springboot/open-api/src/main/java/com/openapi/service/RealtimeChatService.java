@@ -16,11 +16,11 @@ import java.io.IOException;
  * @date 2025/10/16 10:08
  */
 public interface RealtimeChatService {
-    void startChat(@NotNull RealtimeChatContextManager chatContextManager, @NotNull ChatClient chatClient) throws InterruptedException, NoApiKeyException;
+    void startChat(@NotNull RealtimeChatContextManager chatContextManager) throws InterruptedException, NoApiKeyException;
 
     ChatClient initChatClient(@NotNull RealtimeChatContextManager chatContextManager, @NotNull DashScopeChatModel chatModel) throws AppException;
 
-    void startTextChat(@NotNull String userQuestion, @NotNull RealtimeChatContextManager chatContextManager, @NotNull ChatClient chatClient) throws AppException, IOException;
+    void startTextChat(@NotNull String userQuestion, @NotNull RealtimeChatContextManager chatContextManager) throws AppException, IOException;
 
-    void startVisionChat(@Nullable String imageBase64, @NotNull RealtimeChatContextManager chatContextManager, @NotNull ChatClient chatClient) throws NoApiKeyException, UploadFileException;
+    void startVisionChat(@Nullable String imageBase64, @NotNull RealtimeChatContextManager chatContextManager) throws NoApiKeyException, UploadFileException;
 }

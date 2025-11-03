@@ -89,8 +89,13 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
     private final VisionChatService visionChatService;
 
     @Override
-    public void startChat(@NotNull RealtimeChatContextManager chatContextManager, @NotNull ChatClient chatClient) throws InterruptedException, NoApiKeyException {
+    public void startChat(@NotNull RealtimeChatContextManager chatContextManager) throws InterruptedException, NoApiKeyException {
         log.info("[startChat] 开始将音频流数据填充缓冲区");
+
+        var chatClient = chatContextManager.chatClient;
+        if (chatClient == null){
+            throw new AppException(AgentExceptions.AGENT_NOT_EXIST);
+        }
 
         /// audioBytes
         ByteArrayOutputStream out = new ByteArrayOutputStream();
@@ -142,9 +147,8 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
             chatContextManager.session.sendMessage(new TextMessage(startResponse));
             /// llm
             if (StringUtils.hasText(result)) {
-                llmStreamCall(result, chatContextManager, chatClient);
+                llmStreamCall(result, chatContextManager);
             }
-
         });
     }
 
@@ -190,8 +194,13 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
                 );
     }
 
-    private void llmStreamCall(String sentence, @NotNull RealtimeChatContextManager chatContextManager, ChatClient chatClient) /*throws WebClientRequestException*/ {
+    private void llmStreamCall(String sentence, @NotNull RealtimeChatContextManager chatContextManager) /*throws WebClientRequestException*/ {
         log.info("\n[LLM 开始] 输入内容: {}", sentence);
+
+        var chatClient = chatContextManager.chatClient;
+        if (chatClient == null){
+            throw new AppException(AgentExceptions.AGENT_NOT_EXIST);
+        }
 
         String param = chatContextManager.getCurrentContextParam();
         String systemPrompt = chatConfig.getTextFunctionCallPrompt(param);
@@ -321,7 +330,7 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
                             int attempt = chatContextManager.llmConnectResetRetryCount.incrementAndGet();
                             log.warn("检测到连接重置，进行第{}次重试", attempt);
 
-                            llmStreamCall(sentence, chatContextManager, chatClient);
+                            llmStreamCall(sentence, chatContextManager);
                         }
                         else {
                             log.error("[LLM 错误] 连接重置次数过多，已尝试{}次，放弃重试", chatContextManager.llmConnectResetRetryCount.get());
@@ -561,7 +570,7 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
 
 
     @Override
-    public void startTextChat(@NotNull String userQuestion, @NotNull RealtimeChatContextManager chatContextManager, @NotNull ChatClient chatClient) throws AppException, IOException {
+    public void startTextChat(@NotNull String userQuestion, @NotNull RealtimeChatContextManager chatContextManager) throws AppException, IOException {
         log.info("[websocket] 开始文本聊天：userQuestion={}", userQuestion);
 
         // 前端传递过来再传递回去是因为需要分配messageId
@@ -586,23 +595,28 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
         String startResponse = JSON.toJSONString(responseMap);
         chatContextManager.session.sendMessage(new TextMessage(startResponse));
 
-        llmStreamCall(userQuestion, chatContextManager, chatClient);
+        llmStreamCall(userQuestion, chatContextManager);
     }
 
     @Override
-    public void startVisionChat(@Nullable String imageBase64, @NotNull RealtimeChatContextManager chatContextManager, @NotNull ChatClient chatClient) throws NoApiKeyException, UploadFileException {
+    public void startVisionChat(@Nullable String imageBase64, @NotNull RealtimeChatContextManager chatContextManager) throws NoApiKeyException, UploadFileException {
         if (imageBase64 == null || imageBase64.isEmpty()) {
-            visionResultLLMStreamCall(null, chatContextManager, chatClient);
+            visionResultLLMStreamCall(null, chatContextManager);
         }
         else {
             String result = visionChatService.callWithFileBase64(imageBase64, chatContextManager.getUserQuestion());
-            visionResultLLMStreamCall(result, chatContextManager, chatClient);
+            visionResultLLMStreamCall(result, chatContextManager);
         }
     }
 
     // todo 优化代码，将visionLLM和原先的llm相同逻辑合并管理
-    private void visionResultLLMStreamCall(@Nullable String result, @NotNull RealtimeChatContextManager chatContextManager, @NotNull ChatClient chatClient){
+    private void visionResultLLMStreamCall(@Nullable String result, @NotNull RealtimeChatContextManager chatContextManager){
         log.info("\n[vision LLM 开始] vision识别内容: {}", result);
+
+        var chatClient = chatContextManager.chatClient;
+        if (chatClient == null){
+            throw new AppException(AgentExceptions.AGENT_NOT_EXIST);
+        }
 
         String systemPrompt = chatConfig.getVisionLLMPrompt(result);
 
@@ -730,7 +744,7 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
                             int attempt = chatContextManager.llmConnectResetRetryCount.incrementAndGet();
                             log.warn("检测到连接重置，进行第{}次重试", attempt);
 
-                            visionResultLLMStreamCall(result, chatContextManager, chatClient);
+                            visionResultLLMStreamCall(result, chatContextManager);
                         }
                         else {
                             log.error("[LLM 错误] 连接重置次数过多，已尝试{}次，放弃重试", chatContextManager.llmConnectResetRetryCount.get());

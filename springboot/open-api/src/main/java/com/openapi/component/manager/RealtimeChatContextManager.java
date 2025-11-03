@@ -10,14 +10,14 @@ import lombok.NonNull;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
+import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.web.socket.WebSocketSession;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Map;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -29,6 +29,24 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 @Slf4j
 public class RealtimeChatContextManager {
+    /// chatClient      (chatModel是单例，但是chatClient需要集成Agent的记忆，以及每个chatClient的设定不同，所以不是单例)
+    public ChatClient chatClient;
+
+    /// 会话任务
+    private volatile Future<?> chatFuture;
+    private volatile Future<?> visionChatFuture;
+    public void setChatFuture(Future<?> chatFuture){
+        if (chatFuture != null){
+            chatFuture.cancel(true);
+        }
+        this.chatFuture = chatFuture;
+    }
+    public void setVisionChatFuture(Future<?> visionChatFuture){
+        if (visionChatFuture != null){
+            visionChatFuture.cancel(true);
+        }
+        this.visionChatFuture = visionChatFuture;
+    }
 
     /// 音频数据
     public final Queue<byte[]> requestAudioBuffer = new ConcurrentLinkedQueue<>();
@@ -70,18 +88,48 @@ public class RealtimeChatContextManager {
     public long currentAgentMessageTimestamp = System.currentTimeMillis();
     public LocalDateTime currentMessageDateTime = LocalDateTime.now();
     public StringBuffer currentResponseStringBuffer = new StringBuffer();
-    // 开启新的一问一答 todo 需要停止之前全部的模型消息和缓存
+
+    // 开启新的一问一答
     public void newChatMessage(){
-        userQuestion = "";
+        // 取消正在执行的任务
+        cancelCurrentTask();
+
+        // 填充新的会话数据
         currentMessageId = String.valueOf(IdUtil.getSnowflake().nextId());
         currentUserMessageTimestamp = System.currentTimeMillis();
         currentMessageDateTime = LocalDateTime.now();
-        currentResponseStringBuffer = new StringBuffer();
-        isFirstTTS.set(true);
-        llmConnectResetRetryCount.set(0);
-        lastTTSTimestamp = 0L;
-        imageBase64 = new StringBuffer();
+
         log.info("开启新的message，MessageId是：{}", currentMessageId);
+    }
+
+    // 取消当前的任务
+    public void cancelCurrentTask(){
+        // 取消之前的任务
+        if (chatFuture != null) {
+            // true 表示中断正在执行
+            chatFuture.cancel(true);
+        }
+        if (visionChatFuture != null) {
+            // true 表示中断正在执行
+            visionChatFuture.cancel(true);
+        }
+        chatFuture = null;
+        visionChatFuture = null;
+
+        // 清空缓存
+        requestAudioBuffer.clear();
+        sentenceQueue.clear();
+        imageBase64 = new StringBuffer();
+        userQuestion = "";
+        currentResponseStringBuffer = new StringBuffer();
+
+        // 重置状态位
+        stopRecording.set(true);
+        isTTSFinished.set(true);
+        isLLMFinished.set(false);
+        isFirstTTS.set(true);
+        lastTTSTimestamp = 0L;
+        llmConnectResetRetryCount.set(0);
     }
 
     public String getCurrentContextParam(){
@@ -162,8 +210,5 @@ public class RealtimeChatContextManager {
         response.setTimestamp(currentUserMessageTimestamp);
         response.setChatTime(getCurrentMessageTimeStr());
         return response;
-    }
-
-    public void clear() {
     }
 }

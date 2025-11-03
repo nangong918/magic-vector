@@ -17,9 +17,10 @@ AI Emoji Activity （表情系统Mcp，心情系统）
 
 集成minio, 反向代理
 
-联网mcp
+联网MCP
 
-chat rag(向量)
+非结构化chat任务 RAG(向量)
+结构化任务Mysql，Mongodb，Elastic Search，Neo4j
 
 设计一个优先级list判断功能，eye会根据优先级来判断
 

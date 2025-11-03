@@ -334,11 +334,6 @@ class AgentEmojiActivity : BaseAppCompatVmActivity<ActivityAgentEmojiBinding, Ag
                 ToastUtils.showToastActivity(this, getString(R.string.fetch_photo_fail))
             }
             else {
-                // bitmap -> base64
-                val base64Str = VisionMcpManager.bitmapToBase64(
-                    bitmap = bitmap
-                )
-
                 // 上传的方式
                 val visonUploadType = BaseConstant.VISION.UPLOAD_METHOD
 
@@ -358,7 +353,7 @@ class AgentEmojiActivity : BaseAppCompatVmActivity<ActivityAgentEmojiBinding, Ag
                     VisionUploadTypeEnum.WS_FRAGMENT -> {
                         // ws 分片上传
                         wsUploadSingleImageVision(
-                            base64Str = base64Str,
+                            bitmap = bitmap,
                             agentId = agentId!!,
                             userId = userId,
                             messageId = messageId!!
@@ -400,7 +395,12 @@ class AgentEmojiActivity : BaseAppCompatVmActivity<ActivityAgentEmojiBinding, Ag
     }
 
     // ws上传 [额外的kotlin协程异步上传，并设置上传休眠时间，避免出现网络拥塞]
-    private fun wsUploadSingleImageVision(base64Str: String, agentId: String, userId: String, messageId: String) {
+    private fun wsUploadSingleImageVision(bitmap: Bitmap, agentId: String, userId: String, messageId: String) {
+        // bitmap -> base64
+        val base64Str = VisionMcpManager.bitmapToBase64(
+            bitmap = bitmap
+        )
+
         // 获取分片完成的文件队列
         val base64FragmentQueue = VisionMcpManager.fileBase64toQueue(base64Str)
 
@@ -429,7 +429,7 @@ class AgentEmojiActivity : BaseAppCompatVmActivity<ActivityAgentEmojiBinding, Ag
 
                     // 添加休眠，避免网络拥塞（不是最后一个分片时休眠）
                     if (base64FragmentQueue.isNotEmpty()) {
-                        // 休眠50毫秒
+                        // 休眠20毫秒
                         delay(
                             timeMillis = BaseConstant.VISION.WS_SHARD_UPLOAD_DELAY
                         )

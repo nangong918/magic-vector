@@ -119,15 +119,13 @@ public class ChatController {
         }
 
         // 获取ChatClient和RealtimeChatContextManager
-        val chatClient = sessionConfig.chatClientMap().get(agentId);
         val realtimeChatContextManager = sessionConfig.realtimeChatContextManagerMap().get(agentId);
-        taskExecutor.submit(() -> {
+        var visionChatFuture = taskExecutor.submit(() -> {
             try {
                 // 启动vision聊天
                 realtimeChatService.startVisionChat(
                         base64Str,
-                        realtimeChatContextManager,
-                        chatClient
+                        realtimeChatContextManager
                 );
             } catch (Exception e) {
                 realtimeChatContextManager.stopRecording.set(true);
@@ -143,6 +141,7 @@ public class ChatController {
                 }
             }
         });
+        realtimeChatContextManager.setVisionChatFuture(visionChatFuture);
 
         return BaseResponse.getResponseEntitySuccess("上传成功");
     }

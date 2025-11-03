@@ -28,7 +28,6 @@ import java.io.IOException;
 import java.util.Base64;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.Future;
 
 @Slf4j
 @RequiredArgsConstructor
@@ -36,8 +35,6 @@ import java.util.concurrent.Future;
 public class RealtimeChatChannel extends TextWebSocketHandler {
 
     private final ThreadPoolTaskExecutor taskExecutor;
-    private volatile Future<?> chatFuture;
-    private volatile Future<?> visionChatFuture;
     private final RealtimeChatService realtimeChatService;
     private final DashScopeChatModel dashScopeChatModel;
     private final SessionConfig sessionConfig;
@@ -52,16 +49,11 @@ public class RealtimeChatChannel extends TextWebSocketHandler {
     @Override
     public void afterConnectionClosed(WebSocketSession session, @NotNull CloseStatus status) throws Exception {
         log.info("[websocket] 连接断开：id={}，reason={}", session.getId(), status);
-        sessionConfig.realtimeChatContextManagerMap().get(agentId).stopRecording.set(true);
+        var realtimeChatContextManager = sessionConfig.realtimeChatContextManagerMap().get(agentId);
+
         // 取消聊天任务
-        if (chatFuture != null) {
-            // true 表示中断正在执行的任务
-            chatFuture.cancel(true);
-        }
-        if (visionChatFuture != null) {
-            // true 表示中断正在执行的任务
-            visionChatFuture.cancel(true);
-        }
+        realtimeChatContextManager.cancelCurrentTask();
+
         // 清理资源
         sessionConfig.realtimeChatContextManagerMap().remove(agentId);
         agentId = null;
@@ -93,7 +85,6 @@ public class RealtimeChatChannel extends TextWebSocketHandler {
                 log.info("[websocket] 连接，收集用户会话信息");
                 String connectMessage = messageMap.get(RealtimeRequestDataTypeEnum.DATA);
 
-                sessionConfig.realtimeChatContextManagerMap().get(agentId);
                 try {
                     RealtimeChatConnectRequest connectRequest = JSON.parseObject(connectMessage, RealtimeChatConnectRequest.class);
                     // 设置agentId
@@ -107,20 +98,20 @@ public class RealtimeChatChannel extends TextWebSocketHandler {
                     realtimeChatContextManager.connectTimestamp = connectRequest.getTimestamp();
 
                     // 初始化chatClient
-                    var chatClient = realtimeChatService.initChatClient(realtimeChatContextManager, dashScopeChatModel);
+                    // 将获取到的chatClient存储到RealtimeChatContextManager
+                    realtimeChatContextManager.chatClient = realtimeChatService.initChatClient(realtimeChatContextManager, dashScopeChatModel);
 
                     // 将session存储到map
-                    sessionConfig.realtimeChatContextManagerMap().put(realtimeChatContextManager.agentId, realtimeChatContextManager);
-                    sessionConfig.chatClientMap().put(realtimeChatContextManager.agentId, chatClient);
+                    sessionConfig.realtimeChatContextManagerMap().put(agentId, realtimeChatContextManager);
 
                 } catch (Exception e){
                     log.warn("[websocket warn] 断开连接，参数错误");
-//                    session.close();
+                    session.close();
                 }
             }
             case START_AUDIO_RECORD -> {
                 var realtimeChatContextManager = sessionConfig.realtimeChatContextManagerMap().get(agentId);
-                var chatClient = sessionConfig.chatClientMap().get(agentId);
+                var chatClient = realtimeChatContextManager.chatClient;
                 // 正在录音的话就返回
                 if (!realtimeChatContextManager.stopRecording.get()){
                     log.warn("[websocket warn] 录音已开始，前端录音申请驳回");
@@ -131,13 +122,10 @@ public class RealtimeChatChannel extends TextWebSocketHandler {
                 realtimeChatContextManager.newChatMessage();
                 log.info("[websocket] 开始录音");
                 realtimeChatContextManager.stopRecording.set(false);
-                chatFuture = taskExecutor.submit(() -> {
+                var chatFuture = taskExecutor.submit(() -> {
                     try {
                         // 启动聊天
-                        realtimeChatService.startChat(
-                                realtimeChatContextManager,
-                                chatClient
-                        );
+                        realtimeChatService.startChat(realtimeChatContextManager);
                     } catch (Exception e) {
                         realtimeChatContextManager.stopRecording.set(true);
                         log.error("[audioChat] 聊天处理异常", e);
@@ -152,6 +140,7 @@ public class RealtimeChatChannel extends TextWebSocketHandler {
                         }
                     }
                 });
+                realtimeChatContextManager.setChatFuture(chatFuture);
             }
             case STOP_AUDIO_RECORD -> {
                 var realtimeChatContextManager = sessionConfig.realtimeChatContextManagerMap().get(agentId);
@@ -163,17 +152,16 @@ public class RealtimeChatChannel extends TextWebSocketHandler {
             }
             case USER_TEXT_MESSAGE -> {
                 var realtimeChatContextManager = sessionConfig.realtimeChatContextManagerMap().get(agentId);
-                var chatClient = sessionConfig.chatClientMap().get(agentId);
+                var chatClient = realtimeChatContextManager.chatClient;
                 log.info("[websocket] 收到文本消息：{}", messageMap.get(RealtimeRequestDataTypeEnum.DATA).length());
                 realtimeChatContextManager.newChatMessage();
                 realtimeChatContextManager.stopRecording.set(false);
-                chatFuture = taskExecutor.submit(() -> {
+                var chatFuture = taskExecutor.submit(() -> {
                     try {
                         // 启动text聊天
                         realtimeChatService.startTextChat(
                                 messageMap.get(RealtimeRequestDataTypeEnum.DATA),
-                                realtimeChatContextManager,
-                                chatClient
+                                realtimeChatContextManager
                         );
                     } catch (Exception e) {
                         realtimeChatContextManager.stopRecording.set(true);
@@ -189,10 +177,11 @@ public class RealtimeChatChannel extends TextWebSocketHandler {
                         }
                     }
                 });
+                realtimeChatContextManager.setChatFuture(chatFuture);
             }
             case SYSTEM_MESSAGE -> {
                 var realtimeChatContextManager = sessionConfig.realtimeChatContextManagerMap().get(agentId);
-                var chatClient = sessionConfig.chatClientMap().get(agentId);
+                var chatClient = realtimeChatContextManager.chatClient;
                 String responseJson = messageMap.get(RealtimeRequestDataTypeEnum.DATA);
                 log.info("[websocket] 收到前端System消息：{}", responseJson.length());
                 // 系统消息 -> 拍摄了照片 / 拍摄照片失败
@@ -219,13 +208,12 @@ public class RealtimeChatChannel extends TextWebSocketHandler {
                                 String imageBase64 = realtimeChatContextManager.imageBase64.toString();
                                 log.info("[websocket] 获取最后一个图片fragment成功，长度：{}", imageBase64.length());
 
-                                visionChatFuture = taskExecutor.submit(() -> {
+                                var visionChatFuture = taskExecutor.submit(() -> {
                                     try {
                                         // 启动vision聊天
                                         realtimeChatService.startVisionChat(
                                                 imageBase64,
-                                                realtimeChatContextManager,
-                                                chatClient
+                                                realtimeChatContextManager
                                         );
                                     } catch (Exception e) {
                                         realtimeChatContextManager.stopRecording.set(true);
@@ -241,6 +229,7 @@ public class RealtimeChatChannel extends TextWebSocketHandler {
                                         }
                                     }
                                 });
+                                realtimeChatContextManager.setVisionChatFuture(visionChatFuture);
                             }
                         }
                         else {
