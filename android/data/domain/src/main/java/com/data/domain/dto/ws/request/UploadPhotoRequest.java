@@ -9,4 +9,6 @@ public class UploadPhotoRequest {
     public String messageId;
     public Boolean isHavePhoto;
     public String photoBase64;
+    // 是否是最后一个分片
+    public boolean isLastFragment = false;
 }

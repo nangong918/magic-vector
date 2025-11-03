@@ -5,9 +5,13 @@ import android.graphics.Bitmap
 import android.os.Build
 import android.os.Environment
 import android.util.Base64
+import com.data.domain.constant.BaseConstant
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.FileOutputStream
+import java.util.LinkedList
+import java.util.Queue
+import kotlin.math.ceil
 
 object VisionMcpManager {
 
@@ -46,4 +50,27 @@ object VisionMcpManager {
         }
     }
 
+    // 将Base64分片填充到Queue中
+    fun fileBase64toQueue(base64Str: String): Queue<String> {
+        val queue: Queue<String> = LinkedList()
+        val chunkSize = BaseConstant.VISION.FRAGMENT_SIZE
+
+        // 参数校验
+        if (base64Str.isEmpty()) {
+            return queue
+        }
+
+        // 计算总分片数
+        val totalChunks = ceil(base64Str.length.toDouble() / chunkSize).toInt()
+
+        // 分片处理
+        for (i in 0 until totalChunks) {
+            val start = i * chunkSize
+            val end = minOf((i + 1) * chunkSize, base64Str.length)
+            val chunk = base64Str.substring(start, end)
+            queue.offer(chunk) // 添加到队列尾部
+        }
+
+        return queue
+    }
 }

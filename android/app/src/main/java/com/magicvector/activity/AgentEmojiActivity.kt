@@ -29,6 +29,8 @@ import com.magicvector.manager.yolo.TargetActivityDetectionManager
 import com.magicvector.utils.BaseAppCompatVmActivity
 import com.magicvector.viewModel.activity.AgentEmojiVm
 import com.view.appview.R
+import java.util.LinkedList
+import java.util.Queue
 
 class AgentEmojiActivity : BaseAppCompatVmActivity<ActivityAgentEmojiBinding, AgentEmojiVm>(
     AgentEmojiActivity::class,
@@ -295,6 +297,7 @@ class AgentEmojiActivity : BaseAppCompatVmActivity<ActivityAgentEmojiBinding, Ag
         }
     }
 
+    // 处理视觉理解Response
     override fun handleSystemResponse(map: Map<String, String>) {
         val agentId = map["agentId"]
         val userId = MainApplication.getUserId()
@@ -348,21 +351,34 @@ class AgentEmojiActivity : BaseAppCompatVmActivity<ActivityAgentEmojiBinding, Ag
                         )
                     }
                     VisionUploadTypeEnum.WS_FRAGMENT -> {
-                        val uploadPhotoRequest = UploadPhotoRequest()
-                        uploadPhotoRequest.agentId = agentId
-                        uploadPhotoRequest.userId = userId
-                        uploadPhotoRequest.messageId = messageId
-                        uploadPhotoRequest.isHavePhoto = true
-                        uploadPhotoRequest.photoBase64 = base64Str
+                        // 获取分片完成的文件队列
+                        val base64FragmentQueue = VisionMcpManager.fileBase64toQueue(base64Str)
 
-                        val uploadPhotoRequestJson = GSON.toJson(uploadPhotoRequest)
-                        val dataMap = mapOf(
-                            RealtimeRequestDataTypeEnum.TYPE to RealtimeRequestDataTypeEnum.SYSTEM_MESSAGE.type,
-                            RealtimeRequestDataTypeEnum.DATA to uploadPhotoRequestJson
-                        )
+                        while (base64FragmentQueue.isNotEmpty()) {
+                            val base64Fragment = base64FragmentQueue.poll()
+                            val uploadPhotoRequest = UploadPhotoRequest()
+                            uploadPhotoRequest.agentId = agentId
+                            uploadPhotoRequest.userId = userId
+                            uploadPhotoRequest.messageId = messageId
+                            uploadPhotoRequest.isHavePhoto = true
+                            uploadPhotoRequest.photoBase64 = base64Fragment
 
-                        chatMessageHandler.realtimeChatWsClient?.sendMessage(dataMap)
-                        ToastUtils.showToastActivity(this, getString(R.string.fetch_photo_success))
+                            // 正确判断最后一个分片：队列为空时就是最后一个
+                            uploadPhotoRequest.isLastFragment = base64FragmentQueue.isEmpty()
+
+                            val uploadPhotoRequestJson = GSON.toJson(uploadPhotoRequest)
+                            val dataMap = mapOf(
+                                RealtimeRequestDataTypeEnum.TYPE to RealtimeRequestDataTypeEnum.SYSTEM_MESSAGE.type,
+                                RealtimeRequestDataTypeEnum.DATA to uploadPhotoRequestJson
+                            )
+
+                            chatMessageHandler.realtimeChatWsClient?.sendMessage(dataMap)
+
+                            // 只在最后一个分片发送成功后显示Toast
+                            if (base64FragmentQueue.isEmpty()) {
+                                ToastUtils.showToastActivity(this, getString(R.string.fetch_photo_success))
+                            }
+                        }
                     }
                     VisionUploadTypeEnum.RTMP -> {
                         // 暂未实现

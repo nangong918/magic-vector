@@ -91,5 +91,7 @@ class BaseConstant {
         // vision上传方法: http, ws-fragment, rtmp
         val UPLOAD_METHOD = VisionUploadTypeEnum.HTTP
         val VISION_TYPE = VisionTypeEnum.IMAGE
+        // 分片大小: 兼容ws和mqtt的最大限制
+        const val FRAGMENT_SIZE = 16 * 1024 // 16kB大小
     }
 }
