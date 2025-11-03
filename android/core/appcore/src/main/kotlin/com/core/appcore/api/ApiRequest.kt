@@ -99,7 +99,7 @@ interface ApiRequest {
      * @param messageId     messageId
      */
     @Multipart
-    @POST("/vision/upload/img")
+    @POST("/chat/vision/upload/img")
     suspend fun uploadImageVision(
         @Part image: MultipartBody.Part,
         @Part("agentId") agentId: RequestBody,

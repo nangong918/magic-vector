@@ -106,6 +106,7 @@ public class ChatController {
             @RequestParam("messageId") String messageId
     ){
         if (image == null || image.isEmpty() || !StringUtils.hasText(agentId) || !StringUtils.hasText(userId) || !StringUtils.hasText(messageId)){
+            log.warn("[websocket] 参数错误, image: {}, agentId: {}, userId: {}, messageId: {}", image, agentId, userId, messageId);
             return BaseResponse.LogBackError(CommonExceptions.PARAM_ERROR);
         }
 

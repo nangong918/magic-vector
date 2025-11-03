@@ -32,7 +32,7 @@ public class FileUtils {
         // 3. 获取文件ContentType（如image/png、image/jpeg），用于拼接前缀
         String contentType = img.getContentType();
         if (contentType == null || !contentType.startsWith("image/")) {
-            throw new IllegalArgumentException("文件不是有效的图片类型");
+            throw new IllegalArgumentException("文件不是有效的图片类型, contentType = " + contentType);
         }
 
         // 4. 拼接完整的Base64格式（带前缀，方便前端直接使用）
