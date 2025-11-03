@@ -82,13 +82,13 @@ public class RealtimeChatChannel extends TextWebSocketHandler {
         RealtimeRequestDataTypeEnum realtimeDataTypeEnum = RealtimeRequestDataTypeEnum.getByType(type);
         switch (realtimeDataTypeEnum) {
             case CONNECT -> {
-                log.info("[websocket] 连接，收集用户会话信息");
                 String connectMessage = messageMap.get(RealtimeRequestDataTypeEnum.DATA);
 
                 try {
                     RealtimeChatConnectRequest connectRequest = JSON.parseObject(connectMessage, RealtimeChatConnectRequest.class);
                     // 设置agentId
                     agentId = connectRequest.getAgentId();
+                    log.info("[websocket] 连接，收集用户会话信息, agentId: {}", agentId);
 
                     // 重新连接就是新的会话信息
                     var realtimeChatContextManager = new RealtimeChatContextManager();
@@ -111,7 +111,6 @@ public class RealtimeChatChannel extends TextWebSocketHandler {
             }
             case START_AUDIO_RECORD -> {
                 var realtimeChatContextManager = sessionConfig.realtimeChatContextManagerMap().get(agentId);
-                var chatClient = realtimeChatContextManager.chatClient;
                 // 正在录音的话就返回
                 if (!realtimeChatContextManager.stopRecording.get()){
                     log.warn("[websocket warn] 录音已开始，前端录音申请驳回");

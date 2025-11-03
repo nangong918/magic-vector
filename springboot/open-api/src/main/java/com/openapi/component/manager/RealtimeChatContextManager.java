@@ -36,14 +36,14 @@ public class RealtimeChatContextManager {
     private volatile Future<?> chatFuture;
     private volatile Future<?> visionChatFuture;
     public void setChatFuture(Future<?> chatFuture){
-        if (chatFuture != null){
-            chatFuture.cancel(true);
+        if (this.chatFuture != null){
+            this.chatFuture.cancel(true);
         }
         this.chatFuture = chatFuture;
     }
     public void setVisionChatFuture(Future<?> visionChatFuture){
-        if (visionChatFuture != null){
-            visionChatFuture.cancel(true);
+        if (this.visionChatFuture != null){
+            this.visionChatFuture.cancel(true);
         }
         this.visionChatFuture = visionChatFuture;
     }
