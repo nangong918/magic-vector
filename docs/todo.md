@@ -12,19 +12,28 @@ Spring 项目部署在Docker -> 上传到阿里云服务器 todo Docker，Nginx 
 
 Android端优化, 暂时不开启树莓派 -> 研究树莓派
 
-### lv0(当前任务)
+## lv0.5(杂七杂八小任务)
+AI Emoji Activity （表情系统Mcp，心情系统）
+
+集成minio, 反向代理
+
+联网mcp
+
+chat rag(向量)
+
+设计一个优先级list判断功能，eye会根据优先级来判断
+
+Android User管理登录页面
+
+### lv0(当前任务/核心任务)
 实现websocket进行单个图片视觉，后续升级为Http上图片组和视频流
+
+完成视觉之后 -> 研究计算机理论，解决系统不合理以及性能优化
 
 研究降低token的方法
 
 调用阿里百炼视觉模型
 视频流传输考虑使用FFmpeg进行压缩, 节省带宽和模型token
-
-AI Emoji Activity
-
-阿里百炼视觉理解模型
-
-集成minio, 反向代理
 
 更改嵌入式设备, 需要升级为树莓派.(树莓派ARM架构才能带动tflite)
 
@@ -52,14 +61,8 @@ AI Emoji Activity
 
 Silero VAD集成ESP32-S3
 
-联网mcp
-
-chat mcp(tools -> 本地测试)
-chat rag(向量)
-
-设计一个优先级list判断功能，eye会根据优先级来判断
-
 主动调取视觉接口：1.寻找物品，2.寻找人，3.玩玩具
+
 ### lv1(计划任务)
 增加一个HttpClient解决http请求资源复用问题
 音频合成缓存，解决当前音频请求频率过高问题
@@ -90,15 +93,15 @@ spring的线程池升级为虚拟线程
 (*)spring ai -> golang + python + langchain
 (*)docker容器化
 
-Android User管理登录页面
 Android AgentList Fragment, Agent详情Activity，抽离Emoji和chat的逻辑，实现打开Emoji页面不需要先打开Chat页面，研究Java设计模式。
 Android本地缓存功能
+性能：Android性能监听，监听ANR
 
 研究计算机网络：考虑websocket，mqtt性能瓶颈，学习不同网络协议
 
 Spring，Android多级缓存，解决频繁请求
 
-多线程重新设计：Spring：websocket的调用线程创建；Android：Camera和Audio获取的线程创建
+多线程重新设计：Spring：websocket的调用线程创建；Android：Camera和Audio获取的线程创建；Android的kotlin协程异步
 
 数据库性能分析与设计：Spring存储聊天记录
 
@@ -147,6 +150,7 @@ YOLOv8的Emoji追踪目标 (2025/10/27)
 YOLOv8实现视频流目标活动检测 -> 用于未来调用视频流模型 (2025/10/28)
 集成视觉模型 (2025/10/29)
 剥离callManager, 实现Emoji + Chat页面的一同实时语音通话 (2025/10/30)
+引入阿里百炼视觉理解模型 (2025/10/31)
 
 ## 其他
 * 关于跳槽和工作方向选择：看看头部公司的技术方向，仔细看看是走**Android嵌入式**还是走**后端** （视觉模型完成之后就边看边选择，大概开始时间11月中旬）
