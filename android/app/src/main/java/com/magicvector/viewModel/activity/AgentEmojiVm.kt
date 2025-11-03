@@ -40,7 +40,7 @@ class AgentEmojiVm(
                             messageId: String,
                             callback: SyncRequestCallback){
 
-        val imageParam: MultipartBody.Part? = FileUtil.createMultipartBodyPart(
+        val imageParam: MultipartBody.Part? = FileUtil.createImageMultipartBodyPart(
             image,
             "image"
         )

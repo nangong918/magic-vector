@@ -205,6 +205,26 @@ public class FileUtil {
         return MultipartBody.Part.createFormData(fileRequestParamName, file.getName(), requestFile);
     }
 
+    public static MultipartBody.Part createImageMultipartBodyPart(File file, @NonNull String fileRequestParamName) {
+        String fileName = file.getName().toLowerCase();
+        String mimeType;
+
+        if (fileName.endsWith(".png")) {
+            mimeType = "image/png";
+        } else if (fileName.endsWith(".gif")) {
+            mimeType = "image/gif";
+        } else if (fileName.endsWith(".bmp")) {
+            mimeType = "image/bmp";
+        } else if (fileName.endsWith(".webp")) {
+            mimeType = "image/webp";
+        } else {
+            mimeType = "image/jpeg"; // 默认，包括 .jpg, .jpeg
+        }
+
+        RequestBody requestFile = RequestBody.create(MediaType.parse(mimeType), file);
+        return MultipartBody.Part.createFormData(fileRequestParamName, file.getName(), requestFile);
+    }
+
     /**
      * 从ContentResolver中获取文件路径
      * @param selectedVideoUri  选择文件的Uri
