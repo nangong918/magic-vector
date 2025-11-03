@@ -14,7 +14,7 @@ public class OptimizedSentenceDetector {
     /**
      * 句末标点集合
      */
-    public static final String END_PUNCTUATION = "。？！.!?";
+    public static final String END_PUNCTUATION = "。？！~.!?";
 
     /**
      * 检测并提取缓冲区中的第一个完整句子

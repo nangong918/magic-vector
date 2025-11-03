@@ -121,8 +121,7 @@ public class ChatConfig {
                         .orElse("");
 
                 if (systemPrompt.isEmpty()) {
-                    log.warn("textPrompt.json文件内容为空");
-                    return systemPrompt + "visionAgent识别结果: <前端获取照片失败，无识别结果>";
+                    return systemPrompt + "可以用于FunctionCall参数: <" + param + ">";
                 }
                 else if (!StringUtils.hasText(param)) {
                     log.warn("param为空");

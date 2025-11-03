@@ -151,7 +151,6 @@ public class RealtimeChatChannel extends TextWebSocketHandler {
             }
             case USER_TEXT_MESSAGE -> {
                 var realtimeChatContextManager = sessionConfig.realtimeChatContextManagerMap().get(agentId);
-                var chatClient = realtimeChatContextManager.chatClient;
                 log.info("[websocket] 收到文本消息：{}", messageMap.get(RealtimeRequestDataTypeEnum.DATA).length());
                 realtimeChatContextManager.newChatMessage();
                 realtimeChatContextManager.stopRecording.set(false);
@@ -180,7 +179,6 @@ public class RealtimeChatChannel extends TextWebSocketHandler {
             }
             case SYSTEM_MESSAGE -> {
                 var realtimeChatContextManager = sessionConfig.realtimeChatContextManagerMap().get(agentId);
-                var chatClient = realtimeChatContextManager.chatClient;
                 String responseJson = messageMap.get(RealtimeRequestDataTypeEnum.DATA);
                 log.info("[websocket] 收到前端System消息：{}", responseJson.length());
                 // 系统消息 -> 拍摄了照片 / 拍摄照片失败
