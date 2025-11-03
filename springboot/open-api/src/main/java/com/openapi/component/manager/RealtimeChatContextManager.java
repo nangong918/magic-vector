@@ -13,6 +13,8 @@ import lombok.val;
 import org.springframework.web.socket.WebSocketSession;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -28,17 +30,17 @@ import java.util.concurrent.atomic.AtomicInteger;
 @Slf4j
 public class RealtimeChatContextManager {
 
-    // 音频数据
+    /// 音频数据
     public final Queue<byte[]> requestAudioBuffer = new ConcurrentLinkedQueue<>();
     public final AtomicBoolean stopRecording = new AtomicBoolean(true);
 
-    // agent会话信息
+    /// agent会话信息
     public String userId;
     public String agentId;
     public long connectTimestamp = 0L;
     public WebSocketSession session;
 
-    // llm -> tts
+    /// llm -> tts
     public final Queue<String> sentenceQueue = new ConcurrentLinkedQueue<>();
     public final AtomicBoolean isTTSFinished = new AtomicBoolean(true);
     public final AtomicBoolean isLLMFinished = new AtomicBoolean(false);
@@ -49,12 +51,20 @@ public class RealtimeChatContextManager {
     // llm Connect Reset重试
     public final AtomicInteger llmConnectResetRetryCount = new AtomicInteger(0);
 
-    // userQuestion
+    /// vision chat
+    // image chat
+    public StringBuffer imageBase64 = new StringBuffer();
+    // image list chat (开发的时候再放出来)
+//    public List<StringBuffer> imageListBase64 = new ArrayList<>();
+    // video chat (开发的时候再放出来)
+//    public StringBuffer videoBase64 = new StringBuffer();
+
+    /// userQuestion
     @Getter
     @Setter
     private String userQuestion = "";
 
-    // 当前聊天会话信息
+    /// 当前聊天会话信息
     private String currentMessageId = String.valueOf(IdUtil.getSnowflake().nextId());
     public long currentUserMessageTimestamp = System.currentTimeMillis();
     public long currentAgentMessageTimestamp = System.currentTimeMillis();
@@ -70,6 +80,7 @@ public class RealtimeChatContextManager {
         isFirstTTS.set(true);
         llmConnectResetRetryCount.set(0);
         lastTTSTimestamp = 0L;
+        imageBase64 = new StringBuffer();
         log.info("开启新的message，MessageId是：{}", currentMessageId);
     }
 

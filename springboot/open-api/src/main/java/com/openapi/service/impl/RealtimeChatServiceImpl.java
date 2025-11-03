@@ -591,12 +591,12 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
 
     @Override
     public void startVisionChat(@Nullable String imageBase64, @NotNull RealtimeChatContextManager chatContextManager, @NotNull ChatClient chatClient) throws NoApiKeyException, UploadFileException {
-        if (imageBase64 != null) {
-            String result = visionChatService.callWithFileBase64(imageBase64, chatContextManager.getUserQuestion());
-            visionResultLLMStreamCall(result, chatContextManager, chatClient);
+        if (imageBase64 == null || imageBase64.isEmpty()) {
+            visionResultLLMStreamCall(null, chatContextManager, chatClient);
         }
         else {
-            visionResultLLMStreamCall(null, chatContextManager, chatClient);
+            String result = visionChatService.callWithFileBase64(imageBase64, chatContextManager.getUserQuestion());
+            visionResultLLMStreamCall(result, chatContextManager, chatClient);
         }
     }
 

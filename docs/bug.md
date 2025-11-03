@@ -19,6 +19,8 @@ Android 使用DiffUtil优化Adapter性能
 
 当前的agent提示词参数是通过每次提交实现，后续需要改为专门的提示词function call，在调用mcp之前先去调用获取提示词方法
 
+Http上传视觉的线程Future要能取消
+
 ## 待解决
 
 AI模型调用都有HttpClient超时;出现了说话然后语音识别不出来的bug
