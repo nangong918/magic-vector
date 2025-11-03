@@ -93,5 +93,6 @@ class BaseConstant {
         val VISION_TYPE = VisionTypeEnum.IMAGE
         // 分片大小: 兼容ws和mqtt的最大限制
         const val FRAGMENT_SIZE = 16 * 1024 // 16kB大小
+        const val WS_SHARD_UPLOAD_DELAY = 50L // 分片上传延迟50ms，避免网络拥塞
     }
 }
