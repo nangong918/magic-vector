@@ -26,6 +26,8 @@ public enum CommonExceptions implements ExceptionEnums {
     SORT_TYPE_NOT_FOUND("C_10004", "排序方式未找到"),
     // 系统内参数错误
     SYSTEM_PARAM_ERROR("C_10005", "系统内参数错误"),
+    // MultipartFile转换Base64异常
+    MULTIPART_FILE_TO_BASE64_ERROR("C_10006", "MultipartFile转换Base64异常"),
     ;
 
     private final String code;

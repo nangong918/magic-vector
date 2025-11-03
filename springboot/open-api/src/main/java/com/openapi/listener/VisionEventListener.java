@@ -36,8 +36,8 @@ public class VisionEventListener {
         }
 
         // 在这里处理事件，例如进行视觉识别
-        val session = sessionConfig.sessionMap().get(systemTextResponse.agentId);
-        if (session == null){
+        val realtimeChatContextManager = sessionConfig.realtimeChatContextManagerMap().get(systemTextResponse.agentId);
+        if (realtimeChatContextManager == null){
             log.warn("[websocket warn] 找不到对应的会话：{}", systemTextResponse.agentId);
             return;
         }
@@ -49,7 +49,7 @@ public class VisionEventListener {
 
         try {
             // 发送系统请求
-            session.sendMessage(new TextMessage(JSON.toJSONString(responseMap)));
+            realtimeChatContextManager.session.sendMessage(new TextMessage(JSON.toJSONString(responseMap)));
             log.info("[websocket] TakePhotoEvent 响应消息成功, agentId: {}", systemTextResponse.agentId);
         } catch (Exception e) {
             log.error("[websocket error] 响应消息异常", e);

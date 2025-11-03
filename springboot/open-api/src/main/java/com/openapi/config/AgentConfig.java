@@ -1,5 +1,6 @@
 package com.openapi.config;
 
+import com.openapi.domain.constant.ModelConstant;
 import org.springframework.ai.chat.memory.ChatMemory;
 import org.springframework.ai.chat.memory.MessageWindowChatMemory;
 import org.springframework.context.annotation.Bean;
@@ -20,8 +21,8 @@ public class AgentConfig {
     public ChatMemory chatMemory() {
         return MessageWindowChatMemory.builder()
 //                .chatMemoryRepository()
-                // 窗口大小设置为10
-                .maxMessages(10)
+                // 窗口大小设置为n
+                .maxMessages(ModelConstant.MEMORY_CONTEXT_LENGTH)
                 .build();
     }
 }

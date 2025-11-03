@@ -41,7 +41,7 @@ public class VisionChatServiceImpl implements VisionChatService {
                 .role(Role.USER.getValue())
                 .content(Arrays.asList(
                         new HashMap<>() {{
-                            put("image", "data:image/png;base64," + base64Image);
+                            put("image", /*"data:image/png;base64," + */base64Image);
                         }},
                         new HashMap<>() {{
                             put("text", userQuestion);

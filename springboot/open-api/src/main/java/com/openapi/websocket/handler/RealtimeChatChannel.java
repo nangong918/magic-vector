@@ -41,12 +41,10 @@ public class RealtimeChatChannel extends TextWebSocketHandler {
     private final ThreadPoolTaskExecutor taskExecutor;
     private volatile Future<?> chatFuture;
     private volatile Future<?> visionChatFuture;
-    private RealtimeChatContextManager realtimeChatContextManager = new RealtimeChatContextManager();
     private final RealtimeChatService realtimeChatService;
     private final DashScopeChatModel dashScopeChatModel;
-    private ChatClient chatClient;
     private final SessionConfig sessionConfig;
-
+    private String agentId;
 
     @Override
     public void afterConnectionEstablished(@NotNull WebSocketSession session) throws Exception {
@@ -57,7 +55,7 @@ public class RealtimeChatChannel extends TextWebSocketHandler {
     @Override
     public void afterConnectionClosed(WebSocketSession session, @NotNull CloseStatus status) throws Exception {
         log.info("[websocket] 连接断开：id={}，reason={}", session.getId(), status);
-        realtimeChatContextManager.stopRecording.set(true);
+        sessionConfig.realtimeChatContextManagerMap().get(agentId).stopRecording.set(true);
         // 取消聊天任务
         if (chatFuture != null) {
             // true 表示中断正在执行的任务
@@ -67,6 +65,9 @@ public class RealtimeChatChannel extends TextWebSocketHandler {
             // true 表示中断正在执行的任务
             visionChatFuture.cancel(true);
         }
+        // 清理资源
+        sessionConfig.realtimeChatContextManagerMap().remove(agentId);
+        agentId = null;
         super.afterConnectionClosed(session, status);
     }
 
@@ -74,7 +75,7 @@ public class RealtimeChatChannel extends TextWebSocketHandler {
     public void handleTransportError(WebSocketSession session, @NotNull Throwable exception) throws Exception {
         log.error("[websocket] 连接异常：id={}", session.getId(), exception);
 //        session.close();
-        realtimeChatContextManager.stopRecording.set(true);
+        sessionConfig.realtimeChatContextManagerMap().get(agentId).stopRecording.set(true);
         super.handleTransportError(session, exception);
     }
 
@@ -94,20 +95,26 @@ public class RealtimeChatChannel extends TextWebSocketHandler {
             case CONNECT -> {
                 log.info("[websocket] 连接，收集用户会话信息");
                 String connectMessage = messageMap.get(RealtimeRequestDataTypeEnum.DATA);
+
+                sessionConfig.realtimeChatContextManagerMap().get(agentId);
                 try {
                     RealtimeChatConnectRequest connectRequest = JSON.parseObject(connectMessage, RealtimeChatConnectRequest.class);
+                    // 设置agentId
+                    agentId = connectRequest.getAgentId();
+
                     // 重新连接就是新的会话信息
-                    realtimeChatContextManager = new RealtimeChatContextManager();
+                    var realtimeChatContextManager = new RealtimeChatContextManager();
                     realtimeChatContextManager.userId = connectRequest.getUserId();
                     realtimeChatContextManager.agentId = connectRequest.getAgentId();
                     realtimeChatContextManager.session = session;
                     realtimeChatContextManager.connectTimestamp = connectRequest.getTimestamp();
 
                     // 初始化chatClient
-                    chatClient = realtimeChatService.initChatClient(realtimeChatContextManager, dashScopeChatModel);
+                    var chatClient = realtimeChatService.initChatClient(realtimeChatContextManager, dashScopeChatModel);
 
-                    // 将session存储到sessionMap
-                    sessionConfig.sessionMap().put(realtimeChatContextManager.agentId, session);
+                    // 将session存储到map
+                    sessionConfig.realtimeChatContextManagerMap().put(realtimeChatContextManager.agentId, realtimeChatContextManager);
+                    sessionConfig.chatClientMap().put(realtimeChatContextManager.agentId, chatClient);
 
                 } catch (Exception e){
                     log.warn("[websocket warn] 断开连接，参数错误");
@@ -115,6 +122,8 @@ public class RealtimeChatChannel extends TextWebSocketHandler {
                 }
             }
             case START_AUDIO_RECORD -> {
+                var realtimeChatContextManager = sessionConfig.realtimeChatContextManagerMap().get(agentId);
+                var chatClient = sessionConfig.chatClientMap().get(agentId);
                 // 正在录音的话就返回
                 if (!realtimeChatContextManager.stopRecording.get()){
                     log.warn("[websocket warn] 录音已开始，前端录音申请驳回");
@@ -148,6 +157,7 @@ public class RealtimeChatChannel extends TextWebSocketHandler {
                 });
             }
             case STOP_AUDIO_RECORD -> {
+                var realtimeChatContextManager = sessionConfig.realtimeChatContextManagerMap().get(agentId);
                 log.info("[websocket] 停止录音");
                 realtimeChatContextManager.stopRecording.set(true);
             }
@@ -155,6 +165,8 @@ public class RealtimeChatChannel extends TextWebSocketHandler {
                 handleAudioChunk(messageMap.get(RealtimeRequestDataTypeEnum.DATA));
             }
             case USER_TEXT_MESSAGE -> {
+                var realtimeChatContextManager = sessionConfig.realtimeChatContextManagerMap().get(agentId);
+                var chatClient = sessionConfig.chatClientMap().get(agentId);
                 log.info("[websocket] 收到文本消息：{}", messageMap.get(RealtimeRequestDataTypeEnum.DATA).length());
                 realtimeChatContextManager.newChatMessage();
                 realtimeChatContextManager.stopRecording.set(false);
@@ -182,6 +194,8 @@ public class RealtimeChatChannel extends TextWebSocketHandler {
                 });
             }
             case SYSTEM_MESSAGE -> {
+                var realtimeChatContextManager = sessionConfig.realtimeChatContextManagerMap().get(agentId);
+                var chatClient = sessionConfig.chatClientMap().get(agentId);
                 String responseJson = messageMap.get(RealtimeRequestDataTypeEnum.DATA);
                 log.info("[websocket] 收到前端System消息：{}", responseJson.length());
                 // 系统消息 -> 拍摄了照片 / 拍摄照片失败
@@ -249,7 +263,9 @@ public class RealtimeChatChannel extends TextWebSocketHandler {
 //        log.info("[websocket] 音频块大小：{}", audioBytes.length);
 
         // 将字节数组放入队列
+        var realtimeChatContextManager = sessionConfig.realtimeChatContextManagerMap().get(agentId);
         realtimeChatContextManager.requestAudioBuffer.offer(audioBytes);
     }
 
+    // todo 实现websocket分片上传json，然后调用
 }
