@@ -1,14 +1,19 @@
 package com.magicvector.activity
 
 import android.annotation.SuppressLint
+import android.graphics.Bitmap
 import android.os.Bundle
+import android.text.TextUtils
 import android.util.Log
 import androidx.lifecycle.LifecycleOwner
+import com.core.appcore.api.handler.SyncRequestCallback
+import com.core.baseutil.network.networkLoad.NetworkLoadUtils
 import com.core.baseutil.ui.ToastUtils
 import com.data.domain.constant.BaseConstant
 import com.data.domain.constant.VadChatState
 import com.data.domain.constant.chat.RealtimeRequestDataTypeEnum
 import com.data.domain.constant.chat.RealtimeSystemResponseEventEnum
+import com.data.domain.constant.chat.VisionUploadTypeEnum
 import com.data.domain.dto.ws.request.UploadPhotoRequest
 import com.detection.yolov8.BoundingBox
 import com.detection.yolov8.Detector
@@ -294,6 +299,12 @@ class AgentEmojiActivity : BaseAppCompatVmActivity<ActivityAgentEmojiBinding, Ag
         val agentId = map["agentId"]
         val userId = MainApplication.getUserId()
         val messageId = map["messageId"]
+
+        if (TextUtils.isEmpty(agentId) || TextUtils.isEmpty(userId) || TextUtils.isEmpty(messageId)){
+            ToastUtils.showToastActivity(this@AgentEmojiActivity, "vision视觉理解失败，参数不全")
+            return
+        }
+
         // 上传图片的指令
         if (map[RealtimeSystemResponseEventEnum.EVENT_KET] == RealtimeSystemResponseEventEnum.UPLOAD_PHOTO.code) {
             val bitmap = visionManager.getCurrentFrameBitmap()
@@ -320,23 +331,72 @@ class AgentEmojiActivity : BaseAppCompatVmActivity<ActivityAgentEmojiBinding, Ag
                     bitmap = bitmap
                 )
 
-                val uploadPhotoRequest = UploadPhotoRequest()
-                uploadPhotoRequest.agentId = agentId
-                uploadPhotoRequest.userId = userId
-                uploadPhotoRequest.messageId = messageId
-                uploadPhotoRequest.isHavePhoto = true
-                uploadPhotoRequest.photoBase64 = base64Str
+                // 上传的方式
+                val visonUploadType = BaseConstant.VISION.UPLOAD_METHOD
 
-                val uploadPhotoRequestJson = GSON.toJson(uploadPhotoRequest)
-                val dataMap = mapOf(
-                    RealtimeRequestDataTypeEnum.TYPE to RealtimeRequestDataTypeEnum.SYSTEM_MESSAGE.type,
-                    RealtimeRequestDataTypeEnum.DATA to uploadPhotoRequestJson
-                )
+                when (visonUploadType) {
+                    VisionUploadTypeEnum.UNKNOWN -> {
+                        throw IllegalArgumentException("unknown vison upload type")
+                    }
+                    VisionUploadTypeEnum.HTTP -> {
+                        // http上传
+                        httpUploadSingleImageVision(
+                            bitmap = bitmap,
+                            agentId = agentId!!,
+                            userId = userId,
+                            messageId = messageId!!
+                        )
+                    }
+                    VisionUploadTypeEnum.WS_FRAGMENT -> {
+                        val uploadPhotoRequest = UploadPhotoRequest()
+                        uploadPhotoRequest.agentId = agentId
+                        uploadPhotoRequest.userId = userId
+                        uploadPhotoRequest.messageId = messageId
+                        uploadPhotoRequest.isHavePhoto = true
+                        uploadPhotoRequest.photoBase64 = base64Str
 
-                chatMessageHandler.realtimeChatWsClient?.sendMessage(dataMap)
-                ToastUtils.showToastActivity(this, getString(R.string.fetch_photo_success))
+                        val uploadPhotoRequestJson = GSON.toJson(uploadPhotoRequest)
+                        val dataMap = mapOf(
+                            RealtimeRequestDataTypeEnum.TYPE to RealtimeRequestDataTypeEnum.SYSTEM_MESSAGE.type,
+                            RealtimeRequestDataTypeEnum.DATA to uploadPhotoRequestJson
+                        )
+
+                        chatMessageHandler.realtimeChatWsClient?.sendMessage(dataMap)
+                        ToastUtils.showToastActivity(this, getString(R.string.fetch_photo_success))
+                    }
+                    VisionUploadTypeEnum.RTMP -> {
+                        // 暂未实现
+                    }
+                }
             }
         }
+    }
+
+    /// vision 任务
+    // http 上传
+    private fun httpUploadSingleImageVision(bitmap: Bitmap, agentId: String, userId: String, messageId: String){
+        val file = VisionMcpManager.bitmapToFile(
+            bitmap = bitmap,
+            context = this
+        )
+        NetworkLoadUtils.showDialog(this)
+        vm.doUploadImageVision(
+            context = this,
+            image = file,
+            agentId = agentId,
+            userId = userId,
+            messageId = messageId,
+            callback = object : SyncRequestCallback{
+                override fun onThrowable(throwable: Throwable?) {
+                    Log.e(TAG, "httpUploadSingleImageVision::error: ", throwable)
+                    NetworkLoadUtils.dismissDialogSafety(this@AgentEmojiActivity)
+                }
+
+                override fun onAllRequestSuccess() {
+                    NetworkLoadUtils.dismissDialogSafety(this@AgentEmojiActivity)
+                }
+            }
+        )
     }
 
     // 复位回调

@@ -81,7 +81,7 @@ class AgentEmojiVm(
         )
     }
 
-    fun handleUploadImageVision(context: Context, response: BaseResponse<String>?, callback: SyncRequestCallback){
+    private fun handleUploadImageVision(context: Context, response: BaseResponse<String>?, callback: SyncRequestCallback){
         response?.let {
             println("response: ${it.data}")
             println("response: ${it.message}")
