@@ -35,6 +35,7 @@ public class RealtimeChatContextManager {
     /// 会话任务
     private volatile Future<?> chatFuture;
     private volatile Future<?> visionChatFuture;
+    private volatile Future<?> ttsFuture;
     public void setChatFuture(Future<?> chatFuture){
         if (this.chatFuture != null){
             this.chatFuture.cancel(true);
@@ -46,6 +47,12 @@ public class RealtimeChatContextManager {
             this.visionChatFuture.cancel(true);
         }
         this.visionChatFuture = visionChatFuture;
+    }
+    public void setTtsFuture(Future<?> ttsFuture){
+        if (this.ttsFuture != null){
+            this.ttsFuture.cancel(true);
+        }
+        this.ttsFuture = ttsFuture;
     }
 
     /// 音频数据
@@ -113,8 +120,13 @@ public class RealtimeChatContextManager {
             // true 表示中断正在执行
             visionChatFuture.cancel(true);
         }
+        if (ttsFuture != null) {
+            // true 表示中断正在执行
+            ttsFuture.cancel(true);
+        }
         chatFuture = null;
         visionChatFuture = null;
+        ttsFuture = null;
 
         // 清空缓存
         requestAudioBuffer.clear();

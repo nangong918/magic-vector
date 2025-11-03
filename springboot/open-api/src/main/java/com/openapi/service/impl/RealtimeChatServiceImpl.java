@@ -285,11 +285,10 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
                         String complete1Sentence = optimizedSentenceDetector.detectAndExtractFirstSentence(textBuffer);
                         if (StringUtils.hasText(complete1Sentence)){
                             chatContextManager.sentenceQueue.add(complete1Sentence);
-                            threadPoolConfig.taskExecutor().execute(
-                                    () -> {
-                                        generateAudio(chatContextManager);
-                                    }
+                            var ttsFuture = threadPoolConfig.taskExecutor().submit(
+                                    () -> generateAudio(chatContextManager)
                             );
+                            chatContextManager.setTtsFuture(ttsFuture);
                         }
                     }
                     else {
@@ -299,11 +298,10 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
                         String complete2Sentence = optimizedSentenceDetector.detectAndExtractNeedSentences(textBuffer, 2);
                         if (StringUtils.hasText(complete2Sentence)){
                             chatContextManager.sentenceQueue.add(complete2Sentence);
-                            threadPoolConfig.taskExecutor().execute(
-                                    () -> {
-                                        generateAudio(chatContextManager);
-                                    }
+                            var ttsFuture = threadPoolConfig.taskExecutor().submit(
+                                    () -> generateAudio(chatContextManager)
                             );
+                            chatContextManager.setTtsFuture(ttsFuture);
                         }
                     }
 
@@ -357,11 +355,10 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
                     if (StringUtils.hasText(remainingText)) {
                         log.info("[LLM -> TTS 剩余]: {}", remainingText);
                         chatContextManager.sentenceQueue.add(remainingText);
-                        threadPoolConfig.taskExecutor().execute(
-                                () -> {
-                                    generateAudio(chatContextManager);
-                                }
+                        var ttsFuture = threadPoolConfig.taskExecutor().submit(
+                                () -> generateAudio(chatContextManager)
                         );
+                        chatContextManager.setTtsFuture(ttsFuture);
                     }
 
                     // 存储消息到数据库
@@ -394,6 +391,7 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
 
     private void generateAudio(@NotNull RealtimeChatContextManager chatContextManager) {
         if (!chatContextManager.isTTSFinished.get()){
+            log.info("[TTS] 正在生成音频，请稍等...");
             return;
         }
 
@@ -467,11 +465,10 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
                     if (!chatContextManager.sentenceQueue.isEmpty()){
                         log.info("[TTS]自我调用, 剩余数据: {}", chatContextManager.sentenceQueue.size());
                         // 自我调用
-                        threadPoolConfig.taskExecutor().execute(
-                                () -> {
-                                    generateAudio(chatContextManager);
-                                }
+                        var ttsFuture = threadPoolConfig.taskExecutor().submit(
+                                () -> generateAudio(chatContextManager)
                         );
+                        chatContextManager.setTtsFuture(ttsFuture);
                     }
                     else {
                         log.info("[TTS]结束 发送EOF");
@@ -699,11 +696,10 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
                         String complete1Sentence = optimizedSentenceDetector.detectAndExtractFirstSentence(textBuffer);
                         if (StringUtils.hasText(complete1Sentence)){
                             chatContextManager.sentenceQueue.add(complete1Sentence);
-                            threadPoolConfig.taskExecutor().execute(
-                                    () -> {
-                                        generateAudio(chatContextManager);
-                                    }
+                            var ttsFuture = threadPoolConfig.taskExecutor().submit(
+                                    () -> generateAudio(chatContextManager)
                             );
+                            chatContextManager.setTtsFuture(ttsFuture);
                         }
                     }
                     else {
@@ -713,11 +709,10 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
                         String complete2Sentence = optimizedSentenceDetector.detectAndExtractNeedSentences(textBuffer, 2);
                         if (StringUtils.hasText(complete2Sentence)){
                             chatContextManager.sentenceQueue.add(complete2Sentence);
-                            threadPoolConfig.taskExecutor().execute(
-                                    () -> {
-                                        generateAudio(chatContextManager);
-                                    }
+                            var ttsFuture = threadPoolConfig.taskExecutor().submit(
+                                    () -> generateAudio(chatContextManager)
                             );
+                            chatContextManager.setTtsFuture(ttsFuture);
                         }
                     }
 
@@ -771,11 +766,10 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
                     if (StringUtils.hasText(remainingText)) {
                         log.info("[LLM -> TTS 剩余]: {}", remainingText);
                         chatContextManager.sentenceQueue.add(remainingText);
-                        threadPoolConfig.taskExecutor().execute(
-                                () -> {
-                                    generateAudio(chatContextManager);
-                                }
+                        var ttsFuture = threadPoolConfig.taskExecutor().submit(
+                                () -> generateAudio(chatContextManager)
                         );
+                        chatContextManager.setTtsFuture(ttsFuture);
                     }
 
                     // 存储消息到数据库
