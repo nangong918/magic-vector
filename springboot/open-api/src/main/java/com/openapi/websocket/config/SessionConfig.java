@@ -19,7 +19,7 @@ public class SessionConfig {
     // ConcurrentMap<agentId, RealtimeChatContextManager> (不安全的，异常断开的时候不会删除agentId，每次调用需要try)
     private final ConcurrentMap<String, RealtimeChatContextManager> realtimeChatContextManagerMap = new ConcurrentHashMap<>();
 
-    @Bean
+    @Bean("realtimeChatContextManagerMap")
     public ConcurrentMap<String, RealtimeChatContextManager> realtimeChatContextManagerMap() {
         return realtimeChatContextManagerMap;
     }
