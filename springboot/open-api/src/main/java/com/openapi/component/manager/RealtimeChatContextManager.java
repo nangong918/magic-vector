@@ -83,6 +83,8 @@ public class RealtimeChatContextManager {
         isTTSFinished.set(true);
         isFirstTTS.set(true);
         lastTTSTimestamp = 0L;
+        isVisionChat.set(false);
+        isVisionChatFinished.set(false);
     }
     public void cancelTtsFuture(){
         if (this.ttsFuture != null){
@@ -122,6 +124,10 @@ public class RealtimeChatContextManager {
 //    public List<StringBuffer> imageListBase64 = new ArrayList<>();
     // video chat (开发的时候再放出来)
 //    public StringBuffer videoBase64 = new StringBuffer();
+    // 是否是视觉任务 （解决：1.视觉任务的第一次agent call不能发送eof 2.视觉任务的启动不能发送起始符号）
+    public final AtomicBoolean isVisionChat = new AtomicBoolean(false);
+    // 视觉任务是否结束
+    public final AtomicBoolean isVisionChatFinished = new AtomicBoolean(false);
 
     /// userQuestion
     @Getter

@@ -130,7 +130,8 @@ public class ChatController {
                 // 启动vision聊天
                 realtimeChatService.startVisionChat(
                         base64Str,
-                        realtimeChatContextManager
+                        realtimeChatContextManager,
+                        true
                 );
             } catch (Exception e) {
                 realtimeChatContextManager.stopRecording.set(true);

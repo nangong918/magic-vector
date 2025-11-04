@@ -90,7 +90,7 @@ public class WebSocketMessageManager {
             log.error("处理消息时发生异常: {}", threadName, e);
         } finally {
             isProcessing.set(false);
-            log.info("消息处理完成: {}, 剩余消息: {}", threadName, messageQueue.size());
+            log.debug("消息处理完成: {}, 剩余消息: {}", threadName, messageQueue.size());
 
             // 检查是否有新消息到达，如果有则重新调度
             if (!messageQueue.isEmpty()) {

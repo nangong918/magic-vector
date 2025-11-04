@@ -21,7 +21,15 @@ public interface RealtimeChatService {
 
     ChatClient initChatClient(@NotNull RealtimeChatContextManager chatContextManager, @NotNull DashScopeChatModel chatModel) throws AppException;
 
-    void startTextChat(@NotNull String userQuestion, @NotNull RealtimeChatContextManager chatContextManager) throws AppException, IOException;
+    void startTextChat(@NotNull String userQuestion, @NotNull RealtimeChatContextManager chatContextManager) throws AppException;
 
-    void startVisionChat(@Nullable String imageBase64, @NotNull RealtimeChatContextManager chatContextManager) throws NoApiKeyException, UploadFileException;
+    /**
+     * 开启视觉聊天
+     * @param imageBase64            图片的base64
+     * @param chatContextManager     聊天上下文管理器
+     * @param isPassiveNotActive     是被动调用
+     * @throws NoApiKeyException     没有API Key
+     * @throws UploadFileException   上传文件异常
+     */
+    void startVisionChat(@Nullable String imageBase64, @NotNull RealtimeChatContextManager chatContextManager, boolean isPassiveNotActive) throws NoApiKeyException, UploadFileException;
 }

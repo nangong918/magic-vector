@@ -1,16 +1,20 @@
 package com.openapi.service.impl;
 
+import com.openapi.component.manager.RealtimeChatContextManager;
 import com.openapi.domain.constant.realtime.RealtimeSystemResponseEventEnum;
 import com.openapi.domain.dto.ws.response.SystemTextResponse;
 import com.openapi.domain.evnet.TakePhotoEvent;
 import com.openapi.domain.evnet.body.TakePhotoEventBody;
 import com.openapi.service.VisionToolService;
+import com.openapi.websocket.config.SessionConfig;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.ai.tool.annotation.ToolParam;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
+
+import java.util.Optional;
 
 /**
  * @author 13225
@@ -23,6 +27,7 @@ import org.springframework.stereotype.Service;
 public class VisionToolServiceImpl implements VisionToolService {
 
     private final ApplicationEventPublisher eventPublisher;
+    private final SessionConfig sessionConfig;
 
     // 识别意图，意图是进行视觉识别
     @Tool(description = """
@@ -52,6 +57,19 @@ public class VisionToolServiceImpl implements VisionToolService {
                         .systemTextResponse(systemTextResponse)
                         .build()
         );
+
+        RealtimeChatContextManager chatContextManager = Optional.ofNullable(sessionConfig.realtimeChatContextManagerMap())
+                        .map(map -> map.get(agentId))
+                        .orElse(null);
+
+        // 设置识别为视觉任务
+        if (chatContextManager != null){
+            chatContextManager.isVisionChat.set(true);
+            chatContextManager.isVisionChatFinished.set(false);
+        }
+        else {
+            log.warn("未找到agentId: {}, 对应的chatContextManager", agentId);
+        }
 
         eventPublisher.publishEvent(takePhotoEvent);
         log.info("[visionTool] 发送TakePhotoEvent: {}", takePhotoEvent.getEventBody());
