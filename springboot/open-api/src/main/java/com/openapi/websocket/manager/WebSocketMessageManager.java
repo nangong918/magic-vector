@@ -43,6 +43,9 @@ public class WebSocketMessageManager {
             }
             scheduleProcessing();
         }
+        else {
+            log.warn("websocket::submitMessage 添加消息失败，agentId: {}, message: {}", agentId, message);
+        }
     }
 
     /**
@@ -53,6 +56,9 @@ public class WebSocketMessageManager {
         if (!messageQueue.isEmpty() && isProcessing.compareAndSet(false, true)) {
             messageExecutor.execute(this::processMessages);
             log.debug("提交消息处理任务到线程池");
+        }
+        else {
+            log.warn("无消息调度，messageQueue.size: {}, isProcessing: {}", messageQueue.size(), isProcessing.get());
         }
     }
 
@@ -84,7 +90,7 @@ public class WebSocketMessageManager {
             log.error("处理消息时发生异常: {}", threadName, e);
         } finally {
             isProcessing.set(false);
-            log.debug("消息处理完成: {}, 剩余消息: {}", threadName, messageQueue.size());
+            log.info("消息处理完成: {}, 剩余消息: {}", threadName, messageQueue.size());
 
             // 检查是否有新消息到达，如果有则重新调度
             if (!messageQueue.isEmpty()) {
@@ -111,6 +117,7 @@ public class WebSocketMessageManager {
                 log.warn("发送消息异常：session是空或者关闭");
                 return;
             }
+            // 解决：java.lang.IllegalStateException
             synchronized (session) {
                 session.sendMessage(new TextMessage(task.message));
             }

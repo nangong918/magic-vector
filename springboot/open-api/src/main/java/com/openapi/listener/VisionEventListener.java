@@ -5,6 +5,7 @@ import com.openapi.domain.constant.realtime.RealtimeResponseDataTypeEnum;
 import com.openapi.domain.dto.ws.response.SystemTextResponse;
 import com.openapi.domain.evnet.TakePhotoEvent;
 import com.openapi.websocket.config.SessionConfig;
+import com.openapi.websocket.manager.WebSocketMessageManager;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
@@ -26,19 +27,21 @@ import java.util.Map;
 public class VisionEventListener {
 
     private final SessionConfig sessionConfig;
+    private final WebSocketMessageManager webSocketMessageManager;
 
     @EventListener
     public void handleTakePhotoEvent(TakePhotoEvent event) {
         SystemTextResponse systemTextResponse = event.getEventBody().getSystemTextResponse();
-        if (systemTextResponse.agentId == null){
+        var agentId = systemTextResponse.agentId;
+        if (agentId == null){
             log.warn("[websocket warn] agentId == null");
             return;
         }
 
         // 在这里处理事件，例如进行视觉识别
-        val realtimeChatContextManager = sessionConfig.realtimeChatContextManagerMap().get(systemTextResponse.agentId);
+        val realtimeChatContextManager = sessionConfig.realtimeChatContextManagerMap().get(agentId);
         if (realtimeChatContextManager == null){
-            log.warn("[websocket warn] 找不到对应的会话：{}", systemTextResponse.agentId);
+            log.warn("[websocket warn] 找不到对应的会话：{}", agentId);
             return;
         }
 
@@ -49,7 +52,10 @@ public class VisionEventListener {
 
         try {
             // 发送系统请求
-            realtimeChatContextManager.session.sendMessage(new TextMessage(JSON.toJSONString(responseMap)));
+            webSocketMessageManager.submitMessage(
+                    agentId,
+                    JSON.toJSONString(responseMap)
+            );
             log.info("[websocket] TakePhotoEvent 响应消息成功, agentId: {}", systemTextResponse.agentId);
         } catch (Exception e) {
             log.error("[websocket error] 响应消息异常", e);

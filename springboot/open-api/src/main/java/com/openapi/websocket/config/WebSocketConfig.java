@@ -9,6 +9,7 @@ import com.openapi.websocket.handler.test.OmniRealTimeNoVADTestChannel;
 import com.openapi.websocket.handler.test.RealTimeTestChannel;
 import com.openapi.websocket.handler.RealtimeChatChannel;
 import com.openapi.websocket.handler.test.TestChannel;
+import com.openapi.websocket.manager.WebSocketMessageManager;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.socket.config.annotation.EnableWebSocket;
@@ -30,6 +31,7 @@ public class WebSocketConfig implements WebSocketConfigurer {
     private final RealtimeChatService realtimeChatService;
     private final DashScopeChatModel dashScopeChatModel;
     private final SessionConfig sessionConfig;
+    private final WebSocketMessageManager webSocketMessageManager;
 
     /**
      * 注册 WebSocket 处理器
@@ -52,7 +54,8 @@ public class WebSocketConfig implements WebSocketConfigurer {
                                 threadPoolConfig.taskExecutor(),
                                 realtimeChatService,
                                 dashScopeChatModel,
-                                sessionConfig
+                                sessionConfig,
+                                webSocketMessageManager
                         ),
                         "/agent/realtime/chat")
                 .setAllowedOrigins("*"); // 根据需要设置允许的源

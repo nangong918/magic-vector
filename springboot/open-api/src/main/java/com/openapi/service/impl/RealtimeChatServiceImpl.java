@@ -31,6 +31,7 @@ import com.openapi.service.RealtimeChatService;
 import com.openapi.service.UserService;
 import com.openapi.service.VisionChatService;
 import com.openapi.service.VisionToolService;
+import com.openapi.websocket.manager.WebSocketMessageManager;
 import io.reactivex.BackpressureStrategy;
 import io.reactivex.Flowable;
 import io.reactivex.disposables.Disposable;
@@ -88,6 +89,7 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
     private final PromptService promptService;
     private final VisionToolService visionToolService;
     private final VisionChatService visionChatService;
+    private final WebSocketMessageManager webSocketMessageManager;
 
     @Override
     public Disposable startAudioChat(@NotNull RealtimeChatContextManager chatContextManager) throws InterruptedException, NoApiKeyException {
@@ -152,7 +154,10 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
 
                             String startResponse = JSON.toJSONString(responseMap);
 
-                            chatContextManager.session.sendMessage(new TextMessage(startResponse));
+                            webSocketMessageManager.submitMessage(
+                                    chatContextManager.agentId,
+                                    startResponse
+                            );
                             /// llm
                             if (StringUtils.hasText(result)) {
                                 llmStreamCall(result, chatContextManager);
@@ -245,15 +250,15 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
         chatContextManager.currentAgentMessageTimestamp = System.currentTimeMillis();
 
         // 发送开始标识
-        try {
-            Map<String, String> responseMap = new HashMap<>();
-            responseMap.put(RealtimeResponseDataTypeEnum.TYPE, RealtimeResponseDataTypeEnum.START_TTS.getType());
-            responseMap.put(RealtimeResponseDataTypeEnum.DATA, RealtimeResponseDataTypeEnum.START_TTS.getType());
-            String startResponse = JSON.toJSONString(responseMap);
-            chatContextManager.session.sendMessage(new TextMessage(startResponse));
-        } catch (IOException e) {
-            log.error("[websocket error] 发送开始消息异常", e);
-        }
+        Map<String, String> responseMap = new HashMap<>();
+        responseMap.put(RealtimeResponseDataTypeEnum.TYPE, RealtimeResponseDataTypeEnum.START_TTS.getType());
+        responseMap.put(RealtimeResponseDataTypeEnum.DATA, RealtimeResponseDataTypeEnum.START_TTS.getType());
+        String startResponse = JSON.toJSONString(responseMap);
+        webSocketMessageManager.submitMessage(
+                chatContextManager.agentId,
+                startResponse
+        );
+
         // 订阅流式响应并处理
         responseFlux.subscribe(
 
@@ -271,15 +276,14 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
 
                     // 发送消息给Client
                     String agentFragmentResponseJson = JSON.toJSONString(agentFragmentResponse);
-                    Map<String, String> responseMap = new HashMap<>();
-                    responseMap.put(RealtimeResponseDataTypeEnum.TYPE, RealtimeResponseDataTypeEnum.TEXT_CHAT_RESPONSE.getType());
-                    responseMap.put(RealtimeResponseDataTypeEnum.DATA, agentFragmentResponseJson);
-                    String response = JSON.toJSONString(responseMap);
-                    try {
-                        chatContextManager.session.sendMessage(new TextMessage(response));
-                    } catch (IOException e) {
-                        log.error("[websocket error] 响应消息异常", e);
-                    }
+                    Map<String, String> fragmentResponseMap = new HashMap<>();
+                    fragmentResponseMap.put(RealtimeResponseDataTypeEnum.TYPE, RealtimeResponseDataTypeEnum.TEXT_CHAT_RESPONSE.getType());
+                    fragmentResponseMap.put(RealtimeResponseDataTypeEnum.DATA, agentFragmentResponseJson);
+                    String response = JSON.toJSONString(fragmentResponseMap);
+                    webSocketMessageManager.submitMessage(
+                            chatContextManager.agentId,
+                            response
+                    );
 
                     // 观察片段信息
                     log.info("\n[LLM 片段 #{}, 耗时: {}ms]", currentCount, fragmentTime);
@@ -498,11 +502,10 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
                         responseMap.put(RealtimeResponseDataTypeEnum.TYPE, RealtimeResponseDataTypeEnum.AUDIO_CHUNK.getType());
                         responseMap.put(RealtimeResponseDataTypeEnum.DATA, b64Audio);
                         String response = JSON.toJSONString(responseMap);
-                        try {
-                            chatContextManager.session.sendMessage(new TextMessage(response));
-                        } catch (IOException e) {
-                            log.error("[websocket error] 响应消息异常", e);
-                        }
+                        webSocketMessageManager.submitMessage(
+                                chatContextManager.agentId,
+                                response
+                        );
                     }
                 });
     }
@@ -510,17 +513,16 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
     private void sendEOF(@NotNull RealtimeChatContextManager chatContextManager){
         if (chatContextManager.isTTSFinished.get() && chatContextManager.isLLMFinished.get()) {
             // 发送结束标识
-            try {
-                // 当前的合成音频播放完成之后不代表全合成音频都播放完成了, 因此此处不能发送EOF
-                Map<String, String> responseMap = new HashMap<>();
-                responseMap.put(RealtimeResponseDataTypeEnum.TYPE, RealtimeResponseDataTypeEnum.STOP_TTS.getType());
-                responseMap.put(RealtimeResponseDataTypeEnum.DATA, RealtimeResponseDataTypeEnum.STOP_TTS.getType());
-                String endResponse = JSON.toJSONString(responseMap);
-                chatContextManager.session.sendMessage(new TextMessage(endResponse));
-                log.info("[LLM 流式响应结束]");
-            } catch (IOException e) {
-                log.error("[websocket error] 发送结束消息异常", e);
-            }
+            // 当前的合成音频播放完成之后不代表全合成音频都播放完成了, 因此此处不能发送EOF
+            Map<String, String> responseMap = new HashMap<>();
+            responseMap.put(RealtimeResponseDataTypeEnum.TYPE, RealtimeResponseDataTypeEnum.STOP_TTS.getType());
+            responseMap.put(RealtimeResponseDataTypeEnum.DATA, RealtimeResponseDataTypeEnum.STOP_TTS.getType());
+            String endResponse = JSON.toJSONString(responseMap);
+            webSocketMessageManager.submitMessage(
+                    chatContextManager.agentId,
+                    endResponse
+            );
+            log.info("[LLM 流式响应结束]");
         }
     }
 
@@ -602,7 +604,10 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
         responseMap.put(RealtimeResponseDataTypeEnum.DATA, response);
 
         String startResponse = JSON.toJSONString(responseMap);
-        chatContextManager.session.sendMessage(new TextMessage(startResponse));
+        webSocketMessageManager.submitMessage(
+                chatContextManager.agentId,
+                startResponse
+        );
 
         llmStreamCall(userQuestion, chatContextManager);
     }
@@ -662,15 +667,14 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
         chatContextManager.currentAgentMessageTimestamp = System.currentTimeMillis();
 
         // 发送开始标识
-        try {
-            Map<String, String> responseMap = new HashMap<>();
-            responseMap.put(RealtimeResponseDataTypeEnum.TYPE, RealtimeResponseDataTypeEnum.START_TTS.getType());
-            responseMap.put(RealtimeResponseDataTypeEnum.DATA, RealtimeResponseDataTypeEnum.START_TTS.getType());
-            String startResponse = JSON.toJSONString(responseMap);
-            chatContextManager.session.sendMessage(new TextMessage(startResponse));
-        } catch (IOException e) {
-            log.error("[websocket error] 发送开始消息异常", e);
-        }
+        Map<String, String> responseMap = new HashMap<>();
+        responseMap.put(RealtimeResponseDataTypeEnum.TYPE, RealtimeResponseDataTypeEnum.START_TTS.getType());
+        responseMap.put(RealtimeResponseDataTypeEnum.DATA, RealtimeResponseDataTypeEnum.START_TTS.getType());
+        String startResponse = JSON.toJSONString(responseMap);
+        webSocketMessageManager.submitMessage(
+                chatContextManager.agentId,
+                startResponse
+        );
         // 订阅流式响应并处理
         responseFlux.subscribe(
 
@@ -688,15 +692,14 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
 
                     // 发送消息给Client
                     String agentFragmentResponseJson = JSON.toJSONString(agentFragmentResponse);
-                    Map<String, String> responseMap = new HashMap<>();
-                    responseMap.put(RealtimeResponseDataTypeEnum.TYPE, RealtimeResponseDataTypeEnum.TEXT_CHAT_RESPONSE.getType());
-                    responseMap.put(RealtimeResponseDataTypeEnum.DATA, agentFragmentResponseJson);
-                    String response = JSON.toJSONString(responseMap);
-                    try {
-                        chatContextManager.session.sendMessage(new TextMessage(response));
-                    } catch (IOException e) {
-                        log.error("[websocket error] 响应消息异常", e);
-                    }
+                    Map<String, String> fragmentResponseMap = new HashMap<>();
+                    fragmentResponseMap.put(RealtimeResponseDataTypeEnum.TYPE, RealtimeResponseDataTypeEnum.TEXT_CHAT_RESPONSE.getType());
+                    fragmentResponseMap.put(RealtimeResponseDataTypeEnum.DATA, agentFragmentResponseJson);
+                    String response = JSON.toJSONString(fragmentResponseMap);
+                    webSocketMessageManager.submitMessage(
+                            chatContextManager.agentId,
+                            response
+                    );
 
                     // 观察片段信息
                     log.info("\n[LLM 片段 #{}, 耗时: {}ms]", currentCount, fragmentTime);

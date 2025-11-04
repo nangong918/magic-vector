@@ -11,6 +11,7 @@ import com.openapi.service.ChatMessageService;
 import com.openapi.service.RealtimeChatService;
 import com.openapi.utils.FileUtils;
 import com.openapi.websocket.config.SessionConfig;
+import com.openapi.websocket.manager.WebSocketMessageManager;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
@@ -18,9 +19,7 @@ import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
-import org.springframework.web.socket.TextMessage;
 
-import java.io.IOException;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
@@ -38,6 +37,7 @@ public class ChatController {
     private final SessionConfig sessionConfig;
     private final ThreadPoolTaskExecutor taskExecutor;
     private final RealtimeChatService realtimeChatService;
+    private final WebSocketMessageManager webSocketMessageManager;
 
 
     @GetMapping("/getLastChat")
@@ -139,11 +139,11 @@ public class ChatController {
                 responseErrorMap.put(RealtimeResponseDataTypeEnum.TYPE, RealtimeResponseDataTypeEnum.STOP_TTS.getType());
                 responseErrorMap.put(RealtimeResponseDataTypeEnum.DATA, "聊天处理异常" + e.getMessage());
                 String response = JSON.toJSONString(responseErrorMap);
-                try {
-                    realtimeChatContextManager.session.sendMessage(new TextMessage(response));
-                } catch (IOException ex) {
-                    log.error("[websocket error] 响应消息异常", ex);
-                }
+                // 异常消息
+                webSocketMessageManager.submitMessage(
+                        agentId,
+                        response
+                );
             }
         });
         realtimeChatContextManager.setVisionChatFuture(visionChatFuture);

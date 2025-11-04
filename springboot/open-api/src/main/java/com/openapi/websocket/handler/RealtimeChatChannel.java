@@ -12,6 +12,7 @@ import com.openapi.domain.dto.ws.request.RealtimeChatConnectRequest;
 import com.openapi.domain.dto.ws.request.UploadPhotoRequest;
 import com.openapi.service.RealtimeChatService;
 import com.openapi.websocket.config.SessionConfig;
+import com.openapi.websocket.manager.WebSocketMessageManager;
 import io.reactivex.disposables.Disposable;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -25,7 +26,6 @@ import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
 
-import java.io.IOException;
 import java.util.Base64;
 import java.util.HashMap;
 import java.util.Map;
@@ -40,6 +40,7 @@ public class RealtimeChatChannel extends TextWebSocketHandler {
     private final DashScopeChatModel dashScopeChatModel;
     private final SessionConfig sessionConfig;
     private String agentId;
+    private final WebSocketMessageManager webSocketMessageManager;
 
     @Override
     public void afterConnectionEstablished(@NotNull WebSocketSession session) throws Exception {
@@ -134,11 +135,11 @@ public class RealtimeChatChannel extends TextWebSocketHandler {
                         responseMap.put(RealtimeResponseDataTypeEnum.TYPE, RealtimeResponseDataTypeEnum.STOP_TTS.getType());
                         responseMap.put(RealtimeResponseDataTypeEnum.DATA, "聊天处理异常" + e.getMessage());
                         String response = JSON.toJSONString(responseMap);
-                        try {
-                            session.sendMessage(new TextMessage(response));
-                        } catch (IOException ex) {
-                            log.error("[websocket error] 响应消息异常", ex);
-                        }
+                        // 发送EOF
+                        webSocketMessageManager.submitMessage(
+                                agentId,
+                                response
+                        );
                     }
                 });
                 realtimeChatContextManager.setChatFuture(chatFuture);
@@ -170,11 +171,11 @@ public class RealtimeChatChannel extends TextWebSocketHandler {
                         responseMap.put(RealtimeResponseDataTypeEnum.TYPE, RealtimeResponseDataTypeEnum.STOP_TTS.getType());
                         responseMap.put(RealtimeResponseDataTypeEnum.DATA, "聊天处理异常" + e.getMessage());
                         String response = JSON.toJSONString(responseMap);
-                        try {
-                            session.sendMessage(new TextMessage(response));
-                        } catch (IOException ex) {
-                            log.error("[websocket error] 响应消息异常", ex);
-                        }
+                        // 发送EOF
+                        webSocketMessageManager.submitMessage(
+                                agentId,
+                                response
+                        );
                     }
                 });
                 realtimeChatContextManager.setChatFuture(chatFuture);
@@ -225,11 +226,11 @@ public class RealtimeChatChannel extends TextWebSocketHandler {
                                         responseErrorMap.put(RealtimeResponseDataTypeEnum.TYPE, RealtimeResponseDataTypeEnum.STOP_TTS.getType());
                                         responseErrorMap.put(RealtimeResponseDataTypeEnum.DATA, "聊天处理异常" + e.getMessage());
                                         String response = JSON.toJSONString(responseErrorMap);
-                                        try {
-                                            session.sendMessage(new TextMessage(response));
-                                        } catch (IOException ex) {
-                                            log.error("[websocket error] 响应消息异常", ex);
-                                        }
+                                        // 发送EOF
+                                        webSocketMessageManager.submitMessage(
+                                                agentId,
+                                                response
+                                        );
                                     }
                                 });
                                 realtimeChatContextManager.setVisionChatFuture(visionChatFuture);
