@@ -208,6 +208,10 @@ public class RealtimeChatChannel extends TextWebSocketHandler {
                                 var visionChatFuture = taskExecutor.submit(() -> {
                                     try {
                                         // 启动vision聊天
+                                        // 取消之前的对话任务
+                                        realtimeChatContextManager.cancelChatFuture();
+                                        realtimeChatContextManager.cancelVisionChatFuture();
+                                        realtimeChatContextManager.cancelTtsFuture();
                                         realtimeChatService.startVisionChat(
                                                 imageBase64,
                                                 realtimeChatContextManager

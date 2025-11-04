@@ -123,6 +123,10 @@ public class ChatController {
         val realtimeChatContextManager = sessionConfig.realtimeChatContextManagerMap().get(agentId);
         var visionChatFuture = taskExecutor.submit(() -> {
             try {
+                // 取消之前的对话任务
+                realtimeChatContextManager.cancelChatFuture();
+                realtimeChatContextManager.cancelVisionChatFuture();
+                realtimeChatContextManager.cancelTtsFuture();
                 // 启动vision聊天
                 realtimeChatService.startVisionChat(
                         base64Str,

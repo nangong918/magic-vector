@@ -37,22 +37,45 @@ public class RealtimeChatContextManager {
     private volatile Future<?> visionChatFuture;
     private volatile Future<?> ttsFuture;
     public void setChatFuture(Future<?> chatFuture){
-        if (this.chatFuture != null){
-            this.chatFuture.cancel(true);
-        }
+        cancelChatFuture();
         this.chatFuture = chatFuture;
     }
     public void setVisionChatFuture(Future<?> visionChatFuture){
-        if (this.visionChatFuture != null){
-            this.visionChatFuture.cancel(true);
-        }
+        cancelVisionChatFuture();
         this.visionChatFuture = visionChatFuture;
     }
     public void setTtsFuture(Future<?> ttsFuture){
+        cancelTtsFuture();
+        this.ttsFuture = ttsFuture;
+    }
+    public void cancelChatFuture(){
+        if (this.chatFuture != null){
+            log.info("取消之前的chat任务");
+            this.chatFuture.cancel(true);
+        }
+        // 数据复位
+        currentResponseStringBuffer = new StringBuffer();
+        sentenceQueue.clear();
+        isLLMFinished.set(false);
+        llmConnectResetRetryCount.set(0);
+    }
+    public void cancelVisionChatFuture(){
+        if (this.visionChatFuture != null){
+            log.info("取消之前的visionChat任务");
+            this.visionChatFuture.cancel(true);
+        }
+        requestAudioBuffer.clear();
+        stopRecording.set(true);
+        isTTSFinished.set(true);
+        isFirstTTS.set(true);
+        lastTTSTimestamp = 0L;
+    }
+    public void cancelTtsFuture(){
         if (this.ttsFuture != null){
+            log.info("取消之前的tts任务");
             this.ttsFuture.cancel(true);
         }
-        this.ttsFuture = ttsFuture;
+        imageBase64 = new StringBuffer();
     }
 
     /// 音频数据
@@ -66,15 +89,17 @@ public class RealtimeChatContextManager {
     public WebSocketSession session;
 
     /// llm -> tts
+    // llm
+    // llm Connect Reset重试
+    public final AtomicInteger llmConnectResetRetryCount = new AtomicInteger(0);
     public final Queue<String> sentenceQueue = new ConcurrentLinkedQueue<>();
-    public final AtomicBoolean isTTSFinished = new AtomicBoolean(true);
     public final AtomicBoolean isLLMFinished = new AtomicBoolean(false);
+    // tts
+    public final AtomicBoolean isTTSFinished = new AtomicBoolean(true);
     // 用于记录是否是首次TTS，因为后续都是2+句话一个语音生成；而首次是单个句子
     public final AtomicBoolean isFirstTTS = new AtomicBoolean(true);
     // 实现语音延迟
     public long lastTTSTimestamp = 0L;
-    // llm Connect Reset重试
-    public final AtomicInteger llmConnectResetRetryCount = new AtomicInteger(0);
 
     /// vision chat
     // image chat
@@ -88,18 +113,20 @@ public class RealtimeChatContextManager {
     @Getter
     @Setter
     private String userQuestion = "";
+    public StringBuffer currentResponseStringBuffer = new StringBuffer();
 
     /// 当前聊天会话信息
     private String currentMessageId = String.valueOf(IdUtil.getSnowflake().nextId());
     public long currentUserMessageTimestamp = System.currentTimeMillis();
     public long currentAgentMessageTimestamp = System.currentTimeMillis();
     public LocalDateTime currentMessageDateTime = LocalDateTime.now();
-    public StringBuffer currentResponseStringBuffer = new StringBuffer();
 
     // 开启新的一问一答
     public void newChatMessage(){
         // 取消正在执行的任务
         cancelCurrentTask();
+        // 取消任务并不会清除userQuestion
+        userQuestion = "";
 
         // 填充新的会话数据
         currentMessageId = String.valueOf(IdUtil.getSnowflake().nextId());
@@ -111,37 +138,13 @@ public class RealtimeChatContextManager {
 
     // 取消当前的任务
     public void cancelCurrentTask(){
-        // 取消之前的任务
-        if (chatFuture != null) {
-            // true 表示中断正在执行
-            chatFuture.cancel(true);
-        }
-        if (visionChatFuture != null) {
-            // true 表示中断正在执行
-            visionChatFuture.cancel(true);
-        }
-        if (ttsFuture != null) {
-            // true 表示中断正在执行
-            ttsFuture.cancel(true);
-        }
+        cancelChatFuture();
+        cancelVisionChatFuture();
+        cancelTtsFuture();
+
         chatFuture = null;
         visionChatFuture = null;
         ttsFuture = null;
-
-        // 清空缓存
-        requestAudioBuffer.clear();
-        sentenceQueue.clear();
-        imageBase64 = new StringBuffer();
-        userQuestion = "";
-        currentResponseStringBuffer = new StringBuffer();
-
-        // 重置状态位
-        stopRecording.set(true);
-        isTTSFinished.set(true);
-        isLLMFinished.set(false);
-        isFirstTTS.set(true);
-        lastTTSTimestamp = 0L;
-        llmConnectResetRetryCount.set(0);
     }
 
     public String getCurrentContextParam(){
