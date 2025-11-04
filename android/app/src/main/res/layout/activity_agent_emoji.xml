@@ -95,13 +95,22 @@
         app:layout_constraintStart_toStartOf="parent"
         android:background="@color/light_blue_600"/>
 
-    <Button
-        android:id="@+id/btn_take_photo"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="照相测试"
+    <LinearLayout
         app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintStart_toStartOf="parent" />
+        app:layout_constraintStart_toStartOf="parent"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content">
+        <Button
+            android:id="@+id/btn_take_photo"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="照相测试" />
+        <Button
+            android:id="@+id/btn_vision_test"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="vision Test" />
+    </LinearLayout>
 
     <TextView
         android:id="@+id/tv_call_statue"

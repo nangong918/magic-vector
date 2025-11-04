@@ -8,7 +8,9 @@ import com.core.baseutil.file.FileUtil
 import com.core.baseutil.network.BaseResponse
 import com.core.baseutil.network.OnSuccessCallback
 import com.core.baseutil.network.OnThrowableCallback
+import com.data.domain.constant.chat.RealtimeRequestDataTypeEnum
 import com.magicvector.MainApplication
+import com.magicvector.manager.ChatMessageHandler
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
 import okhttp3.RequestBody
@@ -89,4 +91,17 @@ class AgentEmojiVm(
         callback.onAllRequestSuccess()
     }
 
+    // vision测试
+    fun visionTest(chatMessageHandler: ChatMessageHandler){
+        val userQuestion = "你表述一下现在看到的场景。"
+
+        val dataMap = mapOf(
+            RealtimeRequestDataTypeEnum.TYPE to RealtimeRequestDataTypeEnum.USER_TEXT_MESSAGE.type,
+            RealtimeRequestDataTypeEnum.DATA to userQuestion
+        )
+        chatMessageHandler.realtimeChatWsClient?.sendMessage(
+            dataMap,
+            true
+        )
+    }
 }

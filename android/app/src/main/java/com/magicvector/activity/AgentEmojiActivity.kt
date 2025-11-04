@@ -220,6 +220,11 @@ class AgentEmojiActivity : BaseAppCompatVmActivity<ActivityAgentEmojiBinding, Ag
         else {
             setVadChatState(VadChatState.Silent)
         }
+
+        // vision测试
+        binding.btnVisionTest.setOnClickListener {
+            vm.visionTest(chatMessageHandler)
+        }
     }
 
     // 监听VAD状态
