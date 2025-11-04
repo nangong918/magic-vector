@@ -158,7 +158,8 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
                             );
                             /// llm
                             if (StringUtils.hasText(result)) {
-                                llmStreamCall(result, chatContextManager);
+                                var disposable = llmStreamCall(result, chatContextManager);
+                                chatContextManager.addChatDisposables(disposable);
                             }
                         });
                     } else {
@@ -209,11 +210,12 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
                 );
     }
 
-    private void llmStreamCall(String sentence, @NotNull RealtimeChatContextManager chatContextManager) /*throws WebClientRequestException*/ {
+    private reactor.core.Disposable llmStreamCall(String sentence, @NotNull RealtimeChatContextManager chatContextManager) /*throws WebClientRequestException*/ {
         log.info("\n[LLM 开始] 输入内容: {}", sentence);
 
         var chatClient = chatContextManager.chatClient;
         if (chatClient == null){
+            sendEOF(chatContextManager);
             throw new AppException(AgentExceptions.AGENT_NOT_EXIST);
         }
 
@@ -227,7 +229,7 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
         if (prompt == null){
             log.error("[LLM 提示词] 获取失败");
             sendEOF(chatContextManager);
-            return;
+            throw new AppException(AgentExceptions.CHAT_CAN_NOT_BE_NULL);
         }
 
         Flux<String> responseFlux = chatClient.prompt(prompt)
@@ -241,7 +243,6 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
                 .timeout(Duration.ofMillis(ModelConstant.LLM_CONNECT_TIMEOUT_MILLIS));
 
         StringBuffer textBuffer = new StringBuffer();
-        AtomicInteger fragmentCount = new AtomicInteger(0);
         AtomicLong startTime = new AtomicLong(System.currentTimeMillis());
 
         // 设置Agent message Time
@@ -258,7 +259,7 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
         );
 
         // 订阅流式响应并处理
-        responseFlux.subscribe(
+        return responseFlux.subscribe(
 
                 // 处理每个流片段
                 fragment -> {
@@ -285,27 +286,30 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
                     textBuffer.append(fragment);
 
                     if (chatContextManager.isFirstTTS.compareAndSet(true, false)){
-                        // 首次tts
-                        log.info("[LLM Call] 首次TTS");
 
                         String complete1Sentence = optimizedSentenceDetector.detectAndExtractFirstSentence(textBuffer);
                         if (StringUtils.hasText(complete1Sentence)){
                             chatContextManager.sentenceQueue.add(complete1Sentence);
                             var ttsFuture = threadPoolConfig.taskExecutor().submit(
-                                    () -> generateAudio(chatContextManager)
+                                    () -> {
+                                        // 首次tts
+                                        log.info("[LLM Call] 首次TTS");
+                                        generateAudio(chatContextManager);
+                                    }
                             );
                             chatContextManager.setTtsFuture(ttsFuture);
                         }
                     }
                     else {
-                        log.info("[LLM Call] 非首次TTS");
-
                         // 尝试从缓冲区提取2个完整句子并输出
                         String complete2Sentence = optimizedSentenceDetector.detectAndExtractNeedSentences(textBuffer, 2);
                         if (StringUtils.hasText(complete2Sentence)){
                             chatContextManager.sentenceQueue.add(complete2Sentence);
                             var ttsFuture = threadPoolConfig.taskExecutor().submit(
-                                    () -> generateAudio(chatContextManager)
+                                    () -> {
+                                        log.info("[LLM Call] 非首次TTS");
+                                        generateAudio(chatContextManager);
+                                    }
                             );
                             chatContextManager.setTtsFuture(ttsFuture);
                         }
@@ -322,9 +326,6 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
 
                 // 处理错误
                 error -> {
-                    long totalTime = System.currentTimeMillis() - startTime.get();
-                    log.error("\n[LLM 错误] 总耗时: {}ms, 片段总数: {}", totalTime, fragmentCount.get(), error);
-
                     // (待优化A1)长时间未连接之后再次连接会发生Connect Reset目前采用的是递归的方式重试，可能造成堆栈溢出。考虑改为循环调用的方式
                     // 尝试再次自我调用
                     if (error instanceof WebClientRequestException || error instanceof TimeoutException){
@@ -334,7 +335,8 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
                             int attempt = chatContextManager.llmConnectResetRetryCount.incrementAndGet();
                             log.warn("[LLM 警告]检测到连接重置，进行第{}次重试", attempt);
 
-                            llmStreamCall(sentence, chatContextManager);
+                            var disposable = llmStreamCall(sentence, chatContextManager);
+                            chatContextManager.addChatDisposables(disposable);
                         }
                         else {
                             log.error("[LLM 错误] 连接重置次数过多，已尝试{}次，放弃重试", chatContextManager.llmConnectResetRetryCount.get());
@@ -352,10 +354,6 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
 
                 // 处理完成
                 () -> {
-                    long totalTime = System.currentTimeMillis() - startTime.get();
-                    log.info("\n[LLM 结束] 总耗时: {}ms, 片段总数: {}, 总字符数: {}",
-                            totalTime, fragmentCount.get(), textBuffer.length());
-
                     // 检查是否有剩余的
                     String remainingText = optimizedSentenceDetector.extractAllCompleteSentences(textBuffer);
                     if (StringUtils.hasText(remainingText)) {
@@ -399,7 +397,6 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
                     log.info("[LLM 流式响应完全结束]");
                 }
         );
-
     }
 
     private void generateAudio(@NotNull RealtimeChatContextManager chatContextManager) {
@@ -484,8 +481,19 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
                         chatContextManager.setTtsFuture(ttsFuture);
                     }
                     else {
-                        log.info("[TTS]结束 发送EOF");
-                        sendEOF(chatContextManager);
+                        if (chatContextManager.isVisionChat.get()){
+                            if (chatContextManager.isVisionChatFinished.get()){
+                                log.info("[TTS]结束 视觉任务已经结束，直接发送EOF");
+                                sendEOF(chatContextManager);
+                            }
+                            else {
+                                log.info("[TTS]结束 视觉任务未结束，等待视觉任务结束");
+                            }
+                        }
+                        else {
+                            log.info("[TTS]结束 不是视觉任务，直接发送EOF");
+                            sendEOF(chatContextManager);
+                        }
                     }
                 })
                 .blockingForEach(r -> {
@@ -595,35 +603,37 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
             log.error("保存用户TextChat数据到数据库异常", e);
         }
 
-        // 发送给Client
+        // 发送给user的text给Client
         Map<String, String> responseMap = new HashMap<>();
         responseMap.put(RealtimeResponseDataTypeEnum.TYPE, RealtimeResponseDataTypeEnum.TEXT_CHAT_RESPONSE.getType());
         responseMap.put(RealtimeResponseDataTypeEnum.DATA, response);
-
-        String startResponse = JSON.toJSONString(responseMap);
+        String userTextResponse = JSON.toJSONString(responseMap);
         webSocketMessageManager.submitMessage(
                 chatContextManager.agentId,
-                startResponse
+                userTextResponse
         );
 
-        llmStreamCall(userQuestion, chatContextManager);
+        var disposable = llmStreamCall(userQuestion, chatContextManager);
+        chatContextManager.addChatDisposables(disposable);
     }
 
     @Override
     public void startVisionChat(@Nullable String imageBase64, @NotNull RealtimeChatContextManager chatContextManager, boolean isPassiveNotActive) throws NoApiKeyException, UploadFileException {
         if (imageBase64 == null || imageBase64.isEmpty()) {
             log.info("[websocket] 启动视觉聊天：无图片");
-            visionResultLLMStreamCall(null, chatContextManager, isPassiveNotActive);
+            var disposable = visionResultLLMStreamCall(null, chatContextManager, isPassiveNotActive);
+            chatContextManager.addVisionChatDisposables(disposable);
         }
         else {
             log.info("[websocket] 启动视觉聊天：有图片, imageLength: {}", imageBase64.length());
             String result = visionChatService.callWithFileBase64(imageBase64, chatContextManager.getUserQuestion());
-            visionResultLLMStreamCall(result, chatContextManager, isPassiveNotActive);
+            var disposable =visionResultLLMStreamCall(result, chatContextManager, isPassiveNotActive);
+            chatContextManager.addVisionChatDisposables(disposable);
         }
     }
 
     // todo 优化代码，将visionLLM和原先的llm相同逻辑合并管理
-    private void visionResultLLMStreamCall(@Nullable String result, @NotNull RealtimeChatContextManager chatContextManager, boolean isPassiveNotActive){
+    private reactor.core.Disposable visionResultLLMStreamCall(@Nullable String result, @NotNull RealtimeChatContextManager chatContextManager, boolean isPassiveNotActive){
         log.info("\n[vision LLM 开始] vision识别内容: {}", result);
 
         var chatClient = chatContextManager.chatClient;
@@ -642,7 +652,7 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
         if (prompt == null){
             log.error("[vision LLM 提示词] 获取失败");
             sendEOF(chatContextManager);
-            return;
+            throw new AppException(AgentExceptions.CHAT_CAN_NOT_BE_NULL);
         }
 
         // 这里是vision的回复，所以需要进行agent headerId++
@@ -657,7 +667,6 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
                 .timeout(Duration.ofMillis(ModelConstant.LLM_CONNECT_TIMEOUT_MILLIS));
 
         StringBuffer textBuffer = new StringBuffer();
-        AtomicInteger fragmentCount = new AtomicInteger(0);
         AtomicLong startTime = new AtomicLong(System.currentTimeMillis());
 
         // 设置Agent message Time
@@ -679,7 +688,7 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
         }
 
         // 订阅流式响应并处理
-        responseFlux.subscribe(
+        return responseFlux.subscribe(
 
                 // 处理每个流片段
                 fragment -> {
@@ -743,9 +752,6 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
 
                 // 处理错误
                 error -> {
-                    long totalTime = System.currentTimeMillis() - startTime.get();
-                    log.error("\n[vision LLM 错误] 总耗时: {}ms, 片段总数: {}", totalTime, fragmentCount.get(), error);
-
                     // (待优化A1)长时间未连接之后再次连接会发生Connect Reset目前采用的是递归的方式重试，可能造成堆栈溢出。考虑改为循环调用的方式
                     // 尝试再次自我调用
                     if (error instanceof WebClientRequestException || error instanceof TimeoutException){
@@ -755,7 +761,8 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
                             int attempt = chatContextManager.llmConnectResetRetryCount.incrementAndGet();
                             log.warn("vision LLM检测到连接重置，进行第{}次重试", attempt);
 
-                            visionResultLLMStreamCall(result, chatContextManager, isPassiveNotActive);
+                            var disposable = visionResultLLMStreamCall(result, chatContextManager, isPassiveNotActive);
+                            chatContextManager.addVisionChatDisposables(disposable);
                         }
                         else {
                             log.error("[vision LLM 错误] 连接重置次数过多，已尝试{}次，放弃重试", chatContextManager.llmConnectResetRetryCount.get());

@@ -12,6 +12,8 @@ public enum AgentExceptions implements ExceptionEnums {
 
     // Agent不存在
     AGENT_NOT_EXIST("A_10001", "Agent不存在"),
+    // 对话不能为null
+    CHAT_CAN_NOT_BE_NULL("A_10002", "对话不能为null"),
     ;
 
     private final String code;

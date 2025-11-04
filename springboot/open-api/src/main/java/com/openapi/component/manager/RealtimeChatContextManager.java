@@ -15,6 +15,8 @@ import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.web.socket.WebSocketSession;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -35,21 +37,62 @@ public class RealtimeChatContextManager {
 
     /// 会话任务
     private volatile Future<?> chatFuture;
-    private volatile Disposable chatDisposable;
+    private final List<Object> chatDisposables = new ArrayList<>();
     private volatile Future<?> visionChatFuture;
+    private final List<Object> visionChatDisposables = new ArrayList<>();
     private volatile Future<?> ttsFuture;
     // todo 多线程取消还存在很多问题，思考清除全面测试
     public void setChatFuture(Future<?> chatFuture){
         cancelChatFuture();
         this.chatFuture = chatFuture;
     }
-    public void setChatDisposable(Disposable chatDisposable){
-        cancelChatDisposable();
-        this.chatDisposable = chatDisposable;
-    }
     public void setVisionChatFuture(Future<?> visionChatFuture){
         cancelVisionChatFuture();
         this.visionChatFuture = visionChatFuture;
+    }
+    public void addChatDisposables(Object chatDisposable){
+        if (chatDisposable instanceof Disposable || chatDisposable instanceof reactor.core.Disposable){
+            chatDisposables.add(chatDisposable);
+        }
+    }
+    public void cancelChatDisposable(){
+        if (chatDisposables.isEmpty()){
+            return;
+        }
+        else {
+            log.info("取消之前的chatDisposable任务数量: {}", chatDisposables.size());
+        }
+        for (Object disposable : chatDisposables){
+            if (disposable instanceof Disposable){
+                ((Disposable) disposable).dispose();
+            }
+            else if (disposable instanceof reactor.core.Disposable){
+                ((reactor.core.Disposable) disposable).dispose();
+            }
+        }
+        chatDisposables.clear();
+    }
+    public void addVisionChatDisposables(Object visionChatDisposable){
+        if (visionChatDisposable instanceof Disposable || visionChatDisposable instanceof reactor.core.Disposable){
+            visionChatDisposables.add(visionChatDisposable);
+        }
+    }
+    public void cancelVisionChatDisposable(){
+        if (visionChatDisposables.isEmpty()){
+            return;
+        }
+        else {
+            log.info("取消之前的visionChatDisposable任务数量: {}", visionChatDisposables.size());
+        }
+        for (Object disposable : visionChatDisposables){
+            if (disposable instanceof Disposable){
+                ((Disposable) disposable).dispose();
+            }
+            else if (disposable instanceof reactor.core.Disposable){
+                ((reactor.core.Disposable) disposable).dispose();
+            }
+        }
+        visionChatDisposables.clear();
     }
     public void setTtsFuture(Future<?> ttsFuture){
         cancelTtsFuture();
@@ -60,24 +103,22 @@ public class RealtimeChatContextManager {
             log.info("取消之前的chat任务");
             this.chatFuture.cancel(true);
         }
+        cancelChatDisposable();
+
         // 数据复位
-        currentResponseStringBuffer = new StringBuffer();
+        currentResponseStringBuffer.setLength(0);
         sentenceQueue.clear();
         isLLMFinished.set(false);
         llmConnectResetRetryCount.set(0);
         currentAgentResponseCount.set(0);
-    }
-    public void cancelChatDisposable(){
-        if (this.chatDisposable != null){
-            log.info("取消之前的chatDisposable任务");
-            this.chatDisposable.dispose();
-        }
     }
     public void cancelVisionChatFuture(){
         if (this.visionChatFuture != null){
             log.info("取消之前的visionChat任务");
             this.visionChatFuture.cancel(true);
         }
+        cancelVisionChatDisposable();
+
         requestAudioBuffer.clear();
         stopRecording.set(true);
         isTTSFinished.set(true);
@@ -91,7 +132,7 @@ public class RealtimeChatContextManager {
             log.info("取消之前的tts任务");
             this.ttsFuture.cancel(true);
         }
-        imageBase64 = new StringBuffer();
+        imageBase64.setLength(0);
     }
 
     /// 音频数据
@@ -163,11 +204,11 @@ public class RealtimeChatContextManager {
         cancelVisionChatFuture();
         cancelTtsFuture();
         cancelChatDisposable();
+        cancelVisionChatDisposable();
 
         chatFuture = null;
         visionChatFuture = null;
         ttsFuture = null;
-        chatDisposable = null;
     }
 
     public String getCurrentContextParam(){

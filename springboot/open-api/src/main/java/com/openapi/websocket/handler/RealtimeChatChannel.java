@@ -126,7 +126,7 @@ public class RealtimeChatChannel extends TextWebSocketHandler {
                     try {
                         // 启动聊天
                         Disposable chatDisposable = realtimeChatService.startAudioChat(realtimeChatContextManager);
-                        realtimeChatContextManager.setChatDisposable(chatDisposable);
+                        realtimeChatContextManager.addChatDisposables(chatDisposable);
                     } catch (Exception e) {
                         realtimeChatContextManager.stopRecording.set(true);
                         log.error("[audioChat] 聊天处理异常", e);
