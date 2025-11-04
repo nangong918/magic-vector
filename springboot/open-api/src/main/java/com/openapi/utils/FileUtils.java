@@ -1,5 +1,6 @@
 package com.openapi.utils;
 
+import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -9,6 +10,7 @@ import java.util.Base64;
  * @author 13225
  * @date 2025/11/3 11:22
  */
+@Slf4j
 public class FileUtils {
 
     /**
@@ -35,8 +37,10 @@ public class FileUtils {
             throw new IllegalArgumentException("文件不是有效的图片类型, contentType = " + contentType);
         }
 
+        String header = "data:" + contentType + ";base64,";
+        log.info("[multipartFileToBase64] 转换图片为Base64成功, contentType = {}, header: {}, base64Encoded.size = {}", contentType, header, base64Encoded.length());
         // 4. 拼接完整的Base64格式（带前缀，方便前端直接使用）
-        return "data:" + contentType + ";base64," + base64Encoded;
+        return header + base64Encoded;
     }
 
 }

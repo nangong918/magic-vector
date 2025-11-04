@@ -87,7 +87,7 @@ public class RealTimeTestServiceServiceImpl implements RealTimeTestServiceServic
     public void startChat(@NotNull AtomicBoolean stopRecording,
                           @NotNull Queue<byte[]> requestAudioBuffer,
                           @NotNull WebSocketSession session) throws IOException, InterruptedException, NoApiKeyException {
-        log.info("[startChat] 开始将音频流数据填充缓冲区");
+        log.info("[startAudioChat] 开始将音频流数据填充缓冲区");
 
         /// audioBytes
         ByteArrayOutputStream out = new ByteArrayOutputStream();

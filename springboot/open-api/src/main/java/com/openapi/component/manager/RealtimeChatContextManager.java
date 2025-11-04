@@ -5,6 +5,7 @@ import com.alibaba.fastjson.JSON;
 import com.openapi.domain.constant.RoleTypeEnum;
 import com.openapi.domain.dto.ws.response.RealtimeChatTextResponse;
 import com.openapi.utils.DateUtils;
+import io.reactivex.disposables.Disposable;
 import lombok.Getter;
 import lombok.NonNull;
 import lombok.Setter;
@@ -34,11 +35,17 @@ public class RealtimeChatContextManager {
 
     /// 会话任务
     private volatile Future<?> chatFuture;
+    private volatile Disposable chatDisposable;
     private volatile Future<?> visionChatFuture;
     private volatile Future<?> ttsFuture;
+    // todo 多线程取消还存在很多问题，思考清除全面测试
     public void setChatFuture(Future<?> chatFuture){
         cancelChatFuture();
         this.chatFuture = chatFuture;
+    }
+    public void setChatDisposable(Disposable chatDisposable){
+        cancelChatDisposable();
+        this.chatDisposable = chatDisposable;
     }
     public void setVisionChatFuture(Future<?> visionChatFuture){
         cancelVisionChatFuture();
@@ -58,6 +65,13 @@ public class RealtimeChatContextManager {
         sentenceQueue.clear();
         isLLMFinished.set(false);
         llmConnectResetRetryCount.set(0);
+        currentAgentResponseCount.set(0);
+    }
+    public void cancelChatDisposable(){
+        if (this.chatDisposable != null){
+            log.info("取消之前的chatDisposable任务");
+            this.chatDisposable.dispose();
+        }
     }
     public void cancelVisionChatFuture(){
         if (this.visionChatFuture != null){
@@ -114,6 +128,7 @@ public class RealtimeChatContextManager {
     @Setter
     private String userQuestion = "";
     public StringBuffer currentResponseStringBuffer = new StringBuffer();
+    private final AtomicInteger currentAgentResponseCount = new AtomicInteger(0);
 
     /// 当前聊天会话信息
     private String currentMessageId = String.valueOf(IdUtil.getSnowflake().nextId());
@@ -141,10 +156,12 @@ public class RealtimeChatContextManager {
         cancelChatFuture();
         cancelVisionChatFuture();
         cancelTtsFuture();
+        cancelChatDisposable();
 
         chatFuture = null;
         visionChatFuture = null;
         ttsFuture = null;
+        chatDisposable = null;
     }
 
     public String getCurrentContextParam(){
@@ -158,14 +175,25 @@ public class RealtimeChatContextManager {
         return JSON.toJSONString(param);
     }
 
+
+    private String getAgentMessageHeaderId(){
+        return RoleTypeEnum.AGENT.getValue() + String.valueOf(currentAgentResponseCount.get());
+    }
+    public int addAgentMessageHeaderCount(){
+        return currentAgentResponseCount.addAndGet(1);
+    }
+    private String getUserMessageHeaderId(){
+        return RoleTypeEnum.USER.getValue() + "0";
+    }
+
     @NonNull
     public String getCurrentAgentMessageId(){
-        return RoleTypeEnum.AGENT.getValue() + ":" + currentMessageId;
+        return getAgentMessageHeaderId() + ":" + currentMessageId;
     }
 
     @NonNull
     public String getCurrentUserMessageId(){
-        return RoleTypeEnum.USER.getValue() + ":" + currentMessageId;
+        return getUserMessageHeaderId() + ":" + currentMessageId;
     }
 
     @NonNull

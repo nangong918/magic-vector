@@ -125,7 +125,7 @@ public class ChatController {
             try {
                 // 取消之前的对话任务
                 realtimeChatContextManager.cancelChatFuture();
-                realtimeChatContextManager.cancelVisionChatFuture();
+//                realtimeChatContextManager.cancelVisionChatFuture();
                 realtimeChatContextManager.cancelTtsFuture();
                 // 启动vision聊天
                 realtimeChatService.startVisionChat(

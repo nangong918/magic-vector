@@ -31,7 +31,7 @@ public class VisionToolServiceImpl implements VisionToolService {
             此方法用于告知前端传递一张当前相机的照片。
             """)
     @Override
-    public void tellFrontTakePhoto(
+    public String tellFrontTakePhoto(
             @ToolParam(description = "agentId") String agentId,
             @ToolParam(description = "用户Id") String userId,
             @ToolParam(description = "消息Id") String messageId
@@ -55,5 +55,7 @@ public class VisionToolServiceImpl implements VisionToolService {
 
         eventPublisher.publishEvent(takePhotoEvent);
         log.info("[visionTool] 发送TakePhotoEvent: {}", takePhotoEvent.getEventBody());
+
+        return "已经成功向前端发送调用接口请求，你现在只需要回复类似：“稍等，让我来看看”就好了";
     }
 }

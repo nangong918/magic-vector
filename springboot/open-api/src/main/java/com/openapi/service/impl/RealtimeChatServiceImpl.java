@@ -33,6 +33,7 @@ import com.openapi.service.VisionChatService;
 import com.openapi.service.VisionToolService;
 import io.reactivex.BackpressureStrategy;
 import io.reactivex.Flowable;
+import io.reactivex.disposables.Disposable;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
@@ -89,8 +90,8 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
     private final VisionChatService visionChatService;
 
     @Override
-    public void startChat(@NotNull RealtimeChatContextManager chatContextManager) throws InterruptedException, NoApiKeyException {
-        log.info("[startChat] 开始将音频流数据填充缓冲区");
+    public Disposable startAudioChat(@NotNull RealtimeChatContextManager chatContextManager) throws InterruptedException, NoApiKeyException {
+        log.info("[startAudioChat] 开始将音频流数据填充缓冲区");
 
         var chatClient = chatContextManager.chatClient;
         if (chatClient == null){
@@ -122,34 +123,45 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
 
         /// stt
         Flowable<ByteBuffer> audioFlowable = convertAudioToFlowable(audioData);
-        sttStreamCall(audioFlowable, result -> {
-            // 返回结果给前端
-            RealtimeChatTextResponse userAudioSttResponse = chatContextManager.getSSTResultResponse(result);
-            String response = JSON.toJSONString(userAudioSttResponse);
 
-            // 保存到数据库
-            ChatMessageDo chatMessageDo = null;
-            try {
-                chatMessageDo = chatMessageConverter.realtimeChatTextResponseToChatMessageDo(userAudioSttResponse, userAudioSttResponse.chatTime);
-                String messageId = chatMessageService.insertOne(chatMessageDo);
-                log.info("保存用户语音识别结果到数据库：{}", messageId);
-            } catch (Exception e) {
-                log.error("保存用户语音识别结果到数据库失败：{}", e.getMessage());
-            }
+        // 判断 audioFlowable 是否为空
+        return audioFlowable
+                .isEmpty()
+                .subscribe(isEmpty -> {
+                    if (!isEmpty) {
+                        // 只有在 audioFlowable 不为空时才调用 sttStreamCall
+                        sttStreamCall(audioFlowable, result -> {
+                            // 返回结果给前端
+                            RealtimeChatTextResponse userAudioSttResponse = chatContextManager.getSSTResultResponse(result);
+                            String response = JSON.toJSONString(userAudioSttResponse);
 
-            // 发送给Client
-            Map<String, String> responseMap = new HashMap<>();
-            responseMap.put(RealtimeResponseDataTypeEnum.TYPE, RealtimeResponseDataTypeEnum.TEXT_CHAT_RESPONSE.getType());
-            responseMap.put(RealtimeResponseDataTypeEnum.DATA, response);
+                            // 保存到数据库
+                            ChatMessageDo chatMessageDo = null;
+                            try {
+                                chatMessageDo = chatMessageConverter.realtimeChatTextResponseToChatMessageDo(userAudioSttResponse, userAudioSttResponse.chatTime);
+                                String messageId = chatMessageService.insertOne(chatMessageDo);
+                                log.info("保存用户语音识别结果到数据库：{}", messageId);
+                            } catch (Exception e) {
+                                log.error("保存用户语音识别结果到数据库失败：{}", e.getMessage());
+                            }
 
-            String startResponse = JSON.toJSONString(responseMap);
+                            // 发送给Client
+                            Map<String, String> responseMap = new HashMap<>();
+                            responseMap.put(RealtimeResponseDataTypeEnum.TYPE, RealtimeResponseDataTypeEnum.TEXT_CHAT_RESPONSE.getType());
+                            responseMap.put(RealtimeResponseDataTypeEnum.DATA, response);
 
-            chatContextManager.session.sendMessage(new TextMessage(startResponse));
-            /// llm
-            if (StringUtils.hasText(result)) {
-                llmStreamCall(result, chatContextManager);
-            }
-        });
+                            String startResponse = JSON.toJSONString(responseMap);
+
+                            chatContextManager.session.sendMessage(new TextMessage(startResponse));
+                            /// llm
+                            if (StringUtils.hasText(result)) {
+                                llmStreamCall(result, chatContextManager);
+                            }
+                        });
+                    } else {
+                        log.warn("[stt] audioFlowable是empty，不做处理");
+                    }
+                });
     }
 
     private static Flowable<ByteBuffer> convertAudioToFlowable(byte[] audioData) {
@@ -401,7 +413,7 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
                 log.info("[TTS] 模拟人语音停顿 暂停 {}ms", ModelConstant.SENTENCE_INTERVAL - ttsGapTime);
                 Thread.sleep(ModelConstant.SENTENCE_INTERVAL - ttsGapTime);
             } catch (InterruptedException e) {
-                log.error("[TTS] 线程中断", e);
+                log.info("[TTS] 次线程任务被取消，休眠线程中断： {}", e.getMessage());
             }
         }
         else {
@@ -631,6 +643,10 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
             return;
         }
 
+        // 这里是vision的回复，所以需要进行agent headerId++
+        int headerId = chatContextManager.addAgentMessageHeaderCount();
+        log.info("[vision LLM] 启动vision chat; headerId: {}", headerId);
+
         Flux<String> responseFlux = chatClient.prompt(prompt)
                 .advisors(a -> a.param(ChatMemory.CONVERSATION_ID, chatContextManager.agentId))
                 .stream()
@@ -782,6 +798,7 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
                                 realtimeChatTextResponse,
                                 realtimeChatTextResponse.getChatTime()
                         );
+                        // 现在的场景，user的一句话agent可能有两个回答; 所以新增设计了MessageHeader
                         String messageId = chatMessageService.insertOne(chatMessageDo);
                         log.info("成功将LLM插入消息，消息Id: {}", messageId);
                     } catch (Exception e) {

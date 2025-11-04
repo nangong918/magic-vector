@@ -12,6 +12,7 @@ import com.openapi.domain.dto.ws.request.RealtimeChatConnectRequest;
 import com.openapi.domain.dto.ws.request.UploadPhotoRequest;
 import com.openapi.service.RealtimeChatService;
 import com.openapi.websocket.config.SessionConfig;
+import io.reactivex.disposables.Disposable;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
@@ -124,7 +125,8 @@ public class RealtimeChatChannel extends TextWebSocketHandler {
                 var chatFuture = taskExecutor.submit(() -> {
                     try {
                         // 启动聊天
-                        realtimeChatService.startChat(realtimeChatContextManager);
+                        Disposable chatDisposable = realtimeChatService.startAudioChat(realtimeChatContextManager);
+                        realtimeChatContextManager.setChatDisposable(chatDisposable);
                     } catch (Exception e) {
                         realtimeChatContextManager.stopRecording.set(true);
                         log.error("[audioChat] 聊天处理异常", e);
@@ -210,7 +212,7 @@ public class RealtimeChatChannel extends TextWebSocketHandler {
                                         // 启动vision聊天
                                         // 取消之前的对话任务
                                         realtimeChatContextManager.cancelChatFuture();
-                                        realtimeChatContextManager.cancelVisionChatFuture();
+//                                        realtimeChatContextManager.cancelVisionChatFuture();
                                         realtimeChatContextManager.cancelTtsFuture();
                                         realtimeChatService.startVisionChat(
                                                 imageBase64,

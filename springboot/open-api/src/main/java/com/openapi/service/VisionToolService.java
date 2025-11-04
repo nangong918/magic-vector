@@ -14,7 +14,7 @@ public interface VisionToolService {
             当用户问Agent看看当前摄像头前是什么，或者询问Agent能看到用户给Agent展示的物品的时等涉及视觉任务调用此方法，
             此方法用于告知前端传递一张当前相机的照片。
             """)
-    void tellFrontTakePhoto(
+    String tellFrontTakePhoto(
             @ToolParam(description = "agentId") String agentId,
             @ToolParam(description = "用户Id") String userId,
             @ToolParam(description = "消息Id") String messageId
