@@ -274,7 +274,7 @@ public class RealtimeChatContextManager {
     }
 
     @NonNull
-    public RealtimeChatTextResponse getSSTResultResponse(@NonNull String sstResult){
+    public RealtimeChatTextResponse getSTTResultResponse(@NonNull String sstResult){
         setUserQuestion(sstResult);
         val response = new RealtimeChatTextResponse();
         response.setAgentId(agentId);

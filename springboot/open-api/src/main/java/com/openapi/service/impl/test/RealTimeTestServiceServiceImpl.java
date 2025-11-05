@@ -23,7 +23,7 @@ import com.openapi.domain.constant.error.AgentExceptions;
 import com.openapi.domain.constant.test.RealtimeDataTypeEnum;
 import com.openapi.domain.dto.ws.response.RealtimeChatTextResponse;
 import com.openapi.domain.exception.AppException;
-import com.openapi.domain.interfaces.OnSSTResultCallback;
+import com.openapi.domain.interfaces.OnSTTResultCallback;
 import com.openapi.service.AgentService;
 import com.openapi.service.ChatMessageService;
 import com.openapi.service.test.RealTimeTestServiceService;
@@ -142,7 +142,7 @@ public class RealTimeTestServiceServiceImpl implements RealTimeTestServiceServic
         }, BackpressureStrategy.BUFFER);
     }
 
-    private void sttStreamCall(Flowable<ByteBuffer> audioSource, OnSSTResultCallback callback) throws NoApiKeyException {
+    private void sttStreamCall(Flowable<ByteBuffer> audioSource, OnSTTResultCallback callback) throws NoApiKeyException {
         // 创建RecognitionParam，audioFrames参数中传入上面创建的Flowable<ByteBuffer>
         RecognitionParam sttParam = RecognitionParam.builder()
                 .model(sttModel)

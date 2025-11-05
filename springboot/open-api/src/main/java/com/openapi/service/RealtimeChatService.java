@@ -17,7 +17,7 @@ import java.io.IOException;
  * @date 2025/10/16 10:08
  */
 public interface RealtimeChatService {
-    io.reactivex.disposables.Disposable startAudioChat(@NotNull RealtimeChatContextManager chatContextManager) throws InterruptedException, NoApiKeyException;
+    void startAudioChat(@NotNull RealtimeChatContextManager chatContextManager) throws InterruptedException, NoApiKeyException;
 
     ChatClient initChatClient(@NotNull RealtimeChatContextManager chatContextManager, @NotNull DashScopeChatModel chatModel) throws AppException;
 
