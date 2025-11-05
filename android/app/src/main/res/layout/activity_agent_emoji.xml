@@ -97,11 +97,12 @@
 
     <LinearLayout
         app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintStart_toEndOf="@+id/iv_mic"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content">
         <Button
             android:id="@+id/btn_take_photo"
+            android:visibility="gone"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="照相测试" />
@@ -126,11 +127,10 @@
         android:id="@+id/iv_mic"
         android:layout_width="60dp"
         android:layout_height="60dp"
-        android:layout_margin="10dp"
         android:background="@drawable/round_grey_400"
         android:padding="10dp"
         android:src="@xml/mic_24px"
-        app:layout_constraintBottom_toTopOf="@+id/btn_take_photo"
+        app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

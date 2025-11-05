@@ -5,6 +5,8 @@ import android.graphics.Bitmap
 import android.os.Bundle
 import android.text.TextUtils
 import android.util.Log
+import android.view.View
+import android.view.WindowManager
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.lifecycleScope
 import com.core.appcore.api.handler.SyncRequestCallback
@@ -472,6 +474,23 @@ class AgentEmojiActivity : BaseAppCompatVmActivity<ActivityAgentEmojiBinding, Ag
     }
 
     //----------------生命周期----------------
+
+    override fun initWindow() {
+        // 隐藏标题导航栏
+        supportActionBar?.hide()
+
+        // 隐藏状态栏
+        window.setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN, WindowManager.LayoutParams.FLAG_FULLSCREEN)
+        // 保持屏幕常亮
+        window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        // 隐藏导航栏
+        val decorView = window.decorView
+        decorView.systemUiVisibility = (
+                View.SYSTEM_UI_FLAG_FULLSCREEN
+                        or View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
+                        or View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
+                )
+    }
 
     // 恢复
     override fun onResume() {
