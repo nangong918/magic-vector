@@ -124,8 +124,7 @@ public class RealtimeChatChannel extends TextWebSocketHandler {
                 var chatFuture = taskExecutor.submit(() -> {
                     try {
                         // 启动聊天
-                        io.reactivex.disposables.Disposable chatDisposable = realtimeChatService.startAudioChat(realtimeChatContextManager);
-                        realtimeChatContextManager.addChatDisposables(chatDisposable);
+                        realtimeChatService.startAudioChat(realtimeChatContextManager);
                     } catch (Exception e) {
                         realtimeChatContextManager.stopRecording.set(true);
                         log.error("[audioChat] 聊天处理异常", e);
@@ -140,7 +139,7 @@ public class RealtimeChatChannel extends TextWebSocketHandler {
                         );
                     }
                 });
-                realtimeChatContextManager.setChatFuture(chatFuture);
+                realtimeChatContextManager.addChatFutures(chatFuture);
             }
             case STOP_AUDIO_RECORD -> {
                 var realtimeChatContextManager = sessionConfig.realtimeChatContextManagerMap().get(agentId);
@@ -176,7 +175,7 @@ public class RealtimeChatChannel extends TextWebSocketHandler {
                         );
                     }
                 });
-                realtimeChatContextManager.setChatFuture(chatFuture);
+                realtimeChatContextManager.addChatFutures(chatFuture);
             }
             case SYSTEM_MESSAGE -> {
                 var realtimeChatContextManager = sessionConfig.realtimeChatContextManagerMap().get(agentId);
@@ -210,10 +209,8 @@ public class RealtimeChatChannel extends TextWebSocketHandler {
                                     try {
                                         // 启动vision聊天
                                         // 取消之前的对话任务
-                                        realtimeChatContextManager.cancelChatFuture();
-//                                        realtimeChatContextManager.cancelVisionChatFuture();
-                                        realtimeChatContextManager.cancelTtsFuture();
-                                        realtimeChatService.startVisionChat(
+//                                        realtimeChatContextManager.cancelChatTask();
+                                        realtimeChatService.startFunctionCallResultChat(
                                                 imageBase64,
                                                 realtimeChatContextManager,
                                                 true
@@ -232,7 +229,7 @@ public class RealtimeChatChannel extends TextWebSocketHandler {
                                         );
                                     }
                                 });
-                                realtimeChatContextManager.setVisionChatFuture(visionChatFuture);
+                                realtimeChatContextManager.addFunctionCallChatFutures(visionChatFuture);
                             }
                         }
                         else {

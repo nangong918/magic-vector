@@ -5,12 +5,9 @@ import com.alibaba.dashscope.exception.NoApiKeyException;
 import com.alibaba.dashscope.exception.UploadFileException;
 import com.openapi.component.manager.RealtimeChatContextManager;
 import com.openapi.domain.exception.AppException;
-import io.reactivex.disposables.Disposable;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.springframework.ai.chat.client.ChatClient;
-
-import java.io.IOException;
 
 /**
  * @author 13225
@@ -31,5 +28,5 @@ public interface RealtimeChatService {
      * @throws NoApiKeyException     没有API Key
      * @throws UploadFileException   上传文件异常
      */
-    void startVisionChat(@Nullable String imageBase64, @NotNull RealtimeChatContextManager chatContextManager, boolean isPassiveNotActive) throws NoApiKeyException, UploadFileException;
+    void startFunctionCallResultChat(@Nullable String imageBase64, @NotNull RealtimeChatContextManager chatContextManager, boolean isPassiveNotActive) throws NoApiKeyException, UploadFileException;
 }

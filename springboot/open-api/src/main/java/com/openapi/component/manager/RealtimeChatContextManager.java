@@ -28,6 +28,9 @@ import java.util.concurrent.atomic.AtomicInteger;
  * @date 2025/10/16 9:50
  * 实时聊天的上下文管理器，一个连接一个，并非单例，不能使用@Component
  * 需求：1. 用户发送语音 + 回调显示用户语音 2. 流式音频回调 3. 流式文本持续回显 4. 聊天记录保存到mysql 5.下次会话的时候加载到ChatModel
+ * vision chat工作流 ->
+ *  userMessage -> chatClient -> functionCall(将context manager设置为functionCalling) -> response1 -> response2(取消response1的内容)
+ *  response1 [结束：function calling -> 不发送EOF] response2 [开始：function calling -> 不发送起始符]
  */
 @Slf4j
 public class RealtimeChatContextManager {
@@ -35,26 +38,64 @@ public class RealtimeChatContextManager {
     public ChatClient chatClient;
 
     /// 会话任务
-    private volatile Future<?> chatFuture;
+    private final List<Future<?>> chatFutures = new ArrayList<>();
     private final List<Object> chatDisposables = new ArrayList<>();
-    private volatile Future<?> visionChatFuture;
-    private final List<Object> visionChatDisposables = new ArrayList<>();
-    private volatile Future<?> ttsFuture;
-    // todo 多线程取消还存在很多问题，思考清除全面测试
-    public void setChatFuture(Future<?> chatFuture){
-        cancelChatFuture();
-        this.chatFuture = chatFuture;
-    }
-    public void setVisionChatFuture(Future<?> visionChatFuture){
-        cancelVisionChatFuture();
-        this.visionChatFuture = visionChatFuture;
+    private final List<Object> functionCallChatDisposables = new ArrayList<>();
+    private final List<Future<?>> functionCallChatFutures = new ArrayList<>();
+    // 是否正在function call / mcp
+    public AtomicBoolean isFunctionCalling = new AtomicBoolean(false);
+    public AtomicBoolean isChatting = new AtomicBoolean(false);
+    public void addChatFutures(Future<?> chatFuture){
+        if (chatFuture == null){
+            return;
+        }
+        chatFutures.add(chatFuture);
     }
     public void addChatDisposables(Object chatDisposable){
+        if (chatDisposable == null){
+            return;
+        }
         if (chatDisposable instanceof io.reactivex.disposables.Disposable || chatDisposable instanceof reactor.core.Disposable){
             chatDisposables.add(chatDisposable);
         }
     }
-    public void cancelChatDisposable(){
+    public void addFunctionCallChatFutures(Future<?> functionCallChatFuture){
+        if (functionCallChatFuture == null){
+            return;
+        }
+        functionCallChatFutures.add(functionCallChatFuture);
+    }
+    public void addFunctionCallChatDisposables(Object functionCallChatDisposable){
+        if (functionCallChatDisposable == null){
+            return;
+        }
+        if (functionCallChatDisposable instanceof io.reactivex.disposables.Disposable || functionCallChatDisposable instanceof reactor.core.Disposable){
+            functionCallChatDisposables.add(functionCallChatDisposable);
+        }
+    }
+
+    // 取消chat任务
+    public void cancelChatTask(){
+        cancelChatFutures();
+        cancelChatDisposable();
+
+        // 数据复位
+        currentResponseStringBuffer.setLength(0);
+        sentenceQueue.clear();
+        isLLMFinished.set(false);
+        llmConnectResetRetryCount.set(0);
+        currentAgentResponseCount.set(0);
+    }
+    private void cancelChatFutures(){
+        for (Future<?> chatFuture : chatFutures){
+            if (chatFuture != null){
+                chatFuture.cancel(true);
+            }
+        }
+        log.info("取消之前的chatFuture任务数量: {}", chatFutures.size());
+        chatFutures.clear();
+    }
+    private void cancelChatDisposable(){
         if (chatDisposables.isEmpty()){
             return;
         }
@@ -71,19 +112,35 @@ public class RealtimeChatContextManager {
         }
         chatDisposables.clear();
     }
-    public void addVisionChatDisposables(Object visionChatDisposable){
-        if (visionChatDisposable instanceof io.reactivex.disposables.Disposable || visionChatDisposable instanceof reactor.core.Disposable){
-            visionChatDisposables.add(visionChatDisposable);
-        }
+
+    // 取消function call result任务
+    public void cancelFunctionCallChatTask(){
+        cancelFunctionCallChatFutures();
+        cancelFunctionCallChatDisposable();
+
+        requestAudioBuffer.clear();
+        stopRecording.set(true);
+        isTTSFinished.set(true);
+        isFirstTTS.set(true);
+        lastTTSTimestamp = 0L;
     }
-    public void cancelVisionChatDisposable(){
-        if (visionChatDisposables.isEmpty()){
+    private void cancelFunctionCallChatFutures(){
+        for (Future<?> functionCallChatFuture : functionCallChatFutures){
+            if (functionCallChatFuture != null){
+                functionCallChatFuture.cancel(true);
+            }
+        }
+        log.info("取消之前的functionCall ChatFuture任务数量: {}", functionCallChatFutures.size());
+        functionCallChatFutures.clear();
+    }
+    public void cancelFunctionCallChatDisposable(){
+        if (functionCallChatDisposables.isEmpty()){
             return;
         }
         else {
-            log.info("取消之前的visionChatDisposable任务数量: {}", visionChatDisposables.size());
+            log.info("取消之前的functionCall ChatDisposable任务数量: {}", functionCallChatDisposables.size());
         }
-        for (Object disposable : visionChatDisposables){
+        for (Object disposable : functionCallChatDisposables){
             if (disposable instanceof io.reactivex.disposables.Disposable){
                 ((io.reactivex.disposables.Disposable) disposable).dispose();
             }
@@ -91,47 +148,7 @@ public class RealtimeChatContextManager {
                 ((reactor.core.Disposable) disposable).dispose();
             }
         }
-        visionChatDisposables.clear();
-    }
-    public void setTtsFuture(Future<?> ttsFuture){
-        cancelTtsFuture();
-        this.ttsFuture = ttsFuture;
-    }
-    public void cancelChatFuture(){
-        if (this.chatFuture != null){
-            log.info("取消之前的chat任务");
-            this.chatFuture.cancel(true);
-        }
-        cancelChatDisposable();
-
-        // 数据复位
-        currentResponseStringBuffer.setLength(0);
-        sentenceQueue.clear();
-        isLLMFinished.set(false);
-        llmConnectResetRetryCount.set(0);
-        currentAgentResponseCount.set(0);
-    }
-    public void cancelVisionChatFuture(){
-        if (this.visionChatFuture != null){
-            log.info("取消之前的visionChat任务");
-            this.visionChatFuture.cancel(true);
-        }
-        cancelVisionChatDisposable();
-
-        requestAudioBuffer.clear();
-        stopRecording.set(true);
-        isTTSFinished.set(true);
-        isFirstTTS.set(true);
-        lastTTSTimestamp = 0L;
-        isVisionChat.set(false);
-        isVisionChatFinished.set(false);
-    }
-    public void cancelTtsFuture(){
-        if (this.ttsFuture != null){
-            log.info("取消之前的tts任务");
-            this.ttsFuture.cancel(true);
-        }
-        imageBase64.setLength(0);
+        functionCallChatDisposables.clear();
     }
 
     /// 音频数据
@@ -164,10 +181,7 @@ public class RealtimeChatContextManager {
 //    public List<StringBuffer> imageListBase64 = new ArrayList<>();
     // video chat (开发的时候再放出来)
 //    public StringBuffer videoBase64 = new StringBuffer();
-    // 是否是视觉任务 （解决：1.视觉任务的第一次agent call不能发送eof 2.视觉任务的启动不能发送起始符号）
-    public final AtomicBoolean isVisionChat = new AtomicBoolean(false);
-    // 视觉任务是否结束
-    public final AtomicBoolean isVisionChatFinished = new AtomicBoolean(false);
+
 
     /// userQuestion
     @Getter
@@ -199,15 +213,10 @@ public class RealtimeChatContextManager {
 
     // 取消当前的任务
     public void cancelCurrentTask(){
-        cancelChatFuture();
-        cancelVisionChatFuture();
-        cancelTtsFuture();
+        cancelChatFutures();
+        cancelFunctionCallChatFutures();
         cancelChatDisposable();
-        cancelVisionChatDisposable();
-
-        chatFuture = null;
-        visionChatFuture = null;
-        ttsFuture = null;
+        cancelFunctionCallChatDisposable();
     }
 
     public String getCurrentContextParam(){

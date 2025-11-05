@@ -62,10 +62,10 @@ public class VisionToolServiceImpl implements VisionToolService {
                         .map(map -> map.get(agentId))
                         .orElse(null);
 
-        // 设置识别为视觉任务
+        // 设置识别正在进行function call
         if (chatContextManager != null){
-            chatContextManager.isVisionChat.set(true);
-            chatContextManager.isVisionChatFinished.set(false);
+            // 设置正在进行function call
+            chatContextManager.isFunctionCalling.set(true);
         }
         else {
             log.warn("未找到agentId: {}, 对应的chatContextManager", agentId);

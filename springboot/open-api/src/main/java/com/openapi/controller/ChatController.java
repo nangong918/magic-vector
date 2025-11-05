@@ -124,11 +124,9 @@ public class ChatController {
         var visionChatFuture = taskExecutor.submit(() -> {
             try {
                 // 取消之前的对话任务
-                realtimeChatContextManager.cancelChatFuture();
-//                realtimeChatContextManager.cancelVisionChatFuture();
-                realtimeChatContextManager.cancelTtsFuture();
+//                realtimeChatContextManager.cancelChatTask();
                 // 启动vision聊天
-                realtimeChatService.startVisionChat(
+                realtimeChatService.startFunctionCallResultChat(
                         base64Str,
                         realtimeChatContextManager,
                         true
@@ -147,7 +145,7 @@ public class ChatController {
                 );
             }
         });
-        realtimeChatContextManager.setVisionChatFuture(visionChatFuture);
+        realtimeChatContextManager.addFunctionCallChatFutures(visionChatFuture);
 
         return BaseResponse.getResponseEntitySuccess("上传成功");
     }

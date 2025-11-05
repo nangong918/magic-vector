@@ -5,5 +5,5 @@ package com.openapi.domain.interfaces;
  * @date 2025/11/5 13:15
  */
 public interface OnTTSSelfCall {
-    void selfCall(io.reactivex.disposables.Disposable ttsDisposable, boolean isVisionTask);
+    void selfCall(io.reactivex.disposables.Disposable ttsDisposable, boolean isFunctionCall);
 }
