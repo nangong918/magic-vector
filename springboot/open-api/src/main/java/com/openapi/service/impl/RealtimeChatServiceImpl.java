@@ -90,7 +90,7 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
     private final WebSocketMessageManager webSocketMessageManager;
 
     @Override
-    public Disposable startAudioChat(@NotNull RealtimeChatContextManager chatContextManager) throws InterruptedException, NoApiKeyException {
+    public io.reactivex.disposables.Disposable startAudioChat(@NotNull RealtimeChatContextManager chatContextManager) throws InterruptedException, NoApiKeyException {
         log.info("[startAudioChat] 开始将音频流数据填充缓冲区");
 
         var chatClient = chatContextManager.chatClient;
@@ -399,10 +399,11 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
         );
     }
 
-    private void generateAudio(@NotNull RealtimeChatContextManager chatContextManager) {
+    @Nullable
+    private io.reactivex.disposables.Disposable generateAudio(@NotNull RealtimeChatContextManager chatContextManager) {
         if (!chatContextManager.isTTSFinished.get()){
             log.info("[TTS] 正在生成音频，请稍等...");
-            return;
+            return null;
         }
 
         long ttsGapTime = System.currentTimeMillis() - chatContextManager.lastTTSTimestamp;
@@ -426,7 +427,7 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
         if (sentences.isEmpty()){
             log.info("[TTS] 暂无数据");
             chatContextManager.isTTSFinished.set(true);
-            return;
+            return null;
         }
 
         // 拼接
@@ -438,7 +439,7 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
         if (!StringUtils.hasText(sentence)){
             log.info("[TTS] 暂无数据");
             chatContextManager.isTTSFinished.set(true);
-            return;
+            return null;
         }
         else {
             chatContextManager.isTTSFinished.set(false);
@@ -466,8 +467,8 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
             throw new RuntimeException(e);
         }
 
-        result.doOnSubscribe(
-                        subscription -> log.info("TTS开始"))
+        return result
+                .doOnSubscribe(subscription -> log.info("[TTS] 开始"))
                 .doFinally(() -> {
                     chatContextManager.isTTSFinished.set(true);
                     // 记录结束时间
@@ -496,23 +497,28 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
                         }
                     }
                 })
-                .blockingForEach(r -> {
-                    String base64Data = r.getOutput().getAudio().getData();
-                    if (base64Data != null && !base64Data.isEmpty()) {
-                        byte[] audioBytes = Base64.getDecoder().decode(base64Data);
+                .subscribe(
+                    r -> {
+                        String base64Data = r.getOutput().getAudio().getData();
+                        if (base64Data != null && !base64Data.isEmpty()) {
+                            byte[] audioBytes = Base64.getDecoder().decode(base64Data);
 
-                        // bytes -> base64Str
-                        String b64Audio = Base64.getEncoder().encodeToString(audioBytes);
-                        Map<String, String> responseMap = new HashMap<>();
-                        responseMap.put(RealtimeResponseDataTypeEnum.TYPE, RealtimeResponseDataTypeEnum.AUDIO_CHUNK.getType());
-                        responseMap.put(RealtimeResponseDataTypeEnum.DATA, b64Audio);
-                        String response = JSON.toJSONString(responseMap);
-                        webSocketMessageManager.submitMessage(
-                                chatContextManager.agentId,
-                                response
-                        );
+                            // bytes -> base64Str
+                            String b64Audio = Base64.getEncoder().encodeToString(audioBytes);
+                            Map<String, String> responseMap = new HashMap<>();
+                            responseMap.put(RealtimeResponseDataTypeEnum.TYPE, RealtimeResponseDataTypeEnum.AUDIO_CHUNK.getType());
+                            responseMap.put(RealtimeResponseDataTypeEnum.DATA, b64Audio);
+                            String response = JSON.toJSONString(responseMap);
+                            webSocketMessageManager.submitMessage(
+                                    chatContextManager.agentId,
+                                    response
+                            );
+                        }
+                    },
+                    e -> {
+
                     }
-                });
+                );
     }
 
     private void sendEOF(@NotNull RealtimeChatContextManager chatContextManager){
@@ -715,27 +721,31 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
                     textBuffer.append(fragment);
 
                     if (chatContextManager.isFirstTTS.compareAndSet(true, false)){
-                        // 首次tts
-                        log.info("[vision LLM Call] 首次TTS");
 
                         String complete1Sentence = optimizedSentenceDetector.detectAndExtractFirstSentence(textBuffer);
                         if (StringUtils.hasText(complete1Sentence)){
                             chatContextManager.sentenceQueue.add(complete1Sentence);
                             var ttsFuture = threadPoolConfig.taskExecutor().submit(
-                                    () -> generateAudio(chatContextManager)
+                                    () -> {
+                                        // 首次tts
+                                        log.info("[vision LLM Call] 首次TTS");
+                                        generateAudio(chatContextManager);
+                                    }
                             );
                             chatContextManager.setTtsFuture(ttsFuture);
                         }
                     }
                     else {
-                        log.info("[vision LLM Call] 非首次tts");
 
                         // 尝试从缓冲区提取2个完整句子并输出
                         String complete2Sentence = optimizedSentenceDetector.detectAndExtractNeedSentences(textBuffer, 2);
                         if (StringUtils.hasText(complete2Sentence)){
                             chatContextManager.sentenceQueue.add(complete2Sentence);
                             var ttsFuture = threadPoolConfig.taskExecutor().submit(
-                                    () -> generateAudio(chatContextManager)
+                                    () -> {
+                                        log.info("[vision LLM Call] 非首次TTS");
+                                        generateAudio(chatContextManager);
+                                    }
                             );
                             chatContextManager.setTtsFuture(ttsFuture);
                         }

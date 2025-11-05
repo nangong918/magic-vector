@@ -5,7 +5,6 @@ import com.alibaba.fastjson.JSON;
 import com.openapi.domain.constant.RoleTypeEnum;
 import com.openapi.domain.dto.ws.response.RealtimeChatTextResponse;
 import com.openapi.utils.DateUtils;
-import io.reactivex.disposables.Disposable;
 import lombok.Getter;
 import lombok.NonNull;
 import lombok.Setter;
@@ -51,7 +50,7 @@ public class RealtimeChatContextManager {
         this.visionChatFuture = visionChatFuture;
     }
     public void addChatDisposables(Object chatDisposable){
-        if (chatDisposable instanceof Disposable || chatDisposable instanceof reactor.core.Disposable){
+        if (chatDisposable instanceof io.reactivex.disposables.Disposable || chatDisposable instanceof reactor.core.Disposable){
             chatDisposables.add(chatDisposable);
         }
     }
@@ -63,8 +62,8 @@ public class RealtimeChatContextManager {
             log.info("取消之前的chatDisposable任务数量: {}", chatDisposables.size());
         }
         for (Object disposable : chatDisposables){
-            if (disposable instanceof Disposable){
-                ((Disposable) disposable).dispose();
+            if (disposable instanceof io.reactivex.disposables.Disposable){
+                ((io.reactivex.disposables.Disposable) disposable).dispose();
             }
             else if (disposable instanceof reactor.core.Disposable){
                 ((reactor.core.Disposable) disposable).dispose();
@@ -73,7 +72,7 @@ public class RealtimeChatContextManager {
         chatDisposables.clear();
     }
     public void addVisionChatDisposables(Object visionChatDisposable){
-        if (visionChatDisposable instanceof Disposable || visionChatDisposable instanceof reactor.core.Disposable){
+        if (visionChatDisposable instanceof io.reactivex.disposables.Disposable || visionChatDisposable instanceof reactor.core.Disposable){
             visionChatDisposables.add(visionChatDisposable);
         }
     }
@@ -85,8 +84,8 @@ public class RealtimeChatContextManager {
             log.info("取消之前的visionChatDisposable任务数量: {}", visionChatDisposables.size());
         }
         for (Object disposable : visionChatDisposables){
-            if (disposable instanceof Disposable){
-                ((Disposable) disposable).dispose();
+            if (disposable instanceof io.reactivex.disposables.Disposable){
+                ((io.reactivex.disposables.Disposable) disposable).dispose();
             }
             else if (disposable instanceof reactor.core.Disposable){
                 ((reactor.core.Disposable) disposable).dispose();

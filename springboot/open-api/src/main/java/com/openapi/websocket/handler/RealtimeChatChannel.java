@@ -13,7 +13,6 @@ import com.openapi.domain.dto.ws.request.UploadPhotoRequest;
 import com.openapi.service.RealtimeChatService;
 import com.openapi.websocket.config.SessionConfig;
 import com.openapi.websocket.manager.WebSocketMessageManager;
-import io.reactivex.disposables.Disposable;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
@@ -125,7 +124,7 @@ public class RealtimeChatChannel extends TextWebSocketHandler {
                 var chatFuture = taskExecutor.submit(() -> {
                     try {
                         // 启动聊天
-                        Disposable chatDisposable = realtimeChatService.startAudioChat(realtimeChatContextManager);
+                        io.reactivex.disposables.Disposable chatDisposable = realtimeChatService.startAudioChat(realtimeChatContextManager);
                         realtimeChatContextManager.addChatDisposables(chatDisposable);
                     } catch (Exception e) {
                         realtimeChatContextManager.stopRecording.set(true);
