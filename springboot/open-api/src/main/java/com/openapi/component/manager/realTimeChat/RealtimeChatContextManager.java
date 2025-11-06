@@ -35,6 +35,11 @@ import java.util.concurrent.atomic.AtomicInteger;
  *  任务管理：取消chat任务，取消function call任务：添加任务，取消任务，数据复位
  *  设计模式：
  *      1. 桥接模式：拆分为多个抽象接口实现
+ *
+ *      状态设计模式。将各个布尔值改为连贯的几个变量, 并回调对外公开内部状态 -> [UML状态图、流程图draw.io]
+ *      录音状态：单独boolean，因为需要控制循环线程的结束
+ *      并发任务提取出来，因为能以一个状态值表示
+ *      状态：未对话，user正在讲话，agent正在回复，
  */
 @Slf4j
 public class RealtimeChatContextManager implements IRealTimeChatResponseManager {
