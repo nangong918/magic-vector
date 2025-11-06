@@ -11,7 +11,7 @@ import com.alibaba.dashscope.exception.NoApiKeyException;
 import com.alibaba.dashscope.exception.UploadFileException;
 import com.alibaba.fastjson.JSON;
 import com.openapi.component.manager.OptimizedSentenceDetector;
-import com.openapi.component.manager.RealtimeChatContextManager;
+import com.openapi.component.manager.realTimeChat.RealtimeChatContextManager;
 import com.openapi.config.AgentConfig;
 import com.openapi.config.ChatConfig;
 import com.openapi.config.ThreadPoolConfig;
@@ -462,7 +462,7 @@ public class RealTimeTestServiceServiceImpl implements RealTimeTestServiceServic
 
                     // 发送当前fragment消息
                     chatContextManager.currentResponseStringBuffer.append(fragment);
-                    RealtimeChatTextResponse agentFragmentResponse = chatContextManager.getCurrentResponse();
+                    RealtimeChatTextResponse agentFragmentResponse = chatContextManager.getUpToNowAgentResponse();
 
                     // 发送消息给Client
                     String agentFragmentResponseJson = JSON.toJSONString(agentFragmentResponse);
@@ -525,7 +525,7 @@ public class RealTimeTestServiceServiceImpl implements RealTimeTestServiceServic
                             totalTime, fragmentCount.get(), textBuffer.length());
 
                     // 存储消息到数据库
-                    val realtimeChatTextResponse = chatContextManager.getCurrentResponse();
+                    val realtimeChatTextResponse = chatContextManager.getUpToNowAgentResponse();
                     ChatMessageDo chatMessageDo = null;
                     try {
                         chatMessageDo = chatMessageConverter.realtimeChatTextResponseToChatMessageDo(

@@ -2,7 +2,7 @@ package com.openapi.service.test;
 
 import com.alibaba.cloud.ai.dashscope.chat.DashScopeChatModel;
 import com.alibaba.dashscope.exception.NoApiKeyException;
-import com.openapi.component.manager.RealtimeChatContextManager;
+import com.openapi.component.manager.realTimeChat.RealtimeChatContextManager;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.web.socket.WebSocketSession;

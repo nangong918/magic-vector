@@ -1,4 +1,4 @@
-package com.openapi.component.manager;
+package com.openapi.component.manager.realTimeChat;
 
 import cn.hutool.core.util.IdUtil;
 import com.alibaba.fastjson.JSON;
@@ -10,6 +10,7 @@ import lombok.NonNull;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
+import org.jetbrains.annotations.NotNull;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.web.socket.WebSocketSession;
 
@@ -31,9 +32,11 @@ import java.util.concurrent.atomic.AtomicInteger;
  * vision chat工作流 ->
  *  userMessage -> chatClient -> functionCall(将context manager设置为functionCalling) -> response1 -> response2(取消response1的内容)
  *  response1 [结束：function calling -> 不发送EOF] response2 [开始：function calling -> 不发送起始符]
+ *  设计模式：
+ *      1. 桥接模式：拆分为多个抽象接口实现
  */
 @Slf4j
-public class RealtimeChatContextManager {
+public class RealtimeChatContextManager implements IRealTimeChatResponseManager {
     /// chatClient      (chatModel是单例，但是chatClient需要集成Agent的记忆，以及每个chatClient的设定不同，所以不是单例)
     public ChatClient chatClient;
 
@@ -231,33 +234,10 @@ public class RealtimeChatContextManager {
     }
 
 
-    private String getAgentMessageHeaderId(){
-        return RoleTypeEnum.AGENT.getValue() + String.valueOf(currentAgentResponseCount.get());
-    }
-    public int addAgentMessageHeaderCount(){
-        return currentAgentResponseCount.addAndGet(1);
-    }
-    private String getUserMessageHeaderId(){
-        return RoleTypeEnum.USER.getValue() + "0";
-    }
+    /// ==========IRealTimeChatResponseManager==========
 
-    @NonNull
-    public String getCurrentAgentMessageId(){
-        return getAgentMessageHeaderId() + ":" + currentMessageId;
-    }
-
-    @NonNull
-    public String getCurrentUserMessageId(){
-        return getUserMessageHeaderId() + ":" + currentMessageId;
-    }
-
-    @NonNull
-    public String getCurrentMessageTimeStr(){
-        return DateUtils.yyyyMMddHHmmssToString(this.currentMessageDateTime);
-    }
-
-    @NonNull
-    public RealtimeChatTextResponse getCurrentResponse(){
+    @Override
+    public @NonNull RealtimeChatTextResponse getUpToNowAgentResponse() {
         val response = new RealtimeChatTextResponse();
         response.setAgentId(agentId);
         response.setUserId(userId);
@@ -269,8 +249,8 @@ public class RealtimeChatContextManager {
         return response;
     }
 
-    @NonNull
-    public RealtimeChatTextResponse getCurrentFragmentResponse(@NonNull String fragmentText){
+    @Override
+    public @NonNull RealtimeChatTextResponse getCurrentFragmentAgentResponse(@NonNull String fragmentText) {
         val response = new RealtimeChatTextResponse();
         response.setAgentId(agentId);
         response.setUserId(userId);
@@ -282,8 +262,8 @@ public class RealtimeChatContextManager {
         return response;
     }
 
-    @NonNull
-    public RealtimeChatTextResponse getSTTResultResponse(@NonNull String sstResult){
+    @Override
+    public @NonNull RealtimeChatTextResponse getUserSTTResultResponse(@NonNull String sstResult) {
         setUserQuestion(sstResult);
         val response = new RealtimeChatTextResponse();
         response.setAgentId(agentId);
@@ -296,8 +276,8 @@ public class RealtimeChatContextManager {
         return response;
     }
 
-    @NonNull
-    public RealtimeChatTextResponse getUserTextResponse(@NonNull String userChatText){
+    @Override
+    public @NotNull RealtimeChatTextResponse getUserTextResponse(@NonNull String userChatText){
         setUserQuestion(userChatText);
         val response = new RealtimeChatTextResponse();
         response.setAgentId(agentId);
@@ -309,4 +289,27 @@ public class RealtimeChatContextManager {
         response.setChatTime(getCurrentMessageTimeStr());
         return response;
     }
+
+    private String getAgentMessageHeaderId(){
+        return RoleTypeEnum.AGENT.getValue() + String.valueOf(currentAgentResponseCount.get());
+    }
+    public int addAgentMessageHeaderCount(){
+        return currentAgentResponseCount.addAndGet(1);
+    }
+    private String getUserMessageHeaderId(){
+        return RoleTypeEnum.USER.getValue() + "0";
+    }
+    @NonNull
+    private String getCurrentAgentMessageId(){
+        return getAgentMessageHeaderId() + ":" + currentMessageId;
+    }
+    @NonNull
+    private String getCurrentUserMessageId(){
+        return getUserMessageHeaderId() + ":" + currentMessageId;
+    }
+    @NonNull
+    private String getCurrentMessageTimeStr(){
+        return DateUtils.yyyyMMddHHmmssToString(this.currentMessageDateTime);
+    }
+
 }

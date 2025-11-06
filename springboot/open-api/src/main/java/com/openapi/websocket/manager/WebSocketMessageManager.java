@@ -1,6 +1,6 @@
 package com.openapi.websocket.manager;
 
-import com.openapi.component.manager.RealtimeChatContextManager;
+import com.openapi.component.manager.realTimeChat.RealtimeChatContextManager;
 import com.openapi.domain.ao.MessageTask;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

@@ -1,6 +1,6 @@
 package com.openapi.service.impl;
 
-import com.openapi.component.manager.RealtimeChatContextManager;
+import com.openapi.component.manager.realTimeChat.RealtimeChatContextManager;
 import com.openapi.domain.constant.realtime.RealtimeSystemResponseEventEnum;
 import com.openapi.domain.dto.ws.response.SystemTextResponse;
 import com.openapi.domain.evnet.TakePhotoEvent;

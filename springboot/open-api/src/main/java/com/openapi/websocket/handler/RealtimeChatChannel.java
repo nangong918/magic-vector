@@ -4,7 +4,7 @@ package com.openapi.websocket.handler;
 import com.alibaba.cloud.ai.dashscope.chat.DashScopeChatModel;
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.TypeReference;
-import com.openapi.component.manager.RealtimeChatContextManager;
+import com.openapi.component.manager.realTimeChat.RealtimeChatContextManager;
 import com.openapi.domain.constant.realtime.RealtimeRequestDataTypeEnum;
 import com.openapi.domain.constant.realtime.RealtimeResponseDataTypeEnum;
 import com.openapi.domain.constant.realtime.RealtimeSystemRequestEventEnum;

@@ -10,7 +10,7 @@ import com.alibaba.dashscope.exception.NoApiKeyException;
 import com.alibaba.dashscope.exception.UploadFileException;
 import com.alibaba.fastjson.JSON;
 import com.openapi.component.manager.OptimizedSentenceDetector;
-import com.openapi.component.manager.RealtimeChatContextManager;
+import com.openapi.component.manager.realTimeChat.RealtimeChatContextManager;
 import com.openapi.config.AgentConfig;
 import com.openapi.config.ChatConfig;
 import com.openapi.config.ThreadPoolConfig;
@@ -176,7 +176,7 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
     private OnSTTResultCallback getOnSSTResultCallback(RealtimeChatContextManager chatContextManager) {
         return result -> {
             // 返回结果给前端
-            RealtimeChatTextResponse userAudioSttResponse = chatContextManager.getSTTResultResponse(result);
+            RealtimeChatTextResponse userAudioSttResponse = chatContextManager.getUserSTTResultResponse(result);
             String response = JSON.toJSONString(userAudioSttResponse);
 
             // 保存到数据库
@@ -325,7 +325,7 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
                     // 发送当前fragment消息
                     chatContextManager.currentResponseStringBuffer.append(fragment);
 //                    RealtimeChatTextResponse agentFragmentResponse = chatContextManager.getCurrentResponse();
-                    RealtimeChatTextResponse agentFragmentResponse = chatContextManager.getCurrentFragmentResponse(fragment);
+                    RealtimeChatTextResponse agentFragmentResponse = chatContextManager.getCurrentFragmentAgentResponse(fragment);
 
                     // 发送消息给Client
                     String agentFragmentResponseJson = JSON.toJSONString(agentFragmentResponse);
@@ -441,7 +441,7 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
                     }
 
                     // 存储消息到数据库
-                    val realtimeChatTextResponse = chatContextManager.getCurrentResponse();
+                    val realtimeChatTextResponse = chatContextManager.getUpToNowAgentResponse();
                     ChatMessageDo chatMessageDo = null;
                     try {
                         chatMessageDo = chatMessageConverter.realtimeChatTextResponseToChatMessageDo(
@@ -800,7 +800,7 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
                     // 发送当前fragment消息
                     chatContextManager.currentResponseStringBuffer.append(fragment);
 //                    RealtimeChatTextResponse agentFragmentResponse = chatContextManager.getCurrentResponse();
-                    RealtimeChatTextResponse agentFragmentResponse = chatContextManager.getCurrentFragmentResponse(fragment);
+                    RealtimeChatTextResponse agentFragmentResponse = chatContextManager.getCurrentFragmentAgentResponse(fragment);
 
                     // 发送消息给Client
                     String agentFragmentResponseJson = JSON.toJSONString(agentFragmentResponse);
@@ -914,7 +914,7 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
                     }
 
                     // 存储消息到数据库
-                    val realtimeChatTextResponse = chatContextManager.getCurrentResponse();
+                    val realtimeChatTextResponse = chatContextManager.getUpToNowAgentResponse();
                     ChatMessageDo chatMessageDo = null;
                     try {
                         chatMessageDo = chatMessageConverter.realtimeChatTextResponseToChatMessageDo(

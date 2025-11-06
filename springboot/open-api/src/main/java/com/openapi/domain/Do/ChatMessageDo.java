@@ -1,5 +1,6 @@
 package com.openapi.domain.Do;
 
+import com.openapi.component.manager.realTimeChat.RealtimeChatContextManager;
 import com.openapi.domain.constant.RoleTypeEnum;
 import lombok.Data;
 import org.springframework.data.annotation.Id;
@@ -7,7 +8,7 @@ import org.springframework.data.annotation.Id;
 import java.time.LocalDateTime;
 
 /**
- * @see com.openapi.component.manager.RealtimeChatContextManager
+ * @see RealtimeChatContextManager
  */
 @Data
 public class ChatMessageDo {
