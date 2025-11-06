@@ -32,6 +32,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * vision chat工作流 ->
  *  userMessage -> chatClient -> functionCall(将context manager设置为functionCalling) -> response1 -> response2(取消response1的内容)
  *  response1 [结束：function calling -> 不发送EOF] response2 [开始：function calling -> 不发送起始符]
+ *  任务管理：取消chat任务，取消function call任务：添加任务，取消任务，数据复位
  *  设计模式：
  *      1. 桥接模式：拆分为多个抽象接口实现
  */
@@ -41,121 +42,110 @@ public class RealtimeChatContextManager implements IRealTimeChatResponseManager 
     public ChatClient chatClient;
 
     /// 会话任务
-    private final List<Future<?>> chatFutures = new ArrayList<>();
-    private final List<Object> chatDisposables = new ArrayList<>();
-    private final List<Object> functionCallChatDisposables = new ArrayList<>();
-    private final List<Future<?>> functionCallChatFutures = new ArrayList<>();
+    private final List<Object> chatTasks = new ArrayList<>();
+    private final List<Object> functionCallTasks = new ArrayList<>();
     // 是否正在function call / mcp
     public AtomicBoolean isFunctionCalling = new AtomicBoolean(false);
     public AtomicBoolean isChatting = new AtomicBoolean(false);
-    public void addChatFutures(Future<?> chatFuture){
-        if (chatFuture == null){
-            return;
-        }
-        chatFutures.add(chatFuture);
+    // 添加任务
+    public boolean addChatTask(Object task) {
+        return addTask(task, chatTasks);
     }
-    public void addChatDisposables(Object chatDisposable){
-        if (chatDisposable == null){
-            return;
-        }
-        if (chatDisposable instanceof io.reactivex.disposables.Disposable || chatDisposable instanceof reactor.core.Disposable){
-            chatDisposables.add(chatDisposable);
-        }
+    public boolean addFunctionCallTask(Object task) {
+        return addTask(task, functionCallTasks);
     }
-    public void addFunctionCallChatFutures(Future<?> functionCallChatFuture){
-        if (functionCallChatFuture == null){
-            return;
+    private boolean addTask(Object task, @NotNull List<Object> tasks){
+        if (task == null){
+            log.warn("task is null");
+            return false;
         }
-        functionCallChatFutures.add(functionCallChatFuture);
-    }
-    public void addFunctionCallChatDisposables(Object functionCallChatDisposable){
-        if (functionCallChatDisposable == null){
-            return;
-        }
-        if (functionCallChatDisposable instanceof io.reactivex.disposables.Disposable || functionCallChatDisposable instanceof reactor.core.Disposable){
-            functionCallChatDisposables.add(functionCallChatDisposable);
-        }
-    }
-
-    // 取消chat任务
-    public void cancelChatTask(){
-        cancelChatFutures();
-        cancelChatDisposable();
-
-        // 数据复位
-        currentResponseStringBuffer.setLength(0);
-        sentenceQueue.clear();
-        isLLMFinished.set(false);
-        llmConnectResetRetryCount.set(0);
-        currentAgentResponseCount.set(0);
-    }
-    private void cancelChatFutures(){
-        for (Future<?> chatFuture : chatFutures){
-            if (chatFuture != null){
-                chatFuture.cancel(true);
-            }
-        }
-        log.info("取消之前的chatFuture任务数量: {}", chatFutures.size());
-        chatFutures.clear();
-    }
-    private void cancelChatDisposable(){
-        if (chatDisposables.isEmpty()){
-            return;
+        if (task instanceof io.reactivex.disposables.Disposable ||
+                task instanceof reactor.core.Disposable ||
+                task instanceof Future<?>){
+            return tasks.add(task);
         }
         else {
-            log.info("取消之前的chatDisposable任务数量: {}", chatDisposables.size());
+            log.warn("task is not a Disposable or a Future");
         }
-        for (Object disposable : chatDisposables){
-            if (disposable instanceof io.reactivex.disposables.Disposable){
-                ((io.reactivex.disposables.Disposable) disposable).dispose();
-            }
-            else if (disposable instanceof reactor.core.Disposable){
-                ((reactor.core.Disposable) disposable).dispose();
-            }
-        }
-        chatDisposables.clear();
+        return false;
     }
 
-    // 取消function call result任务
-    public void cancelFunctionCallChatTask(){
-        cancelFunctionCallChatFutures();
-        cancelFunctionCallChatDisposable();
+    // 取消任务(方法模板)
+    public final void cancelChatTask(){
+        cancelTask(chatTasks);
+        resetChatData();
+    }
+    public final void cancelFunctionCallTask(){
+        cancelTask(functionCallTasks);
+        resetFunctionCallData();
+    }
+    private void cancelTask(@NotNull List<Object> tasks){
+        if (tasks.isEmpty()){
+            return;
+        }
+        for (Object task: tasks){
+            switch (task) {
+                case null -> log.warn("task is null");
+                case io.reactivex.disposables.Disposable disposable -> disposable.dispose();
+                case reactor.core.Disposable disposable -> disposable.dispose();
+                case Future<?> future -> future.cancel(true);
+                default -> log.warn("task is not a Disposable or a Future");
+            }
+        }
+        tasks.clear();
+    }
 
+    // 重置数据
+    // 重置chat数据
+    private void resetChatData(){
+        // 取消chat之后，录音一定重置，function call不会调用此数据
         requestAudioBuffer.clear();
         stopRecording.set(true);
+        // userQuestion不能取消，因为function call还会用到
+//        userQuestion = "";
+        // isChatting不能取消，因为还有function call，此处不能判定
+//        isChatting.set(false);
+        // 取消chat任务的时候需要将响应数据清空，避免跟function call的填充数据冲突。
+        currentResponseStringBuffer.setLength(0);
+        // 重置llm重连次数
+        llmConnectResetRetryCount.set(0);
+        // sentenceQueue不能取消，因为function call是继续填充，填充之后进行tts
+//        sentenceQueue.clear();
+        // llm需要设置为已经完成，因为function call会重新启动
+        isLLMFinished.set(true);
         isTTSFinished.set(true);
         isFirstTTS.set(true);
         lastTTSTimestamp = 0L;
     }
-    private void cancelFunctionCallChatFutures(){
-        for (Future<?> functionCallChatFuture : functionCallChatFutures){
-            if (functionCallChatFuture != null){
-                functionCallChatFuture.cancel(true);
-            }
-        }
-        log.info("取消之前的functionCall ChatFuture任务数量: {}", functionCallChatFutures.size());
-        functionCallChatFutures.clear();
+    private void resetFunctionCallData(){
+        // function call任务取消
+        isFunctionCalling.set(false);
+        isChatting.set(false);
+        // 响应数据清空
+        userQuestion = "";
+        currentResponseStringBuffer.setLength(0);
+        currentAgentResponseCount.set(0);
+        // 重置llm和tts数据
+        llmConnectResetRetryCount.set(0);
+        sentenceQueue.clear();
+        isLLMFinished.set(true);
+        isTTSFinished.set(true);
+        isFirstTTS.set(true);
+        lastTTSTimestamp = 0L;
+        // vision
+        imageBase64.setLength(0);
     }
-    public void cancelFunctionCallChatDisposable(){
-        if (functionCallChatDisposables.isEmpty()){
-            return;
-        }
-        else {
-            log.info("取消之前的functionCall ChatDisposable任务数量: {}", functionCallChatDisposables.size());
-        }
-        for (Object disposable : functionCallChatDisposables){
-            if (disposable instanceof io.reactivex.disposables.Disposable){
-                ((io.reactivex.disposables.Disposable) disposable).dispose();
-            }
-            else if (disposable instanceof reactor.core.Disposable){
-                ((reactor.core.Disposable) disposable).dispose();
-            }
-        }
-        functionCallChatDisposables.clear();
+
+    // 取消当前的任务
+    public final void cancelCurrentTask(){
+        cancelChatTask();
+        cancelFunctionCallTask();
     }
 
     /// 音频数据
+    // user音频数据
     public final Queue<byte[]> requestAudioBuffer = new ConcurrentLinkedQueue<>();
+    // user是否停止录制
     public final AtomicBoolean stopRecording = new AtomicBoolean(true);
 
     /// agent会话信息
@@ -212,14 +202,6 @@ public class RealtimeChatContextManager implements IRealTimeChatResponseManager 
         currentMessageDateTime = LocalDateTime.now();
 
         log.info("开启新的message，MessageId是：{}", currentMessageId);
-    }
-
-    // 取消当前的任务
-    public void cancelCurrentTask(){
-        cancelChatFutures();
-        cancelFunctionCallChatFutures();
-        cancelChatDisposable();
-        cancelFunctionCallChatDisposable();
     }
 
     public String getCurrentContextParam(){

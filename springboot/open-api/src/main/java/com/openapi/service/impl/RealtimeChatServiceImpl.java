@@ -163,14 +163,14 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
                         // 只有在 audioFlowable 不为空时才调用 sttStreamCall
                         var sttDisposable = sttStreamCall(audioFlowable, onSSTResultCallback);
                         // STT转换的Disposable存储
-                        chatContextManager.addChatDisposables(sttDisposable);
+                        chatContextManager.addChatTask(sttDisposable);
                     }
                     else {
                         log.warn("[STT] audioFlowable是empty，不做处理");
                     }
                 });
         // 音频byte转换的Disposable存储
-        chatContextManager.addChatDisposables(audioToByteBufferDisposable);
+        chatContextManager.addChatTask(audioToByteBufferDisposable);
     }
 
     private OnSTTResultCallback getOnSSTResultCallback(RealtimeChatContextManager chatContextManager) {
@@ -204,7 +204,7 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
             /// llm
             if (StringUtils.hasText(result)) {
                 var llmDisposable = llmStreamCall(result, chatContextManager);
-                chatContextManager.addChatDisposables(llmDisposable);
+                chatContextManager.addChatTask(llmDisposable);
             }
         };
     }
@@ -355,10 +355,10 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
                                                 getOnTTSSelfCall(chatContextManager),
                                                 false
                                         );
-                                        chatContextManager.addChatDisposables(chatTTSDisposable);
+                                        chatContextManager.addChatTask(chatTTSDisposable);
                                     }
                             );
-                            chatContextManager.addChatFutures(ttsFuture);
+                            chatContextManager.addChatTask(ttsFuture);
                         }
                     }
                     else {
@@ -374,10 +374,10 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
                                                 getOnTTSSelfCall(chatContextManager),
                                                 false
                                         );
-                                        chatContextManager.addChatDisposables(chatTTSDisposable);
+                                        chatContextManager.addChatTask(chatTTSDisposable);
                                     }
                             );
-                            chatContextManager.addChatFutures(ttsFuture);
+                            chatContextManager.addChatTask(ttsFuture);
                         }
                     }
 
@@ -402,7 +402,7 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
                             log.warn("[LLM 警告]检测到连接重置，进行第{}次重试", attempt);
 
                             var disposable = llmStreamCall(sentence, chatContextManager);
-                            chatContextManager.addChatDisposables(disposable);
+                            chatContextManager.addChatTask(disposable);
                         }
                         else {
                             log.error("[LLM 错误] 连接重置次数过多，已尝试{}次，放弃重试", chatContextManager.llmConnectResetRetryCount.get());
@@ -434,10 +434,10 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
                                             getOnTTSSelfCall(chatContextManager),
                                             false
                                     );
-                                    chatContextManager.addChatDisposables(chatTTSDisposable);
+                                    chatContextManager.addChatTask(chatTTSDisposable);
                                 }
                         );
-                        chatContextManager.addChatFutures(ttsFuture);
+                        chatContextManager.addChatTask(ttsFuture);
                     }
 
                     // 存储消息到数据库
@@ -601,11 +601,11 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
         return (ttsDisposable, isFunctionCall) -> {
             // 是FunctionCall任务
             if (isFunctionCall){
-                chatContextManager.addFunctionCallChatDisposables(ttsDisposable);
+                chatContextManager.addFunctionCallTask(ttsDisposable);
             }
             // 其他任务
             else {
-                chatContextManager.addChatDisposables(ttsDisposable);
+                chatContextManager.addChatTask(ttsDisposable);
             }
         };
     }
@@ -714,7 +714,7 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
         );
 
         var disposable = llmStreamCall(userQuestion, chatContextManager);
-        chatContextManager.addChatDisposables(disposable);
+        chatContextManager.addChatTask(disposable);
     }
 
     @Override
@@ -722,13 +722,13 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
         if (imageBase64 == null || imageBase64.isEmpty()) {
             log.info("[websocket] 启动视觉聊天：无图片");
             var disposable = functionCallResultLLMStreamCall(null, chatContextManager, isPassiveNotActive);
-            chatContextManager.addFunctionCallChatDisposables(disposable);
+            chatContextManager.addFunctionCallTask(disposable);
         }
         else {
             log.info("[websocket] 启动视觉聊天：有图片, imageLength: {}", imageBase64.length());
             String result = visionChatService.callWithFileBase64(imageBase64, chatContextManager.getUserQuestion());
             var disposable = functionCallResultLLMStreamCall(result, chatContextManager, isPassiveNotActive);
-            chatContextManager.addFunctionCallChatDisposables(disposable);
+            chatContextManager.addFunctionCallTask(disposable);
         }
     }
 
@@ -830,10 +830,10 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
                                                 getOnTTSSelfCall(chatContextManager),
                                                 true
                                         );
-                                        chatContextManager.addFunctionCallChatDisposables(chatVisionTTSDisposable);
+                                        chatContextManager.addFunctionCallTask(chatVisionTTSDisposable);
                                     }
                             );
-                            chatContextManager.addFunctionCallChatFutures(ttsFuture);
+                            chatContextManager.addFunctionCallTask(ttsFuture);
                         }
                     }
                     else {
@@ -849,10 +849,10 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
                                                 getOnTTSSelfCall(chatContextManager),
                                                 true
                                         );
-                                        chatContextManager.addFunctionCallChatDisposables(chatVisionTTSDisposable);
+                                        chatContextManager.addFunctionCallTask(chatVisionTTSDisposable);
                                     }
                             );
-                            chatContextManager.addFunctionCallChatFutures(ttsFuture);
+                            chatContextManager.addFunctionCallTask(ttsFuture);
                         }
                     }
 
@@ -877,7 +877,7 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
                             log.warn("functionCall LLM检测到连接重置，进行第{}次重试", attempt);
 
                             var disposable = functionCallResultLLMStreamCall(result, chatContextManager, isPassiveNotActive);
-                            chatContextManager.addFunctionCallChatDisposables(disposable);
+                            chatContextManager.addFunctionCallTask(disposable);
                         }
                         else {
                             log.error("[functionCall LLM 错误] 连接重置次数过多，已尝试{}次，放弃重试", chatContextManager.llmConnectResetRetryCount.get());
@@ -907,10 +907,10 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
                                             getOnTTSSelfCall(chatContextManager),
                                             true
                                     );
-                                    chatContextManager.addFunctionCallChatDisposables(chatVisionTTSDisposable);
+                                    chatContextManager.addFunctionCallTask(chatVisionTTSDisposable);
                                 }
                         );
-                        chatContextManager.addFunctionCallChatFutures(ttsFuture);
+                        chatContextManager.addFunctionCallTask(ttsFuture);
                     }
 
                     // 存储消息到数据库

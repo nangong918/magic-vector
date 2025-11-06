@@ -139,7 +139,7 @@ public class RealtimeChatChannel extends TextWebSocketHandler {
                         );
                     }
                 });
-                realtimeChatContextManager.addChatFutures(chatFuture);
+                realtimeChatContextManager.addChatTask(chatFuture);
             }
             case STOP_AUDIO_RECORD -> {
                 var realtimeChatContextManager = sessionConfig.realtimeChatContextManagerMap().get(agentId);
@@ -175,7 +175,7 @@ public class RealtimeChatChannel extends TextWebSocketHandler {
                         );
                     }
                 });
-                realtimeChatContextManager.addChatFutures(chatFuture);
+                realtimeChatContextManager.addChatTask(chatFuture);
             }
             case SYSTEM_MESSAGE -> {
                 var realtimeChatContextManager = sessionConfig.realtimeChatContextManagerMap().get(agentId);
@@ -229,7 +229,7 @@ public class RealtimeChatChannel extends TextWebSocketHandler {
                                         );
                                     }
                                 });
-                                realtimeChatContextManager.addFunctionCallChatFutures(visionChatFuture);
+                                realtimeChatContextManager.addFunctionCallTask(visionChatFuture);
                             }
                         }
                         else {

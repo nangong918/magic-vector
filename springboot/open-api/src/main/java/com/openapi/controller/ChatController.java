@@ -145,7 +145,7 @@ public class ChatController {
                 );
             }
         });
-        realtimeChatContextManager.addFunctionCallChatFutures(visionChatFuture);
+        realtimeChatContextManager.addFunctionCallTask(visionChatFuture);
 
         return BaseResponse.getResponseEntitySuccess("上传成功");
     }
