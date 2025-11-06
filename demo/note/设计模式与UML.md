@@ -45,28 +45,61 @@
 
 ### 创建型模式
 #### 工厂模式
-[FactoryMethod.java](../../springboot/demo/src/test/java/designPattern/FactoryMethod.java)
+[FactoryMethod.java](../../springboot/demo/src/test/java/designPattern/create/FactoryMethod.java)
 工厂模式：设计对象的属性，然后根据创建不同的对象实现设计的属性。
 
 #### 抽象工厂模式
-[AbstractFactoryPattern.java](../../springboot/demo/src/test/java/designPattern/AbstractFactoryPattern.java)
+[AbstractFactoryPattern.java](../../springboot/demo/src/test/java/designPattern/create/AbstractFactoryPattern.java)
 工厂方法模式有一个问题就是，类的创建依赖工厂类，也就是说，如果想要拓展程序，必须对工厂类进行修改，这违背了开闭原则。
 Spring种的Service和ServiceImpl的关系就是抽象工厂模式
 例子：PayService需要对应不同的国家：JP，CN，US。然后不同韩国的实现：JPPayImpl，CNPayImpl，USPayImpl；这就是一个抽象工厂模式
 
 #### 单例模式
-[SingletonPattern.java](../../springboot/demo/src/test/java/designPattern/SingletonPattern.java)
+[SingletonPattern.java](../../springboot/demo/src/test/java/designPattern/create/SingletonPattern.java)
 单例模式：保证一个类只有一个实例，并提供一个全局访问点。对资源统一管理。
 Spring框架的@Component和@Service都是单例模式。注意有些时候需要避免单例模式，比如Websocket的每个链接都是独立的而不是单例。所以数据不能作为单例管理。
 
 #### 构建模式
-[BuilderPattern.java](../../springboot/demo/src/test/java/designPattern/BuilderPattern.java)
+[BuilderPattern.java](../../springboot/demo/src/test/java/designPattern/create/BuilderPattern.java)
 建造者模式：将一个复杂对象的构建与它的表示分离，使得同样的构建过程可以创建不同的表示。
 lombok可以直接实现，相当于是数据填充。
 
 #### 原型模式
-[PrototypePattern.java](../../springboot/demo/src/test/java/designPattern/PrototypePattern.java)
+[PrototypePattern.java](../../springboot/demo/src/test/java/designPattern/create/PrototypePattern.java)
 目的是防止对象的指针引用，而是使用复制对象的数据
+
+### 结构型模式
+#### 适配器模式
+[AdapterPattern.java](../../springboot/demo/src/test/java/designPattern/build_/AdapterPattern.java)
+适配器模式，根据适配者的特性展示不同的效果。
+Android的RecyclerViewAdapter就会根据不同的View和ViewHolder进行不同类型的数据绑定并展现。
+
+#### 装饰模式
+[DecoratorPattern.java](../../springboot/demo/src/test/java/designPattern/build_/DecoratorPattern.java)
+装饰器模式的本质确实是通过传入一个对象，并对其进行增强或修改，而不需要改变对象的结构。C/Cpp经常用到
+
+#### 代理模式
+[ProxyPattern.java](../../springboot/demo/src/test/java/designPattern/build_/ProxyPattern.java)
+代理模式允许通过一个代理对象来控制对另一个对象的访问。这种模式常用于实现懒加载、访问控制、日志记录等功能
+
+#### 外观模式
+[FacadePattern.java](../../springboot/demo/src/test/java/designPattern/build_/FacadePattern.java)
+外观模式的本质确实可以看作是一个“管理者”（或称为“门面”）类，它对多个子系统对象进行管理，并向外部提供一个统一的接口，从而简化了对这些子系统的访问
+
+#### 桥接模式
+[BridgePattern.java](../../springboot/demo/src/test/java/designPattern/build_/BridgePattern.java)
+桥接模式
+桥接模式就是将一个具体的对象拆分为多个接口
+假设我们有一个绘图应用程序，可以绘制不同形状（如圆形和正方形），并通过不同的颜色（如红色和蓝色）进行填充。桥接模式可以帮助我们将形状接口和颜色接口的实现分离开来
+
+#### 组合模式
+[CompositePattern.java](../../springboot/demo/src/test/java/designPattern/build_/CompositePattern.java)
+没什么讲的，多个类聚合在一起组成对象而不是继承，基本的网络请求的JSON传递就是组合模式
+
+#### 享元模式
+[FlyweightPattern.java](../../springboot/demo/src/test/java/designPattern/build_/FlyweightPattern.java)
+享元模式：它通过共享对象来减少内存使用和提高性能。享元模式适合于需要大量相似对象的场景，它通过将对象的共享内存部分与可变部分分开，从而实现高效的资源管理。
+不就是map找对象吗？Websocket的SessionManager就是这个模式
 
 # 框架设计模式
 ## SpringBoot设计模式

@@ -1,4 +1,4 @@
-package designPattern;
+package designPattern.create;
 
 /**
  * @author 13225
