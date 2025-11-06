@@ -43,6 +43,30 @@
 
 原则是尽量使用合成/聚合的方式，而不是使用继承。
 
+### 创建型模式
+#### 工厂模式
+[FactoryMethod.java](../../springboot/demo/src/test/java/designPattern/FactoryMethod.java)
+工厂模式：设计对象的属性，然后根据创建不同的对象实现设计的属性。
+
+#### 抽象工厂模式
+[AbstractFactoryPattern.java](../../springboot/demo/src/test/java/designPattern/AbstractFactoryPattern.java)
+工厂方法模式有一个问题就是，类的创建依赖工厂类，也就是说，如果想要拓展程序，必须对工厂类进行修改，这违背了开闭原则。
+Spring种的Service和ServiceImpl的关系就是抽象工厂模式
+例子：PayService需要对应不同的国家：JP，CN，US。然后不同韩国的实现：JPPayImpl，CNPayImpl，USPayImpl；这就是一个抽象工厂模式
+
+#### 单例模式
+[SingletonPattern.java](../../springboot/demo/src/test/java/designPattern/SingletonPattern.java)
+单例模式：保证一个类只有一个实例，并提供一个全局访问点。对资源统一管理。
+Spring框架的@Component和@Service都是单例模式。注意有些时候需要避免单例模式，比如Websocket的每个链接都是独立的而不是单例。所以数据不能作为单例管理。
+
+#### 构建模式
+[BuilderPattern.java](../../springboot/demo/src/test/java/designPattern/BuilderPattern.java)
+建造者模式：将一个复杂对象的构建与它的表示分离，使得同样的构建过程可以创建不同的表示。
+lombok可以直接实现，相当于是数据填充。
+
+#### 原型模式
+[PrototypePattern.java](../../springboot/demo/src/test/java/designPattern/PrototypePattern.java)
+目的是防止对象的指针引用，而是使用复制对象的数据
 
 # 框架设计模式
 ## SpringBoot设计模式
