@@ -101,6 +101,55 @@ Android的RecyclerViewAdapter就会根据不同的View和ViewHolder进行不同�
 享元模式：它通过共享对象来减少内存使用和提高性能。享元模式适合于需要大量相似对象的场景，它通过将对象的共享内存部分与可变部分分开，从而实现高效的资源管理。
 不就是map找对象吗？Websocket的SessionManager就是这个模式
 
+### 行为型模式
+#### 策略模式
+[StrategyPattern.java](../../springboot/demo/src/test/java/designPattern/action/StrategyPattern.java)
+策略模式
+封装算法
+
+#### 模板方法模式
+[TemplateMethodPattern.java](../../springboot/demo/src/test/java/designPattern/action/TemplateMethodPattern.java)
+提前定义一个方法，按照模板方法进行执行
+Android的Activity生命周期就是一个模板方法，允许开发者重写，但是不能改变生命周期调用顺序
+必须使用abstract类 + final method，不能使用interface + default method，因为这样方法就可变，违背了模板方法不可变的规则。
+
+#### 观察者模式
+[ObserverPattern.java](../../springboot/demo/src/test/java/designPattern/action/ObserverPattern.java)
+观察者模式，参考Android的liveData，还要考虑更新在哪个线程执行
+
+#### 迭代器模式
+[IteratorPattern.java](../../springboot/demo/src/test/java/designPattern/action/IteratorPattern.java)
+迭代器模式：逐个循环
+
+#### 责任链模式
+[ChainOfResponsibilityPattern.java](../../springboot/demo/src/test/java/designPattern/action/ChainOfResponsibilityPattern.java)
+责任链模式：找到一个能够处理的对象
+
+#### 命令模式
+[CommandPattern.java](../../springboot/demo/src/test/java/designPattern/action/CommandPattern.java)
+命令模式
+它将请求封装为一个对象，从而使你能够使用不同的请求、队列或日志请求，以及支持可撤销的操作
+就是Restful的Request请求
+
+#### 备忘录模式
+[MementoPattern.java](../../springboot/demo/src/test/java/designPattern/action/MementoPattern.java)
+备忘录模式: 创建一个可以撤销的缓存
+
+#### 状态模式
+[StatePattern.java](../../springboot/demo/src/test/java/designPattern/action/StatePattern.java)
+状态设计模式：内部的状态更变向外同步。Android的Activity生命周期就是如此，其他的生命周期管理也需要使用此设计模式
+
+#### 访问者模式
+[VisitorPattern.java](../../springboot/demo/src/test/java/designPattern/action/VisitorPattern.java)
+它允许你在不改变被访问对象的情况下，对其结构进行操作。通过将操作封装到访问者类中，访问者模式可以使得添加新的操作变得更加灵活，而不需要修改被访问的对象结构
+
+#### 中介模式
+[MediatorPattern.java](../../springboot/demo/src/test/java/designPattern/action/MediatorPattern.java)
+中介模式: 管理用户之间的通讯数据
+
+#### 解释器模式
+[InterpreterPattern.java](../../springboot/demo/src/test/java/designPattern/action/InterpreterPattern.java)
+
 # 框架设计模式
 ## SpringBoot设计模式
 
