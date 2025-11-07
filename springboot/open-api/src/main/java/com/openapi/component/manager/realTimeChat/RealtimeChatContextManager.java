@@ -269,37 +269,44 @@ public class RealtimeChatContextManager implements
     @Override
     public void startRecord() {
         llmProxyContext.startRecord();
+        log.info("[Audio] 录音开始");
     }
 
     @Override
     public void stopRecord() {
         llmProxyContext.stopRecord();
+        log.info("[Audio] 录音结束");
     }
 
     @Override
     public void startLLM() {
         llmProxyContext.startLLM();
+        log.info("[LLM] 开始LLM");
     }
 
     @Override
     public void stopLLM() {
         llmProxyContext.stopLLM();
+        log.info("[LLM] 停止LLM");
     }
 
     @Override
     public void startTTS() {
         llmProxyContext.startTTS();
+        log.info("[TTS] 开始TTS");
     }
 
     @Override
     public void stopTTS() {
         llmProxyContext.stopTTS();
+        log.info("[TTS] 停止TTS");
     }
 
     @Override
     public void endConversation() {
         llmProxyContext.endConversation();
         sendEOF();
+        log.info("[Session] 结束会话");
     }
 
     @Override
@@ -310,6 +317,7 @@ public class RealtimeChatContextManager implements
         cancelTask(functionCallTasks);
         // 取消任务并不会清除userQuestion
         userRequestQuestion = "";
+        log.info("[Session] 重置会话");
     }
 
     ///==========ChatRealtimeStatue==========
@@ -374,5 +382,10 @@ public class RealtimeChatContextManager implements
     @Override
     public void setIsFinalResultTTS(boolean isFinalResultTTS) {
         llmProxyContext.setIsFinalResultTTS(isFinalResultTTS);
+    }
+
+    @Override
+    public boolean isFinalResultTTS() {
+        return llmProxyContext.isFinalResultTTS();
     }
 }

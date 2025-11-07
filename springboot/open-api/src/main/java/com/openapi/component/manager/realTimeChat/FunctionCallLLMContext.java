@@ -40,10 +40,13 @@ public class FunctionCallLLMContext {
 
     // 添加function call信号量
     public synchronized void addFunctionCallSignal() {
-        remainingFunctionCallSignal.incrementAndGet();
+        int count = remainingFunctionCallSignal.incrementAndGet();
+        log.info("[FunctionCall] 添加FunctionCall信号量，剩余function call信号量：{}", count);
     }
     private synchronized int removeFunctionCallSignal() {
-        return remainingFunctionCallSignal.decrementAndGet();
+        int count = remainingFunctionCallSignal.decrementAndGet();
+        log.info("[FunctionCall] 移除FunctionCall信号量，剩余function call信号量：{}", count);
+        return count;
     }
 
     public synchronized int getRemainingFunctionCallSignal() {
@@ -58,11 +61,17 @@ public class FunctionCallLLMContext {
         if (remainingFunctionCallSignal > 0) {
             log.info("[FunctionCall] 添加FunctionCall结果，剩余function call信号量：{}", remainingFunctionCallSignal);
         }
-        else {
+        else if (remainingFunctionCallSignal == 0){
             if (allFunctionCallFinished != null){
                 log.info("[FunctionCall] 检查点1 所有FunctionCall结果获取完毕，开始执行最后result的LLM");
                 allFunctionCallFinished.allFunctionCallFinished();
             }
+            else {
+                log.warn("[FunctionCall] 检查点1 信号量归零，但是回调是null");
+            }
+        }
+        else {
+            log.info("[FunctionCall] 检查点1 信号量小于0，任务已经开始执行...");
         }
     }
 

@@ -74,6 +74,6 @@ public class VisionToolServiceImpl implements VisionToolService {
         eventPublisher.publishEvent(takePhotoEvent);
         log.info("[visionTool] 发送TakePhotoEvent: {}", takePhotoEvent.getEventBody());
 
-        return "已经成功向前端发送调用接口请求，你现在只需要回复类似：“稍等，让我来看看”就好了";
+        return "已经成功向前端发送调用接口请求，你现在只需要回复类似：“稍等，让我来看看。”就好了";
     }
 }

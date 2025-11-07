@@ -9,7 +9,6 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * @author 13225
@@ -124,9 +123,12 @@ public class LLMProxyContext implements RealtimeProcess, ChatRealtimeStatue, Fun
                 if (remainingFunctionCallSignal > 0){
                     log.info("[FunctionCall] Final TTS 执行完毕FunctionCall结果，剩余function call信号量：{}", remainingFunctionCallSignal);
                 }
-                else {
+                else if (remainingFunctionCallSignal == 0){
                     log.info("[FunctionCall] 检查点2 所有FunctionCall结果获取完毕，开始执行最后result的LLM");
                     functionCallLLMContext.allFunctionCallFinished.allFunctionCallFinished();
+                }
+                else {
+                    log.info("[FunctionCall] 检查点2 信号量小于0，任务已经开始执行...");
                 }
             }
         }
@@ -328,5 +330,13 @@ public class LLMProxyContext implements RealtimeProcess, ChatRealtimeStatue, Fun
     @Override
     public void setIsFinalResultTTS(boolean isFinalResultTTS) {
         functionCallLLMContext.setIsFinalResultTTS(isFinalResultTTS);
+    }
+
+    @Override
+    public boolean isFinalResultTTS() {
+        if (isFunctionCall.get()){
+            return functionCallLLMContext.isFinalResultTTS();
+        }
+        return false;
     }
 }

@@ -11,5 +11,6 @@ public interface FunctionCallMethod {
     void addFunctionCallResult(String result);
     @NotNull String getAllFunctionCallResult();
     void setIsFinalResultTTS(boolean isFinalResultTTS);
+    boolean isFinalResultTTS();
 
 }

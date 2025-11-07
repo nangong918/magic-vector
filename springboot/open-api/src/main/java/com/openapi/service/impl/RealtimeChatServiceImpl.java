@@ -350,8 +350,9 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
                     textBuffer.append(fragment);
 
                     if (chatContextManager.llmProxyContext.isFirstTTS().compareAndSet(true, false)){
-
+                        log.info("[LLM Call] 首次TTS111, text: {}", textBuffer.toString());
                         String complete1Sentence = optimizedSentenceDetector.detectAndExtractFirstSentence(textBuffer);
+
                         if (StringUtils.hasText(complete1Sentence)){
                             // 添加待处理的TTS句子到TTS MQ
                             chatContextManager.llmProxyContext.offerTTS(complete1Sentence);
@@ -493,7 +494,7 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
      */
     @Nullable
     private io.reactivex.disposables.Disposable generateAudio(@NotNull RealtimeChatContextManager chatContextManager, @NotNull OnTTSSelfCall onTTSSelfCall, boolean isFunctionCall) {
-        if (!chatContextManager.isTTSing()){
+        if (chatContextManager.isTTSing()){
             log.info("[TTS] 正在生成音频，请稍等...");
             return null;
         }
@@ -545,9 +546,11 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
         }
 
         return result
-                .doOnSubscribe(subscription -> log.info("[TTS] 开始"))
+                .doOnSubscribe(subscription -> {
+                    log.info("[TTS] 调用开始, sentence: {}", sentence);
+                    chatContextManager.startTTS();
+                })
                 .doFinally(() -> {
-                    chatContextManager.stopTTS();
                     // 记录结束时间
                     chatContextManager.setTTSStartTime(System.currentTimeMillis());
                     int remainingCount = chatContextManager.llmProxyContext.getAllTTSCount();
@@ -557,19 +560,24 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
                         onTTSSelfCall.selfCall(ttsDisposable, isFunctionCall);
                     }
                     else {
-                        if (chatContextManager.llmProxyContext.isFunctionCall() || isFunctionCall){
-                            log.info("[TTS]结束 FunctionCall任务已经结束，直接发送EOF; isFunctionCalling: {}, isFunctionCall: {}", chatContextManager.llmProxyContext.isFunctionCall(), isFunctionCall);
+                        chatContextManager.stopTTS();
+                        boolean finalIsFunctionCall = chatContextManager.llmProxyContext.isFunctionCall() || isFunctionCall;
+                        // 是否是最后一个tts
+                        boolean isFinalResultTTs = chatContextManager.isFinalResultTTS();
+                        // 如果不是Function Call，直接发送EOF
+                        if (!finalIsFunctionCall){
+                            log.info("[TTS]结束，不是FunctionCall任务，直接发送EOF");
                             chatContextManager.endConversation();
                         }
-                        else {
-                            log.info("[TTS]结束 不是FunctionCall任务，直接发送EOF");
+                        // 是FunctionCall任务，并且是最后一个tts
+                        else if (/*finalIsFunctionCall && */isFinalResultTTs){
+                            log.info("[TTS]结束 FunctionCall任务已经结束，直接发送EOF; isFunctionCalling: {}, isFunctionCall: {}", chatContextManager.llmProxyContext.isFunctionCall(), isFunctionCall);
                             chatContextManager.endConversation();
                         }
                     }
                 })
                 .subscribe(
                     r -> {
-                        chatContextManager.startTTS();
                         String base64Data = r.getOutput().getAudio().getData();
                         if (base64Data != null && !base64Data.isEmpty()) {
                             byte[] audioBytes = Base64.getDecoder().decode(base64Data);
@@ -584,10 +592,12 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
                                     chatContextManager.agentId,
                                     response
                             );
+                            log.info("发送TTS数据，tts data length: {}", b64Audio.length());
                         }
                     },
                     e -> {
                         log.error("[TTS] 错误", e);
+                        chatContextManager.endConversation();
                     }
                 );
     }

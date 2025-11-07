@@ -101,7 +101,7 @@ public class RealtimeChatChannel extends TextWebSocketHandler {
 
                     // 添加functionCallFinished任务
                     var isFunctionCallFinished = realtimeChatService.getAllFunctionCallFinished(realtimeChatContextManager);
-                    realtimeChatContextManager.addFunctionCallTask(isFunctionCallFinished);
+                    realtimeChatContextManager.setAllFunctionCallFinished(isFunctionCallFinished);
 
                     // 初始化chatClient
                     // 将获取到的chatClient存储到RealtimeChatContextManager
