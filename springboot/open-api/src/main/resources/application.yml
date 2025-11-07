@@ -12,7 +12,7 @@ spring:
       api-key: ${ALI_API_KEY}
       chat:
         options:
-          model: qwen-plus # 经过测试发现qwen-flash蠢到无法调用mcp; qwen-flash百万token1.5元，qwen-plus2元
+          model: deepseek-v3.1 # 经过测试发现qwen-flash蠢到无法调用mcp; qwen-flash百万token1.5元，qwen-plus2元
       embedding:
         options:
           model: "text-embedding-v3"

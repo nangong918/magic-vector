@@ -105,13 +105,16 @@ public class RealtimeChatContextManager implements
         cancelTask(functionCallTasks);
         llmProxyContext.resetSimpleLLM();
     }
-    private void cancelTask(@NotNull List<Object> tasks){
+    private synchronized void cancelTask(@NotNull List<Object> tasks){
         if (tasks.isEmpty()){
             return;
         }
         for (Object task: tasks){
+            if (task == null){
+                log.warn("task is null");
+                continue;
+            }
             switch (task) {
-                case null -> log.warn("task is null");
                 case io.reactivex.disposables.Disposable disposable -> disposable.dispose();
                 case reactor.core.Disposable disposable -> disposable.dispose();
                 case Future<?> future -> future.cancel(true);
@@ -317,6 +320,9 @@ public class RealtimeChatContextManager implements
         cancelTask(functionCallTasks);
         // 取消任务并不会清除userQuestion
         userRequestQuestion = "";
+        agentResponseStringBuffer.setLength(0);
+        currentAgentResponseCount.set(0);
+
         log.info("[Session] 重置会话");
     }
 
