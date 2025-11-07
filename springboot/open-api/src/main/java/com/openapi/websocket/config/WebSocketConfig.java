@@ -3,10 +3,8 @@ package com.openapi.websocket.config;
 import com.alibaba.cloud.ai.dashscope.chat.DashScopeChatModel;
 import com.openapi.config.ThreadPoolConfig;
 import com.openapi.service.test.OmniRealTimeNoVADTestService;
-import com.openapi.service.test.RealTimeTestServiceService;
 import com.openapi.service.RealtimeChatService;
 import com.openapi.websocket.handler.test.OmniRealTimeNoVADTestChannel;
-import com.openapi.websocket.handler.test.RealTimeTestChannel;
 import com.openapi.websocket.handler.RealtimeChatChannel;
 import com.openapi.websocket.handler.test.TestChannel;
 import com.openapi.websocket.manager.WebSocketMessageManager;
@@ -27,7 +25,6 @@ public class WebSocketConfig implements WebSocketConfigurer {
 
     private final OmniRealTimeNoVADTestService omniRealTimeNoVADTestService;
     private final ThreadPoolConfig threadPoolConfig;
-    private final RealTimeTestServiceService realTimeTestServiceService;
     private final RealtimeChatService realtimeChatService;
     private final DashScopeChatModel dashScopeChatModel;
     private final SessionConfig sessionConfig;
@@ -44,12 +41,13 @@ public class WebSocketConfig implements WebSocketConfigurer {
                         omniRealTimeNoVADTestService,
                         threadPoolConfig.taskExecutor()
                 ), "/realtime-no-vad-test")
-                .addHandler(new RealTimeTestChannel(
-                                realTimeTestServiceService,
-                                threadPoolConfig.taskExecutor(),
-                                dashScopeChatModel
-                        ),
-                        "/realtime-test")
+//                .addHandler(new RealTimeTestChannel(
+//                                realTimeTestServiceService,
+//                                threadPoolConfig.taskExecutor(),
+//                                dashScopeChatModel,
+//                                new RealtimeChatContextManager(webSocketMessageManager)
+//                        ),
+//                        "/realtime-test")
                 .addHandler(new RealtimeChatChannel(
                                 threadPoolConfig.taskExecutor(),
                                 realtimeChatService,

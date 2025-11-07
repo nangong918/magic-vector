@@ -132,17 +132,8 @@ public class ChatController {
                         true
                 );
             } catch (Exception e) {
-                realtimeChatContextManager.stopRecording.set(true);
+                realtimeChatContextManager.endConversation();
                 log.error("[vision chat] 聊天处理异常", e);
-                Map<String, String> responseErrorMap = new HashMap<>();
-                responseErrorMap.put(RealtimeResponseDataTypeEnum.TYPE, RealtimeResponseDataTypeEnum.STOP_TTS.getType());
-                responseErrorMap.put(RealtimeResponseDataTypeEnum.DATA, "聊天处理异常" + e.getMessage());
-                String response = JSON.toJSONString(responseErrorMap);
-                // 异常消息
-                webSocketMessageManager.submitMessage(
-                        agentId,
-                        response
-                );
             }
         });
         realtimeChatContextManager.addFunctionCallTask(visionChatFuture);
