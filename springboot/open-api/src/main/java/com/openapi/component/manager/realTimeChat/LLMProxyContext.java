@@ -228,6 +228,7 @@ public class LLMProxyContext implements RealtimeProcess, ChatRealtimeStatue, Fun
     /**
      * 设置是否为首次TTS
      */
+    @Override
     public void setIsFirstTTS(boolean isFirstTTS){
         if (isFunctionCall.get()){
             functionCallLLMContext.getTtsContext().setFirstTTS(isFirstTTS);

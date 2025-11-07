@@ -317,6 +317,9 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
                 startResponse
         );
 
+        // 设置是首次TTS
+        chatContextManager.setIsFirstTTS(true);
+
         // 订阅流式响应并处理
         return responseFlux.subscribe(
 
@@ -693,14 +696,16 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
     public void startFunctionCallResultChat(@Nullable String imageBase64, @NotNull RealtimeChatContextManager chatContextManager, boolean isPassiveNotActive) throws NoApiKeyException, UploadFileException {
         if (imageBase64 == null || imageBase64.isEmpty()) {
             log.info("[websocket] 启动视觉聊天：无图片");
-            var disposable = functionCallResultLLMStreamCall(null, chatContextManager, isPassiveNotActive);
-            chatContextManager.addFunctionCallTask(disposable);
+            chatContextManager.addFunctionCallResult("[视觉任务结果]: error错误，用户并没有提供图片资源");
+//            var disposable = functionCallResultLLMStreamCall(null, chatContextManager, isPassiveNotActive);
+//            chatContextManager.addFunctionCallTask(disposable);
         }
         else {
             log.info("[websocket] 启动视觉聊天：有图片, imageLength: {}", imageBase64.length());
             String result = visionChatService.callWithFileBase64(imageBase64, chatContextManager.getUserRequestQuestion());
-            var disposable = functionCallResultLLMStreamCall(result, chatContextManager, isPassiveNotActive);
-            chatContextManager.addFunctionCallTask(disposable);
+            chatContextManager.addFunctionCallResult("[视觉任务结果]" + result);
+//            var disposable = functionCallResultLLMStreamCall(result, chatContextManager, isPassiveNotActive);
+//            chatContextManager.addFunctionCallTask(disposable);
         }
     }
 
@@ -759,12 +764,17 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
             );
         }
 
+        // 设置是首次TTS
+        chatContextManager.setIsFirstTTS(true);
+
         // 订阅流式响应并处理
         return responseFlux.subscribe(
 
                 // 处理每个流片段
                 fragment -> {
                     chatContextManager.startLLM();
+                    // 设置tts是finalResultTTS
+                    chatContextManager.setIsFinalResultTTS(true);
 
                     System.out.println("[functionCall LLM] 片段: " + fragment);
 

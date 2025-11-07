@@ -16,6 +16,7 @@ public interface ChatRealtimeStatue {
     boolean isRecording();
 
     // TTS
+    void setIsFirstTTS(boolean isFirstTTS);
     AtomicBoolean isFirstTTS();
     boolean isTTSing();
     long getTTSStartTime();

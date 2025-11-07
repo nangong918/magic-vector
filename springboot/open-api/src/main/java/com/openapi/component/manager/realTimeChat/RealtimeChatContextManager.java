@@ -335,6 +335,11 @@ public class RealtimeChatContextManager implements
     }
 
     @Override
+    public void setIsFirstTTS(boolean isFirstTTS) {
+        llmProxyContext.setIsFirstTTS(isFirstTTS);
+    }
+
+    @Override
     public AtomicBoolean isFirstTTS() {
         return llmProxyContext.isFirstTTS();
     }
