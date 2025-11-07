@@ -1,9 +1,9 @@
 package com.openapi.domain.entity;
 
-import com.openapi.domain.entity.realtimeChat.STTContext;
 import com.openapi.domain.entity.realtimeChat.LLMContext;
 import com.openapi.domain.entity.realtimeChat.TTSContext;
 import lombok.Getter;
+import lombok.extern.slf4j.Slf4j;
 
 import java.util.LinkedList;
 import java.util.List;
@@ -16,11 +16,14 @@ import java.util.concurrent.atomic.AtomicInteger;
  * @author 13225
  * @date 2025/11/7 11:48
  */
+@Slf4j
 public class FunctionCallLLMContext {
     // 剩余等待的function call信号量 （封装Function Call）
     private final AtomicInteger remainingFunctionCallSignal = new AtomicInteger(0);
     // ResultList
     private final List<String> functionCallResultList = new LinkedList<>();
+    // 所有function call完成回调
+    public AllFunctionCallFinished allFunctionCallFinished;
     /// LLM
     // llm重试次数（function call LLM 和 result LLM 共享）
     @Getter
@@ -35,16 +38,31 @@ public class FunctionCallLLMContext {
     private final Queue<String> ttsMQ = new ConcurrentLinkedQueue<>();
 
     // 添加function call信号量
-    public void addFunctionCallSignal() {
+    public synchronized void addFunctionCallSignal() {
         remainingFunctionCallSignal.incrementAndGet();
     }
+    private synchronized int removeFunctionCallSignal() {
+        return remainingFunctionCallSignal.decrementAndGet();
+    }
 
-    public int getRemainingFunctionCallSignal() {
+    public synchronized int getRemainingFunctionCallSignal() {
         return remainingFunctionCallSignal.get();
     }
 
-    public void addFunctionCallResult(String result) {
+    public synchronized void addFunctionCallResult(String result) {
         functionCallResultList.add(result);
+        // 添加一条响应结果，减少一条信号量
+        var remainingFunctionCallSignal = removeFunctionCallSignal();
+        // 检查是否可以执行最后result的LLM；检查点1: function call获取到result -> 对应tts比function call快
+        if (remainingFunctionCallSignal > 0) {
+            log.info("[FunctionCall] 添加FunctionCall结果，剩余function call信号量：{}", remainingFunctionCallSignal);
+        }
+        else {
+            if (allFunctionCallFinished != null){
+                log.info("[FunctionCall] 检查点1 所有FunctionCall结果获取完毕，开始执行最后result的LLM");
+                allFunctionCallFinished.allFunctionCallFinished();
+            }
+        }
     }
     
     public String getAllFunctionCallResult() {

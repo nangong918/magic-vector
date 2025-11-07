@@ -1,6 +1,5 @@
 package com.openapi.domain.entity;
 
-import com.openapi.domain.entity.realtimeChat.STTContext;
 import com.openapi.domain.entity.realtimeChat.LLMContext;
 import com.openapi.domain.entity.realtimeChat.TTSContext;
 import lombok.Getter;

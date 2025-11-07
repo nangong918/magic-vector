@@ -3,6 +3,8 @@ package com.openapi.domain.entity;
 import com.openapi.domain.constant.realtime.RealTimeChatStatue;
 import com.openapi.domain.entity.realtimeChat.STTContext;
 import lombok.Getter;
+import lombok.Setter;
+import lombok.extern.slf4j.Slf4j;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -14,19 +16,24 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * @see SimpleLLMContext
  * @see FunctionCallLLMContext
  */
+@Slf4j
 public class LLMProxyContext {
     ///===========会话类型===========
     // 是否是FunctionCall会话
     private final AtomicBoolean isFunctionCall = new AtomicBoolean(false);
-    public void setIsFunctionCall(boolean isFunctionCall) {
-        this.isFunctionCall.set(isFunctionCall);
+    public void addFunctionCallRecord(){
+        isFunctionCall.set(true);
+        functionCallLLMContext.addFunctionCallSignal();
     }
     public boolean isFunctionCall() {
         return isFunctionCall.get();
     }
-
+    public void setFunctionCallFinishCallBack(AllFunctionCallFinished allFunctionCallFinished){
+        this.functionCallLLMContext.allFunctionCallFinished = allFunctionCallFinished;
+    }
 
     ///===========会话状态===========
+    @Setter
     private RealTimeChatStatueCallback statueCallback;
     private void setStatue(RealTimeChatStatue realTimeChatStatue){
         this.realTimeChatStatue = realTimeChatStatue;
@@ -83,6 +90,7 @@ public class LLMProxyContext {
 
     /**
      * 开始TTS
+     * 注意FunctionCall的话需要调用setIsFinalResultTTS
      */
     public void startTTS(){
         if (isFunctionCall.get()){
@@ -100,11 +108,23 @@ public class LLMProxyContext {
     public void stopTTS(){
         if (isFunctionCall.get()){
             functionCallLLMContext.getTtsContext().setTTSing(false);
+            // 如果是最终的tts
+            // 检查是否可以执行最后result的LLM；检查点2: 最终的TTS结束 -> 对应tts比function call慢
+            if (functionCallLLMContext.isFinalResultTTS()){
+                var remainingFunctionCallSignal = functionCallLLMContext.getRemainingFunctionCallSignal();
+                if (remainingFunctionCallSignal > 0){
+                    log.info("[FunctionCall] Final TTS 执行完毕FunctionCall结果，剩余function call信号量：{}", remainingFunctionCallSignal);
+                }
+                else {
+                    log.info("[FunctionCall] 检查点2 所有FunctionCall结果获取完毕，开始执行最后result的LLM");
+                    functionCallLLMContext.allFunctionCallFinished.allFunctionCallFinished();
+                }
+            }
         }
         else {
             simpleLLMContext.getTtsContext().setTTSing(false);
+            // 按理来说此处一定会调用endConversation()结束会话，但是这样就职责不单一，功能耦合了，还是上游去自己调用吧
         }
-        // 回调发送EOF
         setStatue(RealTimeChatStatue.CONVERSATION_END);
     }
 
@@ -115,6 +135,7 @@ public class LLMProxyContext {
         simpleLLMContext.reset();
         functionCallLLMContext.reset();
         sstRecordContext.reset();
+        // 回调发送EOF
         setStatue(RealTimeChatStatue.CONVERSATION_END);
     }
 
