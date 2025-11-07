@@ -1,4 +1,4 @@
-package com.openapi.domain.entity;
+package com.openapi.component.manager.realTimeChat;
 
 /**
  * @author 13225

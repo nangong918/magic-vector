@@ -1,7 +1,7 @@
-package com.openapi.domain.entity;
+package com.openapi.component.manager.realTimeChat;
 
-import com.openapi.domain.entity.realtimeChat.LLMContext;
-import com.openapi.domain.entity.realtimeChat.TTSContext;
+import com.openapi.domain.entity.LLMContext;
+import com.openapi.domain.entity.TTSContext;
 import lombok.Getter;
 
 
@@ -41,5 +41,9 @@ public class SimpleLLMContext {
         llmContext.reset();
         ttsContext.reset();
         ttsMQ.clear();
+    }
+
+    public int getAllTTSCount() {
+        return ttsMQ.size();
     }
 }

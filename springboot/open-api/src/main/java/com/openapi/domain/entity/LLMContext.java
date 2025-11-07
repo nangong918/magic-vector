@@ -1,4 +1,5 @@
-package com.openapi.domain.entity.realtimeChat;
+package com.openapi.domain.entity;
+
 
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -17,6 +18,9 @@ public class LLMContext {
     public int getLlmConnectResetRetryCount() {
         // 增加并返回
         return llmConnectResetRetryCount.incrementAndGet();
+    }
+    public AtomicInteger getLlmConnectResetRetryCountAtomic() {
+        return llmConnectResetRetryCount;
     }
 
     // 是否正在llm

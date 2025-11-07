@@ -1,4 +1,4 @@
-package com.openapi.domain.entity.realtimeChat;
+package com.openapi.domain.entity;
 
 import lombok.Getter;
 import lombok.Setter;
@@ -23,8 +23,8 @@ public class TTSContext {
      * 是否是首次TTS
      * @return  true/false
      */
-    public boolean isFirstTTS() {
-        return isFirstTTS.get();
+    public AtomicBoolean isFirstTTS() {
+        return isFirstTTS;
     }
 
     /**

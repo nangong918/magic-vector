@@ -1,4 +1,4 @@
-package com.openapi.domain.entity;
+package com.openapi.component.manager.realTimeChat;
 
 import com.openapi.domain.constant.realtime.RealTimeChatStatue;
 

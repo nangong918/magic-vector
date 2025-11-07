@@ -1,12 +1,14 @@
-package com.openapi.domain.entity;
+package com.openapi.component.manager.realTimeChat;
 
 import com.openapi.domain.constant.realtime.RealTimeChatStatue;
-import com.openapi.domain.entity.realtimeChat.STTContext;
+import com.openapi.domain.entity.STTContext;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * @author 13225
@@ -17,7 +19,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * @see FunctionCallLLMContext
  */
 @Slf4j
-public class LLMProxyContext {
+public class LLMProxyContext implements RealtimeProcess, ChatRealtimeStatue{
     ///===========会话类型===========
     // 是否是FunctionCall会话
     private final AtomicBoolean isFunctionCall = new AtomicBoolean(false);
@@ -49,22 +51,25 @@ public class LLMProxyContext {
     /**
      * 录音开始
      */
+    @Override
     public void startRecord(){
-        sstRecordContext.startRecord();
+        sttRecordContext.startRecord();
         setStatue(RealTimeChatStatue.RECORDING);
     }
 
     /**
      * 录音结束
      */
+    @Override
     public void stopRecord(){
-        sstRecordContext.stopRecord();
+        sttRecordContext.stopRecord();
         setStatue(RealTimeChatStatue.WAITING_AGENT_REPLY);
     }
 
     /**
      * 开始LLM
      */
+    @Override
     public void startLLM(){
         if (isFunctionCall.get()){
             functionCallLLMContext.getLlmContext().setLLMing(true);
@@ -78,6 +83,7 @@ public class LLMProxyContext {
     /**
      * 结束LLM
      */
+    @Override
     public void stopLLM(){
         if (isFunctionCall.get()){
             functionCallLLMContext.getLlmContext().setLLMing(false);
@@ -92,6 +98,7 @@ public class LLMProxyContext {
      * 开始TTS
      * 注意FunctionCall的话需要调用setIsFinalResultTTS
      */
+    @Override
     public void startTTS(){
         if (isFunctionCall.get()){
             functionCallLLMContext.getTtsContext().setTTSing(true);
@@ -105,6 +112,7 @@ public class LLMProxyContext {
     /**
      * 结束TTS
      */
+    @Override
     public void stopTTS(){
         if (isFunctionCall.get()){
             functionCallLLMContext.getTtsContext().setTTSing(false);
@@ -131,12 +139,87 @@ public class LLMProxyContext {
     /**
      * 会话结束
      */
+    @Override
     public void endConversation(){
         simpleLLMContext.reset();
         functionCallLLMContext.reset();
-        sstRecordContext.reset();
+        sttRecordContext.reset();
         // 回调发送EOF
         setStatue(RealTimeChatStatue.CONVERSATION_END);
+    }
+
+    @Override
+    public int getLLMErrorCount() {
+        int count = 0;
+        if (isFunctionCall.get()){
+            count = functionCallLLMContext.getLlmContext().getLlmConnectResetRetryCount();
+        }
+        else {
+            count = simpleLLMContext.getLlmContext().getLlmConnectResetRetryCount();
+        }
+        return count;
+    }
+
+    @Override
+    public boolean isLLMing() {
+        if (isFunctionCall.get()){
+            return functionCallLLMContext.getLlmContext().isLLMing();
+        }
+        else {
+            return simpleLLMContext.getLlmContext().isLLMing();
+        }
+    }
+
+    @Override
+    public boolean isAudioChat() {
+        return sttRecordContext.isAudioChat();
+    }
+    @Override
+    public boolean isRecording() {
+        return sttRecordContext.isRecording();
+    }
+
+    /**
+     * 是否是首次TTS
+     * @return  true/false
+     */
+    @Override
+    public AtomicBoolean isFirstTTS(){
+        if (isFunctionCall.get()){
+            return functionCallLLMContext.getTtsContext().isFirstTTS();
+        }
+        else {
+            return simpleLLMContext.getTtsContext().isFirstTTS();
+        }
+    }
+    @Override
+    public boolean isTTSing() {
+        if (isFunctionCall.get()){
+            return functionCallLLMContext.getTtsContext().isTTSing();
+        }
+        else {
+            return simpleLLMContext.getTtsContext().isTTSing();
+        }
+    }
+
+    @Override
+    public long getTTSStartTime() {
+        if (isFunctionCall.get()){
+            return functionCallLLMContext.getTtsContext().getLastTTS();
+        }
+        else {
+            return simpleLLMContext.getTtsContext().getLastTTS();
+        }
+    }
+
+    @Override
+    public void setTTSStartTime(long time) {
+        if (isFunctionCall.get()){
+            functionCallLLMContext.getTtsContext().setLastTTS(time);
+        }
+        else {
+            simpleLLMContext.getTtsContext().setLastTTS(time);
+        }
     }
 
     ///===========其他状态
@@ -153,36 +236,37 @@ public class LLMProxyContext {
         }
     }
 
-    /**
-     * 是否是首次TTS
-     * @return  true/false
-     */
-    public boolean isFirstTTS(){
-        if (isFunctionCall.get()){
-            return functionCallLLMContext.getTtsContext().isFirstTTS();
-        }
-        else {
-            return simpleLLMContext.getTtsContext().isFirstTTS();
-        }
-    }
+
+
+
 
     /**
      * 重置状态
      */
+    @Override
     public void reset() {
         simpleLLMContext.reset();
         functionCallLLMContext.reset();
-        sstRecordContext.reset();
+        sttRecordContext.reset();
         setStatue(RealTimeChatStatue.UNCONVERSATION);
     }
-
+    public void resetFunctionCall(){
+        functionCallLLMContext.reset();
+        sttRecordContext.reset();
+        setStatue(RealTimeChatStatue.UNCONVERSATION);
+    }
+    public void resetSimpleLLM(){
+        simpleLLMContext.reset();
+        sttRecordContext.reset();
+        setStatue(RealTimeChatStatue.UNCONVERSATION);
+    }
     ///===========会话Context===========
     private final SimpleLLMContext simpleLLMContext = new SimpleLLMContext();
     private final FunctionCallLLMContext functionCallLLMContext = new FunctionCallLLMContext();
     // 音频
     // 音频状态
     @Getter
-    private final STTContext sstRecordContext = new STTContext();
+    private final STTContext sttRecordContext = new STTContext();
 
     /**
      * 添加TTS sentence 到缓冲池
@@ -211,4 +295,22 @@ public class LLMProxyContext {
     }
 
 
+    public int getAllTTSCount(){
+        if (isFunctionCall.get()){
+            return functionCallLLMContext.getAllTTSCount();
+        }
+        else {
+            return simpleLLMContext.getAllTTSCount();
+        }
+    }
+
+
+    public AtomicInteger getLLMConnectResetRetryCount() {
+        if (isFunctionCall.get()){
+            return functionCallLLMContext.getLlmContext().getLlmConnectResetRetryCountAtomic();
+        }
+        else {
+            return simpleLLMContext.getLlmContext().getLlmConnectResetRetryCountAtomic();
+        }
+    }
 }

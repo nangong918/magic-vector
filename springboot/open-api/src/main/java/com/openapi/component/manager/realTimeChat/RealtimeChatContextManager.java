@@ -3,8 +3,10 @@ package com.openapi.component.manager.realTimeChat;
 import cn.hutool.core.util.IdUtil;
 import com.alibaba.fastjson.JSON;
 import com.openapi.domain.constant.RoleTypeEnum;
+import com.openapi.domain.constant.realtime.RealtimeResponseDataTypeEnum;
 import com.openapi.domain.dto.ws.response.RealtimeChatTextResponse;
 import com.openapi.utils.DateUtils;
+import com.openapi.websocket.manager.WebSocketMessageManager;
 import lombok.Getter;
 import lombok.NonNull;
 import lombok.Setter;
@@ -16,10 +18,9 @@ import org.springframework.web.socket.WebSocketSession;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Queue;
-import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -48,7 +49,13 @@ import java.util.concurrent.atomic.AtomicInteger;
  *  -> end llm
  */
 @Slf4j
-public class RealtimeChatContextManager implements IRealTimeChatResponseManager {
+public class RealtimeChatContextManager implements IRealTimeChatResponseManager, RealtimeProcess, ChatRealtimeStatue {
+
+    private final WebSocketMessageManager webSocketMessageManager;
+    public RealtimeChatContextManager(@NonNull WebSocketMessageManager webSocketMessageManager){
+        this.webSocketMessageManager = webSocketMessageManager;
+    }
+
     /// chatClient      (chatModel是单例，但是chatClient需要集成Agent的记忆，以及每个chatClient的设定不同，所以不是单例)
     public ChatClient chatClient;
 
@@ -57,24 +64,7 @@ public class RealtimeChatContextManager implements IRealTimeChatResponseManager 
     private final List<Object> functionCallTasks = new ArrayList<>();
 
     /// 会话状态
-    // 本次会话是否属于FunctionCall会话
-    public AtomicBoolean isFunctionCall = new AtomicBoolean(false);
-    // 是否正在会话
-    public AtomicBoolean isChatting = new AtomicBoolean(false);
-
-    /*
-        会话状态：
-        1. 未会话 -> agent回复中(包含llm和tts) -> 会话结束
-        2. 未会话 -> 录音中 -> agent回复中(包含llm和tts) -> 会话结束
-        3. 未会话 -> agent回复中 -> 等待function call结果 -> agent回复中 -> 会话结束
-        4. 未会话 -> 录音中 -> agent回复中 -> 等待function call结果 -> agent回复中 -> 会话结束
-        状态管理需要用AtomicResource, 并且使用synchronized上锁，使用并发设计模式
-     */
-
-    // 剩余等待的function call信号量 （封装Function Call）
-    public final AtomicInteger remainingFunctionCallSignal = new AtomicInteger(0);
-
-    // 解耦：非FunctionCall是一个完整流程，FunctionCall是另一个完整流程，互不干扰
+    public final LLMProxyContext llmProxyContext = new LLMProxyContext();
 
     // 添加任务
     public boolean addChatTask(Object task) {
@@ -102,11 +92,11 @@ public class RealtimeChatContextManager implements IRealTimeChatResponseManager 
     // 取消任务(方法模板)
     public final void cancelChatTask(){
         cancelTask(chatTasks);
-        resetChatData();
+        llmProxyContext.resetFunctionCall();
     }
     public final void cancelFunctionCallTask(){
         cancelTask(functionCallTasks);
-        resetFunctionCallData();
+        llmProxyContext.resetSimpleLLM();
     }
     private void cancelTask(@NotNull List<Object> tasks){
         if (tasks.isEmpty()){
@@ -124,77 +114,11 @@ public class RealtimeChatContextManager implements IRealTimeChatResponseManager 
         tasks.clear();
     }
 
-    // 重置数据
-    // 重置chat数据
-    private void resetChatData(){
-        // 取消chat之后，录音一定重置，function call不会调用此数据
-        requestAudioBuffer.clear();
-        stopRecording.set(true);
-        // userQuestion不能取消，因为function call还会用到
-//        userQuestion = "";
-        // isChatting不能取消，因为还有function call，此处不能判定
-//        isChatting.set(false);
-        // 取消chat任务的时候需要将响应数据清空，避免跟function call的填充数据冲突。
-        currentResponseStringBuffer.setLength(0);
-        // 重置llm重连次数
-        llmConnectResetRetryCount.set(0);
-        // sentenceQueue不能取消，因为function call是继续填充，填充之后进行tts
-//        sentenceQueue.clear();
-        // llm需要设置为已经完成，因为function call会重新启动
-        isLLMFinished.set(true);
-        isTTSFinished.set(true);
-        isFirstTTS.set(true);
-        lastTTSTimestamp = 0L;
-    }
-    private void resetFunctionCallData(){
-        // function call任务取消
-        isFunctionCall.set(false);
-        isChatting.set(false);
-        // 响应数据清空
-        userQuestion = "";
-        currentResponseStringBuffer.setLength(0);
-        currentAgentResponseCount.set(0);
-        // 重置llm和tts数据
-        llmConnectResetRetryCount.set(0);
-        sentenceQueue.clear();
-        isLLMFinished.set(true);
-        isTTSFinished.set(true);
-        isFirstTTS.set(true);
-        lastTTSTimestamp = 0L;
-        // vision
-        imageBase64.setLength(0);
-    }
-
-    // 取消当前的任务
-    public final void cancelCurrentTask(){
-        cancelChatTask();
-        cancelFunctionCallTask();
-    }
-
-    /// 音频数据
-    // user音频数据
-    public final Queue<byte[]> requestAudioBuffer = new ConcurrentLinkedQueue<>();
-    // user是否停止录制
-    public final AtomicBoolean stopRecording = new AtomicBoolean(true);
-
     /// agent会话信息
     public String userId;
     public String agentId;
     public long connectTimestamp = 0L;
     public WebSocketSession session;
-
-    /// llm -> tts
-    // llm
-    // llm Connect Reset重试
-    public final AtomicInteger llmConnectResetRetryCount = new AtomicInteger(0);
-    public final Queue<String> sentenceQueue = new ConcurrentLinkedQueue<>();
-    public final AtomicBoolean isLLMFinished = new AtomicBoolean(false);
-    // tts
-    public final AtomicBoolean isTTSFinished = new AtomicBoolean(true);
-    // 用于记录是否是首次TTS，因为后续都是2+句话一个语音生成；而首次是单个句子
-    public final AtomicBoolean isFirstTTS = new AtomicBoolean(true);
-    // 实现语音延迟
-    public long lastTTSTimestamp = 0L;
 
     /// vision chat
     // image chat
@@ -204,12 +128,11 @@ public class RealtimeChatContextManager implements IRealTimeChatResponseManager 
     // video chat (开发的时候再放出来)
 //    public StringBuffer videoBase64 = new StringBuffer();
 
-
     /// userQuestion
     @Getter
     @Setter
-    private String userQuestion = "";
-    public StringBuffer currentResponseStringBuffer = new StringBuffer();
+    private String userRequestQuestion = "";
+    public StringBuffer agentResponseStringBuffer = new StringBuffer();
     private final AtomicInteger currentAgentResponseCount = new AtomicInteger(0);
 
     /// 当前聊天会话信息
@@ -220,10 +143,8 @@ public class RealtimeChatContextManager implements IRealTimeChatResponseManager 
 
     // 开启新的一问一答
     public void newChatMessage(){
-        // 取消正在执行的任务
-        cancelCurrentTask();
-        // 取消任务并不会清除userQuestion
-        userQuestion = "";
+        // 重置
+        reset();
 
         // 填充新的会话数据
         currentMessageId = String.valueOf(IdUtil.getSnowflake().nextId());
@@ -244,6 +165,19 @@ public class RealtimeChatContextManager implements IRealTimeChatResponseManager 
         return JSON.toJSONString(param);
     }
 
+    private void sendEOF(){
+        Map<String, String> responseMap = new HashMap<>();
+        responseMap.put(RealtimeResponseDataTypeEnum.TYPE, RealtimeResponseDataTypeEnum.STOP_TTS.getType());
+        responseMap.put(RealtimeResponseDataTypeEnum.DATA, RealtimeResponseDataTypeEnum.STOP_TTS.getType());
+        String endResponse = JSON.toJSONString(responseMap);
+        webSocketMessageManager.submitMessage(
+                agentId,
+                endResponse
+        );
+
+        // 重置
+        reset();
+    }
 
     /// ==========IRealTimeChatResponseManager==========
 
@@ -253,7 +187,7 @@ public class RealtimeChatContextManager implements IRealTimeChatResponseManager 
         response.setAgentId(agentId);
         response.setUserId(userId);
         response.setRole(RoleTypeEnum.AGENT.getValue());
-        response.setContent(currentResponseStringBuffer.toString());
+        response.setContent(agentResponseStringBuffer.toString());
         response.setMessageId(getCurrentAgentMessageId());
         response.setTimestamp(currentAgentMessageTimestamp);
         response.setChatTime(getCurrentMessageTimeStr());
@@ -275,7 +209,7 @@ public class RealtimeChatContextManager implements IRealTimeChatResponseManager 
 
     @Override
     public @NonNull RealtimeChatTextResponse getUserSTTResultResponse(@NonNull String sstResult) {
-        setUserQuestion(sstResult);
+        setUserRequestQuestion(sstResult);
         val response = new RealtimeChatTextResponse();
         response.setAgentId(agentId);
         response.setUserId(userId);
@@ -289,7 +223,7 @@ public class RealtimeChatContextManager implements IRealTimeChatResponseManager 
 
     @Override
     public @NotNull RealtimeChatTextResponse getUserTextResponse(@NonNull String userChatText){
-        setUserQuestion(userChatText);
+        setUserRequestQuestion(userChatText);
         val response = new RealtimeChatTextResponse();
         response.setAgentId(agentId);
         response.setUserId(userId);
@@ -322,5 +256,96 @@ public class RealtimeChatContextManager implements IRealTimeChatResponseManager 
     private String getCurrentMessageTimeStr(){
         return DateUtils.yyyyMMddHHmmssToString(this.currentMessageDateTime);
     }
+
+    /// ==========RealtimeProcess==========
+
+    @Override
+    public void startRecord() {
+        llmProxyContext.startRecord();
+    }
+
+    @Override
+    public void stopRecord() {
+        llmProxyContext.stopRecord();
+    }
+
+    @Override
+    public void startLLM() {
+        llmProxyContext.startLLM();
+    }
+
+    @Override
+    public void stopLLM() {
+        llmProxyContext.stopLLM();
+    }
+
+    @Override
+    public void startTTS() {
+        llmProxyContext.startTTS();
+    }
+
+    @Override
+    public void stopTTS() {
+        llmProxyContext.stopTTS();
+    }
+
+    @Override
+    public void endConversation() {
+        llmProxyContext.endConversation();
+        sendEOF();
+    }
+
+    @Override
+    public void reset() {
+        llmProxyContext.reset();
+        // 取消正在执行的任务
+        cancelTask(chatTasks);
+        cancelTask(functionCallTasks);
+        // 取消任务并不会清除userQuestion
+        userRequestQuestion = "";
+    }
+
+    ///==========ChatRealtimeStatue==========
+
+    @Override
+    public int getLLMErrorCount() {
+        return llmProxyContext.getLLMErrorCount();
+    }
+
+    @Override
+    public boolean isLLMing() {
+        return llmProxyContext.isLLMing();
+    }
+
+    @Override
+    public boolean isAudioChat() {
+        return llmProxyContext.isAudioChat();
+    }
+
+    @Override
+    public boolean isRecording() {
+        return llmProxyContext.isRecording();
+    }
+
+    @Override
+    public AtomicBoolean isFirstTTS() {
+        return llmProxyContext.isFirstTTS();
+    }
+
+    @Override
+    public boolean isTTSing() {
+        return llmProxyContext.isTTSing();
+    }
+
+    @Override
+    public long getTTSStartTime() {
+        return llmProxyContext.getTTSStartTime();
+    }
+
+    @Override
+    public void setTTSStartTime(long time) {
+        llmProxyContext.setTTSStartTime(time);
+    }
+
 
 }

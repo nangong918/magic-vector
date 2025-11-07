@@ -1,4 +1,4 @@
-package com.openapi.domain.entity.realtimeChat;
+package com.openapi.domain.entity;
 
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
