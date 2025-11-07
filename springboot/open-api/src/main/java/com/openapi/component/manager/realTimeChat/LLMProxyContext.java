@@ -5,6 +5,7 @@ import com.openapi.domain.entity.STTContext;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -19,7 +20,7 @@ import java.util.concurrent.atomic.AtomicLong;
  * @see FunctionCallLLMContext
  */
 @Slf4j
-public class LLMProxyContext implements RealtimeProcess, ChatRealtimeStatue{
+public class LLMProxyContext implements RealtimeProcess, ChatRealtimeStatue, FunctionCallMethod{
     ///===========会话类型===========
     // 是否是FunctionCall会话
     private final AtomicBoolean isFunctionCall = new AtomicBoolean(false);
@@ -308,5 +309,23 @@ public class LLMProxyContext implements RealtimeProcess, ChatRealtimeStatue{
         else {
             return simpleLLMContext.getLlmContext().getLlmConnectResetRetryCountAtomic();
         }
+    }
+
+    /// =============FunctionCallMethod=============
+
+    @Override
+    public void addFunctionCallResult(String result) {
+        functionCallLLMContext.addFunctionCallResult(result);
+    }
+
+    @NotNull
+    @Override
+    public String getAllFunctionCallResult() {
+        return functionCallLLMContext.getAllFunctionCallResult();
+    }
+
+    @Override
+    public void setIsFinalResultTTS(boolean isFinalResultTTS) {
+        functionCallLLMContext.setIsFinalResultTTS(isFinalResultTTS);
     }
 }

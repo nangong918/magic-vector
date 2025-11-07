@@ -4,6 +4,7 @@ import com.openapi.domain.entity.LLMContext;
 import com.openapi.domain.entity.TTSContext;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.LinkedList;
 import java.util.List;
@@ -64,13 +65,17 @@ public class FunctionCallLLMContext {
             }
         }
     }
-    
+
+    @NotNull
     public String getAllFunctionCallResult() {
         StringBuilder sb = new StringBuilder();
         for (String result : functionCallResultList) {
             sb.append(result);
         }
-        return sb.toString();
+        String result = sb.toString();
+        // 获取之后就清空
+        sb.setLength(0);
+        return result;
     }
 
     public void setIsFinalResultTTS(boolean isFinalResultTTS){

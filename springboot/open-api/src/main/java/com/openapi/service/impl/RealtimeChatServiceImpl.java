@@ -10,6 +10,7 @@ import com.alibaba.dashscope.exception.NoApiKeyException;
 import com.alibaba.dashscope.exception.UploadFileException;
 import com.alibaba.fastjson.JSON;
 import com.openapi.component.manager.OptimizedSentenceDetector;
+import com.openapi.component.manager.realTimeChat.AllFunctionCallFinished;
 import com.openapi.component.manager.realTimeChat.RealtimeChatContextManager;
 import com.openapi.config.AgentConfig;
 import com.openapi.config.ChatConfig;
@@ -53,7 +54,6 @@ import reactor.core.publisher.Flux;
 import java.io.ByteArrayOutputStream;
 import java.nio.ByteBuffer;
 import java.time.Duration;
-import java.util.ArrayList;
 import java.util.Base64;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -912,5 +912,23 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
 //                    chatContextManager.isFunctionCalling.set(false);
                 }
         );
+    }
+
+    /**
+     * 获取FunctionCall结果
+     * @param chatContextManager    chatContextManager
+     * @return                      AllFunctionCallFinished
+     */
+    @NotNull
+    @Override
+    public AllFunctionCallFinished getAllFunctionCallFinished(@NotNull RealtimeChatContextManager chatContextManager) {
+        // 全部的Function Call完成
+        return () -> {
+            // 获取全部的FunctionCall结果
+            String results = chatContextManager.llmProxyContext.getAllFunctionCallResult();
+            // 被动调用
+            var disposable = functionCallResultLLMStreamCall(results, chatContextManager, true);
+            chatContextManager.addFunctionCallTask(disposable);
+        };
     }
 }

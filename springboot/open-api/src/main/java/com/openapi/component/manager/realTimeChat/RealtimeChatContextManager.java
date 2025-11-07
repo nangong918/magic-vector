@@ -49,11 +49,18 @@ import java.util.concurrent.atomic.AtomicInteger;
  *  -> end llm
  */
 @Slf4j
-public class RealtimeChatContextManager implements IRealTimeChatResponseManager, RealtimeProcess, ChatRealtimeStatue {
+public class RealtimeChatContextManager implements
+        IRealTimeChatResponseManager, RealtimeProcess, ChatRealtimeStatue,
+        FunctionCallMethod{
 
     private final WebSocketMessageManager webSocketMessageManager;
-    public RealtimeChatContextManager(@NonNull WebSocketMessageManager webSocketMessageManager){
+    public RealtimeChatContextManager(
+            @NonNull WebSocketMessageManager webSocketMessageManager){
         this.webSocketMessageManager = webSocketMessageManager;
+    }
+
+    public void setAllFunctionCallFinished(AllFunctionCallFinished allFunctionCallFinished){
+        this.llmProxyContext.setFunctionCallFinishCallBack(allFunctionCallFinished);
     }
 
     /// chatClient      (chatModel是单例，但是chatClient需要集成Agent的记忆，以及每个chatClient的设定不同，所以不是单例)
@@ -348,4 +355,19 @@ public class RealtimeChatContextManager implements IRealTimeChatResponseManager,
     }
 
 
+    @Override
+    public void addFunctionCallResult(String result) {
+        llmProxyContext.addFunctionCallResult(result);
+    }
+
+    @NotNull
+    @Override
+    public String getAllFunctionCallResult() {
+        return llmProxyContext.getAllFunctionCallResult();
+    }
+
+    @Override
+    public void setIsFinalResultTTS(boolean isFinalResultTTS) {
+        llmProxyContext.setIsFinalResultTTS(isFinalResultTTS);
+    }
 }

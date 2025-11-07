@@ -7,7 +7,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * @date 2025/11/7 18:47
  */
 public interface ChatRealtimeStatue {
-
     // LLM
     int getLLMErrorCount();
     boolean isLLMing();

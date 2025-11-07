@@ -3,6 +3,7 @@ package com.openapi.service;
 import com.alibaba.cloud.ai.dashscope.chat.DashScopeChatModel;
 import com.alibaba.dashscope.exception.NoApiKeyException;
 import com.alibaba.dashscope.exception.UploadFileException;
+import com.openapi.component.manager.realTimeChat.AllFunctionCallFinished;
 import com.openapi.component.manager.realTimeChat.RealtimeChatContextManager;
 import com.openapi.domain.exception.AppException;
 import org.jetbrains.annotations.NotNull;
@@ -29,4 +30,6 @@ public interface RealtimeChatService {
      * @throws UploadFileException   上传文件异常
      */
     void startFunctionCallResultChat(@Nullable String imageBase64, @NotNull RealtimeChatContextManager chatContextManager, boolean isPassiveNotActive) throws NoApiKeyException, UploadFileException;
+
+    @NotNull AllFunctionCallFinished getAllFunctionCallFinished(@NotNull RealtimeChatContextManager chatContextManager);
 }

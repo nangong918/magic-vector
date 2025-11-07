@@ -90,12 +90,18 @@ public class RealtimeChatChannel extends TextWebSocketHandler {
                     agentId = connectRequest.getAgentId();
                     log.info("[websocket] 连接，收集用户会话信息, agentId: {}", agentId);
 
+
+
                     // 重新连接就是新的会话信息
                     var realtimeChatContextManager = new RealtimeChatContextManager(webSocketMessageManager);
                     realtimeChatContextManager.userId = connectRequest.getUserId();
                     realtimeChatContextManager.agentId = connectRequest.getAgentId();
                     realtimeChatContextManager.session = session;
                     realtimeChatContextManager.connectTimestamp = connectRequest.getTimestamp();
+
+                    // 添加functionCallFinished任务
+                    var isFunctionCallFinished = realtimeChatService.getAllFunctionCallFinished(realtimeChatContextManager);
+                    realtimeChatContextManager.addFunctionCallTask(isFunctionCallFinished);
 
                     // 初始化chatClient
                     // 将获取到的chatClient存储到RealtimeChatContextManager
@@ -105,7 +111,7 @@ public class RealtimeChatChannel extends TextWebSocketHandler {
                     sessionConfig.realtimeChatContextManagerMap().put(agentId, realtimeChatContextManager);
 
                 } catch (Exception e){
-                    log.warn("[websocket warn] 断开连接，参数错误");
+                    log.error("[websocket warn] 断开连接，参数错误", e);
                     session.close();
                 }
             }
