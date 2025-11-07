@@ -350,7 +350,6 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
                     textBuffer.append(fragment);
 
                     if (chatContextManager.llmProxyContext.isFirstTTS().compareAndSet(true, false)){
-                        log.info("[LLM Call] 首次TTS111, text: {}", textBuffer.toString());
                         String complete1Sentence = optimizedSentenceDetector.detectAndExtractFirstSentence(textBuffer);
 
                         if (StringUtils.hasText(complete1Sentence)){
@@ -363,6 +362,7 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
                                         var chatTTSDisposable = generateAudio(
                                                 chatContextManager,
                                                 getOnTTSSelfCall(chatContextManager),
+                                                false,
                                                 false
                                         );
                                         chatContextManager.addChatTask(chatTTSDisposable);
@@ -382,6 +382,7 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
                                         var chatTTSDisposable = generateAudio(
                                                 chatContextManager,
                                                 getOnTTSSelfCall(chatContextManager),
+                                                false,
                                                 false
                                         );
                                         chatContextManager.addChatTask(chatTTSDisposable);
@@ -441,6 +442,8 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
                                     var chatTTSDisposable = generateAudio(
                                             chatContextManager,
                                             getOnTTSSelfCall(chatContextManager),
+                                            false,
+                                            // 有限制
                                             false
                                     );
                                     chatContextManager.addChatTask(chatTTSDisposable);
@@ -488,13 +491,14 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
      * 生成音频
      * 内部存在线程休眠，上游需要避免main线程阻塞
      * @param chatContextManager            聊天上下文管理器
+     * @param onTTSSelfCall                 自我回调
+     * @param isFunctionCall                是否是Function Call任务
+     * @param isNoLimit                     是否没有限制 (设计该参数是因为发现TTS自我调用的时候会被isTTSing卡住，并且如果取消isTTSing会被动调用Function Call的信号量减，导致异常)
      * @return                              生成的音频
-     * @throws NoApiKeyException            缺少API密钥
-     * @throws UploadFileException          上传文件异常
      */
     @Nullable
-    private io.reactivex.disposables.Disposable generateAudio(@NotNull RealtimeChatContextManager chatContextManager, @NotNull OnTTSSelfCall onTTSSelfCall, boolean isFunctionCall) {
-        if (chatContextManager.isTTSing()){
+    private io.reactivex.disposables.Disposable generateAudio(@NotNull RealtimeChatContextManager chatContextManager, @NotNull OnTTSSelfCall onTTSSelfCall, boolean isFunctionCall, boolean isNoLimit) {
+        if (chatContextManager.isTTSing() && !isNoLimit){
             log.info("[TTS] 正在生成音频，请稍等...");
             return null;
         }
@@ -518,7 +522,7 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
 
         if (!StringUtils.hasText(sentence)){
             log.info("[TTS] 暂无数据");
-            chatContextManager.stopTTS();
+//            chatContextManager.stopTTS();
             return null;
         }
         else {
@@ -553,10 +557,13 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
                 .doFinally(() -> {
                     // 记录结束时间
                     chatContextManager.setTTSStartTime(System.currentTimeMillis());
+                    boolean isLLMing = chatContextManager.llmProxyContext.isLLMing();
                     int remainingCount = chatContextManager.llmProxyContext.getAllTTSCount();
-                    if (remainingCount > 0){
-                        log.info("[TTS]自我调用, 剩余数据: {}", remainingCount);
-                        var ttsDisposable = generateAudio(chatContextManager, onTTSSelfCall, isFunctionCall);
+                    // 剩余 || llm未结束
+                    if (remainingCount > 0 || isLLMing){
+                        log.info("[TTS]自我调用, 剩余: {} || llm未结束: {}", remainingCount, isLLMing);
+                        // 单独设置TTSing = false
+                        var ttsDisposable = generateAudio(chatContextManager, onTTSSelfCall, isFunctionCall, true);
                         onTTSSelfCall.selfCall(ttsDisposable, isFunctionCall);
                     }
                     else {
@@ -819,7 +826,8 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
                                         var chatVisionTTSDisposable = generateAudio(
                                                 chatContextManager,
                                                 getOnTTSSelfCall(chatContextManager),
-                                                true
+                                                true,
+                                                false
                                         );
                                         chatContextManager.addFunctionCallTask(chatVisionTTSDisposable);
                                     }
@@ -838,7 +846,8 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
                                         var chatVisionTTSDisposable = generateAudio(
                                                 chatContextManager,
                                                 getOnTTSSelfCall(chatContextManager),
-                                                true
+                                                true,
+                                                false
                                         );
                                         chatContextManager.addFunctionCallTask(chatVisionTTSDisposable);
                                     }
@@ -898,7 +907,9 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
                                     var chatVisionTTSDisposable = generateAudio(
                                             chatContextManager,
                                             getOnTTSSelfCall(chatContextManager),
-                                            true
+                                            true,
+                                            // 有限制
+                                            false
                                     );
                                     chatContextManager.addFunctionCallTask(chatVisionTTSDisposable);
                                 }
@@ -926,7 +937,7 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
                         log.info("[最终剩余未完成内容]: {}", textBuffer);
                     }
 
-                    chatContextManager.endConversation();
+//                    chatContextManager.endConversation();
                     log.info("[functionCall LLM 流式响应完全结束]");
 
 //                    chatContextManager.isFunctionCalling.set(false);
