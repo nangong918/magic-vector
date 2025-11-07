@@ -462,7 +462,7 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
                     chatContextManager.isLLMFinished.set(true);
                     // 发送结束符EOF（内部包含检查tts是否完成，不用担心）
                     // 如果是Function Call任务，说明此处不需要发送EOF
-                    if (chatContextManager.isFunctionCalling.get()){
+                    if (chatContextManager.isFunctionCall.get()){
                         log.info("[LLM] 是Function Call任务，不需要发送EOF");
                         // todo 由于不发送EOF，所以需要在异常或者一定的时间内没有收到functionCall数据则发送EOF
                     }
@@ -562,10 +562,10 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
                         onTTSSelfCall.selfCall(ttsDisposable, isFunctionCall);
                     }
                     else {
-                        if (chatContextManager.isFunctionCalling.get() || isFunctionCall){
-                            log.info("[TTS]结束 FunctionCall任务已经结束，直接发送EOF; isFunctionCalling: {}, isFunctionCall: {}", chatContextManager.isFunctionCalling.get(), isFunctionCall);
+                        if (chatContextManager.isFunctionCall.get() || isFunctionCall){
+                            log.info("[TTS]结束 FunctionCall任务已经结束，直接发送EOF; isFunctionCalling: {}, isFunctionCall: {}", chatContextManager.isFunctionCall.get(), isFunctionCall);
                             sendEOF(chatContextManager);
-                            chatContextManager.isFunctionCalling.set(false);
+                            chatContextManager.isFunctionCall.set(false);
                         }
                         else {
                             log.info("[TTS]结束 不是FunctionCall任务，直接发送EOF");

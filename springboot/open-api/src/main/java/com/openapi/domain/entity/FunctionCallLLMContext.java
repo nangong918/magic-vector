@@ -17,11 +17,6 @@ import java.util.concurrent.atomic.AtomicInteger;
  * @date 2025/11/7 11:48
  */
 public class FunctionCallLLMContext {
-    /// 音频
-    // 音频状态
-    @Getter
-    private final STTContext sstRecordContext = new STTContext();
-
     // 剩余等待的function call信号量 （封装Function Call）
     private final AtomicInteger remainingFunctionCallSignal = new AtomicInteger(0);
     // ResultList
@@ -81,7 +76,6 @@ public class FunctionCallLLMContext {
     }
 
     public void reset() {
-        sstRecordContext.reset();
         remainingFunctionCallSignal.set(0);
         functionCallResultList.clear();
         llmContext.reset();

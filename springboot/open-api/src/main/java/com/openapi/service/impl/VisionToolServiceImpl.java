@@ -65,7 +65,7 @@ public class VisionToolServiceImpl implements VisionToolService {
         // 设置识别正在进行function call
         if (chatContextManager != null){
             // 设置正在进行function call
-            chatContextManager.isFunctionCalling.set(true);
+            chatContextManager.isFunctionCall.set(true);
         }
         else {
             log.warn("未找到agentId: {}, 对应的chatContextManager", agentId);

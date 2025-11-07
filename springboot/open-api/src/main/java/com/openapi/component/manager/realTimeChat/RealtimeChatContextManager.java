@@ -40,6 +40,12 @@ import java.util.concurrent.atomic.AtomicInteger;
  *      录音状态：单独boolean，因为需要控制循环线程的结束
  *      并发任务提取出来，因为能以一个状态值表示
  *      状态：未对话，user正在讲话，agent正在回复，
+ *
+ *  需要升级：chat（无function call） -> chat + function call -> chat + 工作流式function call
+ *  工作流模式：唯一输出llm无论再多的工作流，只有一个llm出口；
+ *  eg：帮我看看我的账单，看看我最近是不是超支了：chat-> visionTool, databaseTool
+ *  -> resultJson集合 + (等待完成)
+ *  -> end llm
  */
 @Slf4j
 public class RealtimeChatContextManager implements IRealTimeChatResponseManager {
@@ -49,9 +55,27 @@ public class RealtimeChatContextManager implements IRealTimeChatResponseManager 
     /// 会话任务
     private final List<Object> chatTasks = new ArrayList<>();
     private final List<Object> functionCallTasks = new ArrayList<>();
-    // 是否正在function call / mcp
-    public AtomicBoolean isFunctionCalling = new AtomicBoolean(false);
+
+    /// 会话状态
+    // 本次会话是否属于FunctionCall会话
+    public AtomicBoolean isFunctionCall = new AtomicBoolean(false);
+    // 是否正在会话
     public AtomicBoolean isChatting = new AtomicBoolean(false);
+
+    /*
+        会话状态：
+        1. 未会话 -> agent回复中(包含llm和tts) -> 会话结束
+        2. 未会话 -> 录音中 -> agent回复中(包含llm和tts) -> 会话结束
+        3. 未会话 -> agent回复中 -> 等待function call结果 -> agent回复中 -> 会话结束
+        4. 未会话 -> 录音中 -> agent回复中 -> 等待function call结果 -> agent回复中 -> 会话结束
+        状态管理需要用AtomicResource, 并且使用synchronized上锁，使用并发设计模式
+     */
+
+    // 剩余等待的function call信号量 （封装Function Call）
+    public final AtomicInteger remainingFunctionCallSignal = new AtomicInteger(0);
+
+    // 解耦：非FunctionCall是一个完整流程，FunctionCall是另一个完整流程，互不干扰
+
     // 添加任务
     public boolean addChatTask(Object task) {
         return addTask(task, chatTasks);
@@ -124,7 +148,7 @@ public class RealtimeChatContextManager implements IRealTimeChatResponseManager 
     }
     private void resetFunctionCallData(){
         // function call任务取消
-        isFunctionCalling.set(false);
+        isFunctionCall.set(false);
         isChatting.set(false);
         // 响应数据清空
         userQuestion = "";
