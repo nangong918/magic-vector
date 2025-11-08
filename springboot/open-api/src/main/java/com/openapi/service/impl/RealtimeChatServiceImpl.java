@@ -27,6 +27,7 @@ import com.openapi.domain.exception.AppException;
 import com.openapi.interfaces.OnSTTResultCallback;
 import com.openapi.interfaces.OnTTSSelfCall;
 import com.openapi.interfaces.model.GenerateAudioStateCallback;
+import com.openapi.interfaces.model.LLMStateCallback;
 import com.openapi.service.AgentService;
 import com.openapi.service.ChatMessageService;
 import com.openapi.service.PromptService;
@@ -34,6 +35,7 @@ import com.openapi.service.RealtimeChatService;
 import com.openapi.service.UserService;
 import com.openapi.service.VisionChatService;
 import com.openapi.service.VisionToolService;
+import com.openapi.service.model.LLMServiceService;
 import com.openapi.service.model.TTSServiceService;
 import com.openapi.websocket.manager.WebSocketMessageManager;
 import io.reactivex.BackpressureStrategy;
@@ -53,6 +55,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import org.springframework.web.reactive.function.client.WebClientRequestException;
 import reactor.core.publisher.Flux;
+import reactor.core.publisher.SignalType;
 
 import java.io.ByteArrayOutputStream;
 import java.nio.ByteBuffer;
@@ -91,6 +94,7 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
     private final VisionChatService visionChatService;
     private final WebSocketMessageManager webSocketMessageManager;
     private final TTSServiceService ttsServiceService;
+    private final LLMServiceService llmServiceService;
 
     /**
      * 启动音频聊天
@@ -500,6 +504,141 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
                     }
                     log.info("[LLM 流式响应完全结束]");
                 }
+        );
+    }
+
+    private reactor.core.Disposable toolsLLMStreamCall(String sentence, @NotNull RealtimeChatContextManager chatContextManager){
+        StringBuffer textBuffer = new StringBuffer();
+
+        var callback = new LLMStateCallback() {
+            @Override
+            public void onSubscribe(Subscription subscription) {
+                // 设置Agent message Time
+                chatContextManager.currentAgentMessageTimestamp = System.currentTimeMillis();
+
+                // 发送开始标识
+                Map<String, String> responseMap = new HashMap<>();
+                responseMap.put(RealtimeResponseDataTypeEnum.TYPE, RealtimeResponseDataTypeEnum.START_TTS.getType());
+                responseMap.put(RealtimeResponseDataTypeEnum.DATA, RealtimeResponseDataTypeEnum.START_TTS.getType());
+                String startResponse = JSON.toJSONString(responseMap);
+                webSocketMessageManager.submitMessage(
+                        chatContextManager.agentId,
+                        startResponse
+                );
+
+                // 设置是首次TTS
+                chatContextManager.setIsFirstTTS(true);
+
+                // 开始llm
+                chatContextManager.startLLM();
+
+                log.info("[toolsLLMStreamCall] LLM-Tools开始");
+            }
+
+            @Override
+            public void onFinish(SignalType signalType) {
+                log.info("[toolsLLMStreamCall] LLM-Tools结束");
+            }
+
+            @Override
+            public void onNext(String fragment) {
+                System.out.println("fragment = " + fragment);
+
+                // 发送当前fragment消息
+                chatContextManager.agentResponseStringBuffer.append(fragment);
+                RealtimeChatTextResponse agentFragmentResponse = chatContextManager.getCurrentFragmentAgentResponse(fragment);
+
+                // 发送消息给Client
+                String agentFragmentResponseJson = JSON.toJSONString(agentFragmentResponse);
+                Map<String, String> fragmentResponseMap = new HashMap<>();
+                fragmentResponseMap.put(RealtimeResponseDataTypeEnum.TYPE, RealtimeResponseDataTypeEnum.TEXT_CHAT_RESPONSE.getType());
+                fragmentResponseMap.put(RealtimeResponseDataTypeEnum.DATA, agentFragmentResponseJson);
+                String response = JSON.toJSONString(fragmentResponseMap);
+                webSocketMessageManager.submitMessage(
+                        chatContextManager.agentId,
+                        response
+                );
+
+                if (chatContextManager.llmProxyContext.isFirstTTS().get()){
+                    String complete1Sentence = optimizedSentenceDetector.detectAndExtractFirstSentence(textBuffer);
+
+                    if (StringUtils.hasText(complete1Sentence)){
+                        // 添加待处理的TTS句子到TTS MQ
+                        chatContextManager.llmProxyContext.offerTTS(complete1Sentence);
+                        // 此处如果不提交线程池，可能会阻塞LLM
+                        // 改进之后的TTS，只在LLM中调用一次
+                        var ttsFuture = threadPoolConfig.taskExecutor().submit(
+                                () -> {
+                                    log.info("[toolsLLMStreamCall] LLM-Tools 首次TTS");
+                                    var chatTTSDisposable = proxyGenerateAudio(
+                                            chatContextManager,
+                                            false
+                                    );
+                                    chatContextManager.addChatTask(chatTTSDisposable);
+                                }
+                        );
+                        chatContextManager.addChatTask(ttsFuture);
+
+                        // 设置不是首次TTS
+                        chatContextManager.setIsFirstTTS(false);
+                    }
+                }
+                else {
+                    // 尝试从缓冲区提取2个完整句子并输出
+                    String complete2Sentence = optimizedSentenceDetector.detectAndExtractNeedSentences(textBuffer, 2);
+                    if (StringUtils.hasText(complete2Sentence)){
+                        chatContextManager.llmProxyContext.offerTTS(complete2Sentence);
+                    }
+                }
+
+                // 显示当前缓冲区剩余内容
+                if (!textBuffer.isEmpty()) {
+                    System.out.println("[[LLMStreamCall] LLM-Tools 缓冲区剩余]: " + textBuffer);
+                }
+            }
+
+            @Override
+            public void haveNoSentence() {
+                log.warn("[toolsLLMStreamCall] LLM-Tools没有完整句子");
+            }
+
+            @Override
+            public void onError(Throwable throwable) {
+                log.error("[toolsLLMStreamCall] LLM-Tools 错误", throwable);
+
+                // (待优化A1)长时间未连接之后再次连接会发生Connect Reset目前采用的是递归的方式重试，可能造成堆栈溢出。考虑改为循环调用的方式
+                // 尝试再次自我调用
+                if (throwable instanceof WebClientRequestException || throwable instanceof TimeoutException){
+                    log.error("[toolsLLMStreamCall] LLM-Tools 尝试再次自我调用；错误信息, 错误类型: ", throwable);
+//                        // 再次自调用
+                    if (chatContextManager.getLLMErrorCount() < ModelConstant.LLM_CONNECT_RESET_MAX_RETRY_COUNT){
+                        int attempt = chatContextManager.llmProxyContext.getLLMConnectResetRetryCount().incrementAndGet();
+                        log.warn("[toolsLLMStreamCall] LLM-Tools 警告，检测到连接重置，进行第{}次重试", attempt);
+
+                        var disposable = toolsLLMStreamCall(sentence, chatContextManager);
+                        chatContextManager.addChatTask(disposable);
+                    }
+                    else {
+                        log.error("[toolsLLMStreamCall] LLM-Tools 连接重置次数过多，已尝试{}次，放弃重试", chatContextManager.getLLMErrorCount());
+                        chatContextManager.endConversation();
+                    }
+                }
+                else {
+                    log.error("[toolsLLMStreamCall] LLM-Tools 错误信息, 并非WebClientRequestException问题", throwable);
+                    chatContextManager.endConversation();
+                }
+
+                // 重置重连次数
+                chatContextManager.llmProxyContext.getLLMConnectResetRetryCount().set(0);
+            }
+        };
+        return llmServiceService.LLMStreamCall(
+                sentence,
+                chatContextManager.chatClient,
+                chatContextManager.agentId,
+                chatContextManager.getCurrentContextParam(),
+                callback,
+                visionToolService
         );
     }
 
