@@ -214,7 +214,7 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
 
             /// llm
             if (StringUtils.hasText(result)) {
-                var llmDisposable = llmStreamCall(result, chatContextManager);
+                var llmDisposable = toolsLLMStreamCall(result, chatContextManager);
                 chatContextManager.addChatTask(llmDisposable);
             }
         };
@@ -1058,7 +1058,7 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
                 userTextResponse
         );
 
-        var disposable = llmStreamCall(userQuestion, chatContextManager);
+        var disposable = toolsLLMStreamCall(userQuestion, chatContextManager);
         chatContextManager.addChatTask(disposable);
     }
 
@@ -1069,6 +1069,8 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
             chatContextManager.addFunctionCallResult("[视觉任务结果]: error错误，用户并没有提供图片资源");
 //            var disposable = functionCallLLMStreamCall(null, chatContextManager, isPassiveNotActive);
 //            chatContextManager.addFunctionCallTask(disposable);
+            var disposable = functionCallResultLLMStreamCall(null, chatContextManager, isPassiveNotActive);
+            chatContextManager.addFunctionCallTask(disposable);
         }
         else {
             log.info("[websocket] 启动视觉聊天：有图片, imageLength: {}", imageBase64.length());
@@ -1076,6 +1078,8 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
             chatContextManager.addFunctionCallResult("[视觉任务结果]" + result);
 //            var disposable = functionCallLLMStreamCall(result, chatContextManager, isPassiveNotActive);
 //            chatContextManager.addFunctionCallTask(disposable);
+            var disposable = functionCallResultLLMStreamCall(result, chatContextManager, isPassiveNotActive);
+            chatContextManager.addFunctionCallTask(disposable);
         }
     }
 
@@ -1423,12 +1427,12 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
 
             @Override
             public void haveNoSentence() {
-                log.info("[functionCallResultLLMStreamCall] LLM-Tools没有完整的句子");
+                log.info("[functionCallResultLLMStreamCall] LLM-Function没有完整的句子");
             }
 
             @Override
             public void onError(Throwable throwable) {
-                log.error("[functionCallResultLLMStreamCall] LLM-Tools错误", throwable);
+                log.error("[functionCallResultLLMStreamCall] LLM-Function错误", throwable);
             }
         };
         return llmServiceService.functionCallLLMStreamChat(
@@ -1453,7 +1457,7 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
             // 获取全部的FunctionCall结果
             String results = chatContextManager.llmProxyContext.getAllFunctionCallResult();
             // 被动调用
-            var disposable = functionCallLLMStreamCall(results, chatContextManager, true);
+            var disposable = functionCallResultLLMStreamCall(results, chatContextManager, true);
             chatContextManager.addFunctionCallTask(disposable);
         };
     }
