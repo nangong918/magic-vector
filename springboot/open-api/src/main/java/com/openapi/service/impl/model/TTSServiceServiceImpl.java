@@ -47,6 +47,11 @@ public class TTSServiceServiceImpl implements TTSServiceService {
             @NotNull GenerateAudioStateCallback callback
     ) throws NoApiKeyException, UploadFileException{
 
+        if (sentence.isEmpty()){
+            callback.haveNoSentence();
+            return null;
+        }
+
         MultiModalConversationParam param = MultiModalConversationParam.builder()
                 .model(ModelConstant.TTS_Model)
                 .apiKey(chatConfig.getApiKey())
@@ -94,6 +99,12 @@ public class TTSServiceServiceImpl implements TTSServiceService {
             @NonNull String sentence,
             @NotNull GenerateAudioStateCallback callback
     ) throws NoApiKeyException, UploadFileException {
+
+        if (sentence.isEmpty()){
+            callback.haveNoSentence();
+            return null;
+        }
+
         MultiModalConversationParam param = MultiModalConversationParam.builder()
                 .model(ModelConstant.TTS_Model)
                 .apiKey(chatConfig.getApiKey())
