@@ -112,24 +112,23 @@ public class LLMServiceServiceImpl implements LLMServiceService {
      */
     @Override
     public reactor.core.Disposable functionCallLLMStreamChat(
-            @NonNull String result,
+            @Nullable String result,
             @NonNull String userQuestion,
             @NonNull ChatClient chatClient,
             @NonNull String agentId,
-            @Nullable String currentContextParam,
             @NonNull LLMStateCallback callback
     ){
-        if (result.isEmpty()){
+        if (result == null){
+            result = "";
+        }
+
+        if (userQuestion.isEmpty()){
             callback.haveNoSentence();
             return null;
         }
 
-        if (currentContextParam == null){
-            currentContextParam = "";
-        }
-
         // todo 默认是vision，后续如果需要升级在修改。functionCall本质是调用前端获取结果。后续可以把所有的功能整合成枚举值，然后传递进入
-        String systemPrompt = chatConfig.getVisionLLMPrompt(currentContextParam);
+        String systemPrompt = chatConfig.getVisionLLMPrompt(result);
         Prompt prompt = promptService.getChatPromptWhitSystemPrompt(
                 userQuestion,
                 systemPrompt

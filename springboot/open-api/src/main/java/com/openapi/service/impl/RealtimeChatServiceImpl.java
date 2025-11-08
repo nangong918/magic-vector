@@ -537,12 +537,20 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
 
             @Override
             public void onFinish(SignalType signalType) {
+                // 检查是否有剩余的
+                String remainingText = optimizedSentenceDetector.extractAllCompleteSentences(textBuffer);
+                if (StringUtils.hasText(remainingText)) {
+                    log.info("[toolsLLMStreamCall] LLM -> TTS 剩余: {}", remainingText);
+                    // 添加到TTS MQ
+                    chatContextManager.llmProxyContext.offerTTS(remainingText);
+                }
+                chatContextManager.stopLLM();
                 log.info("[toolsLLMStreamCall] LLM-Tools结束");
             }
 
             @Override
             public void onNext(String fragment) {
-                System.out.println("fragment = " + fragment);
+                System.out.println("tool fragment = " + fragment);
 
                 // 发送当前fragment消息
                 chatContextManager.agentResponseStringBuffer.append(fragment);
@@ -1059,20 +1067,20 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
         if (imageBase64 == null || imageBase64.isEmpty()) {
             log.info("[websocket] 启动视觉聊天：无图片");
             chatContextManager.addFunctionCallResult("[视觉任务结果]: error错误，用户并没有提供图片资源");
-//            var disposable = functionCallResultLLMStreamCall(null, chatContextManager, isPassiveNotActive);
+//            var disposable = functionCallLLMStreamCall(null, chatContextManager, isPassiveNotActive);
 //            chatContextManager.addFunctionCallTask(disposable);
         }
         else {
             log.info("[websocket] 启动视觉聊天：有图片, imageLength: {}", imageBase64.length());
             String result = visionChatService.callWithFileBase64(imageBase64, chatContextManager.getUserRequestQuestion());
             chatContextManager.addFunctionCallResult("[视觉任务结果]" + result);
-//            var disposable = functionCallResultLLMStreamCall(result, chatContextManager, isPassiveNotActive);
+//            var disposable = functionCallLLMStreamCall(result, chatContextManager, isPassiveNotActive);
 //            chatContextManager.addFunctionCallTask(disposable);
         }
     }
 
     // todo 优化代码，将functionCallLLM和原先的llm相同逻辑合并管理
-    private reactor.core.Disposable functionCallResultLLMStreamCall(@Nullable String result, @NotNull RealtimeChatContextManager chatContextManager, boolean isPassiveNotActive){
+    private reactor.core.Disposable functionCallLLMStreamCall(@Nullable String result, @NotNull RealtimeChatContextManager chatContextManager, boolean isPassiveNotActive){
         log.info("\n[functionCall LLM 开始] Result内容: {}", result);
 
         var chatClient = chatContextManager.chatClient;
@@ -1229,7 +1237,7 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
                             int attempt = chatContextManager.llmProxyContext.getLLMConnectResetRetryCount().incrementAndGet();
                             log.warn("functionCall LLM检测到连接重置，进行第{}次重试", attempt);
 
-                            var disposable = functionCallResultLLMStreamCall(result, chatContextManager, isPassiveNotActive);
+                            var disposable = functionCallLLMStreamCall(result, chatContextManager, isPassiveNotActive);
                             chatContextManager.addFunctionCallTask(disposable);
                         }
                         else {
@@ -1303,6 +1311,136 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
     }
 
     /**
+     * functionCall工作流结果再次调用LLM回复
+     * @param result                functionCall结果
+     * @param chatContextManager    chatContextManager
+     * @param isPassiveNotActive    是否被动调用, 有时候可能存在定时任务，主动调用functionCall，此时前端是没有接收到STRAT_TTS指令的，所以需要此值来控制是否添加启动值
+     * @return                      用于取消的Disposable
+     */
+    private reactor.core.Disposable functionCallResultLLMStreamCall(@Nullable String result, @NotNull RealtimeChatContextManager chatContextManager, boolean isPassiveNotActive){
+        StringBuffer textBuffer = new StringBuffer();
+
+        var callback = new LLMStateCallback() {
+            @Override
+            public void onSubscribe(Subscription subscription) {
+                // 这里是functionCall的回复，所以需要进行agent headerId++
+                int headerId = chatContextManager.addAgentMessageHeaderCount();
+                log.info("[functionCallResultLLMStreamCall] 启动functionCall chat; headerId: {}", headerId);
+
+                // 设置Agent message Time
+                chatContextManager.currentAgentMessageTimestamp = System.currentTimeMillis();
+
+                // function call result -> 是否是主动发起的function call
+                if (!isPassiveNotActive){
+                    log.info("[functionCallResultLLMStreamCall] 主动调用function call，发送起始标识符");
+                    // 发送开始标识
+                    Map<String, String> responseMap = new HashMap<>();
+                    responseMap.put(RealtimeResponseDataTypeEnum.TYPE, RealtimeResponseDataTypeEnum.START_TTS.getType());
+                    responseMap.put(RealtimeResponseDataTypeEnum.DATA, RealtimeResponseDataTypeEnum.START_TTS.getType());
+                    String startResponse = JSON.toJSONString(responseMap);
+                    webSocketMessageManager.submitMessage(
+                            chatContextManager.agentId,
+                            startResponse
+                    );
+                }
+
+                // 设置是首次TTS
+                chatContextManager.setIsFirstTTS(true);
+
+                // 设置tts是finalResultTTS
+                chatContextManager.setIsFinalResultTTS(true);
+            }
+
+            @Override
+            public void onFinish(SignalType signalType) {
+                // 检查是否有剩余的
+                String remainingText = optimizedSentenceDetector.extractAllCompleteSentences(textBuffer);
+                if (StringUtils.hasText(remainingText)) {
+                    log.info("[functionCallResultLLMStreamCall] LLM -> TTS 剩余: {}", remainingText);
+                    // 添加到TTS MQ
+                    chatContextManager.llmProxyContext.offerTTS(remainingText);
+                }
+                chatContextManager.stopLLM();
+                log.info("[functionCallResultLLMStreamCall] LLM-Function结束");
+            }
+
+            @Override
+            public void onNext(String fragment) {
+                System.out.println("function call fragment = " + fragment);
+
+                // 发送当前fragment消息
+                chatContextManager.agentResponseStringBuffer.append(fragment);
+                RealtimeChatTextResponse agentFragmentResponse = chatContextManager.getCurrentFragmentAgentResponse(fragment);
+
+                // 发送消息给Client
+                String agentFragmentResponseJson = JSON.toJSONString(agentFragmentResponse);
+                Map<String, String> fragmentResponseMap = new HashMap<>();
+                fragmentResponseMap.put(RealtimeResponseDataTypeEnum.TYPE, RealtimeResponseDataTypeEnum.TEXT_CHAT_RESPONSE.getType());
+                fragmentResponseMap.put(RealtimeResponseDataTypeEnum.DATA, agentFragmentResponseJson);
+                String response = JSON.toJSONString(fragmentResponseMap);
+                webSocketMessageManager.submitMessage(
+                        chatContextManager.agentId,
+                        response
+                );
+
+                // 将新片段添加到缓冲区
+                textBuffer.append(fragment);
+
+                if (chatContextManager.isFirstTTS().get()){
+                    String complete1Sentence = optimizedSentenceDetector.detectAndExtractFirstSentence(textBuffer);
+                    if (StringUtils.hasText(complete1Sentence)){
+                        chatContextManager.llmProxyContext.offerTTS(complete1Sentence);
+                        var ttsFuture = threadPoolConfig.taskExecutor().submit(
+                                () -> {
+                                    // 首次tts
+                                    log.info("[functionCallResultLLMStreamCall] 首次TTS");
+                                    var chatVisionTTSDisposable = proxyGenerateAudio(
+                                            chatContextManager,
+                                            true
+                                    );
+                                    chatContextManager.addFunctionCallTask(chatVisionTTSDisposable);
+                                }
+                        );
+                        chatContextManager.addFunctionCallTask(ttsFuture);
+
+                        // 设置不是首次TTS
+                        chatContextManager.setIsFirstTTS(false);
+                    }
+                }
+                else {
+                    // 尝试从缓冲区提取2个完整句子并输出
+                    String complete2Sentence = optimizedSentenceDetector.detectAndExtractNeedSentences(textBuffer, 2);
+                    if (StringUtils.hasText(complete2Sentence)){
+                        chatContextManager.llmProxyContext.offerTTS(complete2Sentence);
+                    }
+                }
+
+                // 显示当前缓冲区剩余内容
+                if (!textBuffer.isEmpty()) {
+                    log.info("[functionCallResultLLMStreamCall] LLM 缓冲区剩余: {}", textBuffer);
+                }
+            }
+
+            @Override
+            public void haveNoSentence() {
+                log.info("[functionCallResultLLMStreamCall] LLM-Tools没有完整的句子");
+            }
+
+            @Override
+            public void onError(Throwable throwable) {
+                log.error("[functionCallResultLLMStreamCall] LLM-Tools错误", throwable);
+            }
+        };
+        return llmServiceService.functionCallLLMStreamChat(
+                result,
+                chatContextManager.getUserRequestQuestion(),
+                chatContextManager.getChatClient(),
+                chatContextManager.getAgentId(),
+                callback
+        );
+    }
+
+    /**
      * 获取FunctionCall结果
      * @param chatContextManager    chatContextManager
      * @return                      AllFunctionCallFinished
@@ -1315,7 +1453,7 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
             // 获取全部的FunctionCall结果
             String results = chatContextManager.llmProxyContext.getAllFunctionCallResult();
             // 被动调用
-            var disposable = functionCallResultLLMStreamCall(results, chatContextManager, true);
+            var disposable = functionCallLLMStreamCall(results, chatContextManager, true);
             chatContextManager.addFunctionCallTask(disposable);
         };
     }

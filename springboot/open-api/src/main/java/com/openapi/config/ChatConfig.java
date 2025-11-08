@@ -94,6 +94,7 @@ public class ChatConfig {
                 }
                 else if (!StringUtils.hasText(visionResult)) {
                     log.warn("visionResult为空");
+                    return systemPrompt + "visionAgent识别结果: <前端获取照片失败，无识别结果>";
                 } else {
                     return systemPrompt + "visionAgent识别结果: <" + visionResult + ">";
                 }

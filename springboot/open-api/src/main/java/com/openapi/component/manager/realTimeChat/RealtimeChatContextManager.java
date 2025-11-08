@@ -64,6 +64,7 @@ public class RealtimeChatContextManager implements
     }
 
     /// chatClient      (chatModel是单例，但是chatClient需要集成Agent的记忆，以及每个chatClient的设定不同，所以不是单例)
+    @Getter
     public ChatClient chatClient;
 
     /// 会话任务
@@ -132,6 +133,7 @@ public class RealtimeChatContextManager implements
 
     /// agent会话信息
     public String userId;
+    @Getter
     public String agentId;
     public long connectTimestamp = 0L;
     public WebSocketSession session;

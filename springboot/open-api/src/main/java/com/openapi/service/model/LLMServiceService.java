@@ -19,11 +19,10 @@ public interface LLMServiceService {
             @NonNull Object... functionCallTools);
 
     reactor.core.Disposable functionCallLLMStreamChat(
-            @NonNull String result,
+            @Nullable String result,
             @NonNull String userQuestion,
             @NonNull ChatClient chatClient,
             @NonNull String agentId,
-            @Nullable String currentContextParam,
             @NonNull LLMStateCallback callback
     );
 }
