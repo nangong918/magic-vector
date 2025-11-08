@@ -740,7 +740,7 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
                 chatContextManager.setTTSStartTime(System.currentTimeMillis());
 
                 // 自我调用检查 [内部是循环，结束了就是TTS结束了 generateAudio的callback传递null，避免递归导致栈溢出]
-                checkIsTTSFinish(chatContextManager);
+                checkIsTTSFinish(chatContextManager, this);
 
                 log.info("[common TTS] 调用结束");
                 // 完成
@@ -786,7 +786,7 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
      * @throws NoApiKeyException    无API密钥异常
      * @throws UploadFileException  上传文件异常
      */
-    private void checkIsTTSFinish(@NotNull RealtimeChatContextManager chatContextManager) throws NoApiKeyException, UploadFileException {
+    private void checkIsTTSFinish(@NotNull RealtimeChatContextManager chatContextManager, @NotNull GenerateAudioStateCallback callback) throws NoApiKeyException, UploadFileException {
         // 只有当LLM结束并且TTS的MQ不存在句子时候才跳出TTS自我调用
         while (!chatContextManager.llmProxyContext.isLLMing() && chatContextManager.llmProxyContext.getAllTTSCount() <= 0){
             boolean isLLMing = chatContextManager.llmProxyContext.isLLMing();
@@ -797,17 +797,22 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
             if (sentence.isEmpty() && isLLMing){
                 // TTS的MQ存在数据了 || LLM已经结束
                 try {
-                    log.info("[common TTS] LLM还未结束但是句子数量为0，说明llm在缓存区存在一个很长的句子，此时就需要等待输出完毕。等待LLM输出完毕...");
+                    log.info("[checkIsTTSFinish] LLM还未结束但是句子数量为0，说明llm在缓存区存在一个很长的句子，此时就需要等待输出完毕。等待LLM输出完毕...");
                     Thread.sleep(10);
                 } catch (InterruptedException e){
-                    log.info("[common TTS] 次线程任务被取消，休眠线程中断: {}", e.getMessage());
+                    log.info("[checkIsTTSFinish] 次线程任务被取消，休眠线程中断: {}", e.getMessage());
                 }
             }
             else if (!sentence.isEmpty()){
                 // 自我调用 (此时因为可能还是llm，循环仍然继续)
-                ttsServiceService.generateAudio(sentence, null);
+                log.info("[checkIsTTSFinish] 自我调用TTS开始: sentence: {}", sentence);
+                var ttsDisposable = ttsServiceService.generateAudioContinue(sentence, callback);
+                // todo 任务添加到任务list
             }
         }
+        log.info("[checkIsTTSFinish] TTS结束: isLLM: {}, remainCount: {}",
+                chatContextManager.llmProxyContext.isLLMing(),
+                chatContextManager.llmProxyContext.getAllTTSCount());
     }
 
     private OnTTSSelfCall getOnTTSSelfCall(RealtimeChatContextManager chatContextManager) {

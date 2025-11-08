@@ -109,6 +109,7 @@ public class RealtimeChatContextManager implements
         if (tasks.isEmpty()){
             return;
         }
+        int cancelCount = 0;
         for (Object task: tasks){
             if (task == null){
                 log.warn("task is null");
@@ -118,10 +119,15 @@ public class RealtimeChatContextManager implements
                 case io.reactivex.disposables.Disposable disposable -> disposable.dispose();
                 case reactor.core.Disposable disposable -> disposable.dispose();
                 case Future<?> future -> future.cancel(true);
-                default -> log.warn("task is not a Disposable or a Future");
+                default -> {
+                    log.warn("task is not a Disposable or a Future");
+                    continue;
+                }
             }
+            cancelCount++;
         }
         tasks.clear();
+        log.info("取消了: {}条任务", cancelCount);
     }
 
     /// agent会话信息
