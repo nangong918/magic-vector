@@ -100,4 +100,62 @@ public class LLMServiceServiceImpl implements LLMServiceService {
                 );
     }
 
+    /**
+     * functionCall LLM 流式调用
+     * @param result                FunctionCall从前端、嵌入式设备获取分析的结果
+     * @param userQuestion          用户问题
+     * @param chatClient            chatClient
+     * @param agentId               聊天id
+     * @param currentContextParam   上下文参数
+     * @param callback              LLM回调
+     * @return                      管理任务的Disposable
+     */
+    @Override
+    public reactor.core.Disposable functionCallLLMStreamChat(
+            @NonNull String result,
+            @NonNull String userQuestion,
+            @NonNull ChatClient chatClient,
+            @NonNull String agentId,
+            @Nullable String currentContextParam,
+            @NonNull LLMStateCallback callback
+    ){
+        if (result.isEmpty()){
+            callback.haveNoSentence();
+            return null;
+        }
+
+        if (currentContextParam == null){
+            currentContextParam = "";
+        }
+
+        // todo 默认是vision，后续如果需要升级在修改。functionCall本质是调用前端获取结果。后续可以把所有的功能整合成枚举值，然后传递进入
+        String systemPrompt = chatConfig.getVisionLLMPrompt(currentContextParam);
+        Prompt prompt = promptService.getChatPromptWhitSystemPrompt(
+                userQuestion,
+                systemPrompt
+        );
+
+        if (prompt == null){
+            log.error("[functionCall LLM 提示词] 获取失败");
+            throw new AppException(AgentExceptions.CHAT_CAN_NOT_BE_NULL);
+        }
+
+        log.info("[functionCall LLM 提示词] {}", prompt);
+
+        Flux<String> responseFlux = chatClient.prompt(prompt)
+                .advisors(a -> a.param(ChatMemory.CONVERSATION_ID, agentId))
+                .stream()
+                .content()
+                // 3500ms未响应则判定超时，进行重连尝试
+                .timeout(Duration.ofMillis(ModelConstant.LLM_CONNECT_TIMEOUT_MILLIS));
+
+        return responseFlux
+                .doOnSubscribe(callback::onSubscribe)
+                .doFinally(callback::onFinish)
+                .subscribe(
+                        callback::onNext,
+                        callback::onError
+                );
+    }
+
 }
