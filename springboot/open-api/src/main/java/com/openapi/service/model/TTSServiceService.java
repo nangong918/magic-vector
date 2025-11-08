@@ -3,6 +3,7 @@ package com.openapi.service.model;
 import com.alibaba.dashscope.exception.NoApiKeyException;
 import com.alibaba.dashscope.exception.UploadFileException;
 import com.openapi.interfaces.model.GenerateAudioStateCallback;
+import com.openapi.interfaces.model.GetCurrentTTSState;
 import lombok.NonNull;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -20,6 +21,6 @@ public interface TTSServiceService {
     io.reactivex.disposables.Disposable generateAudioContinue(
             @NonNull String sentence,
             @NotNull GenerateAudioStateCallback callback,
-            boolean isFinallyFinish
+            GetCurrentTTSState getCurrentTTSState
     ) throws NoApiKeyException, UploadFileException;
 }

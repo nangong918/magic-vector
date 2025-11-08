@@ -199,11 +199,11 @@ public class RealtimeChatContextManager implements
 
     // TTS 是否结束
     public boolean isTTSFinallyFinish(){
-        // 只有当LLM结束并且TTS的MQ不存在句子时候才跳出TTS自我调用: !(!LLMing && count <= 0)
-        return // LLM结束
-                !(!llmProxyContext.isLLMing() &&
-                // TTS的MQ不存在句子
-                llmProxyContext.getAllTTSCount() <= 0);
+        // 只有当LLM结束并且TTS的MQ不存在句子时候才跳出TTS自我调用: !isLLMing && !haveSentence
+        boolean isLLMing = llmProxyContext.isLLMing();
+        boolean haveSentence = llmProxyContext.getAllTTSCount() > 0;
+        // LLM结束 && TTS的MQ不存在句子
+        return !isLLMing && !haveSentence;
     }
 
     /// ==========IRealTimeChatResponseManager==========

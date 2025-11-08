@@ -7,6 +7,7 @@ import org.reactivestreams.Subscription;
 /**
  * @author 13225
  * @date 2025/11/8 10:06
+ * TTS 的状态回调
  */
 public interface GenerateAudioStateCallback {
     void onSubscribe(Subscription subscription);

@@ -10,6 +10,7 @@ import com.alibaba.dashscope.exception.UploadFileException;
 import com.openapi.config.ChatConfig;
 import com.openapi.domain.constant.ModelConstant;
 import com.openapi.interfaces.model.GenerateAudioStateCallback;
+import com.openapi.interfaces.model.GetCurrentTTSState;
 import com.openapi.service.model.TTSServiceService;
 import io.reactivex.Flowable;
 import lombok.NonNull;
@@ -99,7 +100,7 @@ public class TTSServiceServiceImpl implements TTSServiceService {
     public io.reactivex.disposables.Disposable generateAudioContinue(
             @NonNull String sentence,
             @NotNull GenerateAudioStateCallback callback,
-            boolean isFinallyFinish
+            GetCurrentTTSState getCurrentTTSState
     ) throws NoApiKeyException, UploadFileException {
 
         if (sentence.isEmpty()){
@@ -123,6 +124,7 @@ public class TTSServiceServiceImpl implements TTSServiceService {
                 .doOnSubscribe(subscription -> log.info("[generateAudioContinue] 开始生成音频，无回调"))
                 .doFinally(() -> {
                     callback.onSingleFinish();
+                    boolean isFinallyFinish = getCurrentTTSState.getIsFinallyFinish();
                     log.info("[generateAudioContinue] 音频生成完毕，回调: {}", isFinallyFinish);
                     if (isFinallyFinish) {
                         callback.onAllFinish();
