@@ -613,7 +613,72 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
                 );
     }
 
-    // 设计模式：代理模式：解耦generateAudio的功能；generateAudio就应只管理生成Audio，而状态管理和回调都应该交给代理来管理。
+    /**
+     * 设计模式：代理模式：解耦generateAudio的功能；
+     * <p>
+     *      generateAudio就应只管理生成Audio;
+     * <p>
+     *      commonGenerateAudio只管理整个TTS是否完成
+     * <p>
+     *      proxyGenerateAudio管理区别FunctionCall和普通任务
+     *
+     * @param chatContextManager        聊天上下文管理器
+     * @param isFunctionCall            是否是FunctionCall任务
+     * @return                          线程订阅管理
+     */
+    private io.reactivex.disposables.Disposable proxyGenerateAudio(
+            @NotNull RealtimeChatContextManager chatContextManager,
+            boolean isFunctionCall
+    ) {
+        try {
+            return commonGenerateAudio(chatContextManager, new GenerateAudioStateCallback() {
+                @Override
+                public void onSubscribe(Subscription subscription) {
+
+                }
+
+                @Override
+                public void onFinish() {
+                    boolean finalIsFunctionCall = chatContextManager.llmProxyContext.isFunctionCall() || isFunctionCall;
+                    // 是否是最后一个tts
+                    boolean isFinalResultTTs = chatContextManager.isFinalResultTTS();
+
+                    // 如果不是Function Call，直接发送EOF
+                    if (!finalIsFunctionCall){
+                        log.info("[proxy TTS]结束，不是FunctionCall任务，直接发送EOF");
+                        chatContextManager.endConversation();
+                    }
+                    // 是FunctionCall任务，并且是最后一个tts
+                    else if (/*finalIsFunctionCall && */isFinalResultTTs){
+                        log.info("[proxy TTS]结束 是FunctionCall任务，是最终的TTS，直接发送EOF; " +
+                                "isFunctionCalling: {}, isFunctionCall: {}", chatContextManager.llmProxyContext.isFunctionCall(), isFunctionCall);
+                        chatContextManager.endConversation();
+                    }
+                }
+
+                @Override
+                public void onNext(String audioBase64Data) {
+
+                }
+
+                @Override
+                public void haveNoSentence() {
+                    log.warn("[proxy TTS] 没有待转换的句子");
+                }
+
+                @Override
+                public void onError(Throwable throwable) {
+                    log.error("[proxy TTS] 错误", throwable);
+                }
+            });
+        } catch (NoApiKeyException | UploadFileException e) {
+            log.error("[proxy TTS] 错误", e);
+            chatContextManager.endConversation();
+            return null;
+        }
+    }
+
+
     @Nullable
     private io.reactivex.disposables.Disposable commonGenerateAudio(
             @NotNull RealtimeChatContextManager chatContextManager,
@@ -644,6 +709,7 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
 
         if (sentence.isEmpty()){
             additionalProxyCallback.haveNoSentence();
+            log.info("[common TTS] 无需生成音频，句子为空");
             return null;
         }
 
