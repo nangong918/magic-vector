@@ -305,6 +305,10 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
                     // 添加到TTS MQ
                     chatContextManager.llmProxyContext.offerTTS(remainingText);
                     log.info("[toolsLLMStreamCall] 剩余填充后的TTS MQ大小：{}", chatContextManager.llmProxyContext.getAllTTSCount());
+
+                    if (!chatContextManager.isTTSing()){
+                        log.warn("[toolsLLMStreamCall] TTS结束了 并且还存在数据，数量：{}, 重新调用TTS", chatContextManager.llmProxyContext.getAllTTSCount());
+                    }
                 }
                 chatContextManager.stopLLM();
                 log.info("[toolsLLMStreamCall] LLM-Tools结束");
@@ -459,11 +463,17 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
                         chatContextManager.endConversation();
                     }
                     // 是FunctionCall任务，并且是最后一个tts
-                    else if (/*finalIsFunctionCall && */isFinalResultTTs){
+                    else if (finalIsFunctionCall && isFinalResultTTs){
                         log.info("[proxy TTS]结束 是FunctionCall任务，是最终的TTS，直接发送EOF; " +
                                 "isFunctionCalling: {}, isFunctionCall: {}", chatContextManager.llmProxyContext.isFunctionCall(), isFunctionCall);
                         chatContextManager.endConversation();
                     }
+                    // 无视编译器警告，因为编译器是傻逼，根本就不考虑可扩展性
+                    else if (finalIsFunctionCall && !isFinalResultTTs) {
+                        log.info("[proxy TTS]结束 是FunctionCall任务，是首次TTS，无需无需考虑");
+                    }
+
+                    log.info("[proxy TTS] 全部结束");
                 }
 
                 @Override
@@ -599,12 +609,18 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
             // LLM还未结束但是句子数量为0，说明llm在缓存区存在一个很长的句子，此时就需要等待输出完毕
             if (sentence.isEmpty() && isLLMing){
                 // TTS的MQ存在数据了 || LLM已经结束
-                try {
-                    log.info("[checkIsTTSFinish] LLM还未结束但是句子数量为0，说明llm在缓存区存在一个很长的句子，此时就需要等待输出完毕。等待LLM输出完毕...");
-                    Thread.sleep(10);
-                } catch (InterruptedException e){
-                    log.info("[checkIsTTSFinish] 次线程任务被取消，休眠线程中断: {}", e.getMessage());
+                while (chatContextManager.llmProxyContext.isLLMing()){
+                    try {
+                        log.info("[checkIsTTSFinish] LLM还未结束但是句子数量为0，说明llm在缓存区存在一个很长的句子，此时就需要等待输出完毕。等待LLM输出完毕...");
+                        Thread.sleep(10);
+                    } catch (InterruptedException e){
+                        log.info("[checkIsTTSFinish] 次线程任务被取消，休眠线程中断: {}", e.getMessage());
+                    }
                 }
+                String finishSentence = chatContextManager.llmProxyContext.getAllTTS();
+                log.info("[checkIsTTSFinish] finishSentence自我TTS调用: finishSentence: {}", finishSentence);
+                var ttsDisposable = ttsServiceService.generateAudioContinue(finishSentence, callback, chatContextManager::isTTSFinallyFinish);
+                // todo 任务添加到任务list
             }
             else if (!sentence.isEmpty()){
                 // 自我调用 (此时因为可能还是llm，循环仍然继续)
