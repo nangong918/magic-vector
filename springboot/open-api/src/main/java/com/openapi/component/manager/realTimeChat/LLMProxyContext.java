@@ -1,6 +1,6 @@
 package com.openapi.component.manager.realTimeChat;
 
-import com.openapi.domain.constant.realtime.RealTimeChatStatue;
+import com.openapi.domain.constant.realtime.RealTimeChatState;
 import com.openapi.domain.entity.STTContext;
 import lombok.Getter;
 import lombok.Setter;
@@ -19,7 +19,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * @see FunctionCallLLMContext
  */
 @Slf4j
-public class LLMProxyContext implements RealtimeProcess, ChatRealtimeStatue, FunctionCallMethod{
+public class LLMProxyContext implements RealtimeProcess, ChatRealtimeState, FunctionCallMethod{
     ///===========会话类型===========
     // 是否是FunctionCall会话
     private final AtomicBoolean isFunctionCall = new AtomicBoolean(false);
@@ -36,15 +36,15 @@ public class LLMProxyContext implements RealtimeProcess, ChatRealtimeStatue, Fun
 
     ///===========会话状态===========
     @Setter
-    private RealTimeChatStatueCallback statueCallback;
-    private void setStatue(RealTimeChatStatue realTimeChatStatue){
-        this.realTimeChatStatue = realTimeChatStatue;
-        if (statueCallback != null){
-            statueCallback.onStatueChange(realTimeChatStatue);
+    private RealTimeChatStateCallback stateCallback;
+    private void setState(RealTimeChatState realTimeChatState){
+        this.realTimeChatState = realTimeChatState;
+        if (stateCallback != null){
+            stateCallback.onStateChange(realTimeChatState);
         }
     }
     @Getter
-    private RealTimeChatStatue realTimeChatStatue = RealTimeChatStatue.UNCONVERSATION;
+    private RealTimeChatState realTimeChatState = RealTimeChatState.UNCONVERSATION;
 
     ///===========流程状态
 
@@ -54,7 +54,7 @@ public class LLMProxyContext implements RealtimeProcess, ChatRealtimeStatue, Fun
     @Override
     public void startRecord(){
         sttRecordContext.startRecord();
-        setStatue(RealTimeChatStatue.RECORDING);
+        setState(RealTimeChatState.RECORDING);
     }
 
     /**
@@ -63,7 +63,7 @@ public class LLMProxyContext implements RealtimeProcess, ChatRealtimeStatue, Fun
     @Override
     public void stopRecord(){
         sttRecordContext.stopRecord();
-        setStatue(RealTimeChatStatue.WAITING_AGENT_REPLY);
+        setState(RealTimeChatState.WAITING_AGENT_REPLY);
     }
 
     /**
@@ -77,7 +77,7 @@ public class LLMProxyContext implements RealtimeProcess, ChatRealtimeStatue, Fun
         else {
             simpleLLMContext.getLlmContext().setLLMing(true);
         }
-        setStatue(RealTimeChatStatue.AGENT_REPLYING);
+        setState(RealTimeChatState.AGENT_REPLYING);
     }
 
     /**
@@ -106,7 +106,7 @@ public class LLMProxyContext implements RealtimeProcess, ChatRealtimeStatue, Fun
         else {
             simpleLLMContext.getTtsContext().setTTSing(true);
         }
-        setStatue(RealTimeChatStatue.AGENT_REPLYING);
+        setState(RealTimeChatState.AGENT_REPLYING);
     }
 
     /**
@@ -136,7 +136,7 @@ public class LLMProxyContext implements RealtimeProcess, ChatRealtimeStatue, Fun
             simpleLLMContext.getTtsContext().setTTSing(false);
             // 按理来说此处一定会调用endConversation()结束会话，但是这样就职责不单一，功能耦合了，还是上游去自己调用吧
         }
-        setStatue(RealTimeChatStatue.CONVERSATION_END);
+        setState(RealTimeChatState.CONVERSATION_END);
     }
 
     /**
@@ -148,7 +148,7 @@ public class LLMProxyContext implements RealtimeProcess, ChatRealtimeStatue, Fun
         functionCallLLMContext.reset();
         sttRecordContext.reset();
         // 回调发送EOF
-        setStatue(RealTimeChatStatue.CONVERSATION_END);
+        setState(RealTimeChatState.CONVERSATION_END);
     }
 
     @Override
@@ -248,18 +248,18 @@ public class LLMProxyContext implements RealtimeProcess, ChatRealtimeStatue, Fun
         simpleLLMContext.reset();
         functionCallLLMContext.reset();
         sttRecordContext.reset();
-        setStatue(RealTimeChatStatue.UNCONVERSATION);
+        setState(RealTimeChatState.UNCONVERSATION);
     }
     public void resetFunctionCall(){
         functionCallLLMContext.reset();
         sttRecordContext.reset();
-        setStatue(RealTimeChatStatue.UNCONVERSATION);
+        setState(RealTimeChatState.UNCONVERSATION);
     }
     public void resetSimpleLLM(){
         simpleLLMContext.reset();
         sttRecordContext.reset();
         isFunctionCall.set(false);
-        setStatue(RealTimeChatStatue.UNCONVERSATION);
+        setState(RealTimeChatState.UNCONVERSATION);
     }
     ///===========会话Context===========
     private final SimpleLLMContext simpleLLMContext = new SimpleLLMContext();

@@ -1,4 +1,4 @@
-package com.openapi.domain.interfaces;
+package com.openapi.interfaces;
 
 import com.alibaba.dashscope.exception.NoApiKeyException;
 

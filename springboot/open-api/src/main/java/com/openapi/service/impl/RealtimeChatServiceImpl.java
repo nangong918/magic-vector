@@ -24,8 +24,8 @@ import com.openapi.domain.constant.error.UserExceptions;
 import com.openapi.domain.constant.realtime.RealtimeResponseDataTypeEnum;
 import com.openapi.domain.dto.ws.response.RealtimeChatTextResponse;
 import com.openapi.domain.exception.AppException;
-import com.openapi.domain.interfaces.OnSTTResultCallback;
-import com.openapi.domain.interfaces.OnTTSSelfCall;
+import com.openapi.interfaces.OnSTTResultCallback;
+import com.openapi.interfaces.OnTTSSelfCall;
 import com.openapi.service.AgentService;
 import com.openapi.service.ChatMessageService;
 import com.openapi.service.PromptService;
@@ -608,6 +608,8 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
                     }
                 );
     }
+
+    // 设计模式：代理模式：解耦generateAudio的功能；generateAudio就应只管理生成Audio，而状态管理和回调都应该交给代理来管理。
 
     private OnTTSSelfCall getOnTTSSelfCall(RealtimeChatContextManager chatContextManager) {
         return (ttsDisposable, isFunctionCall) -> {

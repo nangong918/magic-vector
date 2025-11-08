@@ -8,9 +8,9 @@ import org.jetbrains.annotations.NotNull;
  * @date 2025/11/7 13:47
  */
 @Getter
-public enum RealTimeChatStatue {
+public enum RealTimeChatState {
     /*
-    会话状态：chatStatue
+    会话状态：chatState
     1. 未会话 -> agent回复中(包含llm和tts) -> 会话结束
     2. 未会话 -> 录音中 -> 等待Agent回复 -> agent回复中(包含llm和tts) -> 会话结束
     3. 未会话 -> agent回复中 -> 等待function call结果 -> agent回复中 -> 会话结束
@@ -31,14 +31,14 @@ public enum RealTimeChatStatue {
     CONVERSATION_END("会话结束"),
     ;
     private final String value;
-    RealTimeChatStatue(String value) {
+    RealTimeChatState(String value) {
         this.value = value;
     }
     @NotNull
-    public static RealTimeChatStatue getByValue(String value) {
-        for (RealTimeChatStatue realTimeChatStatue : RealTimeChatStatue.values()) {
-            if (realTimeChatStatue.value.equals(value)) {
-                return realTimeChatStatue;
+    public static RealTimeChatState getByValue(String value) {
+        for (RealTimeChatState realTimeChatState : RealTimeChatState.values()) {
+            if (realTimeChatState.value.equals(value)) {
+                return realTimeChatState;
             }
         }
         return UNCONVERSATION;

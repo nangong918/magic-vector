@@ -83,25 +83,25 @@ class AgentEmojiActivity : BaseAppCompatVmActivity<ActivityAgentEmojiBinding, Ag
             runOnUiThread {
                 when (it) {
                     RealtimeChatState.NotInitialized -> {
-                        binding.tvCallStatue.text = "未初始化"
+                        binding.tvCallState.text = "未初始化"
                     }
                     RealtimeChatState.Initializing -> {
-                        binding.tvCallStatue.text = "正在初始化"
+                        binding.tvCallState.text = "正在初始化"
                     }
                     RealtimeChatState.InitializedConnected -> {
-                        binding.tvCallStatue.text = "已初始化并连接"
+                        binding.tvCallState.text = "已初始化并连接"
                     }
                     RealtimeChatState.RecordingAndSending -> {
-                        binding.tvCallStatue.text = "正在记录消息"
+                        binding.tvCallState.text = "正在记录消息"
                     }
                     RealtimeChatState.Receiving -> {
-                        binding.tvCallStatue.text = "正在接收消息"
+                        binding.tvCallState.text = "正在接收消息"
                     }
                     RealtimeChatState.Disconnected -> {
-                        binding.tvCallStatue.text = "已断开连接"
+                        binding.tvCallState.text = "已断开连接"
                     }
                     is RealtimeChatState.Error -> {
-                        binding.tvCallStatue.text = "错误"
+                        binding.tvCallState.text = "错误"
                     }
                 }
             }
@@ -173,19 +173,19 @@ class AgentEmojiActivity : BaseAppCompatVmActivity<ActivityAgentEmojiBinding, Ag
         runOnUiThread {
             when (state) {
                 is VadChatState.Muted -> {
-                    binding.tvCallStatue.text = getString(R.string.muted)
+                    binding.tvCallState.text = getString(R.string.muted)
                 }
                 is VadChatState.Silent -> {
-                    binding.tvCallStatue.text = getString(R.string.silent)
+                    binding.tvCallState.text = getString(R.string.silent)
                 }
                 is VadChatState.Speaking -> {
-                    binding.tvCallStatue.text = getString(R.string.user_speaking)
+                    binding.tvCallState.text = getString(R.string.user_speaking)
                 }
                 is  VadChatState.Replying -> {
-                    binding.tvCallStatue.text = getString(R.string.agent_replying)
+                    binding.tvCallState.text = getString(R.string.agent_replying)
                 }
                 is VadChatState.Error -> {
-                    binding.tvCallStatue.text = getString(R.string.error)
+                    binding.tvCallState.text = getString(R.string.error)
                     Log.e(TAG, "setVadChatState: ${state.message}")
                 }
             }

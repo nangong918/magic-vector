@@ -50,7 +50,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 @Slf4j
 public class RealtimeChatContextManager implements
-        IRealTimeChatResponseManager, RealtimeProcess, ChatRealtimeStatue,
+        IRealTimeChatResponseManager, RealtimeProcess, ChatRealtimeState,
         FunctionCallMethod{
 
     private final WebSocketMessageManager webSocketMessageManager;
@@ -326,7 +326,7 @@ public class RealtimeChatContextManager implements
         log.info("[Session] 重置会话");
     }
 
-    ///==========ChatRealtimeStatue==========
+    ///==========ChatRealtimeState==========
 
     @Override
     public int getLLMErrorCount() {
