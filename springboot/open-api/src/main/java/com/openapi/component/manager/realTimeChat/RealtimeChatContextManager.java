@@ -197,6 +197,15 @@ public class RealtimeChatContextManager implements
         reset();
     }
 
+    // TTS 是否结束
+    public boolean isTTSFinallyFinish(){
+        // 只有当LLM结束并且TTS的MQ不存在句子时候才跳出TTS自我调用: !(!LLMing && count <= 0)
+        return // LLM结束
+                !(!llmProxyContext.isLLMing() &&
+                // TTS的MQ不存在句子
+                llmProxyContext.getAllTTSCount() <= 0);
+    }
+
     /// ==========IRealTimeChatResponseManager==========
 
     @Override

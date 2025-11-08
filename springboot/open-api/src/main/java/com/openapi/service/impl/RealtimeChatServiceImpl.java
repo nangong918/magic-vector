@@ -42,7 +42,6 @@ import io.reactivex.BackpressureStrategy;
 import io.reactivex.Flowable;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import lombok.val;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.reactivestreams.Subscription;
@@ -50,16 +49,13 @@ import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.client.advisor.MessageChatMemoryAdvisor;
 import org.springframework.ai.chat.memory.ChatMemory;
 import org.springframework.ai.chat.messages.Message;
-import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import org.springframework.web.reactive.function.client.WebClientRequestException;
-import reactor.core.publisher.Flux;
 import reactor.core.publisher.SignalType;
 
 import java.io.ByteArrayOutputStream;
 import java.nio.ByteBuffer;
-import java.time.Duration;
 import java.util.Base64;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -67,7 +63,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.TimeoutException;
-import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * @author 13225
@@ -277,7 +272,10 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
                 );
     }
 
-    private reactor.core.Disposable llmStreamCall(String sentence, @NotNull RealtimeChatContextManager chatContextManager) /*throws WebClientRequestException*/ {
+/*
+    private reactor.core.Disposable llmStreamCall(String sentence, @NotNull RealtimeChatContextManager chatContextManager) */
+/*throws WebClientRequestException*//*
+ {
         log.info("\n[LLM 开始] 输入内容: {}", sentence);
 
         var chatClient = chatContextManager.chatClient;
@@ -464,7 +462,8 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
 //                                    );
                                     var chatTTSDisposable = proxyGenerateAudio(
                                             chatContextManager,
-                                            false
+                                            false,
+                                            chatContextManager.isTTSFinallyFinish()
                                     );
                                     chatContextManager.addChatTask(chatTTSDisposable);
                                 }
@@ -506,11 +505,11 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
                 }
         );
     }
+*/
 
     private reactor.core.Disposable toolsLLMStreamCall(String sentence, @NotNull RealtimeChatContextManager chatContextManager){
-        StringBuffer textBuffer = new StringBuffer();
-
         var callback = new LLMStateCallback() {
+            final StringBuffer textBuffer = new StringBuffer();
             @Override
             public void onSubscribe(Subscription subscription) {
                 // 设置Agent message Time
@@ -543,6 +542,7 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
                     log.info("[toolsLLMStreamCall] LLM -> TTS 剩余: {}", remainingText);
                     // 添加到TTS MQ
                     chatContextManager.llmProxyContext.offerTTS(remainingText);
+                    log.info("[toolsLLMStreamCall] 剩余填充后的TTS MQ大小：{}", chatContextManager.llmProxyContext.getAllTTSCount());
                 }
                 chatContextManager.stopLLM();
                 log.info("[toolsLLMStreamCall] LLM-Tools结束");
@@ -554,6 +554,9 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
 
                 // 发送当前fragment消息
                 chatContextManager.agentResponseStringBuffer.append(fragment);
+                // 添加数据到缓存textBuffer
+                textBuffer.append(fragment);
+
                 RealtimeChatTextResponse agentFragmentResponse = chatContextManager.getCurrentFragmentAgentResponse(fragment);
 
                 // 发送消息给Client
@@ -650,7 +653,9 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
         );
     }
 
-    /**
+/*
+    */
+/**
      * 生成音频
      * 内部存在线程休眠，上游需要避免main线程阻塞
      * @param chatContextManager            聊天上下文管理器
@@ -658,7 +663,8 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
      * @param isFunctionCall                是否是Function Call任务
      * @param isNoLimit                     是否没有限制 (设计该参数是因为发现TTS自我调用的时候会被isTTSing卡住，并且如果取消isTTSing会被动调用Function Call的信号量减，导致异常)
      * @return                              生成的音频
-     */
+     *//*
+
     @Nullable
     private io.reactivex.disposables.Disposable generateAudio(@NotNull RealtimeChatContextManager chatContextManager, @NotNull OnTTSSelfCall onTTSSelfCall, boolean isFunctionCall, boolean isNoLimit) {
         if (chatContextManager.isTTSing() && !isNoLimit){
@@ -740,7 +746,9 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
                             chatContextManager.endConversation();
                         }
                         // 是FunctionCall任务，并且是最后一个tts
-                        else if (/*finalIsFunctionCall && */isFinalResultTTs){
+                        else if (*/
+/*finalIsFunctionCall && *//*
+isFinalResultTTs){
                             log.info("[TTS]结束 FunctionCall任务已经结束，直接发送EOF; isFunctionCalling: {}, isFunctionCall: {}", chatContextManager.llmProxyContext.isFunctionCall(), isFunctionCall);
                             chatContextManager.endConversation();
                         }
@@ -771,6 +779,7 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
                     }
                 );
     }
+*/
 
     /**
      * 设计模式：代理模式：解耦generateAudio的功能；
@@ -791,13 +800,20 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
     ) {
         try {
             return commonGenerateAudio(chatContextManager, new GenerateAudioStateCallback() {
+                int count = 0;
                 @Override
                 public void onSubscribe(Subscription subscription) {
 
                 }
 
                 @Override
-                public void onFinish() {
+                public void onSingleFinish() {
+                    count++;
+                    log.info("[proxy TTS] 单次TTS结束, count: {}", count);
+                }
+
+                @Override
+                public void onAllFinish() {
                     boolean finalIsFunctionCall = chatContextManager.llmProxyContext.isFunctionCall() || isFunctionCall;
                     // 是否是最后一个tts
                     boolean isFinalResultTTs = chatContextManager.isFinalResultTTS();
@@ -882,18 +898,22 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
             }
 
             @Override
-            public void onFinish() throws NoApiKeyException, UploadFileException {
+            public void onSingleFinish() throws NoApiKeyException, UploadFileException {
                 // 记录结束时间
                 chatContextManager.setTTSStartTime(System.currentTimeMillis());
 
                 // 自我调用检查 [内部是循环，结束了就是TTS结束了 generateAudio的callback传递null，避免递归导致栈溢出]
                 checkIsTTSFinish(chatContextManager, this);
 
-                log.info("[common TTS] 调用结束");
+                // 回调上游代理
+                additionalProxyCallback.onSingleFinish();
+            }
+
+            @Override
+            public void onAllFinish() {
+                log.info("[common TTS] onAllFinish 调用结束");
                 // 完成
                 chatContextManager.stopTTS();
-                // 回调上游代理
-                additionalProxyCallback.onFinish();
             }
 
             @Override
@@ -934,8 +954,8 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
      * @throws UploadFileException  上传文件异常
      */
     private void checkIsTTSFinish(@NotNull RealtimeChatContextManager chatContextManager, @NotNull GenerateAudioStateCallback callback) throws NoApiKeyException, UploadFileException {
-        // 只有当LLM结束并且TTS的MQ不存在句子时候才跳出TTS自我调用
-        while (!chatContextManager.llmProxyContext.isLLMing() && chatContextManager.llmProxyContext.getAllTTSCount() <= 0){
+        // 只有当LLM结束并且TTS的MQ不存在句子时候才跳出TTS自我调用: !(!LLMing && count <= 0)
+        if (!chatContextManager.isTTSFinallyFinish()){
             boolean isLLMing = chatContextManager.llmProxyContext.isLLMing();
             // 全部取出
             String sentence = chatContextManager.llmProxyContext.getAllTTS();
@@ -953,15 +973,19 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
             else if (!sentence.isEmpty()){
                 // 自我调用 (此时因为可能还是llm，循环仍然继续)
                 log.info("[checkIsTTSFinish] 自我调用TTS开始: sentence: {}", sentence);
-                var ttsDisposable = ttsServiceService.generateAudioContinue(sentence, callback);
+                // !(!LLMing && count <= 0)
+                var ttsDisposable = ttsServiceService.generateAudioContinue(sentence, callback, chatContextManager.isTTSFinallyFinish());
                 // todo 任务添加到任务list
             }
+            // 是否自我调用
+            chatContextManager.llmProxyContext.setIsTTSCallSelf(true);
         }
-        log.info("[checkIsTTSFinish] TTS结束: isLLM: {}, remainCount: {}",
-                chatContextManager.llmProxyContext.isLLMing(),
-                chatContextManager.llmProxyContext.getAllTTSCount());
+        if (!chatContextManager.llmProxyContext.isTTSCallSelf() && chatContextManager.isTTSFinallyFinish()){
+            callback.onAllFinish();
+        }
     }
 
+/*
     private OnTTSSelfCall getOnTTSSelfCall(RealtimeChatContextManager chatContextManager) {
         return (ttsDisposable, isFunctionCall) -> {
             // 是FunctionCall任务
@@ -974,6 +998,7 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
             }
         };
     }
+*/
 
 
     /**
@@ -1084,6 +1109,7 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
     }
 
     // todo 优化代码，将functionCallLLM和原先的llm相同逻辑合并管理
+/*
     private reactor.core.Disposable functionCallLLMStreamCall(@Nullable String result, @NotNull RealtimeChatContextManager chatContextManager, boolean isPassiveNotActive){
         log.info("\n[functionCall LLM 开始] Result内容: {}", result);
 
@@ -1313,6 +1339,7 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
                 }
         );
     }
+*/
 
     /**
      * functionCall工作流结果再次调用LLM回复
@@ -1322,9 +1349,8 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
      * @return                      用于取消的Disposable
      */
     private reactor.core.Disposable functionCallResultLLMStreamCall(@Nullable String result, @NotNull RealtimeChatContextManager chatContextManager, boolean isPassiveNotActive){
-        StringBuffer textBuffer = new StringBuffer();
-
         var callback = new LLMStateCallback() {
+            final StringBuffer textBuffer = new StringBuffer();
             @Override
             public void onSubscribe(Subscription subscription) {
                 // 这里是functionCall的回复，所以需要进行agent headerId++
@@ -1374,6 +1400,9 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
 
                 // 发送当前fragment消息
                 chatContextManager.agentResponseStringBuffer.append(fragment);
+                // 将新片段添加到缓冲区
+                textBuffer.append(fragment);
+
                 RealtimeChatTextResponse agentFragmentResponse = chatContextManager.getCurrentFragmentAgentResponse(fragment);
 
                 // 发送消息给Client
@@ -1387,9 +1416,7 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
                         response
                 );
 
-                // 将新片段添加到缓冲区
-                textBuffer.append(fragment);
-
+                // 是否是首次TTS
                 if (chatContextManager.isFirstTTS().get()){
                     String complete1Sentence = optimizedSentenceDetector.detectAndExtractFirstSentence(textBuffer);
                     if (StringUtils.hasText(complete1Sentence)){

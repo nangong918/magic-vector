@@ -19,6 +19,7 @@ public interface TTSServiceService {
 
     io.reactivex.disposables.Disposable generateAudioContinue(
             @NonNull String sentence,
-            @NotNull GenerateAudioStateCallback callback
+            @NotNull GenerateAudioStateCallback callback,
+            boolean isFinallyFinish
     ) throws NoApiKeyException, UploadFileException;
 }

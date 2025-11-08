@@ -10,7 +10,8 @@ import org.reactivestreams.Subscription;
  */
 public interface GenerateAudioStateCallback {
     void onSubscribe(Subscription subscription);
-    void onFinish() throws NoApiKeyException, UploadFileException;
+    void onSingleFinish() throws NoApiKeyException, UploadFileException;
+    void onAllFinish();
     void onNext(String audioBase64Data);
     void haveNoSentence();
     void onError(Throwable throwable);

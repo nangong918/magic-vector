@@ -341,4 +341,19 @@ public class LLMProxyContext implements RealtimeProcess, ChatRealtimeState, Func
         }
         return false;
     }
+
+    public boolean isTTSCallSelf(){
+        if (isFunctionCall.get()){
+            return functionCallLLMContext.getTtsContext().isCallSelf();
+        }
+        return simpleLLMContext.getTtsContext().isCallSelf();
+    }
+    public void setIsTTSCallSelf(boolean isTTSCallSelf){
+        if (isFunctionCall.get()){
+            functionCallLLMContext.getTtsContext().setCallSelf(isTTSCallSelf);
+        }
+        else {
+            simpleLLMContext.getTtsContext().setCallSelf(isTTSCallSelf);
+        }
+    }
 }

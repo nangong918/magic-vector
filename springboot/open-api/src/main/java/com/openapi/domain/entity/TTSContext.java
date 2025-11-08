@@ -10,8 +10,12 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * @date 2025/11/7 12:52
  */
 public class TTSContext {
-    // 是否是首次TTS
+    // 是否是首次TTS (首次的tts需要快速，后面都是长段给出)
     private final AtomicBoolean isFirstTTS = new AtomicBoolean(true);
+    // 是否自我调用
+    @Getter
+    @Setter
+    private boolean isCallSelf = false;
     // 上一次TTS的时间
     @Getter
     @Setter
@@ -57,6 +61,7 @@ public class TTSContext {
     public void reset() {
         isFirstTTS.set(true);
         isTTSing.set(false);
+        isCallSelf = false;
         lastTTS = 0L;
     }
 }

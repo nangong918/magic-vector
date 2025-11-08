@@ -64,9 +64,10 @@ public class TTSServiceServiceImpl implements TTSServiceService {
 
         result = multiModalConversation.streamCall(param);
 
+        // 结束
         return result
                 .doOnSubscribe(callback::onSubscribe)
-                .doFinally(callback::onFinish)
+                .doFinally(callback::onSingleFinish)
                 .subscribe(
                         mr -> {
                             // 音频数据
@@ -97,7 +98,8 @@ public class TTSServiceServiceImpl implements TTSServiceService {
     @Override
     public io.reactivex.disposables.Disposable generateAudioContinue(
             @NonNull String sentence,
-            @NotNull GenerateAudioStateCallback callback
+            @NotNull GenerateAudioStateCallback callback,
+            boolean isFinallyFinish
     ) throws NoApiKeyException, UploadFileException {
 
         if (sentence.isEmpty()){
@@ -120,7 +122,11 @@ public class TTSServiceServiceImpl implements TTSServiceService {
         return result
                 .doOnSubscribe(subscription -> log.info("[generateAudioContinue] 开始生成音频，无回调"))
                 .doFinally(() -> {
-                    log.info("[generateAudioContinue] 音频生成完毕，无回调");
+                    callback.onSingleFinish();
+                    log.info("[generateAudioContinue] 音频生成完毕，回调: {}", isFinallyFinish);
+                    if (isFinallyFinish) {
+                        callback.onAllFinish();
+                    }
                 })
                 .subscribe(
                         mr -> {
