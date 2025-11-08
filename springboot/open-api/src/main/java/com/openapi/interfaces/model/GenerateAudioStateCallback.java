@@ -1,5 +1,7 @@
 package com.openapi.interfaces.model;
 
+import com.alibaba.dashscope.exception.NoApiKeyException;
+import com.alibaba.dashscope.exception.UploadFileException;
 import org.reactivestreams.Subscription;
 
 /**
@@ -8,7 +10,8 @@ import org.reactivestreams.Subscription;
  */
 public interface GenerateAudioStateCallback {
     void onSubscribe(Subscription subscription);
-    void onFinish();
-    void onNext(byte[] audioBytes);
+    void onFinish() throws NoApiKeyException, UploadFileException;
+    void onNext(String audioBase64Data);
+    void haveNoSentence();
     void onError(Throwable throwable);
 }

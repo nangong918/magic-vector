@@ -1,6 +1,8 @@
 package com.openapi.service.impl.model;
 
+import com.alibaba.dashscope.aigc.multimodalconversation.AudioResult;
 import com.alibaba.dashscope.aigc.multimodalconversation.MultiModalConversation;
+import com.alibaba.dashscope.aigc.multimodalconversation.MultiModalConversationOutput;
 import com.alibaba.dashscope.aigc.multimodalconversation.MultiModalConversationParam;
 import com.alibaba.dashscope.aigc.multimodalconversation.MultiModalConversationResult;
 import com.alibaba.dashscope.exception.NoApiKeyException;
@@ -13,9 +15,11 @@ import io.reactivex.Flowable;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.jetbrains.annotations.Nullable;
 import org.springframework.stereotype.Service;
 
 import java.util.Base64;
+import java.util.Optional;
 
 /**
  * @author 13225
@@ -41,8 +45,15 @@ public class TTSServiceServiceImpl implements TTSServiceService {
     @Override
     public io.reactivex.disposables.Disposable generateAudio(
             @NonNull String sentence,
-            @NonNull GenerateAudioStateCallback callback
+            @Nullable GenerateAudioStateCallback callback
     ) throws NoApiKeyException, UploadFileException{
+        if (sentence.isEmpty()){
+            if (callback != null){
+                callback.haveNoSentence();
+            }
+            return null;
+        }
+
         MultiModalConversationParam param = MultiModalConversationParam.builder()
                 .model(ModelConstant.TTS_Model)
                 .apiKey(chatConfig.getApiKey())
@@ -56,17 +67,38 @@ public class TTSServiceServiceImpl implements TTSServiceService {
         result = multiModalConversation.streamCall(param);
 
         return result
-                .doOnSubscribe(callback::onSubscribe)
-                .doFinally(callback::onFinish)
+                .doOnSubscribe(subscription -> {
+                    if (callback != null){
+                        callback.onSubscribe(subscription);
+                    }
+                })
+                .doFinally(() -> {
+                    if (callback != null){
+                        callback.onFinish();
+                    }
+                })
                 .subscribe(
                         mr -> {
-                            String base64Data = mr.getOutput().getAudio().getData();
-                            if (base64Data != null && !base64Data.isEmpty()){
-                                byte[] audioBytes = Base64.getDecoder().decode(base64Data);
-                                callback.onNext(audioBytes);
+                            if (callback != null){
+                                // 音频数据
+                                Optional.ofNullable(mr)
+                                        .map(MultiModalConversationResult::getOutput)
+                                        .map(MultiModalConversationOutput::getAudio)
+                                        .map(AudioResult::getData)
+                                        .ifPresent(
+                                                base64Data -> {
+                                                    if (!base64Data.isEmpty()){
+                                                        callback.onNext(base64Data);
+                                                    }
+                                                }
+                                        );
                             }
                         },
-                        callback::onError
+                        throwable -> {
+                            if (callback != null){
+                                callback.onError(throwable);
+                            }
+                        }
                 );
     }
 

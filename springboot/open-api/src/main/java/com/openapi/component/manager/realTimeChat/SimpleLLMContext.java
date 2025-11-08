@@ -3,6 +3,7 @@ package com.openapi.component.manager.realTimeChat;
 import com.openapi.domain.entity.LLMContext;
 import com.openapi.domain.entity.TTSContext;
 import lombok.Getter;
+import lombok.NonNull;
 
 
 import java.util.Queue;
@@ -29,6 +30,7 @@ public class SimpleLLMContext {
         ttsMQ.offer(tts);
     }
 
+    @NonNull
     public String getAllTTS() {
         StringBuilder sb = new StringBuilder();
         while (!ttsMQ.isEmpty()) {

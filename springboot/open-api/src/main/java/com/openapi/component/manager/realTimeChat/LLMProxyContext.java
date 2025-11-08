@@ -286,6 +286,7 @@ public class LLMProxyContext implements RealtimeProcess, ChatRealtimeState, Func
      * 获取所有TTS sentence
      * @return  TTS sentence
      */
+    @NotNull
     public String getAllTTS() {
         if (isFunctionCall.get()){
             return functionCallLLMContext.getAllTTS();

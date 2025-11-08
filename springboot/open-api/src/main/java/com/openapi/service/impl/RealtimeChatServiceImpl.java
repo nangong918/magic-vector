@@ -26,6 +26,7 @@ import com.openapi.domain.dto.ws.response.RealtimeChatTextResponse;
 import com.openapi.domain.exception.AppException;
 import com.openapi.interfaces.OnSTTResultCallback;
 import com.openapi.interfaces.OnTTSSelfCall;
+import com.openapi.interfaces.model.GenerateAudioStateCallback;
 import com.openapi.service.AgentService;
 import com.openapi.service.ChatMessageService;
 import com.openapi.service.PromptService;
@@ -33,6 +34,7 @@ import com.openapi.service.RealtimeChatService;
 import com.openapi.service.UserService;
 import com.openapi.service.VisionChatService;
 import com.openapi.service.VisionToolService;
+import com.openapi.service.model.TTSServiceService;
 import com.openapi.websocket.manager.WebSocketMessageManager;
 import io.reactivex.BackpressureStrategy;
 import io.reactivex.Flowable;
@@ -41,6 +43,7 @@ import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.reactivestreams.Subscription;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.client.advisor.MessageChatMemoryAdvisor;
 import org.springframework.ai.chat.memory.ChatMemory;
@@ -87,6 +90,7 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
     private final VisionToolService visionToolService;
     private final VisionChatService visionChatService;
     private final WebSocketMessageManager webSocketMessageManager;
+    private final TTSServiceService ttsServiceService;
 
     /**
      * 启动音频聊天
@@ -610,6 +614,123 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
     }
 
     // 设计模式：代理模式：解耦generateAudio的功能；generateAudio就应只管理生成Audio，而状态管理和回调都应该交给代理来管理。
+    @Nullable
+    private io.reactivex.disposables.Disposable commonGenerateAudio(
+            @NotNull RealtimeChatContextManager chatContextManager,
+            @NotNull GenerateAudioStateCallback additionalProxyCallback
+            ) throws NoApiKeyException, UploadFileException {
+        if (chatContextManager.isTTSing()){
+            log.info("[common TTS] 正在生成音频，请稍等...");
+            return null;
+        }
+
+        // 此处存在休眠，上游需要考虑是否交给线程池
+        long ttsGapTime = System.currentTimeMillis() - chatContextManager.getTTSStartTime();
+        if (ttsGapTime < ModelConstant.SENTENCE_INTERVAL){
+            try {
+                log.info("[common TTS] 模拟人语音停顿 暂停 {}ms", ModelConstant.SENTENCE_INTERVAL - ttsGapTime);
+                Thread.sleep(ModelConstant.SENTENCE_INTERVAL - ttsGapTime);
+            } catch (InterruptedException e) {
+                // 此处只打印e.message不打印堆栈是因为本来就是要用Disposable来让线程中断，此处并不视为一个报错。所以日志也是info级别
+                log.info("[common TTS] 次线程任务被取消，休眠线程中断: {}", e.getMessage());
+            }
+        }
+        else {
+            log.info("[common TTS] 无需模拟人语音停顿, 距离上次TTS已经耗时 {}ms", ttsGapTime);
+        }
+
+        // 全部取出
+        String sentence = chatContextManager.llmProxyContext.getAllTTS();
+
+        if (sentence.isEmpty()){
+            additionalProxyCallback.haveNoSentence();
+            return null;
+        }
+
+        return ttsServiceService.generateAudio(sentence, new GenerateAudioStateCallback() {
+            @Override
+            public void onSubscribe(Subscription subscription) {
+                chatContextManager.startTTS();
+                log.info("[common TTS] 调用开始, sentence: {}", sentence);
+                // 回调上游代理
+                additionalProxyCallback.onSubscribe(subscription);
+            }
+
+            @Override
+            public void onFinish() throws NoApiKeyException, UploadFileException {
+                // 记录结束时间
+                chatContextManager.setTTSStartTime(System.currentTimeMillis());
+
+                // 自我调用检查 [内部是循环，结束了就是TTS结束了 generateAudio的callback传递null，避免递归导致栈溢出]
+                checkIsTTSFinish(chatContextManager);
+
+                log.info("[common TTS] 调用结束");
+                // 完成
+                chatContextManager.stopTTS();
+                // 回调上游代理
+                additionalProxyCallback.onFinish();
+            }
+
+            @Override
+            public void onNext(String audioBase64Data) {
+                // bytes -> base64Str
+                Map<String, String> responseMap = new HashMap<>();
+                responseMap.put(RealtimeResponseDataTypeEnum.TYPE, RealtimeResponseDataTypeEnum.AUDIO_CHUNK.getType());
+                responseMap.put(RealtimeResponseDataTypeEnum.DATA, audioBase64Data);
+                String response = JSON.toJSONString(responseMap);
+                webSocketMessageManager.submitMessage(
+                        chatContextManager.agentId,
+                        response
+                );
+                log.info("[common TTS] 发送TTS数据，tts data length: {}", audioBase64Data.length());
+                additionalProxyCallback.onNext(audioBase64Data);
+            }
+
+            @Override
+            public void haveNoSentence() {
+                // 回调上游代理
+                additionalProxyCallback.haveNoSentence();
+            }
+
+            @Override
+            public void onError(Throwable throwable) {
+                // 回调上游代理
+                additionalProxyCallback.onError(throwable);
+            }
+        });
+    }
+
+    /**
+     * 检查TTS是否结束 + 自我调用
+     * 内部是循环，结束了就是TTS结束了
+     * generateAudio的callback传递null，避免递归导致栈溢出
+     * @param chatContextManager    聊天上下文管理器
+     * @throws NoApiKeyException    无API密钥异常
+     * @throws UploadFileException  上传文件异常
+     */
+    private void checkIsTTSFinish(@NotNull RealtimeChatContextManager chatContextManager) throws NoApiKeyException, UploadFileException {
+        // 只有当LLM结束并且TTS的MQ不存在句子时候才跳出TTS自我调用
+        while (!chatContextManager.llmProxyContext.isLLMing() && chatContextManager.llmProxyContext.getAllTTSCount() <= 0){
+            boolean isLLMing = chatContextManager.llmProxyContext.isLLMing();
+            // 全部取出
+            String sentence = chatContextManager.llmProxyContext.getAllTTS();
+
+            // LLM还未结束但是句子数量为0，说明llm在缓存区存在一个很长的句子，此时就需要等待输出完毕
+            if (sentence.isEmpty() && isLLMing){
+                // TTS的MQ存在数据了 || LLM已经结束
+                try {
+                    log.info("[common TTS] LLM还未结束但是句子数量为0，说明llm在缓存区存在一个很长的句子，此时就需要等待输出完毕。等待LLM输出完毕...");
+                    Thread.sleep(10);
+                } catch (InterruptedException e){
+                    log.info("[common TTS] 次线程任务被取消，休眠线程中断: {}", e.getMessage());
+                }
+            }
+            else if (!sentence.isEmpty()){
+                // 自我调用 (此时因为可能还是llm，循环仍然继续)
+                ttsServiceService.generateAudio(sentence, null);
+            }
+        }
+    }
 
     private OnTTSSelfCall getOnTTSSelfCall(RealtimeChatContextManager chatContextManager) {
         return (ttsDisposable, isFunctionCall) -> {

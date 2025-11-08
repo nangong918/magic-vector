@@ -99,6 +99,7 @@ public class FunctionCallLLMContext {
         ttsMQ.offer(tts);
     }
 
+    @NotNull
     public String getAllTTS() {
         StringBuilder sb = new StringBuilder();
         while (!ttsMQ.isEmpty()) {
