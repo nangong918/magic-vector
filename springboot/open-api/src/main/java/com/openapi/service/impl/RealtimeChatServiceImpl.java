@@ -363,10 +363,14 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
                             var ttsFuture = threadPoolConfig.taskExecutor().submit(
                                     () -> {
                                         log.info("[LLM Call] 首次TTS");
-                                        var chatTTSDisposable = generateAudio(
+//                                        var chatTTSDisposable = generateAudio(
+//                                                chatContextManager,
+//                                                getOnTTSSelfCall(chatContextManager),
+//                                                false,
+//                                                false
+//                                        );
+                                        var chatTTSDisposable = proxyGenerateAudio(
                                                 chatContextManager,
-                                                getOnTTSSelfCall(chatContextManager),
-                                                false,
                                                 false
                                         );
                                         chatContextManager.addChatTask(chatTTSDisposable);
@@ -383,10 +387,14 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
                             var ttsFuture = threadPoolConfig.taskExecutor().submit(
                                     () -> {
                                         log.info("[LLM Call] 非首次TTS");
-                                        var chatTTSDisposable = generateAudio(
+//                                        var chatTTSDisposable = generateAudio(
+//                                                chatContextManager,
+//                                                getOnTTSSelfCall(chatContextManager),
+//                                                false,
+//                                                false
+//                                        );
+                                        var chatTTSDisposable = proxyGenerateAudio(
                                                 chatContextManager,
-                                                getOnTTSSelfCall(chatContextManager),
-                                                false,
                                                 false
                                         );
                                         chatContextManager.addChatTask(chatTTSDisposable);
@@ -443,11 +451,15 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
                         chatContextManager.llmProxyContext.offerTTS(remainingText);
                         var ttsFuture = threadPoolConfig.taskExecutor().submit(
                                 () -> {
-                                    var chatTTSDisposable = generateAudio(
+//                                    var chatTTSDisposable = generateAudio(
+//                                            chatContextManager,
+//                                            getOnTTSSelfCall(chatContextManager),
+//                                            false,
+//                                            // 有限制
+//                                            false
+//                                    );
+                                    var chatTTSDisposable = proxyGenerateAudio(
                                             chatContextManager,
-                                            getOnTTSSelfCall(chatContextManager),
-                                            false,
-                                            // 有限制
                                             false
                                     );
                                     chatContextManager.addChatTask(chatTTSDisposable);
@@ -1012,11 +1024,15 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
                                     () -> {
                                         // 首次tts
                                         log.info("[functionCall LLM Call] 首次TTS");
-                                        var chatVisionTTSDisposable = generateAudio(
+//                                        var chatVisionTTSDisposable = generateAudio(
+//                                                chatContextManager,
+//                                                getOnTTSSelfCall(chatContextManager),
+//                                                true,
+//                                                false
+//                                        );
+                                        var chatVisionTTSDisposable = proxyGenerateAudio(
                                                 chatContextManager,
-                                                getOnTTSSelfCall(chatContextManager),
-                                                true,
-                                                false
+                                                true
                                         );
                                         chatContextManager.addFunctionCallTask(chatVisionTTSDisposable);
                                     }
@@ -1032,11 +1048,15 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
                             var ttsFuture = threadPoolConfig.taskExecutor().submit(
                                     () -> {
                                         log.info("[functionCall LLM Call] 非首次TTS");
-                                        var chatVisionTTSDisposable = generateAudio(
+//                                        var chatVisionTTSDisposable = generateAudio(
+//                                                chatContextManager,
+//                                                getOnTTSSelfCall(chatContextManager),
+//                                                true,
+//                                                false
+//                                        );
+                                        var chatVisionTTSDisposable = proxyGenerateAudio(
                                                 chatContextManager,
-                                                getOnTTSSelfCall(chatContextManager),
-                                                true,
-                                                false
+                                                true
                                         );
                                         chatContextManager.addFunctionCallTask(chatVisionTTSDisposable);
                                     }
@@ -1093,12 +1113,16 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
                         chatContextManager.llmProxyContext.offerTTS(remainingText);
                         var ttsFuture = threadPoolConfig.taskExecutor().submit(
                                 () -> {
-                                    var chatVisionTTSDisposable = generateAudio(
+//                                    var chatVisionTTSDisposable = generateAudio(
+//                                            chatContextManager,
+//                                            getOnTTSSelfCall(chatContextManager),
+//                                            true,
+//                                            // 有限制
+//                                            false
+//                                    );
+                                    var chatVisionTTSDisposable = proxyGenerateAudio(
                                             chatContextManager,
-                                            getOnTTSSelfCall(chatContextManager),
-                                            true,
-                                            // 有限制
-                                            false
+                                            true
                                     );
                                     chatContextManager.addFunctionCallTask(chatVisionTTSDisposable);
                                 }
