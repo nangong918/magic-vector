@@ -105,6 +105,108 @@ public class LLMServiceServiceImpl implements LLMServiceService {
                 );
     }
 
+
+    public String mixLLMCall(
+            @NonNull String sentence,
+            @NonNull ChatClient chatClient,
+            @NonNull String agentId,
+            @NonNull String currentContextParam,
+            @NonNull Object... functionCallTools
+    ) {
+        // 参数校验
+        if (sentence.isEmpty()){
+            // 可能存在STT失败，不要直接报错
+            log.warn("[mix LLM 提示词] 获取失败");
+            return null;
+        }
+        if (currentContextParam.isEmpty()){
+            log.warn("当前参数不能为empty，禁止调用");
+            return null;
+        }
+        if (agentId.isEmpty()){
+            log.warn("agentId不能为empty，禁止调用");
+            throw new AppException(AgentExceptions.AGENT_NOT_EXIST);
+        }
+
+        // 获取设定
+        String systemPrompt = chatConfig.getMixLLMSystemPrompt(currentContextParam);
+        // 获取提示词
+        Prompt prompt = promptService.getChatPromptWhitSystemPrompt(
+                sentence,
+                systemPrompt
+        );
+        if (prompt == null){
+            log.error("[mix LLM 提示词] 获取失败");
+            throw new AppException(AgentExceptions.CHAT_CAN_NOT_BE_NULL);
+        }
+
+        String response;
+
+        if (functionCallTools.length > 0){
+            response = chatClient.prompt(prompt)
+                    .advisors(a -> a.param(ChatMemory.CONVERSATION_ID, agentId))
+                    .tools(functionCallTools)
+                    .call()
+                    .content();
+        }
+        else {
+            response = chatClient.prompt(prompt)
+                    .advisors(a -> a.param(ChatMemory.CONVERSATION_ID, agentId))
+                    .call()
+                    .content();
+        }
+
+        return response;
+    }
+
+    public String mixLLMCallErrorProxy(
+            @NonNull String sentence,
+            @NonNull ChatClient chatClient,
+            @NonNull String agentId,
+            @NonNull String currentContextParam,
+            @NonNull LLMErrorCallback errorCallback,
+            @NonNull Object... functionCallTools
+    ) {
+        try {
+            return mixLLMCall(
+                    sentence,
+                    chatClient,
+                    agentId,
+                    currentContextParam,
+                    functionCallTools
+            );
+        } catch (Exception e){
+            if (e instanceof WebClientRequestException) {
+                log.error("[mix LLM proxy] 连接超时异常，异常详情：", e);
+
+                int[] retryResult = errorCallback.addCountAndCheckIsOverLimit();
+                // 超出重试限制检查
+                boolean isOverLimit = retryResult[0] > 0;
+                if (!isOverLimit){
+                    log.info("[mix LLM proxy] 尝试重连，当前重连次数：{}", retryResult[1]);
+
+                    return mixLLMCallErrorProxy(
+                            sentence,
+                            chatClient,
+                            agentId,
+                            currentContextParam,
+                            errorCallback,
+                            functionCallTools
+                    );
+                }
+                else {
+                    log.error("[mix LLM proxy] 重连次数超出限制，不再重连");
+                    errorCallback.endConversation();
+                    throw e;
+                }
+            }
+            else {
+                log.error("[mix LLM proxy] 非连接超时异常，异常详情：", e);
+                throw e;
+            }
+        }
+    }
+
     public reactor.core.Disposable mixLLMStreamCall(
             @NonNull String sentence,
             @NonNull ChatClient chatClient,
