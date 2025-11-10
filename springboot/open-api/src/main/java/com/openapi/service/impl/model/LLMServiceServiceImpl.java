@@ -1,7 +1,7 @@
 package com.openapi.service.impl.model;
 
 import com.openapi.config.ChatConfig;
-import com.openapi.domain.ao.realtimeChat.McpSwitch;
+import com.openapi.domain.ao.mixLLM.McpSwitch;
 import com.openapi.domain.constant.ModelConstant;
 import com.openapi.domain.constant.error.AgentExceptions;
 import com.openapi.domain.exception.AppException;

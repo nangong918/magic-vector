@@ -1,6 +1,6 @@
 package com.openapi.service.model;
 
-import com.openapi.domain.ao.realtimeChat.McpSwitch;
+import com.openapi.domain.ao.mixLLM.McpSwitch;
 import com.openapi.interfaces.model.LLMErrorCallback;
 import com.openapi.interfaces.model.LLMStateCallback;
 import lombok.NonNull;
