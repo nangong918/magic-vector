@@ -27,7 +27,13 @@ AI Emoji Activity （表情系统Mcp，心情系统）
 Android User管理登录页面
 
 ### lv0(当前任务/核心任务)
-todo: 列出dev-v2分支进行升级, 升级测试成功之后合并到dev
+
+#### 本月任务
+1. 完成状态机
+2. 完成vision线程阻塞与事件激活
+3. 完成表情, motion的mcp
+4. 完成重构升级
+
 各种模式的测试demo
 重构升级: 面向对象, 设计模式, UML, 框架(Android, Spring设计模式)
 
