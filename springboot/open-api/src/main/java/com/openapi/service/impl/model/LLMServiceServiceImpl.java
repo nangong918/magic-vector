@@ -1,6 +1,7 @@
 package com.openapi.service.impl.model;
 
 import com.openapi.config.ChatConfig;
+import com.openapi.domain.ao.realtimeChat.McpSwitch;
 import com.openapi.domain.constant.ModelConstant;
 import com.openapi.domain.constant.error.AgentExceptions;
 import com.openapi.domain.exception.AppException;
@@ -111,6 +112,7 @@ public class LLMServiceServiceImpl implements LLMServiceService {
             @NonNull ChatClient chatClient,
             @NonNull String agentId,
             @NonNull String currentContextParam,
+            @NonNull McpSwitch mcpSwitch,
             @NonNull Object... functionCallTools
     ) {
         // 参数校验
@@ -129,7 +131,7 @@ public class LLMServiceServiceImpl implements LLMServiceService {
         }
 
         // 获取设定
-        String systemPrompt = chatConfig.getMixLLMSystemPrompt(currentContextParam);
+        String systemPrompt = chatConfig.getMixLLMSystemPrompt(currentContextParam, mcpSwitch);
         // 获取提示词
         Prompt prompt = promptService.getChatPromptWhitSystemPrompt(
                 sentence,
@@ -164,6 +166,7 @@ public class LLMServiceServiceImpl implements LLMServiceService {
             @NonNull ChatClient chatClient,
             @NonNull String agentId,
             @NonNull String currentContextParam,
+            @NonNull McpSwitch mcpSwitch,
             @NonNull LLMErrorCallback errorCallback,
             @NonNull Object... functionCallTools
     ) {
@@ -173,6 +176,7 @@ public class LLMServiceServiceImpl implements LLMServiceService {
                     chatClient,
                     agentId,
                     currentContextParam,
+                    mcpSwitch,
                     functionCallTools
             );
         } catch (Exception e){
@@ -190,6 +194,7 @@ public class LLMServiceServiceImpl implements LLMServiceService {
                             chatClient,
                             agentId,
                             currentContextParam,
+                            mcpSwitch,
                             errorCallback,
                             functionCallTools
                     );
@@ -212,6 +217,7 @@ public class LLMServiceServiceImpl implements LLMServiceService {
             @NonNull ChatClient chatClient,
             @NonNull String agentId,
             @NonNull String currentContextParam,
+            @NonNull McpSwitch mcpSwitch,
             @NonNull LLMStateCallback callback,
             @NonNull Object... functionCallTools
     ) {
@@ -232,7 +238,7 @@ public class LLMServiceServiceImpl implements LLMServiceService {
         }
 
         // 获取设定
-        String systemPrompt = chatConfig.getMixLLMSystemPrompt(currentContextParam);
+        String systemPrompt = chatConfig.getMixLLMSystemPrompt(currentContextParam, mcpSwitch);
         // 获取提示词
         Prompt prompt = promptService.getChatPromptWhitSystemPrompt(
                 sentence,
@@ -278,6 +284,7 @@ public class LLMServiceServiceImpl implements LLMServiceService {
             @NonNull ChatClient chatClient,
             @NonNull String agentId,
             @NonNull String currentContextParam,
+            @NonNull McpSwitch mcpSwitch,
             @NonNull LLMStateCallback callback,
             @NonNull LLMErrorCallback errorCallback,
             @NonNull Object... functionCallTools
@@ -319,6 +326,7 @@ public class LLMServiceServiceImpl implements LLMServiceService {
                                 chatClient,
                                 agentId,
                                 currentContextParam,
+                                mcpSwitch,
                                 callback,
                                 errorCallback,
                                 functionCallTools
@@ -343,6 +351,7 @@ public class LLMServiceServiceImpl implements LLMServiceService {
                 chatClient,
                 agentId,
                 currentContextParam,
+                mcpSwitch,
                 errorProxyCallback,
                 functionCallTools
         );

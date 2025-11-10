@@ -12,6 +12,7 @@ import com.openapi.domain.constant.tools.AICallEnum;
 import com.openapi.domain.constant.tools.EmojiEvent;
 import com.openapi.domain.constant.tools.MoodEvent;
 import com.openapi.domain.constant.tools.MotionEvent;
+import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.prompt.PromptTemplate;
@@ -145,7 +146,7 @@ public class ChatConfig {
         return null;
     }
 
-    public String getMixLLMSystemPrompt(String contextParam){
+    public String getMixLLMSystemPrompt(String contextParam, @NonNull McpSwitch mcpSwitch){
         String jsonFilePath = "/ai/mixLLMPrompt.txt";
         try (InputStream inputStream = ChatConfig.class.getResourceAsStream(jsonFilePath)) {
             if (inputStream == null){
@@ -164,7 +165,6 @@ public class ChatConfig {
 
             StringBuilder invokeConfigSb = new StringBuilder();
 
-            McpSwitch mcpSwitch = new McpSwitch();
             mcpSwitch.emojiAndMood = McpSwitch.McpSwitchMode.FREELY.code;
             mcpSwitch.camera = McpSwitch.McpSwitchMode.COMMANDS.code;
             mcpSwitch.motion = McpSwitch.McpSwitchMode.FREELY.code;
@@ -212,7 +212,8 @@ public class ChatConfig {
                 """
                         userId: 123,
                         agentId: 456
-                        """
+                        """,
+                new McpSwitch()
         );
         System.out.println(mixLLMSystemPrompt);
     }
