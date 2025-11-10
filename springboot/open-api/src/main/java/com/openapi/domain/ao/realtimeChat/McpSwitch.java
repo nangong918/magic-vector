@@ -1,6 +1,7 @@
 package com.openapi.domain.ao.realtimeChat;
 
 import lombok.Data;
+import lombok.NonNull;
 
 /**
  * @author 13225
@@ -10,6 +11,7 @@ import lombok.Data;
  */
 @Data
 public class McpSwitch {
+    public String equipment = McpEquipment.PHONE.code;
     public String camera = McpCamera.CLOSE.code;
     public String motion = McpMotion.CLOSE.code;
     public String emoji = McpEmoji.CLOSE.code;
@@ -87,6 +89,30 @@ public class McpSwitch {
                 }
             }
             return CLOSE;
+        }
+    }
+
+    public enum McpEquipment {
+        // phone
+        PHONE("phone"),
+        // device
+        DEVICE("device"),
+        ;
+
+        public final String code;
+
+        McpEquipment(String code) {
+            this.code = code;
+        }
+
+        @NonNull
+        public static McpEquipment getByCode(String code) {
+            for (McpEquipment value : values()) {
+                if (value.code.equals(code)){
+                    return value;
+                }
+            }
+            return PHONE;
         }
     }
 }
