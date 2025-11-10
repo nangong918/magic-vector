@@ -19,7 +19,9 @@ public class MixLLMResult {
     @JsonIgnore
     public static String getInvocationRules() {
         return """
-                响应结构是JSON格式，需要根据句子进行拆分为JSONList，如果该句没有事件就只赋值chatSentence，如果该句话包括多个事件就需要将事件添加到eventList中。
+                响应结构是JSON格式，需要根据句子进行拆分为JSONList，如果该句没有事件就只写chatSentence，
+                如果该句话包括多个事件就需要将事件添加到eventList中。
+                生成事件和调用tool要注意用户设定的权限。
                 [
                     {"chatSentence":"xxx。"},
                     {
@@ -28,7 +30,15 @@ public class MixLLMResult {
                             {
                                 "eventType":"motion",
                                 "event": {
-                                    "type": "停止"
+                                    "type": "前进",
+                                    "value": "2"
+                                }
+                            },
+                            {
+                                "eventType":"motion",
+                                "event": {
+                                    "type": "左转",
+                                    "value": "20.5"
                                 }
                             },
                             {

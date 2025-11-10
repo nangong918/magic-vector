@@ -1,5 +1,7 @@
 package com.openapi.service.model;
 
+import com.openapi.domain.ao.realtimeChat.McpSwitch;
+import com.openapi.interfaces.model.LLMErrorCallback;
 import com.openapi.interfaces.model.LLMStateCallback;
 import lombok.NonNull;
 import org.jetbrains.annotations.Nullable;
@@ -17,6 +19,25 @@ public interface LLMServiceService {
             @Nullable String currentContextParam,
             @NonNull LLMStateCallback callback,
             @NonNull Object... functionCallTools);
+
+    String mixLLMCall(
+            @NonNull String sentence,
+            @NonNull ChatClient chatClient,
+            @NonNull String agentId,
+            @NonNull String currentContextParam,
+            @NonNull McpSwitch mcpSwitch,
+            @Nullable Object... functionCallTools
+    );
+
+    String mixLLMCallErrorProxy(
+            @NonNull String sentence,
+            @NonNull ChatClient chatClient,
+            @NonNull String agentId,
+            @NonNull String currentContextParam,
+            @NonNull McpSwitch mcpSwitch,
+            @NonNull LLMErrorCallback errorCallback,
+            @Nullable Object... functionCallTools
+    );
 
     reactor.core.Disposable functionCallLLMStreamChat(
             @Nullable String result,

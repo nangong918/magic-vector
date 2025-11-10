@@ -107,13 +107,14 @@ public class LLMServiceServiceImpl implements LLMServiceService {
     }
 
 
+    @Override
     public String mixLLMCall(
             @NonNull String sentence,
             @NonNull ChatClient chatClient,
             @NonNull String agentId,
             @NonNull String currentContextParam,
             @NonNull McpSwitch mcpSwitch,
-            @NonNull Object... functionCallTools
+            @Nullable Object... functionCallTools
     ) {
         // 参数校验
         if (sentence.isEmpty()){
@@ -144,16 +145,16 @@ public class LLMServiceServiceImpl implements LLMServiceService {
 
         String response;
 
-        if (functionCallTools.length > 0){
+        if (functionCallTools == null || functionCallTools.length == 0){
             response = chatClient.prompt(prompt)
                     .advisors(a -> a.param(ChatMemory.CONVERSATION_ID, agentId))
-                    .tools(functionCallTools)
                     .call()
                     .content();
         }
         else {
             response = chatClient.prompt(prompt)
                     .advisors(a -> a.param(ChatMemory.CONVERSATION_ID, agentId))
+                    .tools(functionCallTools)
                     .call()
                     .content();
         }
@@ -161,6 +162,7 @@ public class LLMServiceServiceImpl implements LLMServiceService {
         return response;
     }
 
+    @Override
     public String mixLLMCallErrorProxy(
             @NonNull String sentence,
             @NonNull ChatClient chatClient,
@@ -168,7 +170,7 @@ public class LLMServiceServiceImpl implements LLMServiceService {
             @NonNull String currentContextParam,
             @NonNull McpSwitch mcpSwitch,
             @NonNull LLMErrorCallback errorCallback,
-            @NonNull Object... functionCallTools
+            @Nullable Object... functionCallTools
     ) {
         try {
             return mixLLMCall(
@@ -219,7 +221,7 @@ public class LLMServiceServiceImpl implements LLMServiceService {
             @NonNull String currentContextParam,
             @NonNull McpSwitch mcpSwitch,
             @NonNull LLMStateCallback callback,
-            @NonNull Object... functionCallTools
+            @Nullable Object... functionCallTools
     ) {
         // 参数校验
         if (sentence.isEmpty()){

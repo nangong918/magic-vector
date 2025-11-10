@@ -70,7 +70,7 @@ public enum MotionEvent implements AICallEnum {
                     "value": "60.5"
                   }
                 }
-                其中转向事件需要输入旋转角度，移动事件需要输入移动时长，单位ms
+                其中转向事件需要输入旋转角度，移动事件需要输入移动的步数。
                 """;
     }
 

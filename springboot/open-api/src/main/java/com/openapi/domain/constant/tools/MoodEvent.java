@@ -56,7 +56,6 @@ public enum MoodEvent implements AICallEnum {
                     "type": "普通心情"
                   }
                 }
-                其中转向事件需要输入旋转角度，移动事件需要输入移动时长，单位ms
                 """;
     }
 
