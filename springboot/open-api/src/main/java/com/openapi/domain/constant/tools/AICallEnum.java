@@ -15,7 +15,7 @@ public interface AICallEnum {
         StringBuilder sb = new StringBuilder();
         sb.append(clazz.getSimpleName()).append("{\n");
         for (T value : clazz.getEnumConstants()) {
-            sb.append(value).append(":").append(value.getName()).append("\n");
+            sb/*.append(value).append(":")*/.append(value.getName()).append(",\n");
         }
         sb.append("}");
         return sb.toString();

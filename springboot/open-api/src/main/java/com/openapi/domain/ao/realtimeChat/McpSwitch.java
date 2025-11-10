@@ -48,6 +48,7 @@ public class McpSwitch {
             this.name = name;
         }
 
+        @NonNull
         public static McpSwitchMode getByCode(String code) {
             for (McpSwitchMode value : values()) {
                 if (value.code.equals(code)) {
@@ -55,6 +56,15 @@ public class McpSwitch {
                 }
             }
             return CLOSE;
+        }
+        @NonNull
+        public static String getInstructions() {
+            return """
+                    \n其中用户设置Agent的Mcp权限说明：
+                    close关闭 表示用户禁用Agent调用，
+                    freelyAgent自由调度 表示用户允许Agent自由主动合理调用。
+                    commands用户有相关指令再调用 表示用户禁止Agent主动调用，只有用户提及相关任务，Agent才能调用。
+                    """;
         }
 
         public static void main(String[] args) {
@@ -111,7 +121,7 @@ public class McpSwitch {
         map.put("表情和心情调用权限", McpSwitchMode.getByCode(emojiAndMood).getName());
 
         // map -> jsonString
-        return map.toString();
+        return map + McpSwitchMode.getInstructions();
     }
 
     public static void main(String[] args) {

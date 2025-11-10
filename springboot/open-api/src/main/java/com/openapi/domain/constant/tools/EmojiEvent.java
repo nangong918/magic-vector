@@ -9,7 +9,7 @@ import lombok.NonNull;
 public enum EmojiEvent implements AICallEnum {
     /// 状态值
     // 无表情、复位
-    NONE("none", "无表情、复位"),
+    NONE("none", "复位"),
 
     /// 表情
     // 眨眼

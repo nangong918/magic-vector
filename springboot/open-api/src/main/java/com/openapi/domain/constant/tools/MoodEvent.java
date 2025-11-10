@@ -8,8 +8,8 @@ import lombok.NonNull;
  */
 public enum MoodEvent implements AICallEnum {
     /// 状态值
-    // 无表情、复位
-    NONE("none", "无表情、复位"),
+    //
+    NONE("none", "复位"),
 
     /// 心情 (心情和表情是可以叠加的)
     // 普通心情
