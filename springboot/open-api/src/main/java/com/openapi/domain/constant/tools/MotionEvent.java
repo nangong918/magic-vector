@@ -4,7 +4,7 @@ package com.openapi.domain.constant.tools;
  * @author 13225
  * @date 2025/11/10 11:36
  */
-public enum MotionEvent {
+public enum MotionEvent implements EquipmentEvent{
     /// 状态值
     // 停止、复位
     STOP("stop", "停止"),
@@ -32,23 +32,22 @@ public enum MotionEvent {
     public final String code;
     public final String name;
 
+    @Override
+    public String getCode() {
+        return code;
+    }
+
+    @Override
+    public String getName() {
+        return name;
+    }
+
     MotionEvent(String code, String name){
         this.code = code;
         this.name = name;
     }
 
-    public static String getAIDocs(String className){
-        StringBuilder sb = new StringBuilder();
-        sb.append(className).append("{\n");
-        for (MotionEvent value : values()) {
-            sb.append(value).append(":");
-            sb.append(value.name).append("\n");
-        }
-        sb.append("}");
-        return sb.toString();
-    }
-
     public static void main(String[] args) {
-        System.out.println(getAIDocs(MotionEvent.class.getSimpleName()));
+        System.out.println(EquipmentEvent.getAIDocs(MotionEvent.class));
     }
 }

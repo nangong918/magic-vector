@@ -1,10 +1,12 @@
 package com.openapi.domain.constant.tools;
 
+import lombok.NonNull;
+
 /**
  * @author 13225
  * @date 2025/11/10 11:15
  */
-public enum EmojiEvent {
+public enum EmojiEvent implements EquipmentEvent{
     /// 状态值
     // 无表情、复位
     NONE("none", "无表情、复位"),
@@ -37,11 +39,22 @@ public enum EmojiEvent {
     public final String code;
     public final String name;
 
+    @Override
+    public String getCode() {
+        return code;
+    }
+
+    @Override
+    public String getName() {
+        return name;
+    }
+
     EmojiEvent(String code, String name){
         this.code = code;
         this.name = name;
     }
 
+    @NonNull
     public static EmojiEvent getByCode(String code){
         for (EmojiEvent value : values()) {
             if (value.code.equals(code)) {
@@ -51,18 +64,7 @@ public enum EmojiEvent {
         return NONE;
     }
 
-    public static String getAIDocs(String className){
-        StringBuilder sb = new StringBuilder();
-        sb.append(className).append("{\n");
-        for (EmojiEvent value : values()) {
-            sb.append(value).append(":");
-            sb.append(value.name).append("\n");
-        }
-        sb.append("}");
-        return sb.toString();
-    }
-
     public static void main(String[] args) {
-        System.out.println(getAIDocs(EmojiEvent.class.getSimpleName()));
+        System.out.println(EquipmentEvent.getAIDocs(EmojiEvent.class));
     }
 }
