@@ -10,7 +10,9 @@ public enum EquipmentEventType {
     // 移动事件 motion
     MOTION("motion"),
     // 表情事件 emoji
-    EMOJI("emoji")
+    EMOJI("emoji"),
+    // 心情事件 mood
+    MOOD("mood")
     ;
 
     public final String code;

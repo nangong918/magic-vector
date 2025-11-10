@@ -47,6 +47,18 @@ public enum MoodEvent implements AICallEnum {
         }
         return NONE;
     }
+    public static String getInvocationRules(){
+        return """
+                调用输出MixLLMEvent的JSON格式例如：
+                {
+                  "eventType": "mood",
+                  "event": {
+                    "type": "普通心情"
+                  }
+                }
+                其中转向事件需要输入旋转角度，移动事件需要输入移动时长，单位ms
+                """;
+    }
 
     public static void main(String[] args) {
         System.out.println(AICallEnum.getAIDocs(MoodEvent.class));

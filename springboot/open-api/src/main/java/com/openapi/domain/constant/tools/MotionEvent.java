@@ -1,5 +1,7 @@
 package com.openapi.domain.constant.tools;
 
+import lombok.NonNull;
+
 /**
  * @author 13225
  * @date 2025/11/10 11:36
@@ -45,6 +47,31 @@ public enum MotionEvent implements AICallEnum {
     MotionEvent(String code, String name){
         this.code = code;
         this.name = name;
+    }
+
+    @NonNull
+    public static MotionEvent getByCode(String code) {
+        for (MotionEvent value : values()) {
+            if (value.code.equals(code)) {
+                return value;
+            }
+        }
+        return STOP;
+    }
+
+    // 调用规则
+    public static String getInvocationRules() {
+        return """
+                调用输出MixLLMEvent的JSON格式例如：
+                {
+                  "eventType": "motion",
+                  "event": {
+                    "type": "左转",
+                    "value": "60.5"
+                  }
+                }
+                其中转向事件需要输入旋转角度，移动事件需要输入移动时长，单位ms
+                """;
     }
 
     public static void main(String[] args) {

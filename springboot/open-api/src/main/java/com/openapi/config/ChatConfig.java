@@ -6,14 +6,13 @@ import com.alibaba.dashscope.aigc.multimodalconversation.MultiModalConversation;
 import com.alibaba.dashscope.audio.asr.recognition.Recognition;
 import com.google.gson.Gson;
 import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
 import com.openapi.domain.ao.realtimeChat.McpSwitch;
+import com.openapi.domain.ao.realtimeChat.MixLLMResult;
 import com.openapi.domain.constant.tools.AICallEnum;
 import com.openapi.domain.constant.tools.EmojiEvent;
 import com.openapi.domain.constant.tools.MoodEvent;
 import com.openapi.domain.constant.tools.MotionEvent;
 import lombok.extern.slf4j.Slf4j;
-import org.jetbrains.annotations.NotNull;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.prompt.PromptTemplate;
 import org.springframework.ai.template.st.StTemplateRenderer;
@@ -146,18 +145,12 @@ public class ChatConfig {
         return null;
     }
 
-    public String getMixLLMSystemPrompt(String param) {
-        // todo
-        return "";
-    }
-
-    // 文件读取测试
-    public static void main(String[] args) {
+    public String getMixLLMSystemPrompt(String contextParam){
         String jsonFilePath = "/ai/mixLLMPrompt.txt";
         try (InputStream inputStream = ChatConfig.class.getResourceAsStream(jsonFilePath)) {
             if (inputStream == null){
                 System.err.println("文件不存在");
-                return;
+                return null;
             }
             // 读取text -> string
             String text = new String(inputStream.readAllBytes(), StandardCharsets.UTF_8);
@@ -183,29 +176,44 @@ public class ChatConfig {
             if (!McpSwitch.McpSwitchMode.CLOSE.equals(cameraSwitchMode)){
                 invokeConfigSb.append("\n相机选项包括：").append("照片拍摄。")
 //                        .append(AICallEnum.getAIDocs(VisionEvent.class))
-                        ;
+                ;
             }
             if (!McpSwitch.McpSwitchMode.CLOSE.equals(motionSwitchMode)){
                 invokeConfigSb.append("\n运动选项包括：")
                         .append(AICallEnum.getAIDocs(MotionEvent.class))
-                        ;
+                ;
             }
             if (!McpSwitch.McpSwitchMode.CLOSE.equals(emojiAndMoodSwitchMode)){
                 invokeConfigSb.append("\n表情选项包括：")
                         .append(AICallEnum.getAIDocs(EmojiEvent.class))
                         .append("心情选项包括：")
                         .append(AICallEnum.getAIDocs(MoodEvent.class))
-                        ;
+                ;
             }
 
             String invokeConfig = invokeConfigSb.toString();
+            params.put("json_format", MixLLMResult.getInvocationRules());
+            params.put("context_param", contextParam);
             params.put("invoke_setting", mcpSwitch.getAICallInstructions());
             params.put("invoke_config", invokeConfig.isEmpty() ? "无" : invokeConfig);
-            String systemPrompt = promptTemplateObj.render(params);
 
-            System.out.println("systemPrompt = " + systemPrompt);
+            return promptTemplateObj.render(params);
         } catch (Exception e) {
             System.err.println(e.getMessage());
         }
+
+        return null;
+    }
+
+    // 文件读取测试
+    public static void main(String[] args) {
+        ChatConfig chatConfig = new ChatConfig();
+        String mixLLMSystemPrompt = chatConfig.getMixLLMSystemPrompt(
+                """
+                        userId: 123,
+                        agentId: 456
+                        """
+        );
+        System.out.println(mixLLMSystemPrompt);
     }
 }
