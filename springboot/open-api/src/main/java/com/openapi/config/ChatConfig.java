@@ -137,6 +137,11 @@ public class ChatConfig {
         return null;
     }
 
+    public String getMixLLMSystemPrompt(String param) {
+        // todo
+        return "";
+    }
+
     // 文件读取测试
     public static void main(String[] args) {
         String jsonFilePath = "/ai/visionPrompt.json";
