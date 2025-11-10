@@ -27,6 +27,10 @@ AI Emoji Activity （表情系统Mcp，心情系统）
 Android User管理登录页面
 
 ### lv0(当前任务/核心任务)
+todo: 列出dev-v2分支进行升级, 升级测试成功之后合并到dev
+各种模式的测试demo
+重构升级: 面向对象, 设计模式, UML, 框架(Android, Spring设计模式)
+
 修复系统bug: 不能把系统可靠性依赖于AI, 要默认AI是完全不可信的
 学习: 面向对象, 设计模式, UML -> 将下述的设计图绘制出来, 并尝试实现.
 
