@@ -6,7 +6,7 @@ import lombok.NonNull;
  * @author 13225
  * @date 2025/11/10 11:15
  */
-public enum EmojiEvent implements EquipmentEvent{
+public enum EmojiEvent implements AICallEnum {
     /// 状态值
     // 无表情、复位
     NONE("none", "无表情、复位"),
@@ -65,6 +65,6 @@ public enum EmojiEvent implements EquipmentEvent{
     }
 
     public static void main(String[] args) {
-        System.out.println(EquipmentEvent.getAIDocs(EmojiEvent.class));
+        System.out.println(AICallEnum.getAIDocs(EmojiEvent.class));
     }
 }

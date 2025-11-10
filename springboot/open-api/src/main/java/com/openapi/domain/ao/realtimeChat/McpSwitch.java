@@ -1,5 +1,6 @@
 package com.openapi.domain.ao.realtimeChat;
 
+import com.openapi.domain.constant.tools.AICallEnum;
 import lombok.Data;
 import lombok.NonNull;
 
@@ -12,97 +13,75 @@ import lombok.NonNull;
 @Data
 public class McpSwitch {
     public String equipment = McpEquipment.PHONE.code;
-    public String camera = McpCamera.CLOSE.code;
-    public String motion = McpMotion.CLOSE.code;
-    public String emoji = McpEmoji.CLOSE.code;
+    public String camera = McpSwitchMode.CLOSE.code;
+    public String motion = McpSwitchMode.CLOSE.code;
+    public String emoji = McpSwitchMode.CLOSE.code;
 
 
-    public enum McpCamera {
+    public enum McpSwitchMode implements AICallEnum {
         // close
-        CLOSE("close"),
-        // 拍照模式：ShootingModel
-        SHOOTING_MODEL("shootingModel"),
-        // 录像模式：RecordingModel
-        RECORDING_MODEL("recordingModel"),
+        CLOSE("close", "关闭"),
+        // freely
+        FREELY("freely", "Agent自由调度"),
+        // commands
+        COMMANDS("commands", "用户有相关指令再调用"),
         ;
 
         public final String code;
+        public final String name;
 
-        McpCamera(String code) {
-            this.code = code;
+        @Override
+        public String getCode() {
+            return code;
         }
 
-        public static McpCamera getByCode(String code) {
-            for (McpCamera value : values()) {
+        @Override
+        public String getName() {
+            return name;
+        }
+
+        McpSwitchMode(String code, String name) {
+            this.code = code;
+            this.name = name;
+        }
+
+        public static McpSwitchMode getByCode(String code) {
+            for (McpSwitchMode value : values()) {
                 if (value.code.equals(code)) {
                     return value;
                 }
             }
             return CLOSE;
         }
-    }
 
-    public enum McpMotion {
-        // close
-        CLOSE("close"),
-        // Agent自由移动：Agent moves freely
-        AGENT_MOVES_FREELY("agentMovesFreely"),
-        // 识别用户指令移动: Identify user commands
-        IDENTIFY_USER_COMMANDS("identifyUserCommands"),
-        ;
-
-        public final String code;
-
-        McpMotion(String code) {
-            this.code = code;
-        }
-
-        public static McpMotion getByCode(String code) {
-            for (McpMotion value : values()) {
-                if (value.code.equals(code)) {
-                    return value;
-                }
-            }
-            return CLOSE;
+        public static void main(String[] args) {
+            System.out.println(AICallEnum.getAIDocs(McpSwitchMode.class));
         }
     }
 
-    public enum McpEmoji {
-        // close
-        CLOSE("close"),
-        // Agent自由调配表情：Agent expression freely
-        AGENT_EXPRESSION_FREELY("agentExpressionFreely"),
-        // 识别用户指令表情: Identify user commands
-        IDENTIFY_USER_COMMANDS("identifyUserCommands"),
-        ;
-
-        public final String code;
-
-        McpEmoji(String code) {
-            this.code = code;
-        }
-
-        public static McpEmoji getByCode(String code) {
-            for (McpEmoji value : values()) {
-                if (value.code.equals(code)) {
-                    return value;
-                }
-            }
-            return CLOSE;
-        }
-    }
-
-    public enum McpEquipment {
+    public enum McpEquipment implements AICallEnum{
         // phone
-        PHONE("phone"),
+        PHONE("phone", "手机App"),
         // device
-        DEVICE("device"),
+        DEVICE("device", "嵌入式设备"),
         ;
 
         public final String code;
+        public final String name;
 
-        McpEquipment(String code) {
+        @Override
+        public String getCode() {
+            return code;
+        }
+
+        @Override
+        public String getName() {
+            return name;
+        }
+
+        McpEquipment(String code, String name) {
             this.code = code;
+            this.name = name;
         }
 
         @NonNull
@@ -114,5 +93,10 @@ public class McpSwitch {
             }
             return PHONE;
         }
+
+        public static void main(String[] args) {
+            System.out.println(AICallEnum.getAIDocs(McpEquipment.class));
+        }
+
     }
 }

@@ -1,4 +1,4 @@
-package com.openapi.service;
+package com.openapi.service.tools;
 
 import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.ai.tool.annotation.ToolParam;

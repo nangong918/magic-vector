@@ -4,7 +4,7 @@ package com.openapi.domain.constant.tools;
  * @author 13225
  * @date 2025/11/10 11:36
  */
-public enum MotionEvent implements EquipmentEvent{
+public enum MotionEvent implements AICallEnum {
     /// 状态值
     // 停止、复位
     STOP("stop", "停止"),
@@ -48,6 +48,6 @@ public enum MotionEvent implements EquipmentEvent{
     }
 
     public static void main(String[] args) {
-        System.out.println(EquipmentEvent.getAIDocs(MotionEvent.class));
+        System.out.println(AICallEnum.getAIDocs(MotionEvent.class));
     }
 }
