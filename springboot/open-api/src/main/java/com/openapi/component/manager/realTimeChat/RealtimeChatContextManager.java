@@ -2,6 +2,7 @@ package com.openapi.component.manager.realTimeChat;
 
 import cn.hutool.core.util.IdUtil;
 import com.alibaba.fastjson.JSON;
+import com.openapi.component.manager.mixLLM.MixLLMManager;
 import com.openapi.domain.ao.mixLLM.McpSwitch;
 import com.openapi.domain.constant.ModelConstant;
 import com.openapi.domain.constant.RoleTypeEnum;
@@ -141,6 +142,7 @@ public class RealtimeChatContextManager implements
     public WebSocketSession session;
     @Getter
     public McpSwitch mcpSwitch = new McpSwitch();
+    public MixLLMManager mixLLMManager = new MixLLMManager();
 
     /// vision chat
     // image chat
@@ -240,13 +242,13 @@ public class RealtimeChatContextManager implements
     }
 
     @Override
-    public @NonNull RealtimeChatTextResponse getUserSTTResultResponse(@NonNull String sstResult) {
-        setUserRequestQuestion(sstResult);
+    public @NonNull RealtimeChatTextResponse getUserSTTResultResponse(@NonNull String sttResult) {
+        setUserRequestQuestion(sttResult);
         val response = new RealtimeChatTextResponse();
         response.setAgentId(agentId);
         response.setUserId(userId);
         response.setRole(RoleTypeEnum.USER.getValue());
-        response.setContent(sstResult);
+        response.setContent(sttResult);
         response.setMessageId(getCurrentUserMessageId());
         response.setTimestamp(currentUserMessageTimestamp);
         response.setChatTime(getCurrentMessageTimeStr());

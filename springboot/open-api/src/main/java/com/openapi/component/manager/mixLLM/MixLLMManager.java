@@ -6,6 +6,7 @@ import com.openapi.interfaces.mixLLM.LLMCallback;
 import com.openapi.interfaces.mixLLM.TTSCallback;
 import io.reactivex.disposables.Disposable;
 import lombok.extern.slf4j.Slf4j;
+import org.reactivestreams.Subscription;
 
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -37,6 +38,11 @@ public class MixLLMManager extends AbstractMixLLMManager{
             @Override
             public void onSubscribeDisposable(Disposable disposable) {
                 // 记录disposable 到 contextManager
+                log.info("[MixLLMManager] record disposable");
+            }
+
+            @Override
+            public void onStart(Subscription subscription) {
                 log.info("[MixLLMManager] tts start");
             }
 

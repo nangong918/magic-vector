@@ -17,6 +17,7 @@ import com.openapi.service.model.TTSServiceService;
 import io.reactivex.disposables.Disposable;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.Test;
+import org.reactivestreams.Subscription;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -266,6 +267,11 @@ public class MixLLMTests {
             @Override
             public void onSubscribeDisposable(Disposable disposable) {
                 // 记录disposable 到 contextManager
+                log.info("[MixLLMManager] record disposable");
+            }
+
+            @Override
+            public void onStart(Subscription subscription) {
                 log.info("[MixLLMManager] tts start");
             }
 

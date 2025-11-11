@@ -37,7 +37,7 @@ Android User管理登录页面
 
 今日任务：
 1.Android在connect的时候需要传递MCP的设置，暂时在MainApplication中写死。
-2.Android改为接收MixLLM输入，并解析。
+2.Spring 和 Android 都改为接收MixLLM输入，并解析。
 3.Android上传图片到后端的阻塞测试。
 
 

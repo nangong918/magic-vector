@@ -1,5 +1,6 @@
 package com.openapi.domain.constant.realtime;
 
+import com.openapi.domain.ao.mixLLM.MixLLMEvent;
 import com.openapi.domain.dto.ws.response.RealtimeChatTextResponse;
 import com.openapi.domain.dto.ws.response.SystemTextResponse;
 import org.jetbrains.annotations.NotNull;
@@ -24,6 +25,11 @@ public enum RealtimeResponseDataTypeEnum {
      * String: base64Audio
      */
     AUDIO_CHUNK("audio_chunk"),
+    /**
+     * 事件列表: List<MixLLMEvent>
+     * @see MixLLMEvent
+     */
+    EVENT_LIST("event_list"),
     /**
      * text_chat_response
      * @see RealtimeChatTextResponse

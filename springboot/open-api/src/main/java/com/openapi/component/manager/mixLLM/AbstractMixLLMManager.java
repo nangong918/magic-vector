@@ -147,7 +147,7 @@ public abstract class AbstractMixLLMManager {
         // 步骤3: 将提取到的句子结果交付出去
         llmCallback.handleResult(getSentenceBuilder().toString());
 
-        // 步骤3: 开始TTS流处理
+        // 步骤4: 开始TTS流处理
         ttsQueueStream(getMixLLMResultsQueue(), ttsServiceService, ttsCallback);
     }
 
