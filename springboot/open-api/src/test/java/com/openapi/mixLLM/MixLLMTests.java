@@ -10,6 +10,7 @@ import com.openapi.config.ChatConfig;
 import com.openapi.domain.ao.mixLLM.McpSwitch;
 import com.openapi.domain.ao.mixLLM.MixLLMAudio;
 import com.openapi.domain.ao.mixLLM.MixLLMResult;
+import com.openapi.interfaces.mixLLM.LLMCallback;
 import com.openapi.interfaces.mixLLM.TTSCallback;
 import com.openapi.service.model.LLMServiceService;
 import com.openapi.service.model.TTSServiceService;
@@ -285,6 +286,11 @@ public class MixLLMTests {
             public void onError(Throwable throwable) {
                 // 输出日志 + endConversation
                 log.error("[MixLLMManager] tts error", throwable);
+            }
+        }, new LLMCallback() {
+            @Override
+            public void handleResult(String result) {
+                log.info("[MixLLMManager] llm result: {}", result);
             }
         });
 

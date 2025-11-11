@@ -2,6 +2,7 @@ package com.openapi.component.manager.mixLLM;
 
 import com.openapi.domain.ao.mixLLM.MixLLMAudio;
 import com.openapi.domain.ao.mixLLM.MixLLMResult;
+import com.openapi.interfaces.mixLLM.LLMCallback;
 import com.openapi.interfaces.mixLLM.TTSCallback;
 import io.reactivex.disposables.Disposable;
 import lombok.extern.slf4j.Slf4j;
@@ -19,6 +20,7 @@ public class MixLLMManager extends AbstractMixLLMManager{
 
     // 缓存结果(不能放在抽象类，不能多个对象用一个单例)
     protected final Queue<MixLLMResult> mixLLMResults = new ConcurrentLinkedQueue<>();
+    protected final StringBuilder sentenceBuilder = new StringBuilder();
 
     @Override
     protected Queue<MixLLMResult> getMixLLMResultsQueue() {
@@ -26,6 +28,10 @@ public class MixLLMManager extends AbstractMixLLMManager{
     }
 
     @Override
+    protected StringBuilder getSentenceBuilder() {
+        return sentenceBuilder;
+    }
+
     public TTSCallback getDefaultTTSCallback(){
         return new TTSCallback() {
             @Override
@@ -51,6 +57,15 @@ public class MixLLMManager extends AbstractMixLLMManager{
             public void onError(Throwable throwable) {
                 // 输出日志 + endConversation
                 log.error("[MixLLMManager] tts error", throwable);
+            }
+        };
+    }
+
+    public LLMCallback getDefaultLLMCallback(){
+        return new LLMCallback() {
+            @Override
+            public void handleResult(String result) {
+                log.info("[MixLLMManager] llm result: {}", result);
             }
         };
     }

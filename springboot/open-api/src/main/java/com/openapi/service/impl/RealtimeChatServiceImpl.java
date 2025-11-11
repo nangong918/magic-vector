@@ -23,6 +23,7 @@ import com.openapi.domain.dto.ws.response.RealtimeChatTextResponse;
 import com.openapi.domain.exception.AppException;
 import com.openapi.interfaces.OnSTTResultCallback;
 import com.openapi.interfaces.model.GenerateAudioStateCallback;
+import com.openapi.interfaces.model.LLMErrorCallback;
 import com.openapi.interfaces.model.LLMStateCallback;
 import com.openapi.service.AgentService;
 import com.openapi.service.ChatMessageService;
@@ -36,6 +37,7 @@ import com.openapi.service.model.TTSServiceService;
 import com.openapi.websocket.manager.WebSocketMessageManager;
 import io.reactivex.BackpressureStrategy;
 import io.reactivex.Flowable;
+import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
@@ -84,6 +86,115 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
     private final WebSocketMessageManager webSocketMessageManager;
     private final TTSServiceService ttsServiceService;
     private final LLMServiceService llmServiceService;
+
+    /**
+     * 初始化ChatClient
+     * 功能包括：1.绑定agentId，2.载入agent设定 3.载入历史记录
+     * @param chatContextManager    chatContextManager
+     * @param chatModel             chatModel
+     * @return                      ChatClient
+     * @throws AppException         AppException
+     */
+    @NotNull
+    @Override
+    public ChatClient initChatClient(@NotNull RealtimeChatContextManager chatContextManager, @NotNull DashScopeChatModel chatModel) throws AppException {
+        if (!userService.checkUserExistById(chatContextManager.userId)){
+            throw new AppException(UserExceptions.USER_NOT_EXIST);
+        }
+        AgentAo agentAo = agentService.getAgentById(chatContextManager.agentId);
+        if (agentAo == null || agentAo.getAgentId() == null){
+            throw new AppException(AgentExceptions.AGENT_NOT_EXIST);
+        }
+
+        // 设定
+        String description = Optional.ofNullable(agentAo.getAgentVo())
+                .map(agentVo -> agentVo.description)
+                .orElseGet(() -> {
+                    log.warn("Agent 没有设定，使用默认设定");
+                    return ModelConstant.SYSTEM_PROMPT;
+                });
+
+        ChatMemory chatMemory = agentConfig.chatMemory();
+
+        ChatClient chatClient = ChatClient.builder(chatModel)
+                .defaultAdvisors(MessageChatMemoryAdvisor.builder(chatMemory).build())
+                // 此处的defaultSystem存在问题，傻逼openAI会将其视为用户的输入，需要设计提示词工程
+                .defaultSystem(promptService.getSystemPrompt(description))
+                .build();
+
+        // 预先加载10条历史聊天记录
+        List<ChatMessageDo> chatMessageDos = chatMessageService.getLast10Messages(chatContextManager.agentId);
+        // 将历史消息添加到ChatMemory中
+        if (!chatMessageDos.isEmpty()) {
+
+            // 按时间正序排列，确保对话顺序正确 （前端展示是最新的放在第0个，而此处是最新的放在最后一个添加，所以需要重排序）
+            List<ChatMessageDo> sortedMessages = chatMessageDos.stream()
+                    .sorted(Comparator.comparing(ChatMessageDo::getChatTime))
+                    .toList();
+
+            List<Message> historyMessages = chatMessageConverter.chatMessageDoListToMessageList(sortedMessages);
+            for (Message message : historyMessages) {
+                chatMemory.add(chatContextManager.agentId, message);
+            }
+        }
+
+        return chatClient;
+    }
+
+
+    @Override
+    public void startTextChat(@NotNull String userQuestion, @NotNull RealtimeChatContextManager chatContextManager) throws AppException {
+        log.info("[startTextChat] 开始文本聊天：userQuestion={}", userQuestion);
+
+        // 前端传递过来再传递回去是因为需要分配messageId
+        RealtimeChatTextResponse userAudioSttResponse = chatContextManager.getUserTextResponse(userQuestion);
+        String response = JSON.toJSONString(userAudioSttResponse);
+
+        // 保存到数据库
+        ChatMessageDo chatMessageDo = null;
+        try {
+            chatMessageDo = chatMessageConverter.realtimeChatTextResponseToChatMessageDo(userAudioSttResponse, userAudioSttResponse.chatTime);
+            String messageId = chatMessageService.insertOne(chatMessageDo);
+            log.info("保存用户TextChat数据到数据库：{}", messageId);
+        } catch (Exception e) {
+            log.error("保存用户TextChat数据到数据库异常", e);
+        }
+
+        // 发送给user的text给Client
+        Map<String, String> responseMap = new HashMap<>();
+        responseMap.put(RealtimeResponseDataTypeEnum.TYPE, RealtimeResponseDataTypeEnum.TEXT_CHAT_RESPONSE.getType());
+        responseMap.put(RealtimeResponseDataTypeEnum.DATA, response);
+        String userTextResponse = JSON.toJSONString(responseMap);
+        webSocketMessageManager.submitMessage(
+                chatContextManager.agentId,
+                userTextResponse
+        );
+
+        String result = llmServiceService.mixLLMCallErrorProxy(
+                userQuestion,
+                chatContextManager.chatClient,
+                chatContextManager.agentId,
+                chatContextManager.getCurrentContextParam(),
+                chatContextManager.mcpSwitch,
+                new LLMErrorCallback() {
+                    @Override
+                    public int @NonNull [] addCountAndCheckIsOverLimit() {
+                        return chatContextManager.addCountAndCheckIsOverLimit();
+                    }
+
+                    @Override
+                    public void addTask(Object task) {
+                        chatContextManager.addChatTask(task);
+                    }
+
+                    @Override
+                    public void endConversation() {
+                        chatContextManager.endConversation();
+                    }
+                }
+        );
+    }
+
 
     /**
      * 启动音频聊天
@@ -640,92 +751,6 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
         }
     }
 
-
-    /**
-     * 初始化ChatClient
-     * @param chatContextManager    chatContextManager
-     * @param chatModel             chatModel
-     * @return                      ChatClient
-     * @throws AppException         AppException
-     */
-    @NotNull
-    @Override
-    public ChatClient initChatClient(@NotNull RealtimeChatContextManager chatContextManager, @NotNull DashScopeChatModel chatModel) throws AppException {
-        if (!userService.checkUserExistById(chatContextManager.userId)){
-            throw new AppException(UserExceptions.USER_NOT_EXIST);
-        }
-        AgentAo agentAo = agentService.getAgentById(chatContextManager.agentId);
-        if (agentAo == null || agentAo.getAgentId() == null){
-            throw new AppException(AgentExceptions.AGENT_NOT_EXIST);
-        }
-
-        // 设定
-        String description = Optional.ofNullable(agentAo.getAgentVo())
-                .map(agentVo -> agentVo.description)
-                .orElseGet(() -> {
-                    log.warn("Agent 没有设定，使用默认设定");
-                    return ModelConstant.SYSTEM_PROMPT;
-                });
-
-        ChatMemory chatMemory = agentConfig.chatMemory();
-
-        ChatClient chatClient = ChatClient.builder(chatModel)
-                .defaultAdvisors(MessageChatMemoryAdvisor.builder(chatMemory).build())
-                // 此处的defaultSystem存在问题，傻逼openAI会将其视为用户的输入，需要设计提示词工程
-                .defaultSystem(promptService.getSystemPrompt(description))
-                .build();
-
-        // 预先加载10条历史聊天记录
-        List<ChatMessageDo> chatMessageDos = chatMessageService.getLast10Messages(chatContextManager.agentId);
-        // 将历史消息添加到ChatMemory中
-        if (!chatMessageDos.isEmpty()) {
-
-            // 按时间正序排列，确保对话顺序正确 （前端展示是最新的放在第0个，而此处是最新的放在最后一个添加，所以需要重排序）
-            List<ChatMessageDo> sortedMessages = chatMessageDos.stream()
-                    .sorted(Comparator.comparing(ChatMessageDo::getChatTime))
-                    .toList();
-
-            List<Message> historyMessages = chatMessageConverter.chatMessageDoListToMessageList(sortedMessages);
-            for (Message message : historyMessages) {
-                chatMemory.add(chatContextManager.agentId, message);
-            }
-        }
-
-        return chatClient;
-    }
-
-
-    @Override
-    public void startTextChat(@NotNull String userQuestion, @NotNull RealtimeChatContextManager chatContextManager) throws AppException {
-        log.info("[websocket] 开始文本聊天：userQuestion={}", userQuestion);
-
-        // 前端传递过来再传递回去是因为需要分配messageId
-        RealtimeChatTextResponse userAudioSttResponse = chatContextManager.getUserTextResponse(userQuestion);
-        String response = JSON.toJSONString(userAudioSttResponse);
-
-        // 保存到数据库
-        ChatMessageDo chatMessageDo = null;
-        try {
-            chatMessageDo = chatMessageConverter.realtimeChatTextResponseToChatMessageDo(userAudioSttResponse, userAudioSttResponse.chatTime);
-            String messageId = chatMessageService.insertOne(chatMessageDo);
-            log.info("保存用户TextChat数据到数据库：{}", messageId);
-        } catch (Exception e) {
-            log.error("保存用户TextChat数据到数据库异常", e);
-        }
-
-        // 发送给user的text给Client
-        Map<String, String> responseMap = new HashMap<>();
-        responseMap.put(RealtimeResponseDataTypeEnum.TYPE, RealtimeResponseDataTypeEnum.TEXT_CHAT_RESPONSE.getType());
-        responseMap.put(RealtimeResponseDataTypeEnum.DATA, response);
-        String userTextResponse = JSON.toJSONString(responseMap);
-        webSocketMessageManager.submitMessage(
-                chatContextManager.agentId,
-                userTextResponse
-        );
-
-        var disposable = toolsLLMStreamCall(userQuestion, chatContextManager);
-        chatContextManager.addChatTask(disposable);
-    }
 
     @Override
     public void startFunctionCallResultChat(@Nullable String imageBase64, @NotNull RealtimeChatContextManager chatContextManager, boolean isPassiveNotActive) throws NoApiKeyException, UploadFileException {

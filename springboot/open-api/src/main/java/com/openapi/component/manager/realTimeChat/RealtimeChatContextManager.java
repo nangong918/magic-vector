@@ -3,6 +3,7 @@ package com.openapi.component.manager.realTimeChat;
 import cn.hutool.core.util.IdUtil;
 import com.alibaba.fastjson.JSON;
 import com.openapi.domain.ao.mixLLM.McpSwitch;
+import com.openapi.domain.constant.ModelConstant;
 import com.openapi.domain.constant.RoleTypeEnum;
 import com.openapi.domain.constant.realtime.RealtimeResponseDataTypeEnum;
 import com.openapi.domain.dto.ws.response.RealtimeChatTextResponse;
@@ -349,6 +350,15 @@ public class RealtimeChatContextManager implements
     }
 
     ///==========ChatRealtimeState==========
+
+    public int[] addCountAndCheckIsOverLimit(){
+        int[] countAndLimit = new int[2];
+        int currentLLMErrorCount = getLLMErrorCount();
+        boolean isOverLimit = currentLLMErrorCount >= ModelConstant.LLM_CONNECT_RESET_MAX_RETRY_COUNT;
+        countAndLimit[0] = currentLLMErrorCount;
+        countAndLimit[1] = isOverLimit ? 1 : 0;
+        return countAndLimit;
+    }
 
     @Override
     public int getLLMErrorCount() {

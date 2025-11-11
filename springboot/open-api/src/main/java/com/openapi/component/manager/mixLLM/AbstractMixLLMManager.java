@@ -5,6 +5,7 @@ import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONException;
 import com.openapi.domain.ao.mixLLM.MixLLMAudio;
 import com.openapi.domain.ao.mixLLM.MixLLMResult;
+import com.openapi.interfaces.mixLLM.LLMCallback;
 import com.openapi.interfaces.mixLLM.TTSCallback;
 import com.openapi.interfaces.model.GenerateAudioStateCallback;
 import com.openapi.service.model.TTSServiceService;
@@ -41,7 +42,7 @@ public abstract class AbstractMixLLMManager {
     }
 
     // Queue(sentence + eventList) -> callback(streamAudio)
-    public final void ttsQueueStream(
+    protected final void ttsQueueStream(
             Queue<MixLLMResult> mixLLMResults,
             TTSServiceService ttsServiceService,
             TTSCallback ttsCallback
@@ -68,7 +69,7 @@ public abstract class AbstractMixLLMManager {
     }
 
     // (sentence + eventList) -> streamAudio
-    public final Flowable<MixLLMAudio> ttsStream(
+    protected final Flowable<MixLLMAudio> ttsStream(
             TTSServiceService ttsServiceService,
             MixLLMResult mixLLMResult) {
         return Flowable.create(fluxSink -> {
@@ -136,12 +137,15 @@ public abstract class AbstractMixLLMManager {
     }
 
     // 将start方法改为final模板方法
-    public final void start(String result, TTSServiceService ttsServiceService, TTSCallback ttsCallback) {
+    public final void start(String result, TTSServiceService ttsServiceService, TTSCallback ttsCallback, LLMCallback llmCallback) {
         // 步骤1: 解析结果
         List<MixLLMResult> results = parseResult(result);
 
         // 步骤2: 合并句子和事件
         mergeSentencesAndEvents(results);
+
+        // 步骤3: 将提取到的句子结果交付出去
+        llmCallback.handleResult(getSentenceBuilder().toString());
 
         // 步骤3: 开始TTS流处理
         ttsQueueStream(getMixLLMResultsQueue(), ttsServiceService, ttsCallback);
@@ -152,6 +156,8 @@ public abstract class AbstractMixLLMManager {
     protected final void mergeSentencesAndEvents(List<MixLLMResult> results) {
         Queue<MixLLMResult> queue = getMixLLMResultsQueue();
         queue.clear();
+        StringBuilder sentenceBuilder = getSentenceBuilder();
+        sentenceBuilder.setLength(0);
         StringBuilder sb = new StringBuilder();
 
         for (MixLLMResult mixLLMResult : results) {
@@ -166,6 +172,8 @@ public abstract class AbstractMixLLMManager {
                 mixLLMResult = processMixLLMResultWithEvents(mixLLMResult);
                 queue.offer(mixLLMResult);
             }
+            // 保存句子
+            sentenceBuilder.append(mixLLMResult.chatSentence);
         }
 
         if (!sb.isEmpty()) {
@@ -178,6 +186,7 @@ public abstract class AbstractMixLLMManager {
 
     // 抽象方法 - 子类提供具体的队列实现
     protected abstract Queue<MixLLMResult> getMixLLMResultsQueue();
+    protected abstract StringBuilder getSentenceBuilder();
 
     protected MixLLMResult createMixLLMResult(String sentence) {
         MixLLMResult result = new MixLLMResult();
@@ -189,6 +198,4 @@ public abstract class AbstractMixLLMManager {
         // 默认直接返回，子类可以重写来处理带有事件的MixLLMResult
         return mixLLMResult;
     }
-
-    public abstract TTSCallback getDefaultTTSCallback();
 }
