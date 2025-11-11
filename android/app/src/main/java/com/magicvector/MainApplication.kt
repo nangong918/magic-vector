@@ -6,6 +6,7 @@ import com.core.appcore.api.ApiRequest
 import com.core.appcore.api.ApiRequestProvider
 import com.core.baseutil.image.ImageManager
 import com.data.dao.api.ApiRequestImpl
+import com.data.domain.ao.mixLLM.McpSwitch
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import com.magicvector.manager.ChatMapManager
@@ -107,6 +108,19 @@ class MainApplication : Application() {
                 visionManager = VisionManager()
             }
             return visionManager!!
+        }
+
+        // McpSwitch
+        private var mcpSwitch: McpSwitch? = null
+        fun getMcpSwitch(): McpSwitch {
+            if (mcpSwitch == null) {
+                mcpSwitch = McpSwitch()
+                mcpSwitch!!.camera = McpSwitch.McpSwitchMode.COMMANDS.code
+                mcpSwitch!!.motion = McpSwitch.McpSwitchMode.FREELY.code
+                mcpSwitch!!.emojiAndMood = McpSwitch.McpSwitchMode.FREELY.code
+                mcpSwitch!!.equipment = McpSwitch.McpEquipment.PHONE.code
+            }
+            return mcpSwitch!!
         }
     }
 

@@ -34,6 +34,13 @@ Android User管理登录页面
 3. 完成表情, motion的mcp
 4. 完成重构升级
 
+
+今日任务：
+1.Android在connect的时候需要传递MCP的设置，暂时在MainApplication中写死。
+2.Android改为接收MixLLM输入，并解析。
+3.Android上传图片到后端的阻塞测试。
+
+
 各种模式的测试demo
 重构升级: 面向对象, 设计模式, UML, 框架(Android, Spring设计模式)
 
