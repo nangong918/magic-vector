@@ -53,7 +53,7 @@ public abstract class AbstractMixLLMManager {
         }
         MixLLMResult mixLLMResult = mixLLMResults.poll();
         Flowable<MixLLMAudio> ttsFlowable = ttsStream(ttsServiceService, mixLLMResult);
-        var disposable = ttsFlowable.doOnSubscribe(subscription -> {})
+        var disposable = ttsFlowable.doOnSubscribe(ttsCallback::onStart)
                 .doFinally(() -> {
                     if (!mixLLMResults.isEmpty()) {
                         ttsQueueStream(mixLLMResults, ttsServiceService, ttsCallback);
