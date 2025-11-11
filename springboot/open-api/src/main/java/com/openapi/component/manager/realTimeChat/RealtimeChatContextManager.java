@@ -340,6 +340,7 @@ public class RealtimeChatContextManager implements
     public void reset() {
         llmProxyContext.reset();
         visionContext.reset();
+        mixLLMManager.reset();
         // 取消正在执行的任务
         cancelTask(chatTasks);
         cancelTask(functionCallTasks);

@@ -8,6 +8,7 @@ import com.openapi.component.manager.realTimeChat.RealtimeChatContextManager;
 import com.openapi.domain.constant.realtime.RealtimeRequestDataTypeEnum;
 import com.openapi.domain.constant.realtime.RealtimeResponseDataTypeEnum;
 import com.openapi.domain.constant.realtime.RealtimeSystemRequestEventEnum;
+import com.openapi.domain.dto.ws.request.McpSwitchRequest;
 import com.openapi.domain.dto.ws.request.RealtimeChatConnectRequest;
 import com.openapi.domain.dto.ws.request.UploadPhotoRequest;
 import com.openapi.service.RealtimeChatService;
@@ -28,6 +29,7 @@ import org.springframework.web.socket.handler.TextWebSocketHandler;
 import java.util.Base64;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 
 @Slf4j
 @RequiredArgsConstructor
@@ -214,6 +216,12 @@ public class RealtimeChatChannel extends TextWebSocketHandler {
                             log.info("[websocket] 获取图片失败, 无照片");
                             // 未获取到图片 -> 调用AI，告诉用户没有看到照片
                         }
+                    }
+                    else if (eventType.equals(RealtimeSystemRequestEventEnum.SUBMIT_MCP_SWITCH.getCode())){
+                        McpSwitchRequest systemRequest = JSON.parseObject(responseJson, McpSwitchRequest.class);
+                        Optional.ofNullable(systemRequest)
+                                        .map(it -> it.mcpSwitch)
+                                        .ifPresent(it -> realtimeChatContextManager.mcpSwitch.setByThat(it));
                     }
                 } catch (Exception e) {
                     log.error("[SYSTEM_MESSAGE] error 解析失败", e);

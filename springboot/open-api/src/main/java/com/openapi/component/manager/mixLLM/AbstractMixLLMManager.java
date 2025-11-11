@@ -187,6 +187,7 @@ public abstract class AbstractMixLLMManager {
     // 抽象方法 - 子类提供具体的队列实现
     protected abstract Queue<MixLLMResult> getMixLLMResultsQueue();
     protected abstract StringBuilder getSentenceBuilder();
+    public abstract void reset();
 
     protected MixLLMResult createMixLLMResult(String sentence) {
         MixLLMResult result = new MixLLMResult();

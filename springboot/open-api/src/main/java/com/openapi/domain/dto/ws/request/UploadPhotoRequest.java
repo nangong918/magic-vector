@@ -1,11 +1,11 @@
 package com.openapi.domain.dto.ws.request;
 
-import com.openapi.domain.constant.realtime.RealtimeSystemResponseEventEnum;
+import com.openapi.domain.constant.realtime.RealtimeSystemRequestEventEnum;
 import lombok.Data;
 
 @Data
 public class UploadPhotoRequest {
-    public String event = RealtimeSystemResponseEventEnum.UPLOAD_PHOTO.getCode();
+    public String event = RealtimeSystemRequestEventEnum.UPLOAD_PHOTO.getCode();
     public String agentId;
     public String userId;
     public String messageId;

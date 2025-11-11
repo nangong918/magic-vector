@@ -1,5 +1,6 @@
 package com.openapi.domain.ao.mixLLM;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.openapi.domain.constant.tools.AICallEnum;
 import lombok.Data;
 import lombok.NonNull;
@@ -20,6 +21,15 @@ public class McpSwitch {
     public String motion = McpSwitchMode.CLOSE.code;
     public String emojiAndMood = McpSwitchMode.CLOSE.code;
 
+    public void setByThat(McpSwitch that){
+        if (that == null){
+            return;
+        }
+        this.equipment = that.equipment == null ? McpEquipment.PHONE.code : that.equipment;
+        this.camera = that.camera == null ? McpSwitchMode.CLOSE.code : that.camera;
+        this.motion = that.motion == null ? McpSwitchMode.CLOSE.code : that.motion;
+        this.emojiAndMood = that.emojiAndMood == null ? McpSwitchMode.CLOSE.code : that.emojiAndMood;
+    }
 
     public enum McpSwitchMode implements AICallEnum {
         // close
@@ -113,6 +123,7 @@ public class McpSwitch {
 
     }
 
+    @JsonIgnore
     public String getAICallInstructions(){
         Map<String, String> map = new HashMap<>();
         map.put("当前设备", McpEquipment.getByCode(equipment).getName());
@@ -124,6 +135,7 @@ public class McpSwitch {
         return map + McpSwitchMode.getInstructions();
     }
 
+    @JsonIgnore
     public static void main(String[] args) {
         McpSwitch mcpSwitch = new McpSwitch();
         System.out.println(mcpSwitch.getAICallInstructions());

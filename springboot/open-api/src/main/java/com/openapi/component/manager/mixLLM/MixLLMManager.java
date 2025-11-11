@@ -42,6 +42,12 @@ public class MixLLMManager extends AbstractMixLLMManager{
         return sentenceBuilder;
     }
 
+    @Override
+    public void reset() {
+        mixLLMResults.clear();
+        sentenceBuilder.setLength(0);
+    }
+
     public static TTSCallback getDefaultTTSCallback(
             RealtimeChatContextManager chatContextManager,
             WebSocketMessageManager webSocketMessageManager){

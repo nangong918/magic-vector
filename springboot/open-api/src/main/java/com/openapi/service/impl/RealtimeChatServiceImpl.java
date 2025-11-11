@@ -146,7 +146,12 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
         return chatClient;
     }
 
-
+    /**
+     * 开始文本聊天
+     * @param userQuestion          userQuestion
+     * @param chatContextManager    chatContextManager
+     * @throws AppException         Agent相关的AppException
+     */
     @Override
     public void startTextChat(@NotNull String userQuestion, @NotNull RealtimeChatContextManager chatContextManager) throws AppException {
         log.info("[startTextChat] 开始文本聊天：userQuestion={}", userQuestion);
@@ -218,7 +223,6 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
                 llmCallback
         );
     }
-
 
     /**
      * 启动音频聊天

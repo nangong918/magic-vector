@@ -15,6 +15,11 @@ public enum RealtimeSystemRequestEventEnum {
      * @see com.openapi.domain.dto.ws.request.UploadPhotoRequest
      */
     UPLOAD_PHOTO("vision.upload.photo", "上传照片"),
+    /**
+     * 提交McpSwitch
+     * @see com.openapi.domain.dto.ws.request.McpSwitchRequest
+     */
+    SUBMIT_MCP_SWITCH("mcp.switch", "提交McpSwitch"),
     ;
 
     public static final String EVENT_KET = "event";
