@@ -157,8 +157,25 @@ AOP代理模式
 
 ## Android设计模式
 
-Mvc，Mvp，Mvvm
+Mvc，Mvp，Mvvm, Jetpack Compose
 
+### MVVM
+viewModel可以在Activity中进行切换，实现activity的view根据数据切换
+viewModel中的viewModelScope是伴随协程的生命周期，以viewModelScope启动的协程都会在viewModel结束时结束
+livedata: 观察者模式，当数据变化时，会通知观察者
+dataBinding: xml <-> viewModel自动绑定，在Jetpack Compose中取消了xml，view和viewModel的生命周期相同，该概念本质被实现而废弃。
+
+Android设计准则：
+UI：viewModel，Jetpack compose
+自动注入：Darger
+数据缓存：SharedPreferences，MKVV
+数据持久化：Room
+线程与生命周期：Kotlin协程，线程池
+局部网络请求：ViewModelScope
+全局网络请求：Service + EventBus （websocket长连接）
+app内部的数据监听：EventBus
+app系统级别的监听：BroadcastReceiver（如：网络状态监听，屏幕旋转监听等，飞行模式）-> BroadcastReceiver用来恢复websocket长连接
+混淆与逆向：R8，JADX
 
 # UML
 
