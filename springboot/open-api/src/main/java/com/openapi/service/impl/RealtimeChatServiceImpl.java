@@ -180,8 +180,8 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
                 userTextResponse
         );
 
-        // 调用LLM
-        String result = llmServiceService.mixLLMCallErrorProxy(
+        /// LLM
+        String llmResult = llmServiceService.mixLLMCallErrorProxy(
                 userQuestion,
                 chatContextManager.chatClient,
                 chatContextManager.agentId,
@@ -215,9 +215,9 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
                 webSocketMessageManager
         );
 
-        var mixLLMManager = chatContextManager.mixLLMManager;
-        mixLLMManager.start(
-                result,
+        /// TTS
+        chatContextManager.mixLLMManager.start(
+                llmResult,
                 ttsServiceService,
                 ttsCallback,
                 llmCallback
@@ -313,9 +313,9 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
     }
 
     private OnSTTResultCallback getOnSTTResultCallback(RealtimeChatContextManager chatContextManager) {
-        return result -> {
+        return sttResult -> {
             // 返回结果给前端
-            RealtimeChatTextResponse userAudioSttResponse = chatContextManager.getUserSTTResultResponse(result);
+            RealtimeChatTextResponse userAudioSttResponse = chatContextManager.getUserSTTResultResponse(sttResult);
             String response = JSON.toJSONString(userAudioSttResponse);
 
             // 保存到数据库
@@ -340,11 +340,47 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
                     startResponse
             );
 
-            /// llm
-            if (StringUtils.hasText(result)) {
-                var llmDisposable = toolsLLMStreamCall(result, chatContextManager);
-                chatContextManager.addChatTask(llmDisposable);
+            if (!StringUtils.hasText(sttResult)) {
+                log.warn("[startAudioChat] 语音识别结果为空");
+                return;
             }
+
+            /// LLM
+            String llmResult = llmServiceService.mixLLMCallErrorProxy(
+                    sttResult,
+                    chatContextManager.chatClient,
+                    chatContextManager.agentId,
+                    chatContextManager.getCurrentContextParam(),
+                    chatContextManager.mcpSwitch,
+                    new LLMErrorCallback() {
+                        @Override
+                        public int @NonNull [] addCountAndCheckIsOverLimit() {
+                            return chatContextManager.addCountAndCheckIsOverLimit();
+                        }
+
+                        @Override
+                        public void addTask(Object task) {
+                            chatContextManager.addChatTask(task);
+                        }
+
+                        @Override
+                        public void endConversation() {
+                            chatContextManager.endConversation();
+                        }
+                    },
+                    // MCP Tools
+                    visionToolService
+            );
+
+            /// TTS + Event
+            chatContextManager.mixLLMManager.start(
+                    llmResult,
+                    ttsServiceService,
+                    MixLLMManager.getDefaultTTSCallback(chatContextManager, webSocketMessageManager),
+                    MixLLMManager.getDefaultLLMCallback(chatContextManager, webSocketMessageManager)
+            );
+//                var llmDisposable = toolsLLMStreamCall(result, chatContextManager);
+//                chatContextManager.addChatTask(llmDisposable);
         };
     }
 
@@ -406,6 +442,7 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
     }
 
 
+/*
     private reactor.core.Disposable toolsLLMStreamCall(String sentence, @NotNull RealtimeChatContextManager chatContextManager){
         var callback = new LLMStateCallback() {
             final StringBuffer textBuffer = new StringBuffer();
@@ -556,6 +593,7 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
         );
     }
 
+*/
 
     /**
      * 设计模式：代理模式：解耦generateAudio的功能；
