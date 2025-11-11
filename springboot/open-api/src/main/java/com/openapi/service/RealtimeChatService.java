@@ -31,5 +31,7 @@ public interface RealtimeChatService {
      */
     void startFunctionCallResultChat(@Nullable String imageBase64, @NotNull RealtimeChatContextManager chatContextManager, boolean isPassiveNotActive) throws NoApiKeyException, UploadFileException;
 
+    void handleImageCall(String imageBase64, @NotNull RealtimeChatContextManager chatContextManager) throws NoApiKeyException, UploadFileException;
+
     @NotNull AllFunctionCallFinished getAllFunctionCallFinished(@NotNull RealtimeChatContextManager chatContextManager);
 }

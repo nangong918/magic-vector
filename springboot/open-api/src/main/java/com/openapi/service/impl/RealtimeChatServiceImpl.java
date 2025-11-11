@@ -732,8 +732,6 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
         if (imageBase64 == null || imageBase64.isEmpty()) {
             log.info("[websocket] 启动视觉聊天：无图片");
             chatContextManager.addFunctionCallResult("[视觉任务结果]: error错误，用户并没有提供图片资源");
-//            var disposable = functionCallLLMStreamCall(null, chatContextManager, isPassiveNotActive);
-//            chatContextManager.addFunctionCallTask(disposable);
             var disposable = functionCallResultLLMStreamCall(null, chatContextManager, isPassiveNotActive);
             chatContextManager.addFunctionCallTask(disposable);
         }
@@ -741,10 +739,21 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
             log.info("[websocket] 启动视觉聊天：有图片, imageLength: {}", imageBase64.length());
             String result = visionChatService.callWithFileBase64(imageBase64, chatContextManager.getUserRequestQuestion());
             chatContextManager.addFunctionCallResult("[视觉任务结果]" + result);
-//            var disposable = functionCallLLMStreamCall(result, chatContextManager, isPassiveNotActive);
-//            chatContextManager.addFunctionCallTask(disposable);
             var disposable = functionCallResultLLMStreamCall(result, chatContextManager, isPassiveNotActive);
             chatContextManager.addFunctionCallTask(disposable);
+        }
+    }
+
+    @Override
+    public void handleImageCall(String imageBase64, @NotNull RealtimeChatContextManager chatContextManager) throws NoApiKeyException, UploadFileException {
+        if (imageBase64 == null || imageBase64.isEmpty()) {
+            log.info("[handleImageCall] 启动视觉聊天：无图片");
+            chatContextManager.visionContext.setVisionResult("无图片，视觉理解失败。");
+        }
+        else {
+            log.info("[handleImageCall] 启动视觉聊天：有图片, imageLength: {}", imageBase64.length());
+            String result = visionChatService.callWithFileBase64(imageBase64, chatContextManager.getUserRequestQuestion());
+            chatContextManager.visionContext.setVisionResult(result);
         }
     }
 

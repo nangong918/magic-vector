@@ -123,14 +123,8 @@ public class ChatController {
         val realtimeChatContextManager = sessionConfig.realtimeChatContextManagerMap().get(agentId);
         var visionChatFuture = taskExecutor.submit(() -> {
             try {
-                // 取消之前的对话任务
-//                realtimeChatContextManager.cancelChatTask();
-                // 启动vision聊天
-                realtimeChatService.startFunctionCallResultChat(
-                        base64Str,
-                        realtimeChatContextManager,
-                        true
-                );
+                // 启动vision视觉理解
+                realtimeChatService.handleImageCall(base64Str, realtimeChatContextManager);
             } catch (Exception e) {
                 realtimeChatContextManager.endConversation();
                 log.error("[vision chat] 聊天处理异常", e);

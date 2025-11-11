@@ -139,7 +139,7 @@ public class RealtimeChatContextManager implements
     public long connectTimestamp = 0L;
     public WebSocketSession session;
     @Getter
-    public McpSwitch mcpSwitch;
+    public McpSwitch mcpSwitch = new McpSwitch();
 
     /// vision chat
     // image chat
