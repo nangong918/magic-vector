@@ -170,6 +170,7 @@ public class RealtimeChatContextManager implements
     public void newChatMessage(){
         // 重置
         reset();
+        mcpSwitch.camera = McpSwitch.McpSwitchMode.FREELY.code;
 
         // 填充新的会话数据
         currentMessageId = String.valueOf(IdUtil.getSnowflake().nextId());
