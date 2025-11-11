@@ -2,6 +2,7 @@ package com.openapi.component.manager.realTimeChat;
 
 import cn.hutool.core.util.IdUtil;
 import com.alibaba.fastjson.JSON;
+import com.openapi.domain.ao.mixLLM.McpSwitch;
 import com.openapi.domain.constant.RoleTypeEnum;
 import com.openapi.domain.constant.realtime.RealtimeResponseDataTypeEnum;
 import com.openapi.domain.dto.ws.response.RealtimeChatTextResponse;
@@ -137,6 +138,8 @@ public class RealtimeChatContextManager implements
     public String agentId;
     public long connectTimestamp = 0L;
     public WebSocketSession session;
+    @Getter
+    public McpSwitch mcpSwitch;
 
     /// vision chat
     // image chat
@@ -145,6 +148,7 @@ public class RealtimeChatContextManager implements
 //    public List<StringBuffer> imageListBase64 = new ArrayList<>();
     // video chat (开发的时候再放出来)
 //    public StringBuffer videoBase64 = new StringBuffer();
+    public VisionContext visionContext = new VisionContext();
 
     /// userQuestion
     @Getter
@@ -332,6 +336,7 @@ public class RealtimeChatContextManager implements
     @Override
     public void reset() {
         llmProxyContext.reset();
+        visionContext.reset();
         // 取消正在执行的任务
         cancelTask(chatTasks);
         cancelTask(functionCallTasks);
