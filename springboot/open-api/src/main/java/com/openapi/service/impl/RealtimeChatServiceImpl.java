@@ -7,6 +7,7 @@ import com.alibaba.dashscope.exception.NoApiKeyException;
 import com.alibaba.dashscope.exception.UploadFileException;
 import com.alibaba.fastjson.JSON;
 import com.openapi.component.manager.OptimizedSentenceDetector;
+import com.openapi.component.manager.mixLLM.MixLLMManager;
 import com.openapi.component.manager.realTimeChat.AllFunctionCallFinished;
 import com.openapi.component.manager.realTimeChat.RealtimeChatContextManager;
 import com.openapi.config.AgentConfig;
@@ -199,99 +200,15 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
                 }
         );
 
-        TTSCallback ttsCallback = new TTSCallback() {
-            @Override
-            public void onSubscribeDisposable(Disposable disposable) {
-                chatContextManager.addChatTask(disposable);
-            }
+        TTSCallback ttsCallback = MixLLMManager.getDefaultTTSCallback(
+                chatContextManager,
+                webSocketMessageManager
+        );
 
-            @Override
-            public void onStart(Subscription subscription) {
-                // tts Start
-                log.info("[startTextChat] tts start");
-                // 发送开始标识
-                Map<String, String> responseMap = new HashMap<>();
-                responseMap.put(RealtimeResponseDataTypeEnum.TYPE, RealtimeResponseDataTypeEnum.START_TTS.getType());
-                responseMap.put(RealtimeResponseDataTypeEnum.DATA, RealtimeResponseDataTypeEnum.START_TTS.getType());
-                String startResponse = JSON.toJSONString(responseMap);
-                webSocketMessageManager.submitMessage(
-                        chatContextManager.agentId,
-                        startResponse
-                );
-            }
-
-            @Override
-            public void onNext(MixLLMAudio mixLLMAudio) {
-                // 发送到设备端
-                // 音频数据
-                Optional.ofNullable(mixLLMAudio)
-                        .map(it -> it.base64Audio)
-                        .ifPresent(
-                                audioBase64Data -> {
-                                    Map<String, String> responseMap = new HashMap<>();
-                                    responseMap.put(RealtimeResponseDataTypeEnum.TYPE, RealtimeResponseDataTypeEnum.AUDIO_CHUNK.getType());
-                                    responseMap.put(RealtimeResponseDataTypeEnum.DATA, audioBase64Data);
-                                    String response = JSON.toJSONString(responseMap);
-                                    webSocketMessageManager.submitMessage(
-                                            chatContextManager.agentId,
-                                            response
-                                    );
-                                    log.info("[startTextChat] 发送TTS数据，tts data length: {}", audioBase64Data.length());
-                                }
-                        );
-
-                // 事件数据
-                Optional.ofNullable(mixLLMAudio)
-                        .map(it -> it.eventList)
-                        .filter(list -> !list.isEmpty())
-                        .ifPresent(
-                                eventList -> {
-                                    String eventListJSONStr = JSON.toJSONString(eventList);
-                                    Map<String, String> responseMap = new HashMap<>();
-                                    responseMap.put(RealtimeResponseDataTypeEnum.TYPE, RealtimeResponseDataTypeEnum.EVENT_LIST.getType());
-                                    responseMap.put(RealtimeResponseDataTypeEnum.DATA, eventListJSONStr);
-                                    String response = JSON.toJSONString(responseMap);
-                                    webSocketMessageManager.submitMessage(
-                                            chatContextManager.agentId,
-                                            response
-                                    );
-                                    log.info("[startTextChat] 发送EventList事件数据，eventList: {}", eventListJSONStr);
-                                }
-                        );
-            }
-
-            @Override
-            public void onComplete() {
-                // tts end
-                log.info("[startTextChat] tts end");
-                chatContextManager.endConversation();
-            }
-
-            @Override
-            public void onError(Throwable throwable) {
-                log.error("[startTextChat] tts error", throwable);
-                chatContextManager.endConversation();
-            }
-        };
-
-        LLMCallback llmCallback = new LLMCallback() {
-            @Override
-            public void handleResult(String result) {
-                // 消息发送给设备端
-                RealtimeChatTextResponse agentFragmentResponse = chatContextManager.getCurrentFragmentAgentResponse(result);
-
-                // 发送消息给Client
-                String agentFragmentResponseJson = JSON.toJSONString(agentFragmentResponse);
-                Map<String, String> fragmentResponseMap = new HashMap<>();
-                fragmentResponseMap.put(RealtimeResponseDataTypeEnum.TYPE, RealtimeResponseDataTypeEnum.TEXT_CHAT_RESPONSE.getType());
-                fragmentResponseMap.put(RealtimeResponseDataTypeEnum.DATA, agentFragmentResponseJson);
-                String response = JSON.toJSONString(fragmentResponseMap);
-                webSocketMessageManager.submitMessage(
-                        chatContextManager.agentId,
-                        response
-                );
-            }
-        };
+        LLMCallback llmCallback = MixLLMManager.getDefaultLLMCallback(
+                chatContextManager,
+                webSocketMessageManager
+        );
 
         var mixLLMManager = chatContextManager.mixLLMManager;
         mixLLMManager.start(
