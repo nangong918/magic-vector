@@ -47,8 +47,7 @@ public class MixLLMManager {
 
     private final Queue<MixLLMResult> mixLLMResults = new ConcurrentLinkedQueue<>();
 
-    // todo 测试
-    public void start(String result, TTSServiceService ttsServiceService) {
+    public void start(String result, TTSServiceService ttsServiceService, TTSCallback ttsCallback) {
 
         // 提取 + 合并出来sentence -> tts
         mixLLMResults.clear();
@@ -76,34 +75,36 @@ public class MixLLMManager {
         }
 
         // tts -> audio -> text + {audio, event}... -> client
-        tts(ttsServiceService);
+        ttsQueueStream(ttsServiceService, ttsCallback);
     }
 
-    // 定义callback
-    private void tts(TTSServiceService ttsServiceService){
-        TTSCallback ttsCallback = new TTSCallback() {
+    public TTSCallback getDefaultTTSCallback(){
+        return new TTSCallback() {
             @Override
             public void onSubscribeDisposable(Disposable disposable) {
                 // 记录disposable 到 contextManager
+                log.info("[MixLLMManager] tts start");
             }
 
             @Override
             public void onNext(MixLLMAudio mixLLMAudio) {
                 // 流式音频输出
+                log.info("[MixLLMManager] tts onNext, audioLength: {}, events: {}",
+                        mixLLMAudio.base64Audio.length(), mixLLMAudio.eventList);
             }
 
             @Override
             public void onComplete() {
                 // 发送TTS_END
+                log.info("[MixLLMManager] tts end, 发送TTS_END");
             }
 
             @Override
             public void onError(Throwable throwable) {
                 // 输出日志 + endConversation
+                log.error("[MixLLMManager] tts error", throwable);
             }
         };
-
-        ttsQueueStream(ttsServiceService, ttsCallback);
     }
 
     // Queue(sentence + eventList) -> callback(streamAudio)

@@ -5,10 +5,15 @@ import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONException;
 import com.openapi.MainApplication;
+import com.openapi.component.manager.mixLLM.MixLLMManager;
 import com.openapi.config.ChatConfig;
 import com.openapi.domain.ao.mixLLM.McpSwitch;
+import com.openapi.domain.ao.mixLLM.MixLLMAudio;
 import com.openapi.domain.ao.mixLLM.MixLLMResult;
+import com.openapi.interfaces.mixLLM.TTSCallback;
 import com.openapi.service.model.LLMServiceService;
+import com.openapi.service.model.TTSServiceService;
+import io.reactivex.disposables.Disposable;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.Test;
 import org.springframework.ai.chat.client.ChatClient;
@@ -224,5 +229,65 @@ public class MixLLMTests {
             log.error("error = ", e);
         }
 
+    }
+
+    @Autowired
+    private TTSServiceService ttsServiceService;
+
+    @Test
+    public void ttsTest() throws InterruptedException {
+
+        MixLLMManager mixLLMManager = new MixLLMManager();
+
+        ChatClient chatClient = ChatClient.builder(chatModel)
+                .defaultSystem("你是我的可爱智能机器小狗vector")
+                .build();
+
+        McpSwitch mcpSwitch = new McpSwitch();
+        mcpSwitch.emojiAndMood = McpSwitch.McpSwitchMode.FREELY.code;
+        mcpSwitch.camera = McpSwitch.McpSwitchMode.CLOSE.code;
+        mcpSwitch.motion = McpSwitch.McpSwitchMode.FREELY.code;
+
+        String sentence = "看向我，朝我走两步，告诉我最近你过的开心吗？你会撒娇吗？要乖乖的哦。";
+
+        long start = System.currentTimeMillis();
+        String result = llmServiceService.mixLLMCall(
+                sentence,
+                chatClient,
+                contextParam.get("agentId"),
+                contextParam.toString(),
+                mcpSwitch
+        );
+        System.out.println("llm cost = " + (System.currentTimeMillis() - start));
+        System.out.println("result = " + result);
+
+        mixLLMManager.start(result, ttsServiceService, new TTSCallback() {
+            @Override
+            public void onSubscribeDisposable(Disposable disposable) {
+                // 记录disposable 到 contextManager
+                log.info("[MixLLMManager] tts start");
+            }
+
+            @Override
+            public void onNext(MixLLMAudio mixLLMAudio) {
+                // 流式音频输出
+                log.info("[MixLLMManager] tts onNext, audioLength: {}, events: {}",
+                        mixLLMAudio.base64Audio.length(), mixLLMAudio.eventList);
+            }
+
+            @Override
+            public void onComplete() {
+                // 发送TTS_END
+                log.info("[MixLLMManager] tts end, 发送TTS_END");
+            }
+
+            @Override
+            public void onError(Throwable throwable) {
+                // 输出日志 + endConversation
+                log.error("[MixLLMManager] tts error", throwable);
+            }
+        });
+
+        Thread.sleep(30_000L);
     }
 }
