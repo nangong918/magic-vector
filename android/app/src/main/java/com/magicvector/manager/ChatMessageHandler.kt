@@ -19,6 +19,8 @@ import com.core.baseutil.permissions.GainPermissionCallback
 import com.core.baseutil.permissions.PermissionUtil
 import com.core.baseutil.ui.ToastUtils
 import com.data.domain.ao.message.MessageContactItemAo
+import com.data.domain.ao.mixLLM.McpSwitch
+import com.data.domain.ao.mixLLM.MixLLMEvent
 import com.data.domain.constant.BaseConstant
 import com.data.domain.constant.VadChatState
 import com.data.domain.constant.chat.RealtimeRequestDataTypeEnum
@@ -524,6 +526,7 @@ class ChatMessageHandler {
         val type = RealtimeResponseDataTypeEnum.getByType(typeStr)
 
         when(type){
+            // 开始TTS
             RealtimeResponseDataTypeEnum.START_TTS -> {
                 Log.i(TAG, "handleTextMessage::START_TTS播放")
                 // 开始接收数据
@@ -548,6 +551,7 @@ class ChatMessageHandler {
                     Log.d(TAG, "handleTextMessage:: 停止VAD通话: 不管理VAD录音")
                 }
             }
+            // 结束TTS + 结束会话
             RealtimeResponseDataTypeEnum.STOP_TTS -> {
                 Log.i(TAG, "handleTextMessage::STOP_TTS播放")
                 // 结束接收数据
@@ -571,6 +575,7 @@ class ChatMessageHandler {
                     Log.d(TAG, "handleTextMessage:: 停止VAD通话: 不管理VAD录音")
                 }
             }
+            // 音频流
             RealtimeResponseDataTypeEnum.AUDIO_CHUNK -> {
                 // 音频数据
                 realtimeChatState.postValue(RealtimeChatState.Receiving)
@@ -580,6 +585,7 @@ class ChatMessageHandler {
                 }
                 onVadChatStateChange?.onChange(VadChatState.Replying)
             }
+            // 文本流
             RealtimeResponseDataTypeEnum.TEXT_CHAT_RESPONSE -> {
                 // 文本数据
                 realtimeChatState.postValue(RealtimeChatState.Receiving)
@@ -602,7 +608,9 @@ class ChatMessageHandler {
                     Log.e(TAG, "handleTextMessage: data is null")
                 }
             }
+            // 文本整句
             RealtimeResponseDataTypeEnum.WHOLE_CHAT_RESPONSE -> {}
+            // system响应
             RealtimeResponseDataTypeEnum.TEXT_SYSTEM_RESPONSE -> {
                 val data = map[RealtimeResponseDataTypeEnum.DATA]
                 data?.let {
@@ -614,6 +622,13 @@ class ChatMessageHandler {
                     找到要求拍照的消息，调用回调。
                     回调调用拍摄照片，转为base64，组成json加入message消息，传递给后端 -> 等待响应。
                  */
+            }
+            // 事件列表
+            RealtimeResponseDataTypeEnum.EVENT_LIST -> {
+                val data = map[RealtimeResponseDataTypeEnum.DATA]
+                data?.let {
+                    handleEventList(it)
+                }
             }
         }
     }
@@ -644,6 +659,32 @@ class ChatMessageHandler {
         } catch (e: Exception) {
             Log.e(TAG, "handleSystemMessage: parse error", e)
         }
+    }
+
+    private fun handleEventList(eventListStr: String) {
+        try {
+            val eventListType = object : TypeToken<List<MixLLMEvent>>() {}.type
+            val eventList: List<MixLLMEvent> = GSON.fromJson(eventListStr, eventListType)
+
+            // 处理解析后的事件列表
+            eventList.forEach { event ->
+                // 根据需要处理每个 event 对象
+                println("$TAG, Event Type: ${event.eventType}, Event Data: ${event.event}")
+            }
+        } catch (e: Exception){
+            Log.e(TAG, "handleEventList: parse error", e)
+        }
+    }
+
+    //===========sendMessage
+
+    fun sendMcpSwitch(mcpSwitch: McpSwitch = MainApplication.getMcpSwitch()){
+        val mcpSwitchJson = GSON.toJson(mcpSwitch)
+        val dataMap = mapOf(
+            RealtimeRequestDataTypeEnum.TYPE to RealtimeRequestDataTypeEnum.SYSTEM_MESSAGE.type,
+            RealtimeRequestDataTypeEnum.DATA to mcpSwitchJson
+        )
+        realtimeChatWsClient!!.sendMessage(dataMap)
     }
 
     //--------------------------LifeCycle---------------------------

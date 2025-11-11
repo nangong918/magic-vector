@@ -1,5 +1,6 @@
 package com.data.domain.constant.chat;
 
+import com.data.domain.ao.mixLLM.MixLLMEvent;
 import com.data.domain.dto.ws.reponse.RealtimeChatTextResponse;
 import com.data.domain.dto.ws.reponse.SystemTextResponse;
 
@@ -25,6 +26,11 @@ public enum RealtimeResponseDataTypeEnum {
      * String: base64Audio
      */
     AUDIO_CHUNK("audio_chunk"),
+    /**
+     * 事件列表: List<MixLLMEvent>
+     * @see MixLLMEvent
+     */
+    EVENT_LIST("event_list"),
     /**
      * text_chat_response（user response、fragment回复）
      * @see RealtimeChatTextResponse
