@@ -1,22 +1,11 @@
 package com.openapi.component.manager.mixLLM;
 
-import com.alibaba.fastjson.JSON;
-import com.alibaba.fastjson.JSONArray;
 import com.openapi.domain.ao.mixLLM.MixLLMAudio;
 import com.openapi.domain.ao.mixLLM.MixLLMResult;
 import com.openapi.interfaces.mixLLM.TTSCallback;
-import com.openapi.interfaces.model.GenerateAudioStateCallback;
-import com.openapi.service.model.TTSServiceService;
-import io.reactivex.BackpressureStrategy;
-import io.reactivex.Flowable;
 import io.reactivex.disposables.Disposable;
-import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
-import org.reactivestreams.Subscription;
-import org.springframework.util.CollectionUtils;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
@@ -26,58 +15,17 @@ import java.util.concurrent.ConcurrentLinkedQueue;
  * LLM结果管理者
  */
 @Slf4j
-public class MixLLMManager {
+public class MixLLMManager extends AbstractMixLLMManager{
 
-    @NonNull
-    public static List<MixLLMResult> parseResult(String result){
-        List<MixLLMResult> mixLLMResults = new ArrayList<>();
-        try {
-            JSONArray jsonArray = JSON.parseArray(result);
+    // 缓存结果(不能放在抽象类，不能多个对象用一个单例)
+    protected final Queue<MixLLMResult> mixLLMResults = new ConcurrentLinkedQueue<>();
 
-            for (int i = 0; i < jsonArray.size(); i++) {
-                MixLLMResult mixLLMResult = jsonArray.getObject(i, MixLLMResult.class);
-                mixLLMResults.add(mixLLMResult);
-            }
-        } catch (Exception e){
-            log.error("[MixLLMManager] 解析mix LLM result异常", e);
-        }
-
+    @Override
+    protected Queue<MixLLMResult> getMixLLMResultsQueue() {
         return mixLLMResults;
     }
 
-    private final Queue<MixLLMResult> mixLLMResults = new ConcurrentLinkedQueue<>();
-
-    public void start(String result, TTSServiceService ttsServiceService, TTSCallback ttsCallback) {
-
-        // 提取 + 合并出来sentence -> tts
-        mixLLMResults.clear();
-        List<MixLLMResult> results = parseResult(result);
-        StringBuilder sb = new StringBuilder();
-        for (MixLLMResult mixLLMResult : results){
-            if (CollectionUtils.isEmpty(mixLLMResult.eventList)){
-                sb.append(mixLLMResult.chatSentence);
-            }
-            else {
-                if (!sb.isEmpty()){
-                    MixLLMResult lastMixLLMResult = new MixLLMResult();
-                    lastMixLLMResult.chatSentence = sb.toString();
-                    mixLLMResults.offer(lastMixLLMResult);
-                    sb.setLength(0);
-                }
-                mixLLMResults.offer(mixLLMResult);
-            }
-        }
-        if (!sb.isEmpty()){
-            MixLLMResult lastMixLLMResult = new MixLLMResult();
-            lastMixLLMResult.chatSentence = sb.toString();
-            mixLLMResults.offer(lastMixLLMResult);
-            sb.setLength(0);
-        }
-
-        // tts -> audio -> text + {audio, event}... -> client
-        ttsQueueStream(ttsServiceService, ttsCallback);
-    }
-
+    @Override
     public TTSCallback getDefaultTTSCallback(){
         return new TTSCallback() {
             @Override
@@ -105,99 +53,5 @@ public class MixLLMManager {
                 log.error("[MixLLMManager] tts error", throwable);
             }
         };
-    }
-
-    // Queue(sentence + eventList) -> callback(streamAudio)
-    private void ttsQueueStream(
-            TTSServiceService ttsServiceService,
-            TTSCallback ttsCallback
-    ){
-        if (mixLLMResults.isEmpty()){
-            ttsCallback.onComplete();
-            return;
-        }
-        MixLLMResult mixLLMResult = mixLLMResults.poll();
-        Flowable<MixLLMAudio> ttsFlowable = ttsStream(ttsServiceService, mixLLMResult);
-        var disposable = ttsFlowable.doOnSubscribe(subscription -> {})
-                .doFinally(() -> {
-                    if (!mixLLMResults.isEmpty()) {
-                        ttsQueueStream(ttsServiceService, ttsCallback);
-                    }
-                    else {
-                        ttsCallback.onComplete();
-                    }
-                })
-                .subscribe(
-                        ttsCallback::onNext,
-                        ttsCallback::onError
-                );
-        ttsCallback.onSubscribeDisposable(disposable);
-    }
-
-    // (sentence + eventList) -> streamAudio
-    private Flowable<MixLLMAudio> ttsStream(
-            TTSServiceService ttsServiceService,
-            MixLLMResult mixLLMResult) {
-        return Flowable.create(fluxSink -> {
-            try {
-                ttsServiceService.generateAudio(
-                        mixLLMResult.chatSentence,
-                        new GenerateAudioStateCallback() {
-                            boolean isFirst = true;
-                            @Override
-                            public void onSubscribe(Subscription subscription) {
-
-                            }
-
-                            @Override
-                            public void onSingleFinish() {
-                                // 单个音频生成完成
-                                fluxSink.onComplete();
-                            }
-
-                            @Override
-                            public void onAllFinish() {
-                                // 不用管，这个结束不是为这个方法设计的
-                            }
-
-                            @Override
-                            public void onNext(String audioBase64Data) {
-                                MixLLMAudio mixLLMAudio = new MixLLMAudio();
-                                if (isFirst){
-                                    isFirst = false;
-                                    mixLLMAudio.eventList = mixLLMResult.eventList;
-                                }
-                                mixLLMAudio.base64Audio = audioBase64Data;
-
-                                // 发送数据到Flux
-                                if (!fluxSink.isCancelled()) {
-                                    fluxSink.onNext(mixLLMAudio);
-                                }
-                            }
-
-                            @Override
-                            public void haveNoSentence() {
-                                // 没有句子时直接完成
-                                if (!fluxSink.isCancelled()) {
-                                    fluxSink.onComplete();
-                                }
-                            }
-
-                            @Override
-                            public void onError(Throwable throwable) {
-                                // 发送错误
-                                if (!fluxSink.isCancelled()) {
-                                    fluxSink.onError(throwable);
-                                }
-                            }
-                        }
-                );
-            } catch (Exception e){
-                // 发送错误
-                if (!fluxSink.isCancelled()) {
-                    fluxSink.onError(e);
-                }
-            }
-        }, BackpressureStrategy.BUFFER);
     }
 }
