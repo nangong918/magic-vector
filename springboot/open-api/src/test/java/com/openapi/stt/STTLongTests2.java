@@ -53,7 +53,6 @@ public class STTLongTests2 {
 
         } catch (Exception e) {
             System.err.println("程序执行出错: " + e.getMessage());
-            e.printStackTrace();
         }
     }
 
@@ -61,15 +60,12 @@ public class STTLongTests2 {
         // 创建用于TTS音频数据流转发的处理器
         PublishProcessor<ByteBuffer> audioStreamProcessor = PublishProcessor.create();
 
-        // 直接使用PublishProcessor作为Flowable，因为PublishProcessor本身就是Flowable
-        Flowable<ByteBuffer> audioFlowable = audioStreamProcessor;
-
         // 创建STT识别结果的字符串构建器
         AtomicReference<StringBuilder> sttResultBuilder = new AtomicReference<>(new StringBuilder());
         CountDownLatch completionLatch = new CountDownLatch(1);
 
         // 先启动STT识别
-        startSTTRecognition(audioFlowable, sttResultBuilder, completionLatch);
+        startSTTRecognition(audioStreamProcessor, sttResultBuilder, completionLatch);
 
         // 然后启动TTS转换，将音频数据实时转发给STT
         startTTSToSTTStream(audioStreamProcessor, completionLatch);
@@ -92,14 +88,13 @@ public class STTLongTests2 {
                         .apiKey(API_KEY)
                         .build();
 
-                recognizer.streamCall(sttParam, audioSource)
+                var disposable = recognizer.streamCall(sttParam, audioSource)
                         .subscribe(
                                 result -> {
                                     handleRecognitionResult(result, resultBuilder);
                                 },
                                 error -> {
                                     System.err.println("STT 识别出错: " + error.getMessage());
-                                    error.printStackTrace();
                                     completionLatch.countDown();
                                 },
                                 () -> {
@@ -112,7 +107,6 @@ public class STTLongTests2 {
 
             } catch (Exception e) {
                 System.err.println("STT 调用异常: " + e.getMessage());
-                e.printStackTrace();
                 completionLatch.countDown();
             }
         }).start();
@@ -167,7 +161,6 @@ public class STTLongTests2 {
             @Override
             public void onError(Exception e) {
                 System.err.println("TTS 流式转换出错: " + e.getMessage());
-                e.printStackTrace();
                 audioStreamProcessor.onError(e);
                 completionLatch.countDown();
             }
