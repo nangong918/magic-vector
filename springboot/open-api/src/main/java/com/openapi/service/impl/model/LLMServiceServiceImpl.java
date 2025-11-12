@@ -9,6 +9,7 @@ import com.openapi.interfaces.model.StreamCallErrorCallback;
 import com.openapi.interfaces.model.LLMStateCallback;
 import com.openapi.service.PromptService;
 import com.openapi.service.model.LLMServiceService;
+import io.netty.channel.ConnectTimeoutException;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -317,37 +318,17 @@ public class LLMServiceServiceImpl implements LLMServiceService {
 
             @Override
             public void onError(Throwable throwable) {
-                if (throwable instanceof WebClientRequestException || throwable instanceof TimeoutException) {
-                    log.error("[mix LLM Stream proxy] 连接超时异常，异常详情：", throwable);
-
-                    int[] retryResult = errorCallback.addCountAndCheckIsOverLimit();
-                    // 超出重试限制检查
-                    boolean isOverLimit = retryResult[0] > 0;
-                    if (!isOverLimit){
-                        log.info("[mix LLM Stream proxy] 尝试重连，当前重连次数：{}", retryResult[1]);
-
-                        var disposable = mixLLMStreamCallErrorProxy(
-                                sentence,
-                                chatClient,
-                                agentId,
-                                currentContextParam,
-                                mcpSwitch,
-                                callback,
-                                errorCallback,
-                                functionCallTools
-                        );
-                        errorCallback.addTask(disposable);
-                    }
-                    else {
-                        log.error("[mix LLM Stream proxy] 重连次数超出限制，不再重连");
-                        errorCallback.endConversation();
-                    }
-                }
-                else {
-                    log.error("[mix LLM Stream proxy] 非连接超时异常，异常详情：", throwable);
-                    // 上游去控制结束会话
-                    callback.onError(throwable);
-                }
+                handleConnectResetTimeoutError(
+                        throwable,
+                        sentence,
+                        chatClient,
+                        agentId,
+                        currentContextParam,
+                        mcpSwitch,
+                        callback,
+                        errorCallback,
+                        functionCallTools
+                );
             }
         };
 
@@ -360,6 +341,47 @@ public class LLMServiceServiceImpl implements LLMServiceService {
                 proxyCallback,
                 functionCallTools
         );
+    }
+
+    private void handleConnectResetTimeoutError(
+            @NonNull Throwable e,
+            @NonNull String sentence,
+            @NonNull ChatClient chatClient,
+            @NonNull String agentId,
+            @NonNull String currentContextParam,
+            @NonNull McpSwitch mcpSwitch,
+            @NonNull LLMStateCallback llmStateCallback,
+            @NonNull StreamCallErrorCallback errorCallback,
+            @NonNull Object... functionCallTools
+    ){
+        if (e instanceof WebClientRequestException || e instanceof TimeoutException || e instanceof ConnectTimeoutException){
+            // 连接超时
+            log.error("[mixLLMStreamCallErrorProxy] 连接超时: {}", sentence, e);
+
+            int[] retryResult = errorCallback.addCountAndCheckIsOverLimit();
+            // 超出重试限制检查
+            boolean isOverLimit = retryResult[0] > 0;
+
+            if (isOverLimit) {
+                log.error("[mix LLM Stream] 尝试重连次数已超过限制，不再尝试重连");
+
+                errorCallback.endConversation();
+            }
+            else {
+                log.info("[mix LLM Stream] 尝试重连，当前重连次数：{}", retryResult[1]);
+
+                mixLLMStreamCallErrorProxy(
+                        sentence,
+                        chatClient,
+                        agentId,
+                        currentContextParam,
+                        mcpSwitch,
+                        llmStateCallback,
+                        errorCallback,
+                        functionCallTools
+                );
+            }
+        }
     }
 
     /**

@@ -9,6 +9,7 @@ import com.openapi.domain.constant.ModelConstant;
 import com.openapi.interfaces.mixLLM.STTCallback;
 import com.openapi.interfaces.model.StreamCallErrorCallback;
 import com.openapi.service.model.STTServiceService;
+import io.netty.channel.ConnectTimeoutException;
 import io.reactivex.Flowable;
 import io.reactivex.disposables.Disposable;
 import lombok.NonNull;
@@ -133,11 +134,11 @@ public class STTServiceServiceImpl implements STTServiceService {
     }
 
     private void handleConnectResetTimeoutError(
-            Throwable e,
+            @NonNull Throwable e,
             @NonNull Flowable<ByteBuffer> audioSource,
             @NonNull STTCallback sttCallback,
             @NonNull StreamCallErrorCallback errorCallback)  {
-        if (e instanceof WebClientRequestException || e instanceof TimeoutException) {
+        if (e instanceof WebClientRequestException || e instanceof TimeoutException || e instanceof ConnectTimeoutException) {
             log.error("[STT] 连接超时异常，异常详情：", e);
 
             int[] retryResult = errorCallback.addCountAndCheckIsOverLimit();

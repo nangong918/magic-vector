@@ -240,7 +240,7 @@ public class TTSServiceServiceImpl implements TTSServiceService {
     }
 
     private void handleConnectResetTimeoutError(
-            Throwable e,
+            @NonNull Throwable e,
             @NonNull String sentence,
             @NonNull TTSStateCallback ttsStateCallback,
             @NonNull StreamCallErrorCallback errorCallback

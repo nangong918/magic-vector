@@ -37,15 +37,12 @@ Android User管理登录页面
 (太着急了, 压力太大了, 慢慢来吧)
 
 
-1. 阅读LLM，STT，TTS，VL的模型输入限制，设计分片和缓存方案。
-2. visionService升级：提前上传数据直接使用。无提前上传数据就使用阻塞Http获取。
-3. 根据重构的内容升级ContextManager
-4. 抽象工厂解耦Mqtt和Websocket的选择
-5. Android 前端改为接收事件类型。
-6. JSON动态解析，TTS流式生成
-7. 测试：1.取消LLM阻塞改为Flux 2. JSON动态解析 3.模型参数对接和缓存分片设计 4.Prompt提示词测试AI理解能力，Advisers拦截解析AI上传数据
-8. 编写STT测试用例，并测试最大音频输入。
-9. 为LLM，STT，TTS这种流式调用的都加上重试机制
+1. visionService升级：提前上传数据直接使用。无提前上传数据就使用阻塞Http获取。
+2. 根据重构的内容升级ContextManager
+3. 抽象工厂解耦Mqtt和Websocket的选择
+4. Android 前端改为接收事件类型。
+5. JSON动态解析，TTS流式生成
+6. 测试：1. JSON动态解析 2.Prompt提示词测试AI理解能力，Advisers拦截解析AI上传数据
 
 先用测试代码测试项目可行性再进行开发. 不然开发完成发现一堆AI蠢笨如牛的bug导致无法实现, 还得推翻重来.
 压力测试, 测出接口的极限, 好设计优化方案.
@@ -204,6 +201,9 @@ YOLOv8实现视频流目标活动检测 -> 用于未来调用视频流模型 (20
 取消LLM阻塞，改为使用Flux。
 完成大量音频的STT test
 完成大量音频的STT 异步 test
+完成编写STT测试用例，并测试最大音频输入。
+阅读LLM，STT，TTS，VL的模型输入限制，设计分片和缓存方案。-> STT:分片发送; TTS -> 句子分片,迭代调用
+为LLM，STT，TTS这种流式调用的都加上重试机制
 
 
 ## 其他
