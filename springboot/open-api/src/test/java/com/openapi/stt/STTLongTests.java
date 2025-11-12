@@ -1,4 +1,4 @@
-package com.openapi;
+package com.openapi.stt;
 
 import com.alibaba.dashscope.aigc.multimodalconversation.AudioParameters;
 import com.alibaba.dashscope.aigc.multimodalconversation.MultiModalConversation;
@@ -70,11 +70,11 @@ public class STTLongTests {
                     emitter.onNext(chunkBuffer);
 
                     position = end;
-
-                    // 添加小延迟模拟实时流
-                    if (position < audioData.length) {
-                        Thread.sleep(50); // 50ms 延迟
-                    }
+//                      // 不需要要
+//                    // 添加小延迟模拟实时流
+//                    if (position < audioData.length) {
+//                        Thread.sleep(50); // 50ms 延迟
+//                    }
                 }
 
                 emitter.onComplete();
@@ -85,7 +85,7 @@ public class STTLongTests {
         }, BackpressureStrategy.BUFFER);
     }
 
-    private static final String STT_MODEL = "paraformer-realtime-v2"; // 建议使用这个模型
+    private static final String STT_MODEL = "fun-asr-realtime"; // 建议使用这个模型
 
     public static void sttStreamCall(Flowable<ByteBuffer> audioSource) throws NoApiKeyException {
         // 创建Recognizer
@@ -120,7 +120,7 @@ public class STTLongTests {
                     );
 
             // 等待识别完成，设置超时时间
-            if (!completionLatch.await(30, TimeUnit.SECONDS)) {
+            if (!completionLatch.await(300, TimeUnit.SECONDS)) {
                 System.out.println("STT 识别超时");
             }
 
@@ -167,7 +167,7 @@ public class STTLongTests {
 
         MultiModalConversation conv = new MultiModalConversation();
 
-        conv.streamCall(ttsParam, new ResultCallback<MultiModalConversationResult>() {
+        conv.streamCall(ttsParam, new ResultCallback<>() {
             @Override
             public void onEvent(MultiModalConversationResult result) {
                 if (result != null && result.getOutput() != null

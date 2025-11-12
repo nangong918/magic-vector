@@ -1,4 +1,4 @@
-package com.openapi;
+package com.openapi.stt;
 
 import com.alibaba.dashscope.aigc.multimodalconversation.AudioParameters;
 import com.alibaba.dashscope.aigc.multimodalconversation.MultiModalConversation;
@@ -6,7 +6,6 @@ import com.alibaba.dashscope.aigc.multimodalconversation.MultiModalConversationP
 import com.alibaba.dashscope.aigc.multimodalconversation.MultiModalConversationResult;
 import com.alibaba.dashscope.audio.asr.recognition.Recognition;
 import com.alibaba.dashscope.audio.asr.recognition.RecognitionParam;
-import com.alibaba.dashscope.audio.asr.recognition.RecognitionResult;
 import com.alibaba.dashscope.common.ResultCallback;
 import com.alibaba.dashscope.exception.InputRequiredException;
 import com.alibaba.dashscope.exception.NoApiKeyException;
