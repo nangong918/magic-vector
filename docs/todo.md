@@ -37,12 +37,14 @@ Android User管理登录页面
 (太着急了, 压力太大了, 慢慢来吧)
 
 
-1. 阅读LLM，STT，TTS的模型输入限制，设计分片和缓存方案。
+1. 阅读LLM，STT，TTS，VL的模型输入限制，设计分片和缓存方案。
 2. visionService升级：提前上传数据直接使用。无提前上传数据就使用阻塞Http获取。
-3. 测试：1.取消LLM阻塞改为Flux 2. JSON动态解析 3.模型参数对接和缓存分片设计 4.Prompt提示词测试AI理解能力，Advisers拦截解析AI上传数据
-4. 根据重构的内容升级ContextManager
-5. 抽象工厂解耦Mqtt和Websocket的选择
-6. Android 前端改为接收事件类型。
+3. 根据重构的内容升级ContextManager
+4. 抽象工厂解耦Mqtt和Websocket的选择
+5. Android 前端改为接收事件类型。
+6. JSON动态解析，TTS流式生成
+7. 测试：1.取消LLM阻塞改为Flux 2. JSON动态解析 3.模型参数对接和缓存分片设计 4.Prompt提示词测试AI理解能力，Advisers拦截解析AI上传数据
+8. 编写STT测试用例，并测试最大音频输入。
 
 先用测试代码测试项目可行性再进行开发. 不然开发完成发现一堆AI蠢笨如牛的bug导致无法实现, 还得推翻重来.
 压力测试, 测出接口的极限, 好设计优化方案.
