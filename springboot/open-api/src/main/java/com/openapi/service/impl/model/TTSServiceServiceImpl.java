@@ -9,9 +9,11 @@ import com.alibaba.dashscope.exception.NoApiKeyException;
 import com.alibaba.dashscope.exception.UploadFileException;
 import com.openapi.config.ChatConfig;
 import com.openapi.domain.constant.ModelConstant;
+import com.openapi.interfaces.model.StreamCallErrorCallback;
 import com.openapi.interfaces.model.TTSStateCallback;
 import com.openapi.interfaces.model.GetCurrentTTSState;
 import com.openapi.service.model.TTSServiceService;
+import io.netty.channel.ConnectTimeoutException;
 import io.reactivex.Flowable;
 import io.reactivex.disposables.Disposable;
 import lombok.NonNull;
@@ -20,13 +22,14 @@ import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
 import org.reactivestreams.Subscription;
 import org.springframework.stereotype.Service;
+import org.springframework.web.reactive.function.client.WebClientRequestException;
 
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * @author 13225
@@ -181,6 +184,94 @@ public class TTSServiceServiceImpl implements TTSServiceService {
                 splitSentenceIterator.next(),
                 allTTSStateCallback
         );
+    }
+
+    @Override
+    public void ttsSafelyStreamCallErrorProxy(
+            @NonNull String sentence,
+            @NotNull TTSStateCallback callback,
+            @NonNull StreamCallErrorCallback errorCallback
+    ) {
+        TTSStateCallback proxyCallback = new TTSStateCallback() {
+            @Override
+            public void recordDisposable(Disposable disposable) {
+                callback.recordDisposable(disposable);
+            }
+
+            @Override
+            public void onStart(Subscription subscription) {
+                callback.onStart(subscription);
+            }
+
+            @Override
+            public void onNext(String audioBase64Data) {
+                callback.onNext(audioBase64Data);
+            }
+
+            @Override
+            public void onSingleComplete() throws NoApiKeyException, UploadFileException {
+                callback.onSingleComplete();
+            }
+
+            @Override
+            public void onAllComplete() {
+                callback.onAllComplete();
+            }
+
+            @Override
+            public void haveNoSentence() {
+                callback.haveNoSentence();
+            }
+
+            @Override
+            public void onError(Throwable throwable) {
+                handleConnectResetTimeoutError(
+                        throwable,
+                        sentence,
+                        callback,
+                        errorCallback
+                );
+            }
+        };
+        ttsSafelyStreamCall(
+                sentence,
+                proxyCallback
+        );
+    }
+
+    private void handleConnectResetTimeoutError(
+            Throwable e,
+            @NonNull String sentence,
+            @NonNull TTSStateCallback ttsStateCallback,
+            @NonNull StreamCallErrorCallback errorCallback
+    ){
+        if (e instanceof WebClientRequestException || e instanceof TimeoutException || e instanceof ConnectTimeoutException){
+            // 连接超时
+            log.error("[ttsSafelyStreamCallErrorProxy] 连接超时: {}", sentence, e);
+
+            int[] retryResult = errorCallback.addCountAndCheckIsOverLimit();
+            // 超出重试限制检查
+            boolean isOverLimit = retryResult[0] > 0;
+
+            if (isOverLimit) {
+                log.error("[ttsSafelyStreamCallErrorProxy] 尝试重连次数已超过限制，不再尝试重连");
+                errorCallback.endConversation();
+            }
+            else {
+                log.info("[ttsSafelyStreamCallErrorProxy] 尝试重连，当前重连次数：{}", retryResult[1]);
+
+                ttsSafelyStreamCallErrorProxy(
+                        sentence,
+                        ttsStateCallback,
+                        errorCallback
+                );
+            }
+        }
+        else {
+            // 其他错误
+            log.error("[ttsSafelyStreamCallErrorProxy] 错误: {}", sentence, e);
+            ttsStateCallback.onError(e);
+        }
     }
 
     @NotNull

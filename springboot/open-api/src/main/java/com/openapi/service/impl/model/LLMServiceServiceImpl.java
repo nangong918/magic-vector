@@ -294,7 +294,7 @@ public class LLMServiceServiceImpl implements LLMServiceService {
             @NonNull StreamCallErrorCallback errorCallback,
             @NonNull Object... functionCallTools
     ){
-        LLMStateCallback errorProxyCallback = new LLMStateCallback() {
+        LLMStateCallback proxyCallback = new LLMStateCallback() {
             @Override
             public void onSubscribe(Subscription subscription) {
                 callback.onSubscribe(subscription);
@@ -357,7 +357,7 @@ public class LLMServiceServiceImpl implements LLMServiceService {
                 agentId,
                 currentContextParam,
                 mcpSwitch,
-                errorProxyCallback,
+                proxyCallback,
                 functionCallTools
         );
     }

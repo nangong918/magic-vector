@@ -4,6 +4,7 @@ import com.alibaba.dashscope.exception.NoApiKeyException;
 import com.alibaba.dashscope.exception.UploadFileException;
 import com.openapi.MainApplication;
 import com.openapi.domain.constant.ModelConstant;
+import com.openapi.interfaces.model.StreamCallErrorCallback;
 import com.openapi.interfaces.model.TTSStateCallback;
 import com.openapi.service.model.TTSServiceService;
 import io.reactivex.disposables.Disposable;
@@ -16,6 +17,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 
 import java.util.LinkedList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * @author 13225
@@ -108,4 +110,66 @@ public class TTSTests {
         Thread.sleep(60_000);
     }
 
+    @Test
+    void ttsErrorProxyTest() throws InterruptedException {
+
+        AtomicInteger errorTimes = new AtomicInteger(0);
+
+        ttsServiceService.ttsSafelyStreamCallErrorProxy(text,
+                new TTSStateCallback() {
+                    @Override
+                    public void recordDisposable(Disposable disposable) {
+
+                    }
+
+                    @Override
+                    public void onStart(Subscription subscription) {
+                        log.info("开始");
+                    }
+
+                    @Override
+                    public void onNext(String audioBase64Data) {
+                        log.info("数据长度: {}", audioBase64Data.length());
+                    }
+
+                    @Override
+                    public void onSingleComplete() {
+                        log.info("完成");
+                    }
+
+                    @Override
+                    public void onAllComplete() {
+                        log.info("所有完成");
+                    }
+
+                    @Override
+                    public void haveNoSentence() {
+                        log.info("没有句子");
+                    }
+
+                    @Override
+                    public void onError(Throwable throwable) {
+                        log.error("错误: {}", throwable.getMessage());
+                    }
+                }, new StreamCallErrorCallback() {
+                    @Override
+                    public int @NonNull [] addCountAndCheckIsOverLimit() {
+                        int errorTime = errorTimes.getAndIncrement();
+                        boolean isOverLimit = errorTimes.get() > 3;
+                        return new int[]{isOverLimit ? 1 : 0 , errorTime};
+                    }
+
+                    @Override
+                    public void addTask(Object task) {
+                        log.info("添加任务: {}", task);
+                    }
+
+                    @Override
+                    public void endConversation() {
+                        log.info("结束会话");
+                    }
+                });
+
+        Thread.sleep(60_000);
+    }
 }

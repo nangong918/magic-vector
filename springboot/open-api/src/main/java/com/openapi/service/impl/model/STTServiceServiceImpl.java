@@ -136,7 +136,7 @@ public class STTServiceServiceImpl implements STTServiceService {
             Throwable e,
             @NonNull Flowable<ByteBuffer> audioSource,
             @NonNull STTCallback sttCallback,
-            StreamCallErrorCallback errorCallback)  {
+            @NonNull StreamCallErrorCallback errorCallback)  {
         if (e instanceof WebClientRequestException || e instanceof TimeoutException) {
             log.error("[STT] 连接超时异常，异常详情：", e);
 

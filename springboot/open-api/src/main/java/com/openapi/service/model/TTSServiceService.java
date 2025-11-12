@@ -2,6 +2,7 @@ package com.openapi.service.model;
 
 import com.alibaba.dashscope.exception.NoApiKeyException;
 import com.alibaba.dashscope.exception.UploadFileException;
+import com.openapi.interfaces.model.StreamCallErrorCallback;
 import com.openapi.interfaces.model.TTSStateCallback;
 import com.openapi.interfaces.model.GetCurrentTTSState;
 import lombok.NonNull;
@@ -21,6 +22,12 @@ public interface TTSServiceService {
     void ttsSafelyStreamCall(
             @NonNull String sentence,
             @NotNull TTSStateCallback callback
+    );
+
+    void ttsSafelyStreamCallErrorProxy(
+            @NonNull String sentence,
+            @NotNull TTSStateCallback callback,
+            @NonNull StreamCallErrorCallback errorCallback
     );
 
     io.reactivex.disposables.Disposable generateAudio(
