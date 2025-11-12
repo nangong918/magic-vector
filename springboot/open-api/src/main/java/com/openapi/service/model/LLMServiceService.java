@@ -39,6 +39,17 @@ public interface LLMServiceService {
             @Nullable Object... functionCallTools
     );
 
+    reactor.core.Disposable mixLLMStreamCallErrorProxy(
+            @NonNull String sentence,
+            @NonNull ChatClient chatClient,
+            @NonNull String agentId,
+            @NonNull String currentContextParam,
+            @NonNull McpSwitch mcpSwitch,
+            @NonNull LLMStateCallback callback,
+            @NonNull LLMErrorCallback errorCallback,
+            @NonNull Object... functionCallTools
+    );
+
     reactor.core.Disposable functionCallLLMStreamChat(
             @Nullable String result,
             @NonNull String userQuestion,

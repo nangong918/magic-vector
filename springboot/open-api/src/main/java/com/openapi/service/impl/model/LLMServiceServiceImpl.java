@@ -227,15 +227,15 @@ public class LLMServiceServiceImpl implements LLMServiceService {
         if (sentence.isEmpty()){
             callback.haveNoSentence();
             // 可能存在STT失败，不要直接报错
-            log.warn("[mix LLM 提示词] 获取失败");
+            log.warn("[mix LLM Stream] sentence.isEmpty 获取失败");
             return null;
         }
         if (currentContextParam.isEmpty()){
-            log.warn("当前参数不能为empty，禁止调用");
+            log.warn("[mix LLM Stream] 当前参数不能为empty，禁止调用");
             return null;
         }
         if (agentId.isEmpty()){
-            log.warn("agentId不能为empty，禁止调用");
+            log.warn("[mix LLM Stream] agentId不能为empty，禁止调用");
             throw new AppException(AgentExceptions.AGENT_NOT_EXIST);
         }
 
@@ -247,25 +247,27 @@ public class LLMServiceServiceImpl implements LLMServiceService {
                 systemPrompt
         );
         if (prompt == null){
-            log.error("[mix LLM 提示词] 获取失败");
+            log.error("[mix LLM Stream] 提示词 获取失败");
             throw new AppException(AgentExceptions.CHAT_CAN_NOT_BE_NULL);
         }
 
         Flux<String> responseFlux;
 
-        if (functionCallTools.length > 0){
+        if (functionCallTools == null || functionCallTools.length == 0){
+            log.info("[mix LLM Stream] 调用无工具");
             responseFlux = chatClient.prompt(prompt)
                     .advisors(a -> a.param(ChatMemory.CONVERSATION_ID, agentId))
-                    // 添加工具Function Call; MCP
-                    .tools(functionCallTools)
                     .stream()
                     .content()
                     // 3500ms未响应则判定超时，进行重连尝试
                     .timeout(Duration.ofMillis(ModelConstant.LLM_CONNECT_TIMEOUT_MILLIS));
         }
         else {
+            log.info("[mix LLM Stream] 调用有工具, 工具数量: {}", functionCallTools.length);
             responseFlux = chatClient.prompt(prompt)
                     .advisors(a -> a.param(ChatMemory.CONVERSATION_ID, agentId))
+                    // 添加工具Function Call; MCP
+                    .tools(functionCallTools)
                     .stream()
                     .content()
                     // 3500ms未响应则判定超时，进行重连尝试
@@ -281,6 +283,7 @@ public class LLMServiceServiceImpl implements LLMServiceService {
                 );
     }
 
+    @Override
     public reactor.core.Disposable mixLLMStreamCallErrorProxy(
             @NonNull String sentence,
             @NonNull ChatClient chatClient,
@@ -315,13 +318,13 @@ public class LLMServiceServiceImpl implements LLMServiceService {
             @Override
             public void onError(Throwable throwable) {
                 if (throwable instanceof WebClientRequestException || throwable instanceof TimeoutException) {
-                    log.error("[mix LLM proxy] 连接超时异常，异常详情：", throwable);
+                    log.error("[mix LLM Stream proxy] 连接超时异常，异常详情：", throwable);
 
                     int[] retryResult = errorCallback.addCountAndCheckIsOverLimit();
                     // 超出重试限制检查
                     boolean isOverLimit = retryResult[0] > 0;
                     if (!isOverLimit){
-                        log.info("[mix LLM proxy] 尝试重连，当前重连次数：{}", retryResult[1]);
+                        log.info("[mix LLM Stream proxy] 尝试重连，当前重连次数：{}", retryResult[1]);
 
                         var disposable = mixLLMStreamCallErrorProxy(
                                 sentence,
@@ -336,12 +339,12 @@ public class LLMServiceServiceImpl implements LLMServiceService {
                         errorCallback.addTask(disposable);
                     }
                     else {
-                        log.error("[mix LLM proxy] 重连次数超出限制，不再重连");
+                        log.error("[mix LLM Stream proxy] 重连次数超出限制，不再重连");
                         errorCallback.endConversation();
                     }
                 }
                 else {
-                    log.error("[mix LLM proxy] 非连接超时异常，异常详情：", throwable);
+                    log.error("[mix LLM Stream proxy] 非连接超时异常，异常详情：", throwable);
                     // 上游去控制结束会话
                     callback.onError(throwable);
                 }

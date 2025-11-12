@@ -12,17 +12,26 @@ import com.openapi.domain.ao.mixLLM.MixLLMAudio;
 import com.openapi.domain.ao.mixLLM.MixLLMResult;
 import com.openapi.interfaces.mixLLM.LLMCallback;
 import com.openapi.interfaces.mixLLM.TTSCallback;
+import com.openapi.interfaces.model.LLMErrorCallback;
+import com.openapi.interfaces.model.LLMStateCallback;
 import com.openapi.service.model.LLMServiceService;
 import com.openapi.service.model.TTSServiceService;
+import com.openapi.service.tools.VisionToolService;
 import io.reactivex.disposables.Disposable;
+import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.Test;
 import org.reactivestreams.Subscription;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import reactor.core.publisher.SignalType;
 
+import java.util.ArrayList;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * @author 13225
@@ -299,6 +308,91 @@ public class MixLLMTests {
                 log.info("[MixLLMManager] llm result: {}", result);
             }
         });
+
+        Thread.sleep(30_000L);
+    }
+
+    @Autowired
+    private VisionToolService visionToolService;
+
+    @Test
+    public void streamTTSTest() throws InterruptedException {
+        MixLLMManager mixLLMManager = new MixLLMManager();
+
+        ChatClient chatClient = ChatClient.builder(chatModel)
+                .defaultSystem("你是我的可爱智能机器小狗vector")
+                .build();
+
+        McpSwitch mcpSwitch = new McpSwitch();
+        mcpSwitch.emojiAndMood = McpSwitch.McpSwitchMode.FREELY.code;
+        mcpSwitch.camera = McpSwitch.McpSwitchMode.CLOSE.code;
+        mcpSwitch.motion = McpSwitch.McpSwitchMode.FREELY.code;
+
+        String sentence = "看向我，朝我走两步，告诉我最近你过的开心吗？你会撒娇吗？要乖乖的哦。";
+
+        AtomicInteger errorTimes = new AtomicInteger(0);
+        List<Object> tasks = new LinkedList<>();
+
+        LLMStateCallback llmStateCallback = new LLMStateCallback() {
+            @Override
+            public void onSubscribe(Subscription subscription) {
+                System.out.println("开始");
+            }
+
+            @Override
+            public void onFinish(SignalType signalType) {
+                System.out.println("结束");
+            }
+
+            @Override
+            public void onNext(String fragment) {
+                System.out.println("fragment = " + fragment);
+            }
+
+            @Override
+            public void haveNoSentence() {
+                System.err.println("没有句子");
+            }
+
+            @Override
+            public void onError(Throwable throwable) {
+                System.err.println("error = " + throwable);
+            }
+        };
+
+        LLMErrorCallback llmErrorCallback = new LLMErrorCallback() {
+            @Override
+            public int @NonNull [] addCountAndCheckIsOverLimit() {
+                int errorTime = errorTimes.incrementAndGet();
+                System.out.println("errorTime = " + errorTime);
+                int isOverLimit = errorTime > 3 ? 1 : 0;
+                System.out.println("isOverLimit = " + isOverLimit);
+                return new int[]{isOverLimit, errorTime};
+            }
+
+            @Override
+            public void addTask(Object task) {
+                tasks.add(task);
+            }
+
+            @Override
+            public void endConversation() {
+                System.out.println("结束会话");
+            }
+        };
+
+        var disposable = llmServiceService.mixLLMStreamCallErrorProxy(
+                sentence,
+                chatClient,
+                contextParam.get("agentId"),
+                contextParam.toString(),
+                mcpSwitch,
+                llmStateCallback,
+                llmErrorCallback,
+                // tools
+                visionToolService
+        );
+        tasks.add(disposable);
 
         Thread.sleep(30_000L);
     }
