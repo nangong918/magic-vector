@@ -25,7 +25,7 @@ import com.openapi.domain.exception.AppException;
 import com.openapi.interfaces.OnSTTResultCallback;
 import com.openapi.interfaces.mixLLM.LLMCallback;
 import com.openapi.interfaces.mixLLM.TTSCallback;
-import com.openapi.interfaces.model.GenerateAudioStateCallback;
+import com.openapi.interfaces.model.TTSStateCallback;
 import com.openapi.interfaces.model.StreamCallErrorCallback;
 import com.openapi.interfaces.model.LLMStateCallback;
 import com.openapi.service.AgentService;
@@ -40,6 +40,7 @@ import com.openapi.service.model.TTSServiceService;
 import com.openapi.websocket.manager.WebSocketMessageManager;
 import io.reactivex.BackpressureStrategy;
 import io.reactivex.Flowable;
+import io.reactivex.disposables.Disposable;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -443,7 +444,7 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
         var callback = new LLMStateCallback() {
             final StringBuffer textBuffer = new StringBuffer();
             @Override
-            public void onSubscribe(Subscription subscription) {
+            public void onStart(Subscription subscription) {
                 // 设置Agent message Time
                 chatContextManager.currentAgentMessageTimestamp = System.currentTimeMillis();
 
@@ -609,21 +610,27 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
             boolean isFunctionCall
     ) {
         try {
-            return commonGenerateAudio(chatContextManager, new GenerateAudioStateCallback() {
+            return commonGenerateAudio(chatContextManager, new TTSStateCallback() {
                 int count = 0;
+
                 @Override
-                public void onSubscribe(Subscription subscription) {
+                public void recordDisposable(Disposable disposable) {
 
                 }
 
                 @Override
-                public void onSingleFinish() {
+                public void onStart(Subscription subscription) {
+
+                }
+
+                @Override
+                public void onSingleComplete() {
                     count++;
                     log.info("[proxy TTS] 单次TTS结束, count: {}", count);
                 }
 
                 @Override
-                public void onAllFinish() {
+                public void onAllComplete() {
                     boolean finalIsFunctionCall = chatContextManager.llmProxyContext.isFunctionCall() || isFunctionCall;
                     // 是否是最后一个tts
                     boolean isFinalResultTTs = chatContextManager.isFinalResultTTS();
@@ -673,7 +680,7 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
     @Nullable
     private io.reactivex.disposables.Disposable commonGenerateAudio(
             @NotNull RealtimeChatContextManager chatContextManager,
-            @NotNull GenerateAudioStateCallback additionalProxyCallback
+            @NotNull TTSStateCallback additionalProxyCallback
             ) throws NoApiKeyException, UploadFileException {
         if (chatContextManager.isTTSing()){
             log.info("[common TTS] 正在生成音频，请稍等...");
@@ -704,17 +711,22 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
             return null;
         }
 
-        return ttsServiceService.generateAudio(sentence, new GenerateAudioStateCallback() {
+        return ttsServiceService.generateAudio(sentence, new TTSStateCallback() {
             @Override
-            public void onSubscribe(Subscription subscription) {
-                chatContextManager.startTTS();
-                log.info("[common TTS] 调用开始, sentence: {}", sentence);
-                // 回调上游代理
-                additionalProxyCallback.onSubscribe(subscription);
+            public void recordDisposable(Disposable disposable) {
+
             }
 
             @Override
-            public void onSingleFinish() throws NoApiKeyException, UploadFileException {
+            public void onStart(Subscription subscription) {
+                chatContextManager.startTTS();
+                log.info("[common TTS] 调用开始, sentence: {}", sentence);
+                // 回调上游代理
+                additionalProxyCallback.onStart(subscription);
+            }
+
+            @Override
+            public void onSingleComplete() throws NoApiKeyException, UploadFileException {
                 // 记录结束时间
                 chatContextManager.setTTSStartTime(System.currentTimeMillis());
 
@@ -722,15 +734,15 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
                 checkIsTTSFinish(chatContextManager, this);
 
                 // 回调上游代理
-                additionalProxyCallback.onSingleFinish();
+                additionalProxyCallback.onSingleComplete();
             }
 
             @Override
-            public void onAllFinish() {
-                log.info("[common TTS] onAllFinish 调用结束");
+            public void onAllComplete() {
+                log.info("[common TTS] onAllComplete 调用结束");
                 // 完成
                 chatContextManager.stopTTS();
-                additionalProxyCallback.onAllFinish();
+                additionalProxyCallback.onAllComplete();
             }
 
             @Override
@@ -770,7 +782,7 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
      * @throws NoApiKeyException    无API密钥异常
      * @throws UploadFileException  上传文件异常
      */
-    private void checkIsTTSFinish(@NotNull RealtimeChatContextManager chatContextManager, @NotNull GenerateAudioStateCallback callback) throws NoApiKeyException, UploadFileException {
+    private void checkIsTTSFinish(@NotNull RealtimeChatContextManager chatContextManager, @NotNull TTSStateCallback callback) throws NoApiKeyException, UploadFileException {
         // 只有当LLM结束并且TTS的MQ不存在句子时候才跳出TTS自我调用: !(!LLMing && count <= 0)
         if (!chatContextManager.isTTSFinallyFinish()){
             boolean isLLMing = chatContextManager.llmProxyContext.isLLMing();
@@ -809,7 +821,7 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
         if (!isTTSCallSelf && isTTSFinallyFinish){
             log.info("[checkIsTTSFinish] 不是自我调用的结束点, isTTSCallSelf: {}, isTTSFinallyFinish: {}",
                     false, true);
-            callback.onAllFinish();
+            callback.onAllComplete();
         }
     }
 

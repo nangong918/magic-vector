@@ -7,10 +7,11 @@ import com.openapi.domain.ao.mixLLM.MixLLMAudio;
 import com.openapi.domain.ao.mixLLM.MixLLMResult;
 import com.openapi.interfaces.mixLLM.LLMCallback;
 import com.openapi.interfaces.mixLLM.TTSCallback;
-import com.openapi.interfaces.model.GenerateAudioStateCallback;
+import com.openapi.interfaces.model.TTSStateCallback;
 import com.openapi.service.model.TTSServiceService;
 import io.reactivex.BackpressureStrategy;
 import io.reactivex.Flowable;
+import io.reactivex.disposables.Disposable;
 import lombok.extern.slf4j.Slf4j;
 import org.reactivestreams.Subscription;
 import org.springframework.util.CollectionUtils;
@@ -76,22 +77,27 @@ public abstract class AbstractMixLLMManager {
             try {
                 ttsServiceService.generateAudio(
                         mixLLMResult.chatSentence,
-                        new GenerateAudioStateCallback() {
+                        new TTSStateCallback() {
                             boolean isFirst = true;
 
                             @Override
-                            public void onSubscribe(Subscription subscription) {
+                            public void recordDisposable(Disposable disposable) {
 
                             }
 
                             @Override
-                            public void onSingleFinish() {
+                            public void onStart(Subscription subscription) {
+
+                            }
+
+                            @Override
+                            public void onSingleComplete() {
                                 // 单个音频生成完成
                                 fluxSink.onComplete();
                             }
 
                             @Override
-                            public void onAllFinish() {
+                            public void onAllComplete() {
                                 // 不是此方法应该关心的；不实现
                             }
 

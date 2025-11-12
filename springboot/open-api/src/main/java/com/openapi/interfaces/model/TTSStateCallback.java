@@ -2,6 +2,7 @@ package com.openapi.interfaces.model;
 
 import com.alibaba.dashscope.exception.NoApiKeyException;
 import com.alibaba.dashscope.exception.UploadFileException;
+import io.reactivex.disposables.Disposable;
 import org.reactivestreams.Subscription;
 
 /**
@@ -9,11 +10,12 @@ import org.reactivestreams.Subscription;
  * @date 2025/11/8 10:06
  * TTS 的状态回调
  */
-public interface GenerateAudioStateCallback {
-    void onSubscribe(Subscription subscription);
-    void onSingleFinish() throws NoApiKeyException, UploadFileException;
-    void onAllFinish();
+public interface TTSStateCallback {
+    void recordDisposable(Disposable disposable);
+    void onStart(Subscription subscription);
     void onNext(String audioBase64Data);
+    void onSingleComplete() throws NoApiKeyException, UploadFileException;
+    void onAllComplete();
     void haveNoSentence();
     void onError(Throwable throwable);
 }

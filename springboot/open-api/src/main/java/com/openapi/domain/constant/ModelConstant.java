@@ -28,4 +28,6 @@ public interface ModelConstant {
     String STT_Format = "pcm";
     int SST_SampleRate = 16000;
     String SYSTEM_PROMPT = "你是我的傲娇小女友，回答问题的时候暧昧一些。回答的之后只能输出正常语句, 不能使用表情等。对话精简一些，最好在3至5句话。";
+    // tts的句子最大长度, 模型限制是(0, 600]
+    int TTS_MaxLength = 550;
 }
