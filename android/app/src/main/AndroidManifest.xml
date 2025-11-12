@@ -1,6 +1,23 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
+    <!-- 互联网权限 -->
+    <uses-permission android:name="android.permission.INTERNET" /> <!-- 音频录制和播放权限 -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" /> <!-- 文件读写权限 -->
+    <uses-permission
+        android:name="android.permission.WRITE_EXTERNAL_STORAGE"
+        android:maxSdkVersion="32"
+        tools:ignore="ScopedStorage" />
+    <uses-permission
+        android:name="android.permission.READ_EXTERNAL_STORAGE"
+        android:maxSdkVersion="32" /> <!-- 针对 Android 10 (API 29) 及以上版本 -->
+    <uses-permission android:name="android.permission.ACCESS_MEDIA_LOCATION" /> <!-- 针对 Android 11 (API 30) 及以上版本 -->
+    <uses-permission
+        android:name="android.permission.MANAGE_EXTERNAL_STORAGE"
+        tools:ignore="AllFilesAccessPolicy,ScopedStorage" /> <!-- 相机权限 -->
+    <uses-feature android:name="android.hardware.camera" /> <!-- 保持屏幕常亮 -->
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.CAMERA" />
 
     <application
         android:name=".MainApplication"
@@ -9,22 +26,50 @@
         android:fullBackupContent="@xml/backup_rules"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
+        android:networkSecurityConfig="@xml/network_config"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.MagicVector"
         tools:targetApi="31">
         <activity
-            android:name=".activity.ChatActivity"
+            android:name=".activity.AgentEmojiActivity"
+            android:exported="false"
+            android:screenOrientation="landscape" /> <!-- 设置为不可旋转的横屏 -->
+        <activity
+            android:name=".activity.test.AgentEmojiTestActivity"
+            android:exported="false"
+            android:screenOrientation="landscape" /> <!-- 设置为不可旋转的横屏 -->
+        <activity
+            android:name=".activity.test.YOLOv8Activity"
             android:exported="false" />
+        <activity
+            android:name=".activity.AgentInfoActivity"
+            android:exported="false" />
+        <activity
+            android:name=".activity.CreateAgentActivity"
+            android:exported="false"
+            android:theme="@style/Theme.MagicVector"
+            android:windowSoftInputMode="stateVisible|adjustPan" />
+        <activity
+            android:name=".activity.test.TestActivity"
+            android:exported="false"
+            android:windowSoftInputMode="stateVisible|adjustPan" />
+        <activity
+            android:name=".activity.test.VADMainActivity"
+            android:exported="false" />
+        <activity
+            android:name=".activity.ChatActivity"
+            android:exported="false"
+            android:theme="@style/Theme.MagicVector"
+            android:windowSoftInputMode="stateVisible|adjustPan" />
         <activity
             android:name=".activity.MainActivity"
             android:exported="false"
-            android:label="@string/title_activity_main"
-            android:theme="@style/Theme.MagicVector" />
+            android:theme="@style/Theme.MagicVector"
+            android:windowSoftInputMode="stateVisible|adjustPan" />
         <activity
             android:name=".activity.StartActivity"
             android:exported="true"
-            android:label="@string/title_activity_start"
             android:theme="@style/Theme.MagicVector">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -32,6 +77,13 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <uses-native-library
+            android:name="libOpenCL.so"
+            android:required="false" />
+        <uses-native-library
+            android:name="libOpenCL-pixel.so"
+            android:required="false" />
     </application>
 
 </manifest>

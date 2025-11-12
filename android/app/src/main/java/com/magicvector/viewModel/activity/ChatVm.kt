@@ -1,55 +1,221 @@
 package com.magicvector.viewModel.activity
 
 import android.Manifest
+import android.annotation.SuppressLint
+import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.os.Handler
+import android.os.Looper
 import android.text.Editable
 import android.text.TextWatcher
+import android.util.Log
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.ViewModel
+import com.core.appcore.api.handler.SyncRequestCallback
+import com.core.appcore.utils.AppResponseUtil
+import com.core.baseutil.cache.HttpRequestManager
+import com.core.baseutil.network.BaseResponse
+import com.core.baseutil.network.OnSuccessCallback
+import com.core.baseutil.network.OnThrowableCallback
+import com.core.baseutil.network.networkLoad.NetworkLoadUtils
 import com.core.baseutil.permissions.GainPermissionCallback
 import com.core.baseutil.permissions.PermissionUtil
 import com.core.baseutil.photo.SelectPhotoUtil
 import com.core.baseutil.ui.ToastUtils
 import com.data.domain.ao.message.MessageContactItemAo
+import com.data.domain.constant.BaseConstant
+import com.data.domain.constant.chat.RealtimeRequestDataTypeEnum
+import com.data.domain.dto.response.ChatMessageResponse
 import com.data.domain.fragmentActivity.aao.ChatAAo
+import com.magicvector.MainApplication
+import com.magicvector.callback.OnVadChatStateChange
+import com.magicvector.callback.VADCallTextCallback
 import com.view.appview.R
+import com.view.appview.call.CallAo
+import com.view.appview.recycler.RecyclerViewWhereNeedUpdate
 import com.view.appview.chat.ChatMessageAdapter
 import com.view.appview.chat.OnChatMessageClick
 
 
+/**
+ * 录音：
+ *  RealTime
+ *      只有手动按住录制和发送语音才能录音，不用关心其stop和start生命周期
+ *  VAD
+ *      一旦是VADCall状态之后就需要启动，关闭VADCall之后一定要关闭
+ * 播放：
+ *  公用AudioTrack
+ *      接收到TTS_START之后就要启动
+ *      接收到TTS_STOP之后就要关闭
+ */
 class ChatVm(
 
 ) : ViewModel(){
 
     companion object {
         val TAG: String = ChatVm::class.java.name
+        val GSON = MainApplication.GSON
+        val mainHandler: Handler = Handler(Looper.getMainLooper())
+    }
+
+    var chatMessageHandler = MainApplication.getChatMessageHandler()
+
+    fun initResource(
+        activity: FragmentActivity,
+        ao : MessageContactItemAo?,
+        whereNeedUpdate: RecyclerViewWhereNeedUpdate,
+        vadCallTextCallback: VADCallTextCallback,
+        onVadChatStateChange: OnVadChatStateChange
+    ) {
+        chatMessageHandler = MainApplication.getChatMessageHandler()
+
+        // 初始化网络请求
+        val initNetworkRunnable = {
+            NetworkLoadUtils.showDialog(activity)
+            initNetworkRequest(activity, object : SyncRequestCallback {
+                override fun onThrowable(throwable: Throwable?) {
+                    NetworkLoadUtils.dismissDialogSafety(activity)
+                }
+
+                override fun onAllRequestSuccess() {
+                    NetworkLoadUtils.dismissDialogSafety(activity)
+                }
+            })
+        }
+
+        messageAo = ao
+        Log.i("ChatMessageHandler", "ao1: ${GSON.toJson(ao)}")
+        // 初始化ChatMessageHandler
+        MainApplication.getChatMessageHandler().initResource(
+            chatActivity = activity,
+            ao = messageAo,
+            chatAAo = aao,
+            initNetworkRunnable = initNetworkRunnable,
+            whereNeedUpdate = whereNeedUpdate,
+            vadCallTextCallback = vadCallTextCallback,
+            onVadChatStateChange = onVadChatStateChange
+        )
+
     }
 
     //---------------------------AAo Ld---------------------------
 
     val aao = ChatAAo()
-
-    fun initAAo(messageContactItemAo : MessageContactItemAo?){
-        aao.messageContactItemAo = messageContactItemAo
-    }
+    var messageAo: MessageContactItemAo? = null
 
     lateinit var adapter : ChatMessageAdapter
 
     fun initAdapter(onChatMessageClick : OnChatMessageClick){
         adapter = ChatMessageAdapter(
-            aao.chatMessageList,
+            // 这里是初始化，要是chatManagerPointer == null直接报错吧
+            chatMessageHandler.getChatManagerPointer().getViewChatMessageList(),
             onChatMessageClick
         )
     }
 
     //---------------------------NetWork---------------------------
 
+    // chat
+    private fun initNetworkRequest(context: Context, callback: SyncRequestCallback){
+        if (HttpRequestManager.getIsFirstOpen(TAG)){
+            // 第一次打开，初始化
+            Log.i(TAG, "initNetworkRequest: 第一次打开")
+            doGetLastChat(context, callback)
+        }
+        else {
+            Log.i(TAG, "initNetworkRequest: 重启viewModel了")
+            // 重启viewModel了，全部更新
+            mainHandler.post {
+                @SuppressLint("NotifyDataSetChanged")
+                adapter.notifyDataSetChanged()
+                NetworkLoadUtils.dismissDialogSafety(context)
+            }
+        }
+    }
 
+    // chatHistory First
+    fun doGetLastChat(context: Context, callback: SyncRequestCallback){
+        if (chatMessageHandler.messageContactItemAo != null) {
+            MainApplication.getApiRequestImplInstance().getLastChat(
+                chatMessageHandler.messageContactItemAo!!.contactId!!,
+                object : OnSuccessCallback<BaseResponse<ChatMessageResponse>>{
+                    override fun onResponse(response: BaseResponse<ChatMessageResponse>?) {
+                        AppResponseUtil.handleSyncResponseEx(
+                            response,
+                            context,
+                            callback,
+                            ::handleGetChatHistory
+                        )
+                    }
+
+                },
+                object : OnThrowableCallback{
+                    override fun callback(throwable: Throwable?) {
+                        Log.e(TAG, "doGetLastChat: onThrowable", throwable)
+                        callback.onThrowable(Throwable("Get ChatHistory Failed"))
+                    }
+                }
+            )
+        }
+        else {
+            Log.w(TAG, "doGetLastChat: messageContactItemAo == null")
+            ToastUtils.showToastActivity(context, "获取聊天记录失败")
+            val throwable = Throwable("Get ChatHistory Failed")
+            callback.onThrowable(throwable)
+        }
+    }
+
+    // 特定时间段的chat history todo: 上拉上滑获取之前的chat History
+    fun doGetTimeLimitChat(context: Context, deadline: String, callback: SyncRequestCallback){
+        if (chatMessageHandler.messageContactItemAo != null){
+            MainApplication.getApiRequestImplInstance().getTimeLimitChat(
+                chatMessageHandler.messageContactItemAo!!.contactId!!,
+                deadline,
+                BaseConstant.Constant.CHAT_HISTORY_LIMIT_COUNT,
+                object : OnSuccessCallback<BaseResponse<ChatMessageResponse>>{
+                    override fun onResponse(response: BaseResponse<ChatMessageResponse>?) {
+                        AppResponseUtil.handleSyncResponseEx(
+                            response,
+                            context,
+                            callback,
+                            ::handleGetChatHistory
+                        )
+                    }
+
+                },
+                object : OnThrowableCallback{
+                    override fun callback(throwable: Throwable?) {
+                        Log.e(TAG, "doGetTimeLimitChat: onThrowable", throwable)
+                        callback.onThrowable(Throwable("doGetTimeLimitChat: onThrowable"))
+                    }
+                }
+            )
+        }
+        else {
+            Log.w(TAG, "doGetTimeLimitChat: messageContactItemAo == null")
+            ToastUtils.showToastActivity(context, "获取聊天记录失败")
+            callback.onThrowable(Throwable("doGetTimeLimitChat: onThrowable"))
+        }
+    }
+
+    private fun handleGetChatHistory(response: BaseResponse<ChatMessageResponse>?,
+                                     context: Context,
+                                     callback: SyncRequestCallback){
+
+        response?.data?.chatMessages?.let {
+            chatMessageHandler.getChatManagerPointer().setResponsesToViews(it)
+            chatMessageHandler.updateMessage()
+        }
+
+        callback.onAllRequestSuccess()
+    }
 
     //---------------------------Logic---------------------------
+
+    // text message
 
     fun getTextWatcher(): TextWatcher {
         return object : TextWatcher {
@@ -67,9 +233,23 @@ class ChatVm(
         }
     }
 
-    fun sendMessage() {
-    }
+    fun sendMessage(context: Context) {
+        val inputText = aao.inputTextLd.value
+        val isAllWhitespaceOrSpecialChars = inputText?.all { it.isWhitespace() || !it.isLetterOrDigit() }
 
+        if (inputText == null || inputText.isEmpty() || isAllWhitespaceOrSpecialChars == true){
+            // 请输入合法的内容
+            ToastUtils.showToastActivity(context, context.getString(R.string.please_input_legal_content))
+            return
+        }
+
+        val dataMap = mapOf(
+            RealtimeRequestDataTypeEnum.TYPE to RealtimeRequestDataTypeEnum.USER_TEXT_MESSAGE.type,
+            RealtimeRequestDataTypeEnum.DATA to inputText
+        )
+        chatMessageHandler.realtimeChatWsClient!!.sendMessage(dataMap, true)
+        // 发送的时候不用回显，因为此时还没拿到后端的messageId
+    }
 
     //===========selectImage
 
@@ -138,4 +318,22 @@ class ChatVm(
         )
     }
 
+
+    // 语音通话
+    fun getCallAo(onMuteClickRunnable: Runnable?, onCallEndClickRunnable: Runnable?): CallAo{
+        val callAo = CallAo()
+        callAo.agentName = aao.nameLd.value
+        callAo.agentAvatar = aao.avatarUrlLd.value
+        callAo.agentId = chatMessageHandler.messageContactItemAo?.contactId?:""
+
+        callAo.onMuteClickRunnable = onMuteClickRunnable
+        callAo.onCallEndClickRunnable = onCallEndClickRunnable
+
+        return callAo
+    }
+
+    // 销毁
+    fun destroy(){
+        chatMessageHandler.destroy()
+    }
 }

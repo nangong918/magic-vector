@@ -1,20 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
-<menu xmlns:app="http://schemas.android.com/apk/res-auto"
-    xmlns:android="http://schemas.android.com/apk/res/android">
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
     <item
-        android:id="@+id/i_home"
-        android:icon="@xml/home_24px"
-        app:actionLayout="@layout/switch_item" />
-    <item
-        android:id="@+id/i_medicine"
-        android:icon="@xml/settings_24px"
-        android:checked="false"
-        android:checkable="true" />
+        android:id="@+id/navigation_webrtc"
+        android:icon="@mipmap/dnn"
+        android:title="@string/vad_webrtc" />
 
     <item
-        android:id="@+id/i_message"
-        android:icon="@xml/person_24px"
-        android:checked="false"
-        android:checkable="true" />
+        android:id="@+id/navigation_silero"
+        android:icon="@mipmap/dnn"
+        android:title="@string/vad_silero" />
 
+    <item
+        android:id="@+id/navigation_yamnet"
+        android:icon="@mipmap/dnn"
+        android:title="@string/vad_yamnet" />
 </menu>

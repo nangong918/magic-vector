@@ -9,7 +9,7 @@ import com.view.appview.databinding.ViewMessageCardItemBinding
 import java.util.Optional
 
 class MessageContactAdapter(
-    private val messageContactItemAosPointer: List<MessageContactItemAo>,
+    private val messageContactItemAosPointer: MutableList<MessageContactItemAo>,
     private val onPositionItemClick : OnPositionItemClick
 ) : RecyclerView.Adapter<MessageCardItemViewHolder>(){
     override fun onCreateViewHolder(
@@ -29,7 +29,7 @@ class MessageContactAdapter(
         position: Int
     ) {
         Optional.of(messageContactItemAosPointer)
-            .filter { it -> it.size <= position }
+            .filter { it.size > position }
             .ifPresent {
                 holder.bindAo(it[position])
             }

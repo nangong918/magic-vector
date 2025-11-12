@@ -1,0 +1,246 @@
+package com.magicvector.activity.test
+
+import android.Manifest
+import android.annotation.SuppressLint
+import android.content.pm.PackageManager
+import android.graphics.Bitmap
+import android.graphics.Matrix
+import android.os.Bundle
+import android.util.Log
+import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.appcompat.app.AppCompatActivity
+import androidx.camera.core.AspectRatio
+import androidx.camera.core.Camera
+import androidx.camera.core.CameraSelector
+import androidx.camera.core.ImageAnalysis
+import androidx.camera.core.Preview
+import androidx.camera.lifecycle.ProcessCameraProvider
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
+import com.detection.yolov8.BoundingBox
+import com.detection.yolov8.Detector
+import com.detection.yolov8.YOLOv8Constants
+import com.magicvector.databinding.ActivityYolov8Binding
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.Executors
+import kotlin.use
+import androidx.core.graphics.createBitmap
+import com.detection.yolov8.R
+import com.detection.yolov8.targetPoint.YOLOv8TargetPointGenerator
+import com.google.gson.Gson
+import com.google.gson.GsonBuilder
+import com.magicvector.MainApplication
+
+class YOLOv8Activity : AppCompatActivity() , Detector.DetectorListener{
+
+    private lateinit var binding: ActivityYolov8Binding
+    private val isFrontCamera = false
+
+    private var preview: Preview? = null
+    private var imageAnalyzer: ImageAnalysis? = null
+    private var camera: Camera? = null
+    private var cameraProvider: ProcessCameraProvider? = null
+    private var detector: Detector? = null
+
+
+    private lateinit var cameraExecutor: ExecutorService
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        binding = ActivityYolov8Binding.inflate(layoutInflater)
+        setContentView(binding.root)
+
+        cameraExecutor = Executors.newSingleThreadExecutor()
+
+        cameraExecutor.execute {
+            detector = Detector(baseContext, YOLOv8Constants.MODEL_PATH, YOLOv8Constants.LABELS_PATH, this) {
+                toast(it)
+            }
+        }
+
+        if (allPermissionsGranted()) {
+            startCamera()
+        } else {
+            ActivityCompat.requestPermissions(this, REQUIRED_PERMISSIONS, REQUEST_CODE_PERMISSIONS)
+        }
+
+        bindListeners()
+    }
+
+    private fun bindListeners() {
+        binding.apply {
+            isGpu.setOnCheckedChangeListener { buttonView, isChecked ->
+                cameraExecutor.submit {
+                    detector?.restart(isGpu = isChecked)
+                }
+                if (isChecked) {
+                    buttonView.setBackgroundColor(ContextCompat.getColor(baseContext, R.color.orange))
+                } else {
+                    buttonView.setBackgroundColor(ContextCompat.getColor(baseContext, R.color.gray))
+                }
+            }
+        }
+    }
+
+    private fun startCamera() {
+        val cameraProviderFuture = ProcessCameraProvider.getInstance(this)
+        cameraProviderFuture.addListener({
+            cameraProvider  = cameraProviderFuture.get()
+            bindCameraUseCases()
+        }, ContextCompat.getMainExecutor(this))
+    }
+
+    private fun bindCameraUseCases() {
+        val cameraProvider = cameraProvider ?: throw IllegalStateException("Camera initialization failed.")
+
+        val rotation = binding.viewFinder.display.rotation
+
+        val cameraSelector = CameraSelector
+            .Builder()
+            .requireLensFacing(CameraSelector.LENS_FACING_BACK)
+            .build()
+
+        preview =  Preview.Builder()
+            .setTargetAspectRatio(AspectRatio.RATIO_4_3)
+            .setTargetRotation(rotation)
+            .build()
+
+        imageAnalyzer = ImageAnalysis.Builder()
+            .setTargetAspectRatio(AspectRatio.RATIO_4_3)
+            .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
+            .setTargetRotation(binding.viewFinder.display.rotation)
+            .setOutputImageFormat(ImageAnalysis.OUTPUT_IMAGE_FORMAT_RGBA_8888)
+            .build()
+
+        imageAnalyzer?.setAnalyzer(cameraExecutor) { imageProxy ->
+            // 获取bitmap
+            val bitmapBuffer =
+                createBitmap(imageProxy.width, imageProxy.height)
+            imageProxy.use { bitmapBuffer.copyPixelsFromBuffer(imageProxy.planes[0].buffer) }
+            imageProxy.close()
+
+            // 构建变换矩阵
+            val matrix = Matrix().apply {
+                postRotate(imageProxy.imageInfo.rotationDegrees.toFloat())
+
+                if (isFrontCamera) {
+                    postScale(
+                        -1f,
+                        1f,
+                        imageProxy.width.toFloat(),
+                        imageProxy.height.toFloat()
+                    )
+                }
+            }
+
+            // 生成旋转后的位图
+            val rotatedBitmap = Bitmap.createBitmap(
+                bitmapBuffer, 0, 0, bitmapBuffer.width, bitmapBuffer.height,
+                matrix, true
+            )
+
+            // 识别
+            detector?.detect(rotatedBitmap)
+        }
+
+        cameraProvider.unbindAll()
+
+        try {
+            camera = cameraProvider.bindToLifecycle(
+                this,
+                cameraSelector,
+                preview,
+                imageAnalyzer
+            )
+
+            preview?.surfaceProvider = binding.viewFinder.surfaceProvider
+        } catch(exc: Exception) {
+            Log.e(TAG, "Use case binding failed", exc)
+        }
+    }
+
+    private fun allPermissionsGranted() = REQUIRED_PERMISSIONS.all {
+        ContextCompat.checkSelfPermission(baseContext, it) == PackageManager.PERMISSION_GRANTED
+    }
+
+    private val requestPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()) {
+        if (it[Manifest.permission.CAMERA] == true) { startCamera() }
+    }
+
+    private fun toast(message: String) {
+        runOnUiThread {
+            Toast.makeText(baseContext, message, Toast.LENGTH_LONG).show()
+        }
+    }
+
+
+    // 由于surface可能在onStop销毁，所以分析器要在onPause中提前结束
+    private val cameraLock = Any()
+    override fun onPause() {
+        super.onPause()
+        // 线程同步，避免在Surface销毁的时候还从Buffer中获取数据
+        synchronized(cameraLock){
+            // 停止线程池行为
+            cameraExecutor.shutdownNow()
+            // 停止分析器
+            imageAnalyzer?.clearAnalyzer()
+            // 停止相机
+            cameraProvider?.unbindAll()
+        }
+    }
+
+
+    override fun onDestroy() {
+        super.onDestroy()
+        detector?.close()
+        cameraExecutor.shutdownNow()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        if (allPermissionsGranted()){
+            startCamera()
+        } else {
+            requestPermissionLauncher.launch(REQUIRED_PERMISSIONS)
+        }
+    }
+
+    companion object {
+        private const val TAG = "YOLOv8Activity"
+        private const val REQUEST_CODE_PERMISSIONS = 10
+        private val REQUIRED_PERMISSIONS = mutableListOf (
+            Manifest.permission.CAMERA
+        ).toTypedArray()
+        val GSON = MainApplication.GSON
+    }
+
+    override fun onEmptyDetect() {
+        runOnUiThread {
+            binding.overlay.clear()
+        }
+    }
+
+    override fun onDetect(boundingBoxes: List<BoundingBox>, inferenceTime: Long) {
+        runOnUiThread {
+            val inferenceTimeStr = "${inferenceTime}ms"
+            binding.inferenceTime.text = inferenceTimeStr
+            binding.overlay.apply {
+                setResults(boundingBoxes)
+                invalidate()
+            }
+        }
+        val allTargetPoint = YOLOv8TargetPointGenerator.generateAllTargetPoint(boundingBoxes)
+        val maxTargetPoint = YOLOv8TargetPointGenerator.generateMaxTargetPoint(boundingBoxes)
+        // 0代表person
+        val specificTargetPoint = YOLOv8TargetPointGenerator.generateSpecificTargetPoint(boundingBoxes, 0)
+        // 除了person之外的
+        val maxTargetPointExcludeSpecificClass = YOLOv8TargetPointGenerator.generateMaxTargetPointExcludeSpecificClass(boundingBoxes, 0)
+        Log.d(TAG, "目标点生成测试：" +
+                "\n生成全目标中心点: ${GSON.toJson(allTargetPoint)} " +
+                "\n生成最大目标中心点: ${GSON.toJson(maxTargetPoint)} " +
+                "\n生成特定目标中心点: ${GSON.toJson(specificTargetPoint)} " +
+                "\n生成最大目标中心点（排除特定类）: ${GSON.toJson(maxTargetPointExcludeSpecificClass)}")
+    }
+}

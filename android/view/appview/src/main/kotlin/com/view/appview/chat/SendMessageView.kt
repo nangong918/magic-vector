@@ -1,11 +1,14 @@
 package com.view.appview.chat
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.util.AttributeSet
 import android.view.LayoutInflater
+import android.view.MotionEvent
 import android.widget.EditText
 import androidx.constraintlayout.widget.ConstraintLayout
 import com.view.appview.databinding.ViewSendMessageBinding
+import kotlinx.coroutines.Runnable
 
 class SendMessageView : ConstraintLayout {
 
@@ -24,6 +27,16 @@ class SendMessageView : ConstraintLayout {
     )
 
     private fun init(context: Context) {
+        // 初始化view
+        binding.btnTakeAudio.text = context.getString(com.view.appview.R.string.press_to_record)
+
+        // 点击事件
+        binding.btnAudio.setOnClickListener {
+            setKeyboardOpen(false)
+        }
+        binding.btnKeyboard.setOnClickListener {
+            setKeyboardOpen(true)
+        }
     }
 
     fun getEditText(): EditText {
@@ -44,16 +57,97 @@ class SendMessageView : ConstraintLayout {
         }
     }
 
-    fun setCallClickListener(listener: OnClickListener?) {
-        listener?.let {
-            binding.btnCall.setOnClickListener(listener)
-        }
-    }
-
     fun setImgClickListener(listener: OnClickListener?) {
         listener?.let {
             binding.btnPicture.setOnClickListener(listener)
         }
     }
 
+    fun setCallClickListener(listener: OnClickListener?) {
+        listener?.let {
+            binding.btnCall.setOnClickListener(listener)
+        }
+    }
+
+    fun setVideoClickListener(listener: OnClickListener?) {
+        listener?.let {
+            binding.btnVideoCall.setOnClickListener(listener)
+        }
+    }
+
+    @SuppressLint("ClickableViewAccessibility")
+    fun setTakAudioOnTouchListener(startRecording: Runnable, stopRecording: Runnable){
+        binding.btnTakeAudio.setOnTouchListener { v, event ->
+            when (event.action) {
+                MotionEvent.ACTION_DOWN -> {
+                    binding.btnTakeAudio.text = context.getString(com.view.appview.R.string.release_to_cancel)
+                    startRecording.run()
+                    true
+                }
+                MotionEvent.ACTION_UP -> {
+                    binding.btnTakeAudio.text = context.getString(com.view.appview.R.string.press_to_record)
+                    stopRecording.run()
+                    true
+                }
+                else -> false
+            }
+        }
+    }
+
+    private var isKeyboardOpen = true
+
+    fun setKeyboardOpen(isOpen: Boolean) {
+        isKeyboardOpen = isOpen
+        if (isOpen){
+            binding.lyKeyboard.visibility = VISIBLE
+            binding.lyAudio.visibility = GONE
+        }
+        else {
+            binding.lyKeyboard.visibility = GONE
+            binding.lyAudio.visibility = VISIBLE
+        }
+    }
+
+    private var isEnableSend = true
+    fun setIsEnableSend(isEnable: Boolean) {
+        isEnableSend = isEnable
+        binding.btnPicture.let {
+            it.setBackgroundResource(
+                if (isEnable) com.view.appview.R.drawable.background_chat_input
+                else com.view.appview.R.drawable.background_chat_not_input
+            )
+            it.isEnabled = isEnable
+        }
+        binding.btnSend.let {
+            it.setBackgroundResource(
+                if (isEnable) com.view.appview.R.drawable.background_chat_input
+                else com.view.appview.R.drawable.background_chat_not_input
+            )
+            it.isEnabled = isEnable
+        }
+        binding.btnCall.let {
+            it.setBackgroundResource(
+                if (isEnable) com.view.appview.R.drawable.background_chat_input
+                else com.view.appview.R.drawable.background_chat_not_input
+            )
+            it.isEnabled = isEnable
+        }
+        binding.btnVideoCall.let {
+            it.setBackgroundResource(
+                if (isEnable) com.view.appview.R.drawable.background_chat_input
+                else com.view.appview.R.drawable.background_chat_not_input
+            )
+            it.isEnabled = isEnable
+        }
+        binding.btnTakeAudio.let {
+            it.setBackgroundResource(
+                if (isEnable) com.view.appview.R.drawable.round_corners_button2
+                else com.view.appview.R.drawable.round_corners_not_button2
+            )
+            it.isEnabled = isEnable
+        }
+    }
+    fun getIsEnableSend(): Boolean {
+        return isEnableSend
+    }
 }

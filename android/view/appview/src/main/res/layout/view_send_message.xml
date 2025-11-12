@@ -1,67 +1,141 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
+    xmlns:tools="http://schemas.android.com/tools"
+    tools:context="com.view.appview.chat.SendMessageView"
+    android:orientation="vertical"
     xmlns:app="http://schemas.android.com/apk/res-auto">
 
-    <androidx.appcompat.widget.AppCompatImageView
-        android:id="@+id/btn_picture"
-        android:layout_width="37dp"
-        android:layout_height="37dp"
-        android:layout_marginEnd="5dp"
-        android:background="@drawable/background_chat_input"
-        android:padding="8dp"
-        android:src="@xml/image_24px"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toStartOf="@+id/btn_call"
-        app:layout_constraintTop_toTopOf="parent"
-        app:tint="@color/green_900" />
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/ly_keyboard"
+        android:layout_width="match_parent"
+        android:layout_height="70dp">
 
-    <androidx.appcompat.widget.AppCompatImageView
-        android:id="@+id/btn_call"
-        android:layout_width="37dp"
-        android:layout_height="37dp"
-        android:layout_marginEnd="5dp"
-        android:padding="8dp"
-        android:background="@drawable/background_chat_input"
-        android:src="@xml/videocam_24px"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toStartOf="@+id/btn_send"
-        app:layout_constraintTop_toTopOf="parent"
-        app:tint="@color/green_900" />
+        <androidx.appcompat.widget.AppCompatImageView
+            android:id="@+id/btn_picture"
+            android:layout_width="37dp"
+            android:layout_height="37dp"
+            android:layout_marginEnd="5dp"
+            android:background="@drawable/background_chat_input"
+            android:padding="8dp"
+            android:src="@xml/image_24px"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toStartOf="@+id/btn_audio"
+            app:layout_constraintTop_toTopOf="parent"
+            app:tint="@color/s1_800" />
 
-    <androidx.appcompat.widget.AppCompatImageView
-        android:id="@+id/btn_send"
-        android:layout_width="37dp"
-        android:layout_height="37dp"
-        android:padding="8dp"
-        android:layout_marginEnd="10dp"
-        android:background="@drawable/background_chat_input"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
-        android:src="@xml/send_24px"
-        app:tint="@color/green_900" />
+        <androidx.appcompat.widget.AppCompatImageView
+            android:id="@+id/btn_audio"
+            android:layout_width="37dp"
+            android:layout_height="37dp"
+            android:layout_marginEnd="5dp"
+            android:padding="8dp"
+            android:background="@drawable/background_chat_input"
+            android:src="@xml/mic_24px"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toStartOf="@+id/btn_send"
+            app:layout_constraintTop_toTopOf="parent"
+            app:tint="@color/s1_800" />
 
-    <EditText
-        android:id="@+id/edtv"
-        android:layout_marginTop="15dp"
-        android:layout_marginBottom="15dp"
-        android:layout_width="0dp"
-        android:layout_height="45dp"
-        android:layout_marginStart="10dp"
-        android:layout_marginEnd="10dp"
-        android:background="@drawable/background_chat_input"
-        android:hint="@string/type_a_message"
-        android:imeOptions="actionDone"
-        android:inputType="text"
-        android:paddingStart="15dp"
-        android:paddingEnd="15dp"
-        android:textColor="@color/green_900"
-        android:textColorHint="@color/green_900"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toStartOf="@+id/btn_picture"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
+        <androidx.appcompat.widget.AppCompatImageView
+            android:id="@+id/btn_send"
+            android:layout_width="37dp"
+            android:layout_height="37dp"
+            android:padding="8dp"
+            android:layout_marginEnd="10dp"
+            android:background="@drawable/background_chat_input"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            android:src="@xml/send_24px"
+            app:tint="@color/s1_800" />
 
-</androidx.constraintlayout.widget.ConstraintLayout>
+        <androidx.appcompat.widget.AppCompatEditText
+            android:id="@+id/edtv"
+            android:layout_marginTop="15dp"
+            android:layout_marginBottom="15dp"
+            android:layout_width="0dp"
+            android:layout_height="45dp"
+            android:gravity="center_vertical"
+            android:layout_marginStart="10dp"
+            android:layout_marginEnd="10dp"
+            android:background="@drawable/background_chat_input"
+            android:hint="@string/type_a_message"
+            android:imeOptions="actionDone"
+            android:inputType="text"
+            android:paddingStart="15dp"
+            android:paddingEnd="15dp"
+            android:textColor="@color/s1_800"
+            android:textColorHint="@color/s1_800"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toStartOf="@+id/btn_picture"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/ly_audio"
+        android:visibility="gone"
+        tools:visibility="visible"
+        android:layout_width="match_parent"
+        android:layout_height="70dp">
+
+        <TextView
+            android:id="@+id/btn_takeAudio"
+            android:layout_width="0dp"
+            android:layout_height="50dp"
+            android:background="@drawable/round_corners_button2"
+            android:gravity="center"
+            android:textColor="@color/s1_800"
+            android:textSize="18sp"
+            android:layout_marginStart="10dp"
+            android:layout_marginEnd="10dp"
+            app:layout_constraintEnd_toStartOf="@+id/btn_call"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            tools:text="按住录音" />
+
+        <androidx.appcompat.widget.AppCompatImageView
+            android:id="@+id/btn_call"
+            android:layout_width="37dp"
+            android:layout_height="37dp"
+            android:background="@drawable/background_chat_input"
+            android:padding="8dp"
+            android:src="@xml/call_24px"
+            android:layout_marginEnd="10dp"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toStartOf="@+id/btn_video_call"
+            app:layout_constraintTop_toTopOf="parent"
+            app:tint="@color/s1_800" />
+
+        <androidx.appcompat.widget.AppCompatImageView
+            android:id="@+id/btn_video_call"
+            android:layout_width="37dp"
+            android:layout_height="37dp"
+            android:background="@drawable/background_chat_input"
+            android:padding="8dp"
+            android:src="@xml/videocam_24px"
+            android:layout_marginEnd="10dp"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toStartOf="@+id/btn_keyboard"
+            app:layout_constraintTop_toTopOf="parent"
+            app:tint="@color/s1_800" />
+
+        <androidx.appcompat.widget.AppCompatImageView
+            android:id="@+id/btn_keyboard"
+            android:layout_width="37dp"
+            android:layout_height="37dp"
+            android:background="@drawable/background_chat_input"
+            android:padding="8dp"
+            android:src="@xml/keyboard_24px"
+            android:layout_marginEnd="10dp"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            app:tint="@color/s1_800" />
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+</LinearLayout>

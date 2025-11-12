@@ -2,7 +2,110 @@
 server:
   port: 48888
 
+alikey: ${ALI_API_KEY}
+
 spring:
   application:
     name: open-api
+  ai:
+    dashscope:
+      api-key: ${ALI_API_KEY}
+      chat:
+        options:
+          model: deepseek-v3.1 # 经过测试发现qwen-flash蠢到无法调用mcp; qwen-flash百万token1.5元，qwen-plus2元
+      embedding:
+        options:
+          model: "text-embedding-v3"
+      tts:
+        model: "qwen3-tts-flash"  # 模型名称（必填）
+        voice: "CHERRY"  # 声音名称（对应 SDK 的 voice 字段，必填）
+        language: "Chinese"  # 语言类型（对应 languageType）
+        speed: 1.0  # 语速（0.5~2.0，对应 SDK 的 speed 字段）
+        volume: 50  # 音量（0~100，默认50）
+        pitch: 1.0  # 音调（0.5~2.0，默认1.0）
+        sample-rate: 48000  # 采样率（默认48000）
+        response-format: "MP3"  # 音频格式（默认MP3）
+    openai:
+      api-key: ${ALI_API_KEY}
+      base-url: https://dashscope.aliyuncs.com/compatible-mode
+      chat:
+        options:
+          model: qwen-max
+  # 数据库
+  jpa:
+    hibernate:
+      ddl-auto: none  # 不自动创建数据库表，初始时可设置为 none
+    show-sql: true  # 显示 SQL 语句
 
+  #-------------------------database Setting-------------------------
+  # 数据源配置 - Spring Boot 3.4 标准方式
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://localhost:3306/magic_vector?serverTimezone=Asia/Shanghai&useUnicode=true&characterEncoding=utf8&useSSL=false&allowPublicKeyRetrieval=true
+    username: root
+    password: 123456
+    type: com.alibaba.druid.pool.DruidDataSource
+
+    # Druid 特定配置放在这里
+    druid:
+      initial-size: 5
+      max-active: 20
+      min-idle: 5
+      max-wait: 60000
+      time-between-eviction-runs-millis: 60000
+      min-evictable-idle-time-millis: 300000
+      validation-query: SELECT 1
+      test-while-idle: true
+      test-on-borrow: false
+      test-on-return: false
+      pool-prepared-statements: true
+      max-pool-prepared-statement-per-connection-size: 20
+      filters: stat,wall
+
+      # 过滤器配置
+      filter:
+        stat:
+          enabled: true
+          log-slow-sql: true
+          slow-sql-millis: 1000
+        wall:
+          enabled: true
+          config:
+            multi-statement-allow: true
+
+  #============ redis
+  redis:
+    host: ${REDIS_HOST:127.0.0.1}
+    port: ${REDIS_PORT:6379}
+    password: ${REDIS_PWD:Y)D7d%gXFsCL*&pdJ4f)}
+    ssl: false          # Redis 是否启用 SSL
+    timeout: 10000      # 连接超时时间
+    database: 0         # 选择的数据库:Redis 默认提供 16 个数据库（索引 0 到 15）
+    jedis:
+      # 配置上连接池：增加对于数据连接的管理，提升访问的效率，也保证了对资源的合理利用
+      pool:
+        max-active: 50      # 最大活动连接数
+        max-idle: 5         # 最大空闲连接数
+        max-wait: 1         # 最小空闲连接数
+        min-idle: 200       # 连接池最大阻塞等待时间（使用负值表示没有限制）
+
+#============ oss：minIO todo 反向代理
+minio:
+  endpoint: "http://127.0.0.1:9000" # minIO 服务器地址
+  access-key: "minioadmin"  # minIO 用户名
+  secret-key: "minioadmin"  # minIO 密码
+  #============ minio 代理
+  use-gateway-proxy: true
+  gateway-port: 8888        # 代理minio的网关端口号
+  minio-url: "/oss-minio"
+
+#-------------------------Mybatis-plus setting-------------------------
+
+mybatis-plus:
+  type-aliases-package: com.minio.domain.Do, com.openapi.domain.Do # 扫描实体类
+  mapper-locations: classpath*:mybatis/*Mapper.xml, classpath*:mybatis-plus/*Mapper.xml #指定多个 Mapper XML 文件的路径
+  global-config:
+    db-config:
+      id-type: auto # 数据库主键策略配置
+  configuration:
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl

@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/main"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context=".activity.AgentInfoActivity">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:gravity="center_horizontal">
+
+        <com.view.appview.InfoBarView
+            android:id="@+id/top_bar"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"/>
+
+        <!-- Agent Avatar -->
+        <de.hdodenhof.circleimageview.CircleImageView
+            android:id="@+id/imvg_avatar"
+            android:layout_marginTop="20dp"
+            android:layout_height="120dp"
+            android:layout_width="120dp"
+            android:src="@xml/person_24px"
+            android:background="@drawable/circle_corners_bg_white" />
+
+        <!-- Agent Name -->
+        <com.view.appview.GeneralEditText
+            android:id="@+id/g_edit_name"
+            android:layout_marginTop="20dp"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"/>
+
+        <!-- Agent System Setting -->
+        <com.view.appview.GeneralEditText
+            android:id="@+id/g_edit_setting"
+            android:layout_marginTop="20dp"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"/>
+
+        <androidx.appcompat.widget.AppCompatButton
+            android:id="@+id/btn_confirm"
+            android:layout_width="match_parent"
+            android:layout_marginStart="30dp"
+            android:layout_marginEnd="30dp"
+            android:layout_height="70dp"
+            android:textAllCaps="false"
+            android:layout_marginBottom="20dp"
+            android:layout_marginTop="33dp"
+            android:gravity="center"
+            android:text="@string/set_agent"
+            android:textColor="@color/white"
+            android:textSize="26sp"
+            android:textStyle="bold"
+            app:layout_constraintEnd_toEndOf="parent"
+            android:background="@drawable/button_selected"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@+id/ly_confirm_password" />
+
+        <androidx.appcompat.widget.AppCompatButton
+            android:id="@+id/btn_delete"
+            android:layout_width="match_parent"
+            android:layout_marginStart="30dp"
+            android:layout_marginEnd="30dp"
+            android:layout_height="70dp"
+            android:textAllCaps="false"
+            android:layout_marginBottom="20dp"
+            android:layout_marginTop="33dp"
+            android:gravity="center"
+            android:text="@string/delete_agent"
+            android:textColor="@color/white"
+            android:textSize="26sp"
+            android:textStyle="bold"
+            app:layout_constraintEnd_toEndOf="parent"
+            android:background="@drawable/button_selected_red"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@+id/ly_confirm_password" />
+
+    </LinearLayout>
+
+</androidx.core.widget.NestedScrollView>

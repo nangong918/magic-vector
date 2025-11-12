@@ -1,0 +1,128 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.openapi.mapper.ChatMessageMapper">
+
+    <sql id="table">
+        chat_message
+    </sql>
+
+    <sql id="columns">
+        id, agent_id, content, chat_time, role, user_id, chat_timestamp
+    </sql>
+
+    <insert id="insert">
+        insert into
+        <include refid="table"/>
+        (
+        <include refid="columns"/>
+        )
+        values(
+        #{id}, #{agentId}, #{content}, #{chatTime}, #{role}, #{userId}, #{chatTimestamp}
+        )
+    </insert>
+    <insert id="insertBatch">
+        <if test="list != null and list.size() > 0">
+            insert into
+            <include refid="table"/>
+            (
+            <include refid="columns"/>
+            )
+            values
+            <foreach item="item" index="index" collection="list" separator="," open="(" close=")">
+                (
+                #{item.id}, #{item.agentId}, #{item.content}, #{item.chatTime}, #{item.role}, #{item.userId}, #{{item.chatTimestamp}
+                )
+            </foreach>
+        </if>
+    </insert>
+
+    <delete id="delete">
+        delete from
+        <include refid="table"/>
+        where id = #{id}
+    </delete>
+    <delete id="deleteBatch">
+        <if test="list != null and list.size() > 0">
+            delete from
+            <include refid="table"/>
+            where id in
+            <foreach item="item" index="index" collection="list" separator="," open="(" close=")">
+                #{item}
+            </foreach>
+        </if>
+    </delete>
+    <delete id="deleteByAgentId">
+        delete from
+        <include refid="table"/>
+        where agent_id = #{agentId}
+    </delete>
+    <delete id="deleteByAgentIdBatch">
+        <if test="list != null and list.size() > 0">
+            delete from
+            <include refid="table"/>
+            where agent_id in
+            <foreach item="item" index="index" collection="list" separator="," open="(" close=")">
+                #{item}
+            </foreach>
+        </if>
+    </delete>
+
+    <select id="getById" resultType="com.openapi.domain.Do.ChatMessageDo">
+        select
+        <include refid="columns"/>
+        from
+        <include refid="table"/>
+        where id = #{id}
+    </select>
+    <select id="getByIds" resultType="com.openapi.domain.Do.ChatMessageDo">
+        <if test="list != null and list.size() > 0">
+            select
+            <include refid="columns"/>
+            from
+            <include refid="table"/>
+            where id in
+            <foreach item="item" index="index" collection="list" separator="," open="(" close=")">
+                #{item}
+            </foreach>
+        </if>
+    </select>
+
+    <select id="getMessagesByAgentIdDeadlineLimit" resultType="com.openapi.domain.Do.ChatMessageDo">
+        select
+        <include refid="columns"/>
+        from
+        <include refid="table"/>
+        where
+            agent_id = #{agentId} and
+            chat_time &lt;= #{deadline}
+        order by
+            chat_timestamp DESC -- 根据 chat_timestamp 从大到小排序
+        limit #{limit}
+    </select>
+    <select id="getAllMessagesByAgentId" resultType="com.openapi.domain.Do.ChatMessageDo">
+        select
+        <include refid="columns"/>
+        from
+        <include refid="table"/>
+        where
+            agent_id = #{agentId}
+        order by
+            chat_timestamp DESC -- 根据 chat_timestamp 从大到小排序
+    </select>
+    <select id="getMessageByAgentIds" resultType="com.openapi.domain.Do.ChatMessageDo">
+        SELECT
+        <include refid="columns"/>
+        FROM
+        <include refid="table"/>
+        WHERE agent_id IN
+        <foreach item="agentId" collection="agentIds" separator=","
+                 open="(" close=")">
+            #{agentId}
+        </foreach>
+        AND chat_time &lt;= #{deadline}
+        ORDER BY chat_timestamp DESC -- 根据 chat_timestamp 从大到小排序
+        LIMIT #{limit}
+    </select>
+
+</mapper>

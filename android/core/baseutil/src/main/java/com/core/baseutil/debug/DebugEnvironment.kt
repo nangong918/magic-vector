@@ -2,7 +2,8 @@ package com.core.baseutil.debug
 
 object DebugEnvironment {
     // Debug状态或者Release状态
-    var projectEnvironment: Environment = Environment.TEST
+    val projectEnvironment: Environment = Environment.TEST
+    val LOG_DEBUG = projectEnvironment != Environment.PRODUCTION
 
     enum class Environment(val code: String, val description: String) {
         LOCAL("local", "本地环境"),

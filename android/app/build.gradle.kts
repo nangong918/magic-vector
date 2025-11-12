@@ -7,14 +7,16 @@ plugins {
 
 android {
     namespace = "com.magicvector"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.magicvector"
         minSdk = 28
-        targetSdk = 35
+        targetSdk = 36
         versionCode = 1
         versionName = "1.0"
+
+        setProperty("archivesBaseName", "Android-VAD-v$versionName")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         externalNativeBuild {
@@ -36,7 +38,7 @@ android {
             )
         }
         debug {
-            isMinifyEnabled = true
+            isMinifyEnabled = false
             multiDexEnabled = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
@@ -65,6 +67,8 @@ android {
 
 dependencies {
 
+    implementation(fileTree(mapOf("dir" to "libs", "include" to listOf("*.jar"))))
+
     // 基础
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)
@@ -91,9 +95,46 @@ dependencies {
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
 
+    //navigation
+    implementation(libs.androidx.navigation.fragment.ktx)
+    implementation(libs.androidx.navigation.ui.ktx)
+
     // 圆形的 ImageView 组件
     implementation(libs.circleimageview)
     implementation(libs.roundedimageview)
+
+    // OkHttp3 / WebSocket支持
+    implementation(libs.okhttp)
+    // OkHttp的日志
+    implementation(libs.logging.interceptor)
+    // SSE支持
+    implementation(libs.okhttp.sse)
+
+    // Retrofit
+    implementation(libs.retrofit)
+    implementation(libs.converter.gson)
+
+    // event bus
+    implementation(libs.eventbus)
+
+    // Gson
+    implementation(libs.gson)
+
+    // multidex
+    implementation(libs.multidex)
+
+    // permission
+    implementation(libs.permissionsdispatcher)
+    kapt(libs.permissionsdispatcher.processor)
+
+    // 下拉刷新
+    implementation(libs.swiperefreshlayout)
+
+    // camera
+    val cameraxVersion = "1.4.0-beta02"
+    implementation("androidx.camera:camera-camera2:${cameraxVersion}")
+    implementation("androidx.camera:camera-lifecycle:${cameraxVersion}")
+    implementation("androidx.camera:camera-view:${cameraxVersion}")
 
     /**
      * 自定义Module
@@ -116,4 +157,12 @@ dependencies {
     implementation(project(":core:appcore"))
     implementation(project(":data:dao"))
     implementation(project(":view:appview"))
+
+    // vad库
+    implementation(project(":vad:silero"))
+    implementation(project(":vad:yamnet"))
+    // 不迁移到VAD文件夹中：1.文件夹过长NDK无法编译 2.文件夹变化需要配置全部的JNI名称变化和Cpp头文件路径
+    implementation(project(":webrtc"))
+    // YOLOv8
+    implementation(project(":yolov8"))
 }

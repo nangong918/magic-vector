@@ -1,4 +1,4 @@
-package com.czy.smartmedicine.utils
+package com.magicvector.utils
 
 
 import androidx.fragment.app.Fragment

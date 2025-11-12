@@ -54,7 +54,7 @@
         android:layout_marginTop="5dp"
         app:layout_constraintStart_toStartOf="@+id/nagi_phone"
         app:layout_constraintTop_toBottomOf="@+id/nagi_phone"
-        app:tint="@color/green_900"
+        app:tint="@color/s1_800"
         android:src="@xml/settings_24px" />
 
     <de.hdodenhof.circleimageview.CircleImageView

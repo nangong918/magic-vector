@@ -1,24 +1,33 @@
 package com.magicvector.activity
 
 import android.content.Intent
+import android.os.Build
 import android.os.Bundle
+import android.view.View
+import android.view.WindowInsetsController
+import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
 import com.core.baseutil.fragmentActivity.ActivityLaunchUtils
 import com.data.domain.constant.BaseConstant
 import com.magicvector.ui.theme.MagicVectorTheme
-import com.magicvector.ui.theme.Purple80
+import com.magicvector.ui.theme.White
 import java.util.Timer
 import java.util.TimerTask
 
@@ -33,6 +42,23 @@ class StartActivity : ComponentActivity() {
         }
 
         initTimer()
+    }
+
+    override fun onResume() {
+        super.onResume()
+
+        // 隐藏标题导航栏
+        window.setFlags(
+            WindowManager.LayoutParams.FLAG_FULLSCREEN,
+            WindowManager.LayoutParams.FLAG_FULLSCREEN
+        )
+        // 隐藏状态栏
+        val decorView = window.decorView
+        decorView.systemUiVisibility = (
+                View.SYSTEM_UI_FLAG_FULLSCREEN or
+                        View.SYSTEM_UI_FLAG_HIDE_NAVIGATION or
+                        View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
+                )
     }
 
     //-------------------------------定时跳转-------------------------------
@@ -87,19 +113,22 @@ fun StartScreen() {
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
-                .background(Purple80), // 设置背景为灰色
+                .background(White), // 设置背景为紫色
             contentAlignment = Alignment.Center // 设置内容居中
         ) {
-            Greeting(name = "world") // 将文本内容改为 "world"
+            Logo() // 使用 Logo 组件展示 logo
         }
     }
 }
 
 @Composable
-fun Greeting(name: String, modifier: Modifier = Modifier) {
-    Text(
-        text = "Hello $name!",
-        modifier = modifier
+fun Logo(modifier: Modifier = Modifier) {
+    // 这里假设你有一个 logo 的 drawable 资源
+    Image(
+        painter = painterResource(id = com.view.appview.R.mipmap.vector), // 替换为你的 logo 资源 ID
+        contentDescription = "App Logo",
+        modifier = modifier.size(220.dp)
+            .clip(RoundedCornerShape(20.dp))
     )
 }
 

@@ -3,11 +3,13 @@ package com.view.appview
 import android.content.Context
 import android.graphics.PorterDuff
 import android.view.LayoutInflater
+import android.view.View
 import android.widget.ImageView
 import android.widget.LinearLayout
 import androidx.annotation.ColorRes
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.content.ContextCompat
+import com.data.domain.OnPositionItemClick
 import com.view.appview.databinding.ViewMainBottomBarBinding
 
 class MainBottomBar : ConstraintLayout {
@@ -50,8 +52,8 @@ class MainBottomBar : ConstraintLayout {
         for (i in imageViews.indices) {
 
             val color: Int = if (isClick[i])
-                R.color.green_300 else
-                R.color.green_900
+                R.color.s1_300 else
+                R.color.s1_800
             imageViews[i].setColorFilter(
                 ContextCompat.getColor(context, color),
                 PorterDuff.Mode.SRC_IN
@@ -63,6 +65,16 @@ class MainBottomBar : ConstraintLayout {
         binding.lyMain.setBackgroundResource(
             colorResId
         )
+    }
+
+    fun clickListener(click: OnPositionItemClick) {
+        for (i in clickLys.indices) {
+            val finalI = i
+            clickLys[i].setOnClickListener { v: View ->
+                updateUi(finalI)
+                click.onPositionItemClick(finalI)
+            }
+        }
     }
 
 }

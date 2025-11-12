@@ -12,11 +12,19 @@ open class ApiUrlConfig {
         private val TAG: String = ApiUrlConfig::class.java.name
 
         // 获取 URL
-        fun getMainUrl(): String {
+        private fun getMainUrl(): String {
             return when (DebugEnvironment.projectEnvironment) {
                 DebugEnvironment.Environment.LOCAL -> BaseConstant.ConstantUrl.LOCAL_URL
                 DebugEnvironment.Environment.TEST -> BaseConstant.ConstantUrl.TEST_URL
                 DebugEnvironment.Environment.STAGING, DebugEnvironment.Environment.PRODUCTION -> BaseConstant.ConstantUrl.PROD_URL
+            }
+        }
+
+        fun getWsMainUrl(): String {
+            return when (DebugEnvironment.projectEnvironment) {
+                DebugEnvironment.Environment.LOCAL -> BaseConstant.ConstantUrl.LOCAL_WS_URL
+                DebugEnvironment.Environment.TEST -> BaseConstant.ConstantUrl.TEST_WS_URL
+                DebugEnvironment.Environment.STAGING, DebugEnvironment.Environment.PRODUCTION -> BaseConstant.ConstantUrl.PROD_WS_URL
             }
         }
 
