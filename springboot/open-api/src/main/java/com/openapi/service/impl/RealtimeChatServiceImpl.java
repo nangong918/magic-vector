@@ -33,7 +33,7 @@ import com.openapi.service.ChatMessageService;
 import com.openapi.service.PromptService;
 import com.openapi.service.RealtimeChatService;
 import com.openapi.service.UserService;
-import com.openapi.service.VisionChatService;
+import com.openapi.service.model.VLService;
 import com.openapi.service.tools.VisionToolService;
 import com.openapi.service.model.LLMServiceService;
 import com.openapi.service.model.TTSServiceService;
@@ -83,7 +83,7 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
     private final ThreadPoolConfig threadPoolConfig;
     private final PromptService promptService;
     private final VisionToolService visionToolService;
-    private final VisionChatService visionChatService;
+    private final VLService visionChatService;
     private final WebSocketMessageManager webSocketMessageManager;
     private final TTSServiceService ttsServiceService;
     private final LLMServiceService llmServiceService;

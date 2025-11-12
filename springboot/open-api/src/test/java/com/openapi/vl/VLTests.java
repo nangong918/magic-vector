@@ -11,7 +11,7 @@ import com.openapi.MainApplication;
 import com.openapi.config.ChatConfig;
 import com.openapi.domain.constant.ModelConstant;
 import com.openapi.service.PromptService;
-import com.openapi.service.VisionChatService;
+import com.openapi.service.model.VLService;
 import com.openapi.service.tools.VisionToolService;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.Test;
@@ -75,7 +75,7 @@ public class VLTests {
     }
 
     @Autowired
-    private VisionChatService visionChatService;
+    private VLService visionChatService;
 
     public static String encodeImageToBase64(String imagePath) throws IOException {
         Path path = Paths.get(imagePath);

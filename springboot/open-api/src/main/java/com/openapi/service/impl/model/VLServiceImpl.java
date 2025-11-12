@@ -1,4 +1,4 @@
-package com.openapi.service.impl;
+package com.openapi.service.impl.model;
 
 import com.alibaba.dashscope.aigc.multimodalconversation.MultiModalConversation;
 import com.alibaba.dashscope.aigc.multimodalconversation.MultiModalConversationParam;
@@ -10,7 +10,7 @@ import com.alibaba.dashscope.exception.UploadFileException;
 import com.google.gson.JsonElement;
 import com.openapi.config.ChatConfig;
 import com.openapi.domain.constant.ModelConstant;
-import com.openapi.service.VisionChatService;
+import com.openapi.service.model.VLService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
@@ -29,7 +29,7 @@ import java.util.Optional;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class VisionChatServiceImpl implements VisionChatService {
+public class VLServiceImpl implements VLService {
 
     private final MultiModalConversation multiModalConversation;
     private final ChatConfig chatConfig;
