@@ -6,7 +6,7 @@ import lombok.NonNull;
  * @author 13225
  * @date 2025/11/10 10:31
  */
-public interface LLMErrorCallback {
+public interface StreamCallErrorCallback {
     /**
      * 增加错误次数并检查是否超出重试限制 (上游内部需要进行原子的自增并检查)
      * @return  int[2] {是否超出?1:0, 重试次数}

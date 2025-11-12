@@ -16,7 +16,6 @@ import com.openapi.config.ThreadPoolConfig;
 import com.openapi.converter.ChatMessageConverter;
 import com.openapi.domain.Do.ChatMessageDo;
 import com.openapi.domain.ao.AgentAo;
-import com.openapi.domain.ao.mixLLM.MixLLMAudio;
 import com.openapi.domain.constant.ModelConstant;
 import com.openapi.domain.constant.error.AgentExceptions;
 import com.openapi.domain.constant.error.UserExceptions;
@@ -27,7 +26,7 @@ import com.openapi.interfaces.OnSTTResultCallback;
 import com.openapi.interfaces.mixLLM.LLMCallback;
 import com.openapi.interfaces.mixLLM.TTSCallback;
 import com.openapi.interfaces.model.GenerateAudioStateCallback;
-import com.openapi.interfaces.model.LLMErrorCallback;
+import com.openapi.interfaces.model.StreamCallErrorCallback;
 import com.openapi.interfaces.model.LLMStateCallback;
 import com.openapi.service.AgentService;
 import com.openapi.service.ChatMessageService;
@@ -41,7 +40,6 @@ import com.openapi.service.model.TTSServiceService;
 import com.openapi.websocket.manager.WebSocketMessageManager;
 import io.reactivex.BackpressureStrategy;
 import io.reactivex.Flowable;
-import io.reactivex.disposables.Disposable;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -54,7 +52,6 @@ import org.springframework.ai.chat.memory.ChatMemory;
 import org.springframework.ai.chat.messages.Message;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
-import org.springframework.web.reactive.function.client.WebClientRequestException;
 import reactor.core.publisher.SignalType;
 
 import java.io.ByteArrayOutputStream;
@@ -64,7 +61,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.concurrent.TimeoutException;
 
 /**
  * @author 13225
@@ -187,7 +183,7 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
                 chatContextManager.agentId,
                 chatContextManager.getCurrentContextParam(),
                 chatContextManager.mcpSwitch,
-                new LLMErrorCallback() {
+                new StreamCallErrorCallback() {
                     @Override
                     public int @NonNull [] addCountAndCheckIsOverLimit() {
                         return chatContextManager.addCountAndCheckIsOverLimit();
@@ -352,7 +348,7 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
                     chatContextManager.agentId,
                     chatContextManager.getCurrentContextParam(),
                     chatContextManager.mcpSwitch,
-                    new LLMErrorCallback() {
+                    new StreamCallErrorCallback() {
                         @Override
                         public int @NonNull [] addCountAndCheckIsOverLimit() {
                             return chatContextManager.addCountAndCheckIsOverLimit();

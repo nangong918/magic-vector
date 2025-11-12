@@ -1,7 +1,7 @@
 package com.openapi.service.model;
 
 import com.openapi.domain.ao.mixLLM.McpSwitch;
-import com.openapi.interfaces.model.LLMErrorCallback;
+import com.openapi.interfaces.model.StreamCallErrorCallback;
 import com.openapi.interfaces.model.LLMStateCallback;
 import lombok.NonNull;
 import org.jetbrains.annotations.Nullable;
@@ -35,7 +35,7 @@ public interface LLMServiceService {
             @NonNull String agentId,
             @NonNull String currentContextParam,
             @NonNull McpSwitch mcpSwitch,
-            @NonNull LLMErrorCallback errorCallback,
+            @NonNull StreamCallErrorCallback errorCallback,
             @Nullable Object... functionCallTools
     );
 
@@ -46,7 +46,7 @@ public interface LLMServiceService {
             @NonNull String currentContextParam,
             @NonNull McpSwitch mcpSwitch,
             @NonNull LLMStateCallback callback,
-            @NonNull LLMErrorCallback errorCallback,
+            @NonNull StreamCallErrorCallback errorCallback,
             @NonNull Object... functionCallTools
     );
 

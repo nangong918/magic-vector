@@ -7,13 +7,18 @@ import com.alibaba.dashscope.exception.NoApiKeyException;
 import com.openapi.config.ChatConfig;
 import com.openapi.domain.constant.ModelConstant;
 import com.openapi.interfaces.mixLLM.STTCallback;
+import com.openapi.interfaces.model.StreamCallErrorCallback;
 import com.openapi.service.model.STTServiceService;
 import io.reactivex.Flowable;
+import io.reactivex.disposables.Disposable;
+import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.web.reactive.function.client.WebClientRequestException;
 
 import java.nio.ByteBuffer;
+import java.util.concurrent.TimeoutException;
 
 /**
  * @author 13225
@@ -30,8 +35,8 @@ public class STTServiceServiceImpl implements STTServiceService {
 
     @Override
     public void sttStreamCall(
-            Flowable<ByteBuffer> audioSource,
-            STTCallback sttCallback
+            @NonNull Flowable<ByteBuffer> audioSource,
+            @NonNull STTCallback sttCallback
     ) {
         RecognitionParam sttParam = RecognitionParam.builder()
                 .model(ModelConstant.STT_Model)
@@ -55,7 +60,7 @@ public class STTServiceServiceImpl implements STTServiceService {
     }
 
     private void handleRecognitionResult(RecognitionResult result,
-                                         STTCallback sttCallback) {
+                                         @NonNull STTCallback sttCallback) {
         if (result == null) {
             return;
         }
@@ -74,6 +79,88 @@ public class STTServiceServiceImpl implements STTServiceService {
             }
         } catch (Exception e) {
             System.err.println("处理识别结果时出错: " + e.getMessage());
+        }
+    }
+
+    @Override
+    public void sttStreamCallErrorProxy(
+            @NonNull Flowable<ByteBuffer> audioSource,
+            @NonNull STTCallback sttCallback,
+            @NonNull StreamCallErrorCallback errorCallback
+    ){
+        STTCallback newSttCallback = new STTCallback() {
+            @Override
+            public void onSTTStart() {
+                sttCallback.onSTTStart();
+            }
+
+            @Override
+            public void onIdentifying(String intermediateResult) {
+                sttCallback.onIdentifying(intermediateResult);
+            }
+
+            @Override
+            public void onRecognitionSentence(String sentence) {
+                sttCallback.onRecognitionSentence(sentence);
+            }
+
+            @Override
+            public void onRecognitionComplete() {
+                sttCallback.onRecognitionComplete();
+            }
+
+            @Override
+            public void onRecognitionError(Throwable e) {
+                sttCallback.onRecognitionError(e);
+            }
+
+            @Override
+            public void onSTTError(Throwable e) {
+                handleConnectResetTimeoutError(
+                        e,
+                        audioSource,
+                        sttCallback,
+                        errorCallback
+                );
+            }
+
+            @Override
+            public void recordDisposable(Disposable disposable) {
+                errorCallback.addTask(disposable);
+            }
+        };
+        sttStreamCall(audioSource, newSttCallback);
+    }
+
+    private void handleConnectResetTimeoutError(
+            Throwable e,
+            @NonNull Flowable<ByteBuffer> audioSource,
+            @NonNull STTCallback sttCallback,
+            StreamCallErrorCallback errorCallback)  {
+        if (e instanceof WebClientRequestException || e instanceof TimeoutException) {
+            log.error("[STT] 连接超时异常，异常详情：", e);
+
+            int[] retryResult = errorCallback.addCountAndCheckIsOverLimit();
+            // 超出重试限制检查
+            boolean isOverLimit = retryResult[0] > 0;
+
+            if (isOverLimit) {
+                log.error("[STT] 尝试重连次数已超过限制，不再尝试重连");
+                errorCallback.endConversation();
+                sttCallback.onSTTError(e);
+            }
+            else {
+                log.info("[STT] 尝试重连，当前重连次数：{}", retryResult[1]);
+                sttStreamCallErrorProxy(
+                        audioSource,
+                        sttCallback,
+                        errorCallback
+                );
+            }
+        }
+        else {
+            log.error("[STT] 非连接超时异常，异常详情：", e);
+            sttCallback.onSTTError(e);
         }
     }
 

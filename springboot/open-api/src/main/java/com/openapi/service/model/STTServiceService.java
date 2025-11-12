@@ -1,7 +1,9 @@
 package com.openapi.service.model;
 
 import com.openapi.interfaces.mixLLM.STTCallback;
+import com.openapi.interfaces.model.StreamCallErrorCallback;
 import io.reactivex.Flowable;
+import lombok.NonNull;
 
 import java.nio.ByteBuffer;
 
@@ -13,5 +15,11 @@ public interface STTServiceService {
     void sttStreamCall(
             Flowable<ByteBuffer> audioSource,
             STTCallback sttCallback
+    );
+
+    void sttStreamCallErrorProxy(
+            @NonNull Flowable<ByteBuffer> audioSource,
+            @NonNull STTCallback sttCallback,
+            @NonNull StreamCallErrorCallback errorCallback
     );
 }

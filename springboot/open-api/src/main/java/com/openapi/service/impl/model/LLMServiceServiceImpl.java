@@ -5,7 +5,7 @@ import com.openapi.domain.ao.mixLLM.McpSwitch;
 import com.openapi.domain.constant.ModelConstant;
 import com.openapi.domain.constant.error.AgentExceptions;
 import com.openapi.domain.exception.AppException;
-import com.openapi.interfaces.model.LLMErrorCallback;
+import com.openapi.interfaces.model.StreamCallErrorCallback;
 import com.openapi.interfaces.model.LLMStateCallback;
 import com.openapi.service.PromptService;
 import com.openapi.service.model.LLMServiceService;
@@ -169,7 +169,7 @@ public class LLMServiceServiceImpl implements LLMServiceService {
             @NonNull String agentId,
             @NonNull String currentContextParam,
             @NonNull McpSwitch mcpSwitch,
-            @NonNull LLMErrorCallback errorCallback,
+            @NonNull StreamCallErrorCallback errorCallback,
             @Nullable Object... functionCallTools
     ) {
         try {
@@ -291,7 +291,7 @@ public class LLMServiceServiceImpl implements LLMServiceService {
             @NonNull String currentContextParam,
             @NonNull McpSwitch mcpSwitch,
             @NonNull LLMStateCallback callback,
-            @NonNull LLMErrorCallback errorCallback,
+            @NonNull StreamCallErrorCallback errorCallback,
             @NonNull Object... functionCallTools
     ){
         LLMStateCallback errorProxyCallback = new LLMStateCallback() {

@@ -12,7 +12,7 @@ import com.openapi.domain.ao.mixLLM.MixLLMAudio;
 import com.openapi.domain.ao.mixLLM.MixLLMResult;
 import com.openapi.interfaces.mixLLM.LLMCallback;
 import com.openapi.interfaces.mixLLM.TTSCallback;
-import com.openapi.interfaces.model.LLMErrorCallback;
+import com.openapi.interfaces.model.StreamCallErrorCallback;
 import com.openapi.interfaces.model.LLMStateCallback;
 import com.openapi.service.model.LLMServiceService;
 import com.openapi.service.model.TTSServiceService;
@@ -27,7 +27,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import reactor.core.publisher.SignalType;
 
-import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -360,7 +359,7 @@ public class MixLLMTests {
             }
         };
 
-        LLMErrorCallback llmErrorCallback = new LLMErrorCallback() {
+        StreamCallErrorCallback llmErrorCallback = new StreamCallErrorCallback() {
             @Override
             public int @NonNull [] addCountAndCheckIsOverLimit() {
                 int errorTime = errorTimes.incrementAndGet();
