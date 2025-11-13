@@ -15,23 +15,5 @@ import org.springframework.stereotype.Service;
 @Service
 @RequiredArgsConstructor
 public class PersistentConnectionServiceImpl implements PersistentConnectionService {
-    @Override
-    public void connect() {
-        log.info("[PersistentConnection] connect");
-    }
 
-    @Override
-    public void disconnect() {
-        log.info("[PersistentConnection] disconnect");
-    }
-
-    @Override
-    public void onThrowable(Throwable throwable) {
-
-    }
-
-    @Override
-    public void onMessage(Message message) {
-
-    }
 }
