@@ -3,8 +3,8 @@ package com.openapi.connect.websocket.handler;
 import com.openapi.component.manager.connect.WebSocketConnection;
 import com.openapi.component.manager.connect.WebSocketMessage;
 import com.openapi.component.manager.realTimeChat.PersistentConnectionManager;
+import com.openapi.interfaces.connect.ConnectionSession;
 import com.openapi.interfaces.connect.Message;
-import com.openapi.interfaces.connect.PersistentConnection;
 import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.web.socket.BinaryMessage;
@@ -33,7 +33,7 @@ public class WsChatHandler extends TextWebSocketHandler {
     @Override
     public void afterConnectionEstablished(@NotNull WebSocketSession session) throws Exception {
         super.afterConnectionEstablished(session);
-        PersistentConnection connection = new WebSocketConnection(session);
+        ConnectionSession connection = new WebSocketConnection(session);
         connectionManager.connect(connection);
     }
 
