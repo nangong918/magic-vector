@@ -37,15 +37,16 @@ Android User管理登录页面
 (太着急了, 压力太大了, 慢慢来吧)
 
 
-1. websocket的事件重新设计 (从开始说话就进行录制视频然后发送, 从说话就开始拍摄照片组提交) -> 抽象工厂
-2. 学习计算机网络. 集成mqtt, 集成udp; 抽象工厂解耦Mqtt和Websocket的选择
+1. 根据重构的内容升级ContextManager
+2. 录音和STT按照TestDemo进行升级修改
 3. Android 与 SpringBoot进行 UDP 视频流传输 + 模型调用测试
-4. visionService升级：提前上传数据直接使用。无提前上传数据就使用阻塞Http获取。
-5. 录音和STT按照TestDemo进行升级修改
-6. 根据重构的内容升级ContextManager
-7. Android 前端改为接收事件类型。
-8. JSON动态解析，TTS流式生成
-9. 测试：1. JSON动态解析 2.Prompt提示词测试AI理解能力，Advisers拦截解析AI上传数
+4. visionService升级：提前上传数据直接使用。无提前上传数据就使用阻塞Http获取。Android升级
+5. Android 前端改为接收事件类型。
+6. JSON动态解析，TTS流式生成
+7. 测试：1. JSON动态解析 2.Prompt提示词测试AI理解能力，Advisers拦截解析AI上传数
+8. 目标：STT，LLM，TTS，VL，FunctionCall顺利流畅的调用 + Motion，Emoji的MCP
+
+暂时不继续优化，等真正加入mqtt之后再执行。（websocket的事件重新设计 (从开始说话就进行录制视频然后发送, 从说话就开始拍摄照片组提交) -> 抽象工厂， 学习计算机网络. 集成mqtt, 集成udp; 抽象工厂解耦Mqtt和Websocket的选择）
 
 先用测试代码测试项目可行性再进行开发. 不然开发完成发现一堆AI蠢笨如牛的bug导致无法实现, 还得推翻重来.
 压力测试, 测出接口的极限, 好设计优化方案.
@@ -207,6 +208,9 @@ YOLOv8实现视频流目标活动检测 -> 用于未来调用视频流模型 (20
 完成编写STT测试用例，并测试最大音频输入。
 阅读LLM，STT，TTS，VL的模型输入限制，设计分片和缓存方案。-> STT:分片发送; TTS -> 句子分片,迭代调用
 为LLM，STT，TTS这种流式调用的都加上重试机制
+* 2025/11/13
+* 初步完成UDP上传视频流功能
+初步完成websocket和mqtt的解耦，暂时不继续优化，等真正加入mqtt之后再执行。
 
 
 ## 其他
