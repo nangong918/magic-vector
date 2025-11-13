@@ -30,13 +30,12 @@ public class VideoVL {
 
     public static void callWithLocalFile(String localPath)
             throws ApiException, NoApiKeyException, UploadFileException {
-        String filePath = "file://"+localPath;
         MultiModalConversation conv = new MultiModalConversation();
         MultiModalMessage userMessage = MultiModalMessage.builder().role(Role.USER.getValue())
                 .content(Arrays.asList(new HashMap<String, Object>()
                                        {{
-                                           put("video", filePath);// fps参数控制视频抽帧数量，表示每隔1/fps 秒抽取一帧
-                                           put("fps", 2);
+                                           put("video", localPath);// fps参数控制视频抽帧数量，表示每隔1/fps 秒抽取一帧
+                                           put("fps", 10);
                                        }},
                         new HashMap<String, Object>(){{put("text", "这段视频描绘的是什么景象？");}})).build();
         MultiModalConversationParam param = MultiModalConversationParam.builder()
@@ -64,7 +63,7 @@ public class VideoVL {
         MultiModalMessage userMessage = MultiModalMessage.builder().role(Role.USER.getValue())
                 .content(Arrays.asList(new HashMap<>() {{
                                            put("video", "data:video/mp4;base64," + base64Video);// fps参数控制视频抽帧数量，表示每隔1/fps 秒抽取一帧
-                                           put("fps", 2);
+                                           put("fps", 10);
                                        }},
                         new HashMap<>() {{
                             put("text", "这段视频描绘的是什么景象？");
@@ -83,10 +82,11 @@ public class VideoVL {
     }
 
     public static void main(String[] args) {
+        String localPath = "D:\\Bandicam\\test.mp4";
         try {
             // 将xxxx/test.mp4替换为你本地视频的绝对路径
-            callWithLocalFile("xxx/test.mp4");
-            callWithLocalFileBase64("xxx/test.mp4");
+            callWithLocalFile(localPath);
+            callWithLocalFileBase64(localPath);
         } catch (ApiException | NoApiKeyException | UploadFileException | IOException e) {
             System.out.println(e.getMessage());
         }
