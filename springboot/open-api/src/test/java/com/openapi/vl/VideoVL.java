@@ -35,7 +35,7 @@ public class VideoVL {
                 .content(Arrays.asList(new HashMap<String, Object>()
                                        {{
                                            put("video", localPath);// fps参数控制视频抽帧数量，表示每隔1/fps 秒抽取一帧
-                                           put("fps", 10);
+                                           put("fps", 0.1);
                                        }},
                         new HashMap<String, Object>(){{put("text", "这段视频描绘的是什么景象？");}})).build();
         MultiModalConversationParam param = MultiModalConversationParam.builder()
@@ -63,7 +63,7 @@ public class VideoVL {
         MultiModalMessage userMessage = MultiModalMessage.builder().role(Role.USER.getValue())
                 .content(Arrays.asList(new HashMap<>() {{
                                            put("video", "data:video/mp4;base64," + base64Video);// fps参数控制视频抽帧数量，表示每隔1/fps 秒抽取一帧
-                                           put("fps", 10);
+                                           put("fps", 0.1);
                                        }},
                         new HashMap<>() {{
                             put("text", "这段视频描绘的是什么景象？");

@@ -836,7 +836,7 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
         }
         else {
             log.info("[websocket] 启动视觉聊天：有图片, imageLength: {}", imageBase64.length());
-            String result = visionChatService.callWithFileBase64(imageBase64, chatContextManager.getUserRequestQuestion());
+            String result = visionChatService.vlSingleFileBase64(imageBase64, chatContextManager.getUserRequestQuestion());
             chatContextManager.addFunctionCallResult("[视觉任务结果]" + result);
             var disposable = functionCallResultLLMStreamCall(result, chatContextManager, isPassiveNotActive);
             chatContextManager.addFunctionCallTask(disposable);
@@ -851,7 +851,7 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
         }
         else {
             log.info("[handleImageCall] 启动视觉聊天：有图片, imageLength: {}", imageBase64.length());
-            String result = visionChatService.callWithFileBase64(imageBase64, chatContextManager.getUserRequestQuestion());
+            String result = visionChatService.vlSingleFileBase64(imageBase64, chatContextManager.getUserRequestQuestion());
             chatContextManager.visionContext.setVisionResult(result);
         }
     }
