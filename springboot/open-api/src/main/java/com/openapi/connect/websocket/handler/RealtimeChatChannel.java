@@ -1,4 +1,4 @@
-package com.openapi.websocket.handler;
+package com.openapi.connect.websocket.handler;
 
 
 import com.alibaba.cloud.ai.dashscope.chat.DashScopeChatModel;
@@ -12,7 +12,7 @@ import com.openapi.domain.dto.ws.request.RealtimeChatConnectRequest;
 import com.openapi.domain.dto.ws.request.UploadPhotoRequest;
 import com.openapi.service.RealtimeChatService;
 import com.openapi.config.SessionConfig;
-import com.openapi.websocket.manager.WebSocketMessageManager;
+import com.openapi.connect.websocket.manager.WebSocketMessageManager;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;

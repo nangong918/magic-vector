@@ -1,4 +1,4 @@
-package com.openapi.udp;
+package com.openapi.connect.udp;
 
 import lombok.Data;
 

@@ -9,7 +9,7 @@ import com.openapi.domain.constant.RoleTypeEnum;
 import com.openapi.domain.constant.realtime.RealtimeResponseDataTypeEnum;
 import com.openapi.domain.dto.ws.response.RealtimeChatTextResponse;
 import com.openapi.utils.DateUtils;
-import com.openapi.websocket.manager.WebSocketMessageManager;
+import com.openapi.connect.websocket.manager.WebSocketMessageManager;
 import lombok.Getter;
 import lombok.NonNull;
 import lombok.Setter;

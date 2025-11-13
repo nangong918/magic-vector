@@ -1,4 +1,4 @@
-package com.openapi.websocket.handler.test;
+package com.openapi.connect.websocket.handler.test;
 
 import com.alibaba.dashscope.audio.omni.OmniRealtimeConversation;
 import com.alibaba.dashscope.exception.NoApiKeyException;

@@ -37,7 +37,7 @@ import com.openapi.service.model.VLService;
 import com.openapi.service.tools.VisionToolService;
 import com.openapi.service.model.LLMServiceService;
 import com.openapi.service.model.TTSServiceService;
-import com.openapi.websocket.manager.WebSocketMessageManager;
+import com.openapi.connect.websocket.manager.WebSocketMessageManager;
 import io.reactivex.BackpressureStrategy;
 import io.reactivex.Flowable;
 import io.reactivex.disposables.Disposable;

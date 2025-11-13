@@ -1,4 +1,4 @@
-package com.openapi.websocket.manager;
+package com.openapi.connect.websocket.manager;
 
 import com.openapi.component.manager.realTimeChat.RealtimeChatContextManager;
 import com.openapi.domain.ao.MessageTask;

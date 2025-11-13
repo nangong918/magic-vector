@@ -1,14 +1,14 @@
-package com.openapi.websocket.config;
+package com.openapi.connect.websocket.config;
 
 import com.alibaba.cloud.ai.dashscope.chat.DashScopeChatModel;
 import com.openapi.config.SessionConfig;
 import com.openapi.config.ThreadPoolConfig;
 import com.openapi.service.test.OmniRealTimeNoVADTestService;
 import com.openapi.service.RealtimeChatService;
-import com.openapi.websocket.handler.test.OmniRealTimeNoVADTestChannel;
-import com.openapi.websocket.handler.RealtimeChatChannel;
-import com.openapi.websocket.handler.test.TestChannel;
-import com.openapi.websocket.manager.WebSocketMessageManager;
+import com.openapi.connect.websocket.handler.test.OmniRealTimeNoVADTestChannel;
+import com.openapi.connect.websocket.handler.RealtimeChatChannel;
+import com.openapi.connect.websocket.handler.test.TestChannel;
+import com.openapi.connect.websocket.manager.WebSocketMessageManager;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.socket.config.annotation.EnableWebSocket;

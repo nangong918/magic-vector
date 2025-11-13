@@ -11,7 +11,6 @@ import com.openapi.service.ChatMessageService;
 import com.openapi.service.RealtimeChatService;
 import com.openapi.utils.FileUtils;
 import com.openapi.config.SessionConfig;
-import com.openapi.websocket.manager.WebSocketMessageManager;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
