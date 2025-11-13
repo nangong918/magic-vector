@@ -1,16 +1,16 @@
 package com.openapi.controller;
 
 
-import com.alibaba.fastjson.JSON;
+import com.openapi.component.manager.realTimeChat.VLManager;
 import com.openapi.domain.constant.ModelConstant;
+import com.openapi.domain.constant.error.AgentExceptions;
 import com.openapi.domain.constant.error.CommonExceptions;
-import com.openapi.domain.constant.realtime.RealtimeResponseDataTypeEnum;
 import com.openapi.domain.dto.BaseResponse;
 import com.openapi.domain.dto.resonse.ChatMessageResponse;
 import com.openapi.service.ChatMessageService;
 import com.openapi.service.RealtimeChatService;
 import com.openapi.utils.FileUtils;
-import com.openapi.websocket.config.SessionConfig;
+import com.openapi.config.SessionConfig;
 import com.openapi.websocket.manager.WebSocketMessageManager;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -22,8 +22,8 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.List;
+import java.util.concurrent.ConcurrentMap;
 
 
 @Slf4j
@@ -37,7 +37,6 @@ public class ChatController {
     private final SessionConfig sessionConfig;
     private final ThreadPoolTaskExecutor taskExecutor;
     private final RealtimeChatService realtimeChatService;
-    private final WebSocketMessageManager webSocketMessageManager;
 
 
     @GetMapping("/getLastChat")
@@ -100,37 +99,36 @@ public class ChatController {
      */
     @PostMapping("/vision/upload/img")
     public BaseResponse<String> uploadVisionImg(
-            @RequestParam("image") MultipartFile image,
+            @RequestParam("images") List<MultipartFile> images,
             @RequestParam("agentId") String agentId,
             @RequestParam("userId") String userId,
             @RequestParam("messageId") String messageId
     ){
-        if (image == null || image.isEmpty() || !StringUtils.hasText(agentId) || !StringUtils.hasText(userId) || !StringUtils.hasText(messageId)){
-            log.warn("[websocket] 参数错误, image: {}, agentId: {}, userId: {}, messageId: {}", image, agentId, userId, messageId);
+        if (images == null || images.isEmpty() || !StringUtils.hasText(agentId) || !StringUtils.hasText(userId) || !StringUtils.hasText(messageId)){
+            log.warn("[uploadVisionImg] 参数错误, image: {}, agentId: {}, userId: {}, messageId: {}", images == null ? 0 : images.size(), agentId, userId, messageId);
             return BaseResponse.LogBackError(CommonExceptions.PARAM_ERROR);
         }
 
-        // MultipartFile -> Base64
-        String base64Str;
-        try {
-            base64Str = FileUtils.multipartFileToBase64(image);
-        } catch (Exception e) {
-            log.error("提供给前端上传视觉图片的接口：MultipartFile -> base64Str error: ", e);
-            return BaseResponse.LogBackError(CommonExceptions.MULTIPART_FILE_TO_BASE64_ERROR);
+        ConcurrentMap<String, VLManager> vlManagerMap = sessionConfig.vlManagerMap();
+        VLManager vlManager = vlManagerMap.get(agentId);
+        if (vlManager == null) {
+            log.warn("[uploadVisionImg] agentId: {} 不存在VLManager", agentId);
+            return BaseResponse.LogBackError(AgentExceptions.SESSION_NOT_EXIST);
         }
 
-        // 获取ChatClient和RealtimeChatContextManager
-        val realtimeChatContextManager = sessionConfig.realtimeChatContextManagerMap().get(agentId);
-        var visionChatFuture = taskExecutor.submit(() -> {
+        // 清空原先的数据 (不要勿清空video数据)
+        vlManager.resetImages();
+
+        // MultipartFile -> Base64
+        for (MultipartFile image : images) {
             try {
-                // 启动vision视觉理解
-                realtimeChatService.handleImageCall(base64Str, realtimeChatContextManager);
+                String base64Str = FileUtils.multipartFileToBase64(image);
+                vlManagerMap.get(agentId).imagesBase64.add(base64Str);
             } catch (Exception e) {
-                realtimeChatContextManager.endConversation();
-                log.error("[vision chat] 聊天处理异常", e);
+                log.error("提供给前端上传视觉图片的接口：MultipartFile -> base64Str error: ", e);
+                return BaseResponse.LogBackError(CommonExceptions.MULTIPART_FILE_TO_BASE64_ERROR);
             }
-        });
-        realtimeChatContextManager.addFunctionCallTask(visionChatFuture);
+        }
 
         return BaseResponse.getResponseEntitySuccess("上传成功");
     }

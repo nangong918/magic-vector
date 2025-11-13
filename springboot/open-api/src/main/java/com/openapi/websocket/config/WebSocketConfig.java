@@ -1,6 +1,7 @@
 package com.openapi.websocket.config;
 
 import com.alibaba.cloud.ai.dashscope.chat.DashScopeChatModel;
+import com.openapi.config.SessionConfig;
 import com.openapi.config.ThreadPoolConfig;
 import com.openapi.service.test.OmniRealTimeNoVADTestService;
 import com.openapi.service.RealtimeChatService;

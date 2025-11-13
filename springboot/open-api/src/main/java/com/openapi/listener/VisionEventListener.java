@@ -4,14 +4,13 @@ import com.alibaba.fastjson.JSON;
 import com.openapi.domain.constant.realtime.RealtimeResponseDataTypeEnum;
 import com.openapi.domain.dto.ws.response.SystemTextResponse;
 import com.openapi.domain.evnet.TakePhotoEvent;
-import com.openapi.websocket.config.SessionConfig;
+import com.openapi.config.SessionConfig;
 import com.openapi.websocket.manager.WebSocketMessageManager;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
-import org.springframework.web.socket.TextMessage;
 
 import java.util.HashMap;
 import java.util.Map;

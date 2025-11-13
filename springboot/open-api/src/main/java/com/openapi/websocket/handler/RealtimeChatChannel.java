@@ -6,13 +6,12 @@ import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.TypeReference;
 import com.openapi.component.manager.realTimeChat.RealtimeChatContextManager;
 import com.openapi.domain.constant.realtime.RealtimeRequestDataTypeEnum;
-import com.openapi.domain.constant.realtime.RealtimeResponseDataTypeEnum;
 import com.openapi.domain.constant.realtime.RealtimeSystemRequestEventEnum;
 import com.openapi.domain.dto.ws.request.McpSwitchRequest;
 import com.openapi.domain.dto.ws.request.RealtimeChatConnectRequest;
 import com.openapi.domain.dto.ws.request.UploadPhotoRequest;
 import com.openapi.service.RealtimeChatService;
-import com.openapi.websocket.config.SessionConfig;
+import com.openapi.config.SessionConfig;
 import com.openapi.websocket.manager.WebSocketMessageManager;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -27,7 +26,6 @@ import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
 
 import java.util.Base64;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 

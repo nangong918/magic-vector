@@ -37,14 +37,15 @@ Android User管理登录页面
 (太着急了, 压力太大了, 慢慢来吧)
 
 
-1. websocket的事件重新设计 (从开始说话就进行录制视频然后发送, 从说话就开始拍摄照片组提交)
-2. visionService升级：提前上传数据直接使用。无提前上传数据就使用阻塞Http获取。
-3. 录音和STT按照TestDemo进行升级修改
-4. 根据重构的内容升级ContextManager
-5. 抽象工厂解耦Mqtt和Websocket的选择
-6. Android 前端改为接收事件类型。
-7. JSON动态解析，TTS流式生成
-8. 测试：1. JSON动态解析 2.Prompt提示词测试AI理解能力，Advisers拦截解析AI上传数据
+1. websocket的事件重新设计 (从开始说话就进行录制视频然后发送, 从说话就开始拍摄照片组提交) -> 抽象工厂
+2. 学习计算机网络. 集成mqtt, 集成udp; 抽象工厂解耦Mqtt和Websocket的选择
+3. Android 与 SpringBoot进行 UDP 视频流传输 + 模型调用测试
+4. visionService升级：提前上传数据直接使用。无提前上传数据就使用阻塞Http获取。
+5. 录音和STT按照TestDemo进行升级修改
+6. 根据重构的内容升级ContextManager
+7. Android 前端改为接收事件类型。
+8. JSON动态解析，TTS流式生成
+9. 测试：1. JSON动态解析 2.Prompt提示词测试AI理解能力，Advisers拦截解析AI上传数
 
 先用测试代码测试项目可行性再进行开发. 不然开发完成发现一堆AI蠢笨如牛的bug导致无法实现, 还得推翻重来.
 压力测试, 测出接口的极限, 好设计优化方案.
