@@ -9,7 +9,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * @date 2025/11/7 13:06
  */
 public class LLMContext {
-    // llm重试次数（function call LLM 和 result LLM 共享）
+    // llm重试次数
     private final AtomicInteger llmConnectResetRetryCount = new AtomicInteger(0);
     // 是否正在llm
     private final AtomicBoolean isLLMing = new AtomicBoolean(false);

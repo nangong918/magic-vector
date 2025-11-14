@@ -2,7 +2,7 @@ package com.openapi.service.impl.tools;
 
 import com.alibaba.dashscope.exception.UploadFileException;
 import com.openapi.component.manager.realTimeChat.RealtimeChatContextManager;
-import com.openapi.component.manager.realTimeChat.VLManager;
+import com.openapi.component.manager.realTimeChat.VLContext;
 import com.openapi.domain.ao.mixLLM.McpSwitch;
 import com.openapi.domain.constant.ModelConstant;
 import com.openapi.domain.constant.error.AgentExceptions;
@@ -55,9 +55,8 @@ public class VisionToolServiceImpl implements VisionToolService {
         RealtimeChatContextManager chatContextManager = Optional.ofNullable(sessionConfig.realtimeChatContextManagerMap())
                 .map(map -> map.get(agentId))
                 .orElse(null);
-        VLManager vlManager = Optional.ofNullable(sessionConfig.vlManagerMap())
-                .map(map -> map.get(agentId))
-                .orElse(null);
+
+        VLContext vlManager = sessionConfig.getVLManager(agentId);
 
         if (chatContextManager == null || vlManager == null) {
             throw new AppException(AgentExceptions.SESSION_NOT_EXIST);
@@ -72,9 +71,6 @@ public class VisionToolServiceImpl implements VisionToolService {
                     messageId,
                     RealtimeSystemResponseEventEnum.UPLOAD_PHOTO.getCode()
             );
-
-            // 重置上次vision结果
-            chatContextManager.visionContext.reset();
 
             // 发送Spring Event
             TakePhotoEvent takePhotoEvent = new TakePhotoEvent(
@@ -91,11 +87,11 @@ public class VisionToolServiceImpl implements VisionToolService {
             try {
                 while (System.currentTimeMillis() - startTime < ModelConstant.VISION_TIMEOUT_MILLIS) {
                     // 检查是否有结果
-                    String visionResult = chatContextManager.visionContext.getVisionResult();
+                    String visionResult = chatContextManager.llmProxyContext.getVlContext().getVisionResult();
                     if (visionResult != null && !visionResult.trim().isEmpty()) {
                         log.info("[visionTool] 获取到视觉处理结果: {}", visionResult);
                         // 清空结果，避免影响下一次调用
-                        chatContextManager.visionContext.reset();
+                        chatContextManager.llmProxyContext.getVlContext().setVisionResult(visionResult);
                         return visionResult;
                     }
 
@@ -111,9 +107,6 @@ public class VisionToolServiceImpl implements VisionToolService {
                 Thread.currentThread().interrupt();
                 log.error("[visionTool] 等待视觉结果时被中断", e);
                 return "视觉处理被中断，请稍后重试。";
-            } finally {
-                // 清空结果，避免影响下一次调用
-                chatContextManager.visionContext.reset();
             }
         }
         // 有缓存直接调用缓存

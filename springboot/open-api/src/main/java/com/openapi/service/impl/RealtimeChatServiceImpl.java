@@ -8,7 +8,6 @@ import com.alibaba.dashscope.exception.UploadFileException;
 import com.alibaba.fastjson.JSON;
 import com.openapi.component.manager.OptimizedSentenceDetector;
 import com.openapi.component.manager.mixLLM.MixLLMManager;
-import com.openapi.component.manager.realTimeChat.AllFunctionCallFinished;
 import com.openapi.component.manager.realTimeChat.RealtimeChatContextManager;
 import com.openapi.config.AgentConfig;
 import com.openapi.config.ChatConfig;
@@ -27,7 +26,6 @@ import com.openapi.interfaces.mixLLM.LLMCallback;
 import com.openapi.interfaces.mixLLM.TTSCallback;
 import com.openapi.interfaces.model.TTSStateCallback;
 import com.openapi.interfaces.model.StreamCallErrorCallback;
-import com.openapi.interfaces.model.LLMStateCallback;
 import com.openapi.service.AgentService;
 import com.openapi.service.ChatMessageService;
 import com.openapi.service.PromptService;
@@ -53,7 +51,6 @@ import org.springframework.ai.chat.memory.ChatMemory;
 import org.springframework.ai.chat.messages.Message;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
-import reactor.core.publisher.SignalType;
 
 import java.io.ByteArrayOutputStream;
 import java.nio.ByteBuffer;
@@ -605,6 +602,7 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
      * @param isFunctionCall            是否是FunctionCall任务
      * @return                          线程订阅管理
      */
+/*
     private io.reactivex.disposables.Disposable proxyGenerateAudio(
             @NotNull RealtimeChatContextManager chatContextManager,
             boolean isFunctionCall
@@ -675,9 +673,10 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
             return null;
         }
     }
+*/
 
 
-    @Nullable
+/*    @Nullable
     private io.reactivex.disposables.Disposable commonGenerateAudio(
             @NotNull RealtimeChatContextManager chatContextManager,
             @NotNull TTSStateCallback additionalProxyCallback
@@ -772,98 +771,101 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
                 additionalProxyCallback.onError(throwable);
             }
         });
-    }
+    }*/
 
-    /**
-     * 检查TTS是否结束 + 自我调用
-     * 内部是循环，结束了就是TTS结束了
-     * generateAudio的callback传递null，避免递归导致栈溢出
-     * @param chatContextManager    聊天上下文管理器
-     * @throws NoApiKeyException    无API密钥异常
-     * @throws UploadFileException  上传文件异常
-     */
-    private void checkIsTTSFinish(@NotNull RealtimeChatContextManager chatContextManager, @NotNull TTSStateCallback callback) throws NoApiKeyException, UploadFileException {
-        // 只有当LLM结束并且TTS的MQ不存在句子时候才跳出TTS自我调用: !(!LLMing && count <= 0)
-        if (!chatContextManager.isTTSFinallyFinish()){
-            boolean isLLMing = chatContextManager.llmProxyContext.isLLMing();
-            // 全部取出
-            String sentence = chatContextManager.llmProxyContext.getAllTTS();
-
-            // LLM还未结束但是句子数量为0，说明llm在缓存区存在一个很长的句子，此时就需要等待输出完毕
-            if (sentence.isEmpty() && isLLMing){
-                // TTS的MQ存在数据了 || LLM已经结束
-                while (chatContextManager.llmProxyContext.isLLMing()){
-                    try {
-                        log.info("[checkIsTTSFinish] LLM还未结束但是句子数量为0，说明llm在缓存区存在一个很长的句子，此时就需要等待输出完毕。等待LLM输出完毕...");
-                        Thread.sleep(10);
-                    } catch (InterruptedException e){
-                        log.info("[checkIsTTSFinish] 次线程任务被取消，休眠线程中断: {}", e.getMessage());
-                    }
-                }
-                String finishSentence = chatContextManager.llmProxyContext.getAllTTS();
-                log.info("[checkIsTTSFinish] finishSentence自我TTS调用: finishSentence: {}", finishSentence);
-                var ttsDisposable = ttsServiceService.generateAudioContinue(finishSentence, callback, chatContextManager::isTTSFinallyFinish);
-                // todo 任务添加到任务list
-            }
-            else if (!sentence.isEmpty()){
-                // 自我调用 (此时因为可能还是llm，循环仍然继续)
-                log.info("[checkIsTTSFinish] 自我调用TTS开始: sentence: {}", sentence);
-                // !(!LLMing && count <= 0)
-                var ttsDisposable = ttsServiceService.generateAudioContinue(sentence, callback, chatContextManager::isTTSFinallyFinish);
-                // todo 任务添加到任务list
-            }
-            // 是否自我调用
-            chatContextManager.llmProxyContext.setIsTTSCallSelf(true);
-        }
-        // 不是自我调用的结束点
-        boolean isTTSCallSelf = chatContextManager.llmProxyContext.isTTSCallSelf();
-        boolean isTTSFinallyFinish = chatContextManager.isTTSFinallyFinish();
-        if (!isTTSCallSelf && isTTSFinallyFinish){
-            log.info("[checkIsTTSFinish] 不是自我调用的结束点, isTTSCallSelf: {}, isTTSFinallyFinish: {}",
-                    false, true);
-            callback.onAllComplete();
-        }
-    }
-
-
-    @Override
-    public void startFunctionCallResultChat(@Nullable String imageBase64, @NotNull RealtimeChatContextManager chatContextManager, boolean isPassiveNotActive) throws NoApiKeyException, UploadFileException {
-        if (imageBase64 == null || imageBase64.isEmpty()) {
-            log.info("[websocket] 启动视觉聊天：无图片");
-            chatContextManager.addFunctionCallResult("[视觉任务结果]: error错误，用户并没有提供图片资源");
-            var disposable = functionCallResultLLMStreamCall(null, chatContextManager, isPassiveNotActive);
-            chatContextManager.addFunctionCallTask(disposable);
-        }
-        else {
-            log.info("[websocket] 启动视觉聊天：有图片, imageLength: {}", imageBase64.length());
-            String result = visionChatService.vlSingleFileBase64(imageBase64, chatContextManager.getUserRequestQuestion());
-            chatContextManager.addFunctionCallResult("[视觉任务结果]" + result);
-            var disposable = functionCallResultLLMStreamCall(result, chatContextManager, isPassiveNotActive);
-            chatContextManager.addFunctionCallTask(disposable);
-        }
-    }
-
-    @Override
-    public void handleImageCall(String imageBase64, @NotNull RealtimeChatContextManager chatContextManager) throws NoApiKeyException, UploadFileException {
-        if (imageBase64 == null || imageBase64.isEmpty()) {
-            log.info("[handleImageCall] 启动视觉聊天：无图片");
-            chatContextManager.visionContext.setVisionResult("无图片，视觉理解失败。");
-        }
-        else {
-            log.info("[handleImageCall] 启动视觉聊天：有图片, imageLength: {}", imageBase64.length());
-            String result = visionChatService.vlSingleFileBase64(imageBase64, chatContextManager.getUserRequestQuestion());
-            chatContextManager.visionContext.setVisionResult(result);
-        }
-    }
+//    /**
+//     * 检查TTS是否结束 + 自我调用
+//     * 内部是循环，结束了就是TTS结束了
+//     * generateAudio的callback传递null，避免递归导致栈溢出
+//     * @param chatContextManager    聊天上下文管理器
+//     * @throws NoApiKeyException    无API密钥异常
+//     * @throws UploadFileException  上传文件异常
+//     */
+//    private void checkIsTTSFinish(@NotNull RealtimeChatContextManager chatContextManager, @NotNull TTSStateCallback callback) throws NoApiKeyException, UploadFileException {
+//        // 只有当LLM结束并且TTS的MQ不存在句子时候才跳出TTS自我调用: !(!LLMing && count <= 0)
+//        if (!chatContextManager.isTTSFinallyFinish()){
+//            boolean isLLMing = chatContextManager.llmProxyContext.isLLMing();
+//            // 全部取出
+//            String sentence = chatContextManager.llmProxyContext.getAllTTS();
+//
+//            // LLM还未结束但是句子数量为0，说明llm在缓存区存在一个很长的句子，此时就需要等待输出完毕
+//            if (sentence.isEmpty() && isLLMing){
+//                // TTS的MQ存在数据了 || LLM已经结束
+//                while (chatContextManager.llmProxyContext.isLLMing()){
+//                    try {
+//                        log.info("[checkIsTTSFinish] LLM还未结束但是句子数量为0，说明llm在缓存区存在一个很长的句子，此时就需要等待输出完毕。等待LLM输出完毕...");
+//                        Thread.sleep(10);
+//                    } catch (InterruptedException e){
+//                        log.info("[checkIsTTSFinish] 次线程任务被取消，休眠线程中断: {}", e.getMessage());
+//                    }
+//                }
+//                String finishSentence = chatContextManager.llmProxyContext.getAllTTS();
+//                log.info("[checkIsTTSFinish] finishSentence自我TTS调用: finishSentence: {}", finishSentence);
+//                var ttsDisposable = ttsServiceService.generateAudioContinue(finishSentence, callback, chatContextManager::isTTSFinallyFinish);
+//                // todo 任务添加到任务list
+//            }
+//            else if (!sentence.isEmpty()){
+//                // 自我调用 (此时因为可能还是llm，循环仍然继续)
+//                log.info("[checkIsTTSFinish] 自我调用TTS开始: sentence: {}", sentence);
+//                // !(!LLMing && count <= 0)
+//                var ttsDisposable = ttsServiceService.generateAudioContinue(sentence, callback, chatContextManager::isTTSFinallyFinish);
+//                // todo 任务添加到任务list
+//            }
+//            // 是否自我调用
+//            chatContextManager.llmProxyContext.setIsTTSCallSelf(true);
+//        }
+//        // 不是自我调用的结束点
+//        boolean isTTSCallSelf = chatContextManager.llmProxyContext.isTTSCallSelf();
+//        boolean isTTSFinallyFinish = chatContextManager.isTTSFinallyFinish();
+//        if (!isTTSCallSelf && isTTSFinallyFinish){
+//            log.info("[checkIsTTSFinish] 不是自我调用的结束点, isTTSCallSelf: {}, isTTSFinallyFinish: {}",
+//                    false, true);
+//            callback.onAllComplete();
+//        }
+//    }
 
 
-    /**
+//    @Override
+//    public void startFunctionCallResultChat(@Nullable String imageBase64, @NotNull RealtimeChatContextManager chatContextManager, boolean isPassiveNotActive) throws NoApiKeyException, UploadFileException {
+//        if (imageBase64 == null || imageBase64.isEmpty()) {
+//            log.info("[websocket] 启动视觉聊天：无图片");
+//            chatContextManager.addFunctionCallResult("[视觉任务结果]: error错误，用户并没有提供图片资源");
+//            var disposable = functionCallResultLLMStreamCall(null, chatContextManager, isPassiveNotActive);
+//            chatContextManager.addFunctionCallTask(disposable);
+//        }
+//        else {
+//            log.info("[websocket] 启动视觉聊天：有图片, imageLength: {}", imageBase64.length());
+//            String result = visionChatService.vlSingleFileBase64(imageBase64, chatContextManager.getUserRequestQuestion());
+//            chatContextManager.addFunctionCallResult("[视觉任务结果]" + result);
+//            var disposable = functionCallResultLLMStreamCall(result, chatContextManager, isPassiveNotActive);
+//            chatContextManager.addFunctionCallTask(disposable);
+//        }
+//    }
+
+//    @Override
+//    public void handleImageCall(String imageBase64, @NotNull RealtimeChatContextManager chatContextManager) throws NoApiKeyException, UploadFileException {
+//        if (imageBase64 == null || imageBase64.isEmpty()) {
+//            log.info("[handleImageCall] 启动视觉聊天：无图片");
+//            chatContextManager.visionContext.setVisionResult("无图片，视觉理解失败。");
+//        }
+//        else {
+//            log.info("[handleImageCall] 启动视觉聊天：有图片, imageLength: {}", imageBase64.length());
+//            String result = visionChatService.vlSingleFileBase64(imageBase64, chatContextManager.getUserRequestQuestion());
+//            chatContextManager.visionContext.setVisionResult(result);
+//        }
+//    }
+
+
+/*
+    */
+/**
      * functionCall工作流结果再次调用LLM回复
      * @param result                functionCall结果
      * @param chatContextManager    chatContextManager
      * @param isPassiveNotActive    是否被动调用, 有时候可能存在定时任务，主动调用functionCall，此时前端是没有接收到STRAT_TTS指令的，所以需要此值来控制是否添加启动值
      * @return                      用于取消的Disposable
-     */
+     *//*
+
     private reactor.core.Disposable functionCallResultLLMStreamCall(@Nullable String result, @NotNull RealtimeChatContextManager chatContextManager, boolean isPassiveNotActive){
         var callback = new LLMStateCallback() {
             final StringBuffer textBuffer = new StringBuffer();
@@ -986,12 +988,13 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
                 callback
         );
     }
+*/
 
-    /**
+/*    *//**
      * 获取FunctionCall结果
      * @param chatContextManager    chatContextManager
      * @return                      AllFunctionCallFinished
-     */
+     *//*
     @NotNull
     @Override
     public AllFunctionCallFinished getAllFunctionCallFinished(@NotNull RealtimeChatContextManager chatContextManager) {
@@ -1003,5 +1006,5 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
             var disposable = functionCallResultLLMStreamCall(results, chatContextManager, true);
             chatContextManager.addFunctionCallTask(disposable);
         };
-    }
+    }*/
 }

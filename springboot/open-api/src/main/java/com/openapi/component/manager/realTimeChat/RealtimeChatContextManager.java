@@ -53,17 +53,12 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 @Slf4j
 public class RealtimeChatContextManager implements
-        IRealTimeChatResponseManager, RealtimeProcess, ChatRealtimeState,
-        FunctionCallMethod {
+        IRealTimeChatResponseManager, RealtimeProcess, ChatRealtimeState {
 
     private final PersistentConnectMessageManager webSocketMessageManager;
     public RealtimeChatContextManager(
             @NonNull PersistentConnectMessageManager webSocketMessageManager){
         this.webSocketMessageManager = webSocketMessageManager;
-    }
-
-    public void setAllFunctionCallFinished(AllFunctionCallFinished allFunctionCallFinished){
-        this.llmProxyContext.setFunctionCallFinishCallBack(allFunctionCallFinished);
     }
 
     /// chatClient      (chatModel是单例，但是chatClient需要集成Agent的记忆，以及每个chatClient的设定不同，所以不是单例)
@@ -75,29 +70,29 @@ public class RealtimeChatContextManager implements
     private final List<Object> functionCallTasks = new ArrayList<>();
 
     /// 会话状态
+    @Getter
     public final LLMProxyContext llmProxyContext = new LLMProxyContext();
 
     // 添加任务
-    public boolean addChatTask(Object task) {
-        return addTask(task, chatTasks);
+    public void addChatTask(Object task) {
+        addTask(task, chatTasks);
     }
-    public boolean addFunctionCallTask(Object task) {
-        return addTask(task, functionCallTasks);
+    public void addFunctionCallTask(Object task) {
+        addTask(task, functionCallTasks);
     }
-    private boolean addTask(Object task, @NotNull List<Object> tasks){
+    private void addTask(Object task, @NotNull List<Object> tasks){
         if (task == null){
             log.warn("task is null");
-            return false;
+            return;
         }
         if (task instanceof io.reactivex.disposables.Disposable ||
                 task instanceof reactor.core.Disposable ||
                 task instanceof Future<?>){
-            return tasks.add(task);
+            tasks.add(task);
         }
         else {
             log.warn("task is not a Disposable or a Future");
         }
-        return false;
     }
 
     // 取消任务(方法模板)
@@ -143,15 +138,6 @@ public class RealtimeChatContextManager implements
     @Getter
     public McpSwitch mcpSwitch = new McpSwitch();
     public MixLLMManager mixLLMManager = new MixLLMManager();
-
-    /// vision chat
-    // image chat
-    public StringBuffer imageBase64 = new StringBuffer();
-    // image list chat (开发的时候再放出来)
-//    public List<StringBuffer> imageListBase64 = new ArrayList<>();
-    // video chat (开发的时候再放出来)
-//    public StringBuffer videoBase64 = new StringBuffer();
-    public VisionContext visionContext = new VisionContext();
 
     /// userQuestion
     @Getter
@@ -340,7 +326,6 @@ public class RealtimeChatContextManager implements
     @Override
     public void reset() {
         llmProxyContext.reset();
-        visionContext.reset();
         mixLLMManager.reset();
         // 取消正在执行的任务
         cancelTask(chatTasks);
@@ -409,25 +394,4 @@ public class RealtimeChatContextManager implements
         llmProxyContext.setTTSStartTime(time);
     }
 
-
-    @Override
-    public void addFunctionCallResult(String result) {
-        llmProxyContext.addFunctionCallResult(result);
-    }
-
-    @NotNull
-    @Override
-    public String getAllFunctionCallResult() {
-        return llmProxyContext.getAllFunctionCallResult();
-    }
-
-    @Override
-    public void setIsFinalResultTTS(boolean isFinalResultTTS) {
-        llmProxyContext.setIsFinalResultTTS(isFinalResultTTS);
-    }
-
-    @Override
-    public boolean isFinalResultTTS() {
-        return llmProxyContext.isFinalResultTTS();
-    }
 }

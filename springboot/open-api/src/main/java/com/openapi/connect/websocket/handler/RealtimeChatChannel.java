@@ -1,3 +1,4 @@
+/*
 package com.openapi.connect.websocket.handler;
 
 
@@ -175,10 +176,6 @@ public class RealtimeChatChannel extends TextWebSocketHandler {
                     String eventType = responseMap.get(RealtimeSystemRequestEventEnum.EVENT_KET);
                     // 实现websocket分片上传json，然后调用
                     if (eventType.equals(RealtimeSystemRequestEventEnum.UPLOAD_PHOTO.getCode())){
-                        /**
-                         * 获取图片Map<String, String>
-                         * @see com.openapi.domain.dto.ws.request.UploadPhotoRequest
-                         */
                         UploadPhotoRequest systemRequest = JSON.parseObject(responseJson, UploadPhotoRequest.class);
                         if (systemRequest.isHavePhoto) {
                             // 成功获取图片
@@ -247,3 +244,4 @@ public class RealtimeChatChannel extends TextWebSocketHandler {
         realtimeChatContextManager.llmProxyContext.getSttRecordContext().offerAudioBuffer(audioBytes);
     }
 }
+*/

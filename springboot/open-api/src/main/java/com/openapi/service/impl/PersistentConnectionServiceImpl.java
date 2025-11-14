@@ -161,21 +161,21 @@ public class PersistentConnectionServiceImpl implements PersistentConnectionServ
         RealtimeSystemRequestEventEnum eventEnum = RealtimeSystemRequestEventEnum.getByCode(eventType);
 
         switch (eventEnum) {
-            case UPLOAD_PHOTO -> handleUploadPhotoSystem(systemMessage, contextManager);
+//            case UPLOAD_PHOTO -> handleUploadPhotoSystem(systemMessage, contextManager);
             case SUBMIT_MCP_SWITCH -> handleFunctionCallSystem(systemMessage, contextManager);
         }
     }
 
-    private void handleUploadPhotoSystem(
+/*    private void handleUploadPhotoSystem(
             @NotNull String systemMessage,
             @NotNull RealtimeChatContextManager contextManager
     ) throws JSONException {
         UploadPhotoRequest systemRequest = JSON.parseObject(systemMessage, UploadPhotoRequest.class);
         if (systemRequest.isHavePhoto) {
             // 成功获取图片
-            if (!systemRequest.isLastFragment) {
+            if (!systemRequest.isLastFragment && systemRequest.currentPhotoIndex != null) {
                 // 不是最后一个碎片：拼接
-                contextManager.imageBase64.append(systemRequest.photoBase64);
+                contextManager.llmProxyContext.getVlContext().imageBase64.append(systemRequest.photoBase64);
             }
             else {
                 // 最后一个碎片：拼接完成
@@ -203,7 +203,7 @@ public class PersistentConnectionServiceImpl implements PersistentConnectionServ
             log.info("[websocket] 获取图片失败, 无照片");
             // 未获取到图片 -> 调用AI，告诉用户没有看到照片
         }
-    }
+    }*/
 
     private void handleFunctionCallSystem(
             @NotNull String systemMessage,

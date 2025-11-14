@@ -1,7 +1,7 @@
 package com.openapi.controller;
 
 
-import com.openapi.component.manager.realTimeChat.VLManager;
+import com.openapi.component.manager.realTimeChat.VLContext;
 import com.openapi.domain.constant.ModelConstant;
 import com.openapi.domain.constant.error.AgentExceptions;
 import com.openapi.domain.constant.error.CommonExceptions;
@@ -108,8 +108,7 @@ public class ChatController {
             return BaseResponse.LogBackError(CommonExceptions.PARAM_ERROR);
         }
 
-        ConcurrentMap<String, VLManager> vlManagerMap = sessionConfig.vlManagerMap();
-        VLManager vlManager = vlManagerMap.get(agentId);
+        VLContext vlManager = sessionConfig.getVLManager(agentId);
         if (vlManager == null) {
             log.warn("[uploadVisionImg] agentId: {} 不存在VLManager", agentId);
             return BaseResponse.LogBackError(AgentExceptions.SESSION_NOT_EXIST);
@@ -122,7 +121,7 @@ public class ChatController {
         for (MultipartFile image : images) {
             try {
                 String base64Str = FileUtils.multipartFileToBase64(image);
-                vlManagerMap.get(agentId).imagesBase64.add(base64Str);
+                vlManager.imagesBase64.add(base64Str);
             } catch (Exception e) {
                 log.error("提供给前端上传视觉图片的接口：MultipartFile -> base64Str error: ", e);
                 return BaseResponse.LogBackError(CommonExceptions.MULTIPART_FILE_TO_BASE64_ERROR);

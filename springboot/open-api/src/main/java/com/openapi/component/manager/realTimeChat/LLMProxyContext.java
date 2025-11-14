@@ -19,21 +19,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * @see FunctionCallLLMContext
  */
 @Slf4j
-public class LLMProxyContext implements RealtimeProcess, ChatRealtimeState, FunctionCallMethod{
-    ///===========会话类型===========
-    // 是否是FunctionCall会话
-    private final AtomicBoolean isFunctionCall = new AtomicBoolean(false);
-    public void addFunctionCallRecord(){
-        isFunctionCall.set(true);
-        functionCallLLMContext.addFunctionCallSignal();
-    }
-    public boolean isFunctionCall() {
-        return isFunctionCall.get();
-    }
-    public void setFunctionCallFinishCallBack(AllFunctionCallFinished allFunctionCallFinished){
-        this.functionCallLLMContext.allFunctionCallFinished = allFunctionCallFinished;
-    }
-
+public class LLMProxyContext implements RealtimeProcess, ChatRealtimeState{
     ///===========会话状态===========
     @Setter
     private RealTimeChatStateCallback stateCallback;
@@ -71,12 +57,7 @@ public class LLMProxyContext implements RealtimeProcess, ChatRealtimeState, Func
      */
     @Override
     public void startLLM(){
-        if (isFunctionCall.get()){
-            functionCallLLMContext.getLlmContext().setLLMing(true);
-        }
-        else {
-            simpleLLMContext.getLlmContext().setLLMing(true);
-        }
+        simpleLLMContext.getLlmContext().setLLMing(true);
         setState(RealTimeChatState.AGENT_REPLYING);
     }
 
@@ -85,12 +66,7 @@ public class LLMProxyContext implements RealtimeProcess, ChatRealtimeState, Func
      */
     @Override
     public void stopLLM(){
-        if (isFunctionCall.get()){
-            functionCallLLMContext.getLlmContext().setLLMing(false);
-        }
-        else {
-            simpleLLMContext.getLlmContext().setLLMing(false);
-        }
+        simpleLLMContext.getLlmContext().setLLMing(false);
         // 此处不设置，因为LLM和TTS存在并发状态情况，两者被归纳为了AGENT_REPLYING，所以AGENT_REPLYING由TTS结束
     }
 
@@ -100,12 +76,7 @@ public class LLMProxyContext implements RealtimeProcess, ChatRealtimeState, Func
      */
     @Override
     public void startTTS(){
-        if (isFunctionCall.get()){
-            functionCallLLMContext.getTtsContext().setTTSing(true);
-        }
-        else {
-            simpleLLMContext.getTtsContext().setTTSing(true);
-        }
+        simpleLLMContext.getTtsContext().setTTSing(true);
         setState(RealTimeChatState.AGENT_REPLYING);
     }
 
@@ -114,28 +85,8 @@ public class LLMProxyContext implements RealtimeProcess, ChatRealtimeState, Func
      */
     @Override
     public void stopTTS(){
-        if (isFunctionCall.get()){
-            functionCallLLMContext.getTtsContext().setTTSing(false);
-            // 如果是最终的tts
-            // 检查是否可以执行最后result的LLM；检查点2: 最终的TTS结束 -> 对应tts比function call慢
-            if (functionCallLLMContext.isFinalResultTTS()){
-                var remainingFunctionCallSignal = functionCallLLMContext.getRemainingFunctionCallSignal();
-                if (remainingFunctionCallSignal > 0){
-                    log.info("[FunctionCall] Final TTS 执行完毕FunctionCall结果，剩余function call信号量：{}", remainingFunctionCallSignal);
-                }
-                else if (remainingFunctionCallSignal == 0){
-                    log.info("[FunctionCall] 检查点2 所有FunctionCall结果获取完毕，开始执行最后result的LLM");
-                    functionCallLLMContext.allFunctionCallFinished.allFunctionCallFinished();
-                }
-                else {
-                    log.info("[FunctionCall] 检查点2 信号量小于0，任务已经开始执行...");
-                }
-            }
-        }
-        else {
-            simpleLLMContext.getTtsContext().setTTSing(false);
-            // 按理来说此处一定会调用endConversation()结束会话，但是这样就职责不单一，功能耦合了，还是上游去自己调用吧
-        }
+        simpleLLMContext.getTtsContext().setTTSing(false);
+        // 按理来说此处一定会调用endConversation()结束会话，但是这样就职责不单一，功能耦合了，还是上游去自己调用吧
         setState(RealTimeChatState.CONVERSATION_END);
     }
 
@@ -145,8 +96,8 @@ public class LLMProxyContext implements RealtimeProcess, ChatRealtimeState, Func
     @Override
     public void endConversation(){
         simpleLLMContext.reset();
-        functionCallLLMContext.reset();
         sttRecordContext.reset();
+        vlContext.resetAll();
         // 回调发送EOF
         setState(RealTimeChatState.CONVERSATION_END);
     }
@@ -154,23 +105,13 @@ public class LLMProxyContext implements RealtimeProcess, ChatRealtimeState, Func
     @Override
     public int getLLMErrorCount() {
         int count = 0;
-        if (isFunctionCall.get()){
-            count = functionCallLLMContext.getLlmContext().getLlmConnectResetRetryCount();
-        }
-        else {
-            count = simpleLLMContext.getLlmContext().getLlmConnectResetRetryCount();
-        }
+        count = simpleLLMContext.getLlmContext().getLlmConnectResetRetryCount();
         return count;
     }
 
     @Override
     public boolean isLLMing() {
-        if (isFunctionCall.get()){
-            return functionCallLLMContext.getLlmContext().isLLMing();
-        }
-        else {
-            return simpleLLMContext.getLlmContext().isLLMing();
-        }
+        return simpleLLMContext.getLlmContext().isLLMing();
     }
 
     @Override
@@ -188,41 +129,21 @@ public class LLMProxyContext implements RealtimeProcess, ChatRealtimeState, Func
      */
     @Override
     public AtomicBoolean isFirstTTS(){
-        if (isFunctionCall.get()){
-            return functionCallLLMContext.getTtsContext().isFirstTTS();
-        }
-        else {
-            return simpleLLMContext.getTtsContext().isFirstTTS();
-        }
+        return simpleLLMContext.getTtsContext().isFirstTTS();
     }
     @Override
     public boolean isTTSing() {
-        if (isFunctionCall.get()){
-            return functionCallLLMContext.getTtsContext().isTTSing();
-        }
-        else {
-            return simpleLLMContext.getTtsContext().isTTSing();
-        }
+        return simpleLLMContext.getTtsContext().isTTSing();
     }
 
     @Override
     public long getTTSStartTime() {
-        if (isFunctionCall.get()){
-            return functionCallLLMContext.getTtsContext().getLastTTS();
-        }
-        else {
-            return simpleLLMContext.getTtsContext().getLastTTS();
-        }
+        return simpleLLMContext.getTtsContext().getLastTTS();
     }
 
     @Override
     public void setTTSStartTime(long time) {
-        if (isFunctionCall.get()){
-            functionCallLLMContext.getTtsContext().setLastTTS(time);
-        }
-        else {
-            simpleLLMContext.getTtsContext().setLastTTS(time);
-        }
+        simpleLLMContext.getTtsContext().setLastTTS(time);
     }
 
     ///===========其他状态
@@ -232,12 +153,7 @@ public class LLMProxyContext implements RealtimeProcess, ChatRealtimeState, Func
      */
     @Override
     public void setIsFirstTTS(boolean isFirstTTS){
-        if (isFunctionCall.get()){
-            functionCallLLMContext.getTtsContext().setFirstTTS(isFirstTTS);
-        }
-        else {
-            simpleLLMContext.getTtsContext().setFirstTTS(isFirstTTS);
-        }
+        simpleLLMContext.getTtsContext().setFirstTTS(isFirstTTS);
     }
 
     /**
@@ -246,40 +162,34 @@ public class LLMProxyContext implements RealtimeProcess, ChatRealtimeState, Func
     @Override
     public void reset() {
         simpleLLMContext.reset();
-        functionCallLLMContext.reset();
         sttRecordContext.reset();
         setState(RealTimeChatState.UNCONVERSATION);
     }
     public void resetFunctionCall(){
-        functionCallLLMContext.reset();
         sttRecordContext.reset();
         setState(RealTimeChatState.UNCONVERSATION);
     }
     public void resetSimpleLLM(){
         simpleLLMContext.reset();
         sttRecordContext.reset();
-        isFunctionCall.set(false);
         setState(RealTimeChatState.UNCONVERSATION);
     }
     ///===========会话Context===========
+    // llm + tts
     private final SimpleLLMContext simpleLLMContext = new SimpleLLMContext();
-    private final FunctionCallLLMContext functionCallLLMContext = new FunctionCallLLMContext();
-    // 音频
-    // 音频状态
+    // stt
     @Getter
     private final STTContext sttRecordContext = new STTContext();
+    // vl
+    @Getter
+    private final VLContext vlContext = new VLContext();
 
     /**
      * 添加TTS sentence 到缓冲池
      * @param ttsSentence ttsSentence
      */
     public void offerTTS(String ttsSentence){
-        if (isFunctionCall.get()){
-            functionCallLLMContext.offerTTS(ttsSentence);
-        }
-        else {
-            simpleLLMContext.offerTTS(ttsSentence);
-        }
+        simpleLLMContext.offerTTS(ttsSentence);
     }
 
     /**
@@ -288,74 +198,16 @@ public class LLMProxyContext implements RealtimeProcess, ChatRealtimeState, Func
      */
     @NotNull
     public String getAllTTS() {
-        if (isFunctionCall.get()){
-            return functionCallLLMContext.getAllTTS();
-        }
-        else {
-            return simpleLLMContext.getAllTTS();
-        }
+        return simpleLLMContext.getAllTTS();
     }
 
 
     public int getAllTTSCount(){
-        if (isFunctionCall.get()){
-            return functionCallLLMContext.getAllTTSCount();
-        }
-        else {
-            return simpleLLMContext.getAllTTSCount();
-        }
+        return simpleLLMContext.getAllTTSCount();
     }
 
 
     public AtomicInteger getLLMConnectResetRetryCount() {
-        if (isFunctionCall.get()){
-            return functionCallLLMContext.getLlmContext().getLlmConnectResetRetryCountAtomic();
-        }
-        else {
-            return simpleLLMContext.getLlmContext().getLlmConnectResetRetryCountAtomic();
-        }
-    }
-
-    /// =============FunctionCallMethod=============
-
-    @Override
-    public void addFunctionCallResult(String result) {
-        functionCallLLMContext.addFunctionCallResult(result);
-    }
-
-    @NotNull
-    @Override
-    public String getAllFunctionCallResult() {
-        return functionCallLLMContext.getAllFunctionCallResult();
-    }
-
-    @Override
-    public void setIsFinalResultTTS(boolean isFinalResultTTS) {
-        functionCallLLMContext.setIsFinalResultTTS(isFinalResultTTS);
-    }
-
-    @Override
-    public boolean isFinalResultTTS() {
-        if (isFunctionCall.get()){
-            return functionCallLLMContext.isFinalResultTTS();
-        }
-        return false;
-    }
-
-    public boolean isTTSCallSelf(){
-        if (isFunctionCall.get()){
-            return functionCallLLMContext.getTtsContext().isCallSelf();
-        }
-        else {
-            return simpleLLMContext.getTtsContext().isCallSelf();
-        }
-    }
-    public void setIsTTSCallSelf(boolean isTTSCallSelf){
-        if (isFunctionCall.get()){
-            functionCallLLMContext.getTtsContext().setCallSelf(isTTSCallSelf);
-        }
-        else {
-            simpleLLMContext.getTtsContext().setCallSelf(isTTSCallSelf);
-        }
+        return simpleLLMContext.getLlmContext().getLlmConnectResetRetryCountAtomic();
     }
 }

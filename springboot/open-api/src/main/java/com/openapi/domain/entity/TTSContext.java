@@ -4,6 +4,7 @@ import lombok.Getter;
 import lombok.Setter;
 
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * @author 13225
@@ -12,6 +13,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public class TTSContext {
     // 是否是首次TTS (首次的tts需要快速，后面都是长段给出)
     private final AtomicBoolean isFirstTTS = new AtomicBoolean(true);
+    // tts重试次数
+    private final AtomicInteger ttsRetryCount = new AtomicInteger(0);
     // 是否自我调用
     @Getter
     @Setter
@@ -22,6 +25,15 @@ public class TTSContext {
     private long lastTTS = 0L;
     // 是否正在生成音频
     private final AtomicBoolean isTTSing = new AtomicBoolean(false);
+
+    // 获取当前重试次数
+    public int getTtsRetryCount() {
+        // 增加并返回
+        return ttsRetryCount.incrementAndGet();
+    }
+    public AtomicInteger getTtsRetryCountAtomic() {
+        return ttsRetryCount;
+    }
 
     /**
      * 是否是首次TTS
@@ -62,6 +74,7 @@ public class TTSContext {
         isFirstTTS.set(true);
         isTTSing.set(false);
         isCallSelf = false;
+        ttsRetryCount.set(0);
         lastTTS = 0L;
     }
 }

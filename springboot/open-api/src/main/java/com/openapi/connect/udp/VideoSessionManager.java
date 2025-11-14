@@ -48,7 +48,7 @@ public class VideoSessionManager {
                     completeBase64.length(), System.currentTimeMillis() - startTime);
 
             // 完成之后将数据流交给VLManager
-            var vlManager = sessionConfig.vlManagerMap().get(session.getAgentId());
+            var vlManager = sessionConfig.getVLManager(session.getAgentId());
             if (vlManager != null){
                 vlManager.videoBase64 = completeBase64;
             }
