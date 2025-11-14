@@ -47,6 +47,7 @@ class AgentEmojiActivity : BaseAppCompatVmActivity<ActivityAgentEmojiBinding, Ag
 
     companion object {
         val GSON = MainApplication.GSON
+        val udpVisionManager = MainApplication.getUdpVisionManager()
     }
 
     var visionManager = MainApplication.getVisionManager()
@@ -76,6 +77,14 @@ class AgentEmojiActivity : BaseAppCompatVmActivity<ActivityAgentEmojiBinding, Ag
             listener = getDetectListener(),
             lifecycleOwner = this as LifecycleOwner
         )
+
+        agentId?.let {
+            udpVisionManager.initialize(
+                userId = MainApplication.getUserId(),
+                agentId = agentId,
+            )
+            Log.i(TAG, "udpVisionManager initialize: userId = ${MainApplication.getUserId()}, agentId = $agentId")
+        }
 
         observeData()
     }
@@ -315,6 +324,13 @@ class AgentEmojiActivity : BaseAppCompatVmActivity<ActivityAgentEmojiBinding, Ag
     private var currentFrameBitmap: Bitmap? = null
     override fun onReceiveCurrentFrameBitmap(bitmap: Bitmap) {
         currentFrameBitmap = bitmap
+        handleFrameBitmapToUdpSend(bitmap)
+    }
+    // 将帧通过UDP发送给后端
+    private fun handleFrameBitmapToUdpSend(bitmap: Bitmap){
+        if (vadChatState == VadChatState.Speaking) {
+            udpVisionManager.sendVideoFrame(bitmap)
+        }
     }
 
     // 处理视觉理解Response
@@ -527,6 +543,7 @@ class AgentEmojiActivity : BaseAppCompatVmActivity<ActivityAgentEmojiBinding, Ag
     override fun onDestroy() {
         super.onDestroy()
         visionManager.onDestroy(window = window)
+        udpVisionManager.destroy()
     }
 
 }

@@ -42,7 +42,7 @@ class UdpVisionManager {
     // UDP相关
     private var datagramSocket: DatagramSocket? = null
     private val gson = MainApplication.GSON
-    private var isInitialized = false
+    var isInitialized = false
 
     // 帧率控制
     private var lastSendTime = 0L
