@@ -25,11 +25,11 @@ public class VideoSessionManager {
     private final Map<String, VideoSession> sessions = new ConcurrentHashMap<>();
 
     public void processVideoPacket(VideoUdpPacket packet) {
-        String sessionKey = buildSessionKey(packet.getUserId(), packet.getAgentId(), packet.getSessionId());
+        String sessionKey = buildSessionKey(packet.getUserId(), packet.getAgentId());
 
         VideoSession session = sessions.computeIfAbsent(sessionKey,
                 k -> new VideoSession(packet.getUserId(), packet.getAgentId(),
-                        packet.getSessionId(), packet.getTotalChunks()));
+                        packet.getTotalChunks()));
 
         session.addChunk(packet.getChunkIndex(), packet.getData());
 
@@ -43,8 +43,8 @@ public class VideoSessionManager {
             long startTime = System.currentTimeMillis();
             String completeBase64 = session.getCompleteData();
 
-            log.info("收到完整视频 - 会话: {}, 用户: {}, 数据大小: {} bytes, 耗时: {}ms",
-                    session.getSessionId(), session.getUserId(),
+            log.info("收到完整视频 - 用户: {}, 数据大小: {} bytes, 耗时: {}ms",
+                     session.getUserId(),
                     completeBase64.length(), System.currentTimeMillis() - startTime);
 
             // 完成之后将数据流交给VLManager
@@ -64,8 +64,8 @@ public class VideoSessionManager {
         }
     }
 
-    private String buildSessionKey(String userId, String agentId, String sessionId) {
-        return userId + ":" + agentId + ":" + sessionId;
+    private String buildSessionKey(String userId, String agentId) {
+        return userId + ":" + agentId;
     }
 
     @PreDestroy

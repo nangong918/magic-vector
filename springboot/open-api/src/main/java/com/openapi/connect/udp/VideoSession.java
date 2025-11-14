@@ -12,15 +12,13 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class VideoSession {
     private final String userId;
     private final String agentId;
-    private final String sessionId;
     private final int totalChunks;
     private final String[] chunks;
     private final AtomicInteger receivedCount = new AtomicInteger(0);
 
-    public VideoSession(String userId, String agentId, String sessionId, int totalChunks) {
+    public VideoSession(String userId, String agentId, int totalChunks) {
         this.userId = userId;
         this.agentId = agentId;
-        this.sessionId = sessionId;
         this.totalChunks = totalChunks;
         this.chunks = new String[totalChunks];
     }

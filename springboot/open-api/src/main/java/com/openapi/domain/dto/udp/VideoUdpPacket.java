@@ -11,7 +11,7 @@ import lombok.Data;
 public class VideoUdpPacket {
     private String userId;        // 用户ID
     private String agentId;       // 代理ID
-    private String sessionId;     // 会话ID
+//    private String sessionId;     // 会话ID
     private int chunkIndex;       // 分块索引
     private int totalChunks;      // 总块数
     private long timestamp;       // 时间戳

@@ -61,8 +61,8 @@ public class UdpPacketHandler extends SimpleChannelInboundHandler<DatagramPacket
             videoSessionManager.processVideoPacket(videoPacket);
 
             // 记录接收统计
-            log.debug("收到UDP数据包 - 用户: {}, 会话: {}, 分片: {}/{}",
-                    videoPacket.getUserId(), videoPacket.getSessionId(),
+            log.debug("收到UDP数据包 - 用户: {}, 分片: {}/{}",
+                    videoPacket.getUserId(),
                     videoPacket.getChunkIndex() + 1, videoPacket.getTotalChunks());
 
         } catch (Exception e) {
