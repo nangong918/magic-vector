@@ -8,7 +8,7 @@ import com.openapi.service.RealtimeChatService;
 import com.openapi.connect.websocket.handler.test.OmniRealTimeNoVADTestChannel;
 import com.openapi.connect.websocket.handler.RealtimeChatChannel;
 import com.openapi.connect.websocket.handler.test.TestChannel;
-import com.openapi.connect.websocket.manager.WebSocketMessageManager;
+import com.openapi.connect.websocket.manager.PersistentConnectMessageManager;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.socket.config.annotation.EnableWebSocket;
@@ -29,7 +29,7 @@ public class WebSocketConfig implements WebSocketConfigurer {
     private final RealtimeChatService realtimeChatService;
     private final DashScopeChatModel dashScopeChatModel;
     private final SessionConfig sessionConfig;
-    private final WebSocketMessageManager webSocketMessageManager;
+    private final PersistentConnectMessageManager webSocketMessageManager;
 
     /**
      * 注册 WebSocket 处理器

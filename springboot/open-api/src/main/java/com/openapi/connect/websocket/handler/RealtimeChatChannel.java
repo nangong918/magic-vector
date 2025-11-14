@@ -12,7 +12,7 @@ import com.openapi.domain.dto.ws.request.RealtimeChatConnectRequest;
 import com.openapi.domain.dto.ws.request.UploadPhotoRequest;
 import com.openapi.service.RealtimeChatService;
 import com.openapi.config.SessionConfig;
-import com.openapi.connect.websocket.manager.WebSocketMessageManager;
+import com.openapi.connect.websocket.manager.PersistentConnectMessageManager;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
@@ -39,7 +39,7 @@ public class RealtimeChatChannel extends TextWebSocketHandler {
     private final DashScopeChatModel dashScopeChatModel;
     private final SessionConfig sessionConfig;
     private String agentId;
-    private final WebSocketMessageManager webSocketMessageManager;
+    private final PersistentConnectMessageManager webSocketMessageManager;
 
     @Override
     public void afterConnectionEstablished(@NotNull WebSocketSession session) throws Exception {
@@ -96,7 +96,7 @@ public class RealtimeChatChannel extends TextWebSocketHandler {
                     var realtimeChatContextManager = new RealtimeChatContextManager(webSocketMessageManager);
                     realtimeChatContextManager.userId = connectRequest.getUserId();
                     realtimeChatContextManager.agentId = connectRequest.getAgentId();
-                    realtimeChatContextManager.session = session;
+//                    realtimeChatContextManager.session = session;
                     realtimeChatContextManager.connectTimestamp = connectRequest.getTimestamp();
 
                     // 添加functionCallFinished任务

@@ -5,7 +5,7 @@ import com.openapi.domain.constant.realtime.RealtimeResponseDataTypeEnum;
 import com.openapi.domain.dto.ws.response.SystemTextResponse;
 import com.openapi.domain.evnet.TakePhotoEvent;
 import com.openapi.config.SessionConfig;
-import com.openapi.connect.websocket.manager.WebSocketMessageManager;
+import com.openapi.connect.websocket.manager.PersistentConnectMessageManager;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
@@ -26,7 +26,7 @@ import java.util.Map;
 public class VisionEventListener {
 
     private final SessionConfig sessionConfig;
-    private final WebSocketMessageManager webSocketMessageManager;
+    private final PersistentConnectMessageManager webSocketMessageManager;
 
     @EventListener
     public void handleTakePhotoEvent(TakePhotoEvent event) {

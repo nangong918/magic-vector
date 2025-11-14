@@ -37,7 +37,7 @@ import com.openapi.service.model.VLService;
 import com.openapi.service.tools.VisionToolService;
 import com.openapi.service.model.LLMServiceService;
 import com.openapi.service.model.TTSServiceService;
-import com.openapi.connect.websocket.manager.WebSocketMessageManager;
+import com.openapi.connect.websocket.manager.PersistentConnectMessageManager;
 import io.reactivex.BackpressureStrategy;
 import io.reactivex.Flowable;
 import io.reactivex.disposables.Disposable;
@@ -85,7 +85,7 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
     private final PromptService promptService;
     private final VisionToolService visionToolService;
     private final VLService visionChatService;
-    private final WebSocketMessageManager webSocketMessageManager;
+    private final PersistentConnectMessageManager webSocketMessageManager;
     private final TTSServiceService ttsServiceService;
     private final LLMServiceService llmServiceService;
 

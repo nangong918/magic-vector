@@ -1,6 +1,7 @@
 package com.openapi.component.manager.realTimeChat;
 
 import com.alibaba.fastjson.JSON;
+import com.alibaba.fastjson.JSONException;
 import com.alibaba.fastjson.TypeReference;
 import com.openapi.config.SessionConfig;
 import com.openapi.domain.constant.realtime.RealtimeRequestDataTypeEnum;
@@ -103,10 +104,16 @@ public class PersistentConnectionManager implements IPersistentConnectionManager
                 requestMessage,
                 agentId.get()
             );
-            case SYSTEM_MESSAGE -> persistentConnectionService.handleSystemMessage(
-                requestMessage,
-                agentId.get()
-            );
+            case SYSTEM_MESSAGE -> {
+                try {
+                    persistentConnectionService.handleSystemMessage(
+                            requestMessage,
+                            agentId.get()
+                    );
+                } catch (JSONException e) {
+                    log.error("[WebSocketConnection] handleSystemMessage error, id={}", connectionSession.getSessionId(), e);
+                }
+            }
         }
     }
 

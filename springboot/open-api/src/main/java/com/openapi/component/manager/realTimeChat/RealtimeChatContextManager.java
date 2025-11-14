@@ -8,8 +8,9 @@ import com.openapi.domain.constant.ModelConstant;
 import com.openapi.domain.constant.RoleTypeEnum;
 import com.openapi.domain.constant.realtime.RealtimeResponseDataTypeEnum;
 import com.openapi.domain.dto.ws.response.RealtimeChatTextResponse;
+import com.openapi.interfaces.connect.ConnectionSession;
 import com.openapi.utils.DateUtils;
-import com.openapi.connect.websocket.manager.WebSocketMessageManager;
+import com.openapi.connect.websocket.manager.PersistentConnectMessageManager;
 import lombok.Getter;
 import lombok.NonNull;
 import lombok.Setter;
@@ -17,7 +18,6 @@ import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.ai.chat.client.ChatClient;
-import org.springframework.web.socket.WebSocketSession;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -54,11 +54,11 @@ import java.util.concurrent.atomic.AtomicInteger;
 @Slf4j
 public class RealtimeChatContextManager implements
         IRealTimeChatResponseManager, RealtimeProcess, ChatRealtimeState,
-        FunctionCallMethod{
+        FunctionCallMethod {
 
-    private final WebSocketMessageManager webSocketMessageManager;
+    private final PersistentConnectMessageManager webSocketMessageManager;
     public RealtimeChatContextManager(
-            @NonNull WebSocketMessageManager webSocketMessageManager){
+            @NonNull PersistentConnectMessageManager webSocketMessageManager){
         this.webSocketMessageManager = webSocketMessageManager;
     }
 
@@ -139,7 +139,7 @@ public class RealtimeChatContextManager implements
     @Getter
     public String agentId;
     public long connectTimestamp = 0L;
-    public WebSocketSession session;
+    public ConnectionSession session;
     @Getter
     public McpSwitch mcpSwitch = new McpSwitch();
     public MixLLMManager mixLLMManager = new MixLLMManager();

@@ -1,19 +1,16 @@
 package com.openapi.connect.websocket.manager;
 
-import com.openapi.component.manager.realTimeChat.RealtimeChatContextManager;
+import com.openapi.config.SessionConfig;
 import com.openapi.domain.ao.MessageTask;
+import com.openapi.interfaces.connect.ConnectionSession;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
-import org.springframework.web.socket.TextMessage;
-import org.springframework.web.socket.WebSocketSession;
 
 import java.io.IOException;
-import java.util.Optional;
 import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -25,17 +22,17 @@ import java.util.concurrent.atomic.AtomicBoolean;
 @Slf4j
 @Component
 @RequiredArgsConstructor
-public class WebSocketMessageManager {
+public class PersistentConnectMessageManager {
     private final BlockingQueue<MessageTask> messageQueue = new LinkedBlockingQueue<>();
     private final AtomicBoolean isProcessing = new AtomicBoolean(false);
-    private final ConcurrentMap<String, RealtimeChatContextManager> realtimeChatContextManagerMap;
+    private final SessionConfig sessionConfig;
     private final ThreadPoolTaskExecutor messageExecutor;
     /**
      * 提交消息发送任务
      * @param agentId agent会话Id
      * @param message 消息内容
      */
-    public void submitMessage(String agentId, String message/*, SendCallback callback*/) {
+    public void submitMessage(String agentId, String message) {
         if (StringUtils.hasText(agentId) && StringUtils.hasText(message)) {
             boolean addResult = messageQueue.offer(new MessageTask(agentId, message));
             if (!addResult){
@@ -110,19 +107,22 @@ public class WebSocketMessageManager {
             return;
         }
         try {
-            final WebSocketSession session = Optional.ofNullable(realtimeChatContextManagerMap.get(agentId))
-                    .map(it -> it.session)
-                    .orElse(null);
-            if (session == null || !session.isOpen()){
+            var contextManagerMap = sessionConfig.realtimeChatContextManagerMap().get(agentId);
+            if (contextManagerMap == null){
+                log.warn("发送消息异常：connectionSession是空, agentId = {}", agentId);
+                return;
+            }
+
+            final ConnectionSession connectionSession = contextManagerMap.session;
+
+            if (connectionSession == null || !connectionSession.isConnected()){
                 log.warn("发送消息异常：session是空或者关闭");
                 return;
             }
             // 解决：java.lang.IllegalStateException
-            synchronized (session) {
-                session.sendMessage(new TextMessage(task.message));
+            synchronized (connectionSession) {
+                connectionSession.send(message);
             }
-        } catch (IOException e) {
-            log.error("发送WebSocket消息时发生IO异常, agentId: {}", agentId, e);
         } catch (Exception e) {
             log.error("发送WebSocket消息时发生异常, agentId: {}", agentId, e);
         }

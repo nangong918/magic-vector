@@ -14,7 +14,7 @@ public class STTContext {
     private final AtomicBoolean isAudioChat = new AtomicBoolean(false);
     // 是否正在录音
     private final AtomicBoolean isRecording = new AtomicBoolean(false);
-    // user的音频数据
+    // user的音频数据（STT接收的是Flowable<BufferArray>, 必须提前解析好为byte[]）
     private final Queue<byte[]> requestAudioBuffer = new ConcurrentLinkedQueue<>();
 
     /**

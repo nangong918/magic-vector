@@ -6,7 +6,7 @@ import com.alibaba.fastjson.JSONException;
 import com.alibaba.fastjson.TypeReference;
 import com.openapi.component.manager.realTimeChat.RealtimeChatContextManager;
 import com.openapi.config.SessionConfig;
-import com.openapi.connect.websocket.manager.WebSocketMessageManager;
+import com.openapi.connect.websocket.manager.PersistentConnectMessageManager;
 import com.openapi.domain.constant.error.AgentExceptions;
 import com.openapi.domain.constant.realtime.RealtimeSystemRequestEventEnum;
 import com.openapi.domain.dto.ws.request.McpSwitchRequest;
@@ -23,6 +23,7 @@ import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
+import java.util.Base64;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
@@ -38,7 +39,7 @@ import java.util.concurrent.atomic.AtomicReference;
 public class PersistentConnectionServiceImpl implements PersistentConnectionService {
 
     private final ThreadPoolTaskExecutor taskExecutor;
-    private final WebSocketMessageManager webSocketMessageManager;
+    private final PersistentConnectMessageManager webSocketMessageManager;
     private final RealtimeChatService realtimeChatService;
     private final SessionConfig sessionConfig;
     private final DashScopeChatModel dashScopeChatModel;
@@ -121,7 +122,9 @@ public class PersistentConnectionServiceImpl implements PersistentConnectionServ
             return;
         }
         var contextManager = sessionConfig.realtimeChatContextManagerMap().get(agentId);
-        contextManager.llmProxyContext.getSttRecordContext().offerAudioBuffer(base64Audio);
+        // base64 -> byte[] (可能考虑需要使用异步, 如果录音数据并不是很影响写入就不异步了)
+        byte[] audioBytes = Base64.getDecoder().decode(base64Audio);
+        contextManager.llmProxyContext.getSttRecordContext().offerAudioBuffer(audioBytes);
     }
 
     @Override
@@ -167,10 +170,6 @@ public class PersistentConnectionServiceImpl implements PersistentConnectionServ
             @NotNull String systemMessage,
             @NotNull RealtimeChatContextManager contextManager
     ) throws JSONException {
-        /**
-         * 获取图片Map<String, String>
-         * @see com.openapi.domain.dto.ws.request.UploadPhotoRequest
-         */
         UploadPhotoRequest systemRequest = JSON.parseObject(systemMessage, UploadPhotoRequest.class);
         if (systemRequest.isHavePhoto) {
             // 成功获取图片
