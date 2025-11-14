@@ -3,6 +3,7 @@ package com.magicvector.manager.vl
 import android.graphics.Bitmap
 import android.util.Base64
 import com.core.baseutil.log.Log
+import com.data.domain.constant.BaseConstant
 import com.data.domain.dto.udp.VideoChunkData
 import com.magicvector.MainApplication
 import kotlinx.coroutines.CoroutineScope
@@ -28,13 +29,13 @@ class UdpVisionManager {
     }
 
     // 配置参数
-    private val serverIp = "your_server_ip" // 替换为实际服务器IP
-    private val serverPort = 45000
-    private val chunkSize = 4 * 1024 // 4KB分片大小
-    private val maxPacketSize = 64 * 1024 // UDP包最大64KB
+    private val serverIp = BaseConstant.ConstantUrl.TEST_ADDRESS // 替换为实际服务器IP
+    private val serverPort = BaseConstant.UDP.PORT
+    private val chunkSize = BaseConstant.UDP.CHUNK_SIZE // 4KB分片大小
+    private val maxPacketSize = BaseConstant.UDP.MAX_PACKET_SIZE // UDP包最大64KB
 
     // 会话管理
-    private var currentSessionId: String? = null
+//    private var currentSessionId: String? = null
     private var currentUserId: String = ""
     private var currentAgentId: String = ""
 
@@ -45,7 +46,7 @@ class UdpVisionManager {
 
     // 帧率控制
     private var lastSendTime = 0L
-    private val minFrameInterval = 100L // 最小发送间隔(ms)，10fps
+    private val minFrameInterval = BaseConstant.UDP.MIN_FRAME_INTERVAL // 最小发送间隔(ms)，10fps
 
     /**
      * 初始化UDP管理器
@@ -57,7 +58,7 @@ class UdpVisionManager {
 
         try {
             datagramSocket = DatagramSocket().apply {
-                soTimeout = 5000 // 5秒超时
+                soTimeout = BaseConstant.UDP.UDP_TIMEOUT // 5秒超时
                 broadcast = false
             }
             Log.d("UdpVisionManager", "UDP管理器初始化成功")
@@ -70,6 +71,8 @@ class UdpVisionManager {
     fun destroy() {
         datagramSocket?.close()
         isInitialized = false
+        currentUserId = ""
+        currentAgentId = ""
     }
 
     /**
@@ -102,7 +105,7 @@ class UdpVisionManager {
      */
     private fun processAndSendFrame(bitmap: Bitmap) {
         // 1. 将Bitmap转换为JPEG byte数组
-        val jpegData = bitmapToJpeg(bitmap, quality = 70) // 70%质量
+        val jpegData = bitmapToJpeg(bitmap, quality = BaseConstant.UDP.BITMAP_QUALITY) // 70%质量
 
         // 2. 分片处理
         val totalChunks = ceil(jpegData.size.toDouble() / chunkSize).toInt()

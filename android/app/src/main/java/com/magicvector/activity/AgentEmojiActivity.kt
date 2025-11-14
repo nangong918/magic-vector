@@ -29,6 +29,7 @@ import com.magicvector.manager.mcp.VisionMcpManager
 import com.magicvector.manager.yolo.EyesMoveManager
 import com.magicvector.manager.yolo.OnResetCallback
 import com.magicvector.manager.yolo.TargetActivityDetectionManager
+import com.magicvector.manager.yolo.VisionCallback
 import com.magicvector.utils.BaseAppCompatVmActivity
 import com.magicvector.viewModel.activity.AgentEmojiVm
 import com.view.appview.R
@@ -42,7 +43,7 @@ import java.util.Queue
 class AgentEmojiActivity : BaseAppCompatVmActivity<ActivityAgentEmojiBinding, AgentEmojiVm>(
     AgentEmojiActivity::class,
     AgentEmojiVm::class
-), HandleSystemResponse, OnVadChatStateChange {
+), HandleSystemResponse, OnVadChatStateChange, VisionCallback {
 
     companion object {
         val GSON = MainApplication.GSON
@@ -59,6 +60,7 @@ class AgentEmojiActivity : BaseAppCompatVmActivity<ActivityAgentEmojiBinding, Ag
         super.onCreate(savedInstanceState)
 
         visionManager = MainApplication.getVisionManager()
+        visionManager.setVisionCallback(this)
         chatMessageHandler = MainApplication.getChatMessageHandler()
     }
 
@@ -309,6 +311,12 @@ class AgentEmojiActivity : BaseAppCompatVmActivity<ActivityAgentEmojiBinding, Ag
         }
     }
 
+    // 添加一个变量来保存当前帧的Bitmap
+    private var currentFrameBitmap: Bitmap? = null
+    override fun onReceiveCurrentFrameBitmap(bitmap: Bitmap) {
+        currentFrameBitmap = bitmap
+    }
+
     // 处理视觉理解Response
     override fun handleSystemResponse(map: Map<String, String>) {
         val agentId = map["agentId"]
@@ -322,7 +330,7 @@ class AgentEmojiActivity : BaseAppCompatVmActivity<ActivityAgentEmojiBinding, Ag
 
         // 上传图片的指令
         if (map[RealtimeSystemResponseEventEnum.EVENT_KET] == RealtimeSystemResponseEventEnum.UPLOAD_PHOTO.code) {
-            val bitmap = visionManager.getCurrentFrameBitmap()
+            val bitmap = currentFrameBitmap
             if (bitmap == null) {
                 // 传递无图片的响应给服务器
                 val uploadPhotoRequest = UploadPhotoRequest()

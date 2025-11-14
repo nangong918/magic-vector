@@ -12,6 +12,7 @@ import com.google.gson.GsonBuilder
 import com.magicvector.manager.ChatMapManager
 import com.magicvector.manager.ChatMessageHandler
 import com.magicvector.manager.MessageListManager
+import com.magicvector.manager.vl.UdpVisionManager
 import com.magicvector.manager.yolo.VisionManager
 
 class MainApplication : Application() {
@@ -121,6 +122,15 @@ class MainApplication : Application() {
                 mcpSwitch!!.equipment = McpSwitch.McpEquipment.PHONE.code
             }
             return mcpSwitch!!
+        }
+
+        // Udp vision
+        private var udpVisionManager: UdpVisionManager? = null
+        fun getUdpVisionManager(): UdpVisionManager {
+            if (udpVisionManager == null) {
+                udpVisionManager = UdpVisionManager.getInstance()
+            }
+            return udpVisionManager!!
         }
     }
 
