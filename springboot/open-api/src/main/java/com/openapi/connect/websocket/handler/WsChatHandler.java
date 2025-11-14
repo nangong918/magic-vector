@@ -3,8 +3,10 @@ package com.openapi.connect.websocket.handler;
 import com.openapi.component.manager.connect.WebSocketConnection;
 import com.openapi.component.manager.connect.WebSocketMessage;
 import com.openapi.component.manager.realTimeChat.PersistentConnectionManager;
+import com.openapi.config.SessionConfig;
 import com.openapi.interfaces.connect.ConnectionSession;
 import com.openapi.interfaces.connect.Message;
+import com.openapi.service.PersistentConnectionService;
 import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.web.socket.BinaryMessage;
@@ -22,18 +24,26 @@ import org.springframework.web.socket.handler.TextWebSocketHandler;
 @Slf4j
 public class WsChatHandler extends TextWebSocketHandler {
 
-    private final PersistentConnectionManager connectionManager;
+    private PersistentConnectionManager connectionManager;
+    private final SessionConfig sessionConfig;
+    private final PersistentConnectionService persistentConnectionService;
 
     public WsChatHandler(
-            PersistentConnectionManager connectionManager
+            SessionConfig sessionConfig,
+            PersistentConnectionService persistentConnectionService
     ){
-        this.connectionManager = connectionManager;
+        this.sessionConfig = sessionConfig;
+        this.persistentConnectionService = persistentConnectionService;
     }
 
     @Override
     public void afterConnectionEstablished(@NotNull WebSocketSession session) throws Exception {
         super.afterConnectionEstablished(session);
         ConnectionSession connection = new WebSocketConnection(session);
+        connectionManager = new PersistentConnectionManager(
+            sessionConfig,
+            persistentConnectionService
+        );
         connectionManager.connect(connection);
     }
 

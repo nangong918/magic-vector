@@ -1,8 +1,10 @@
 package com.openapi.connect.websocket.config;
 
 import com.openapi.component.manager.realTimeChat.PersistentConnectionManager;
+import com.openapi.config.SessionConfig;
 import com.openapi.config.ThreadPoolConfig;
 import com.openapi.connect.websocket.handler.WsChatHandler;
+import com.openapi.service.PersistentConnectionService;
 import com.openapi.service.test.OmniRealTimeNoVADTestService;
 import com.openapi.connect.websocket.handler.test.OmniRealTimeNoVADTestChannel;
 import com.openapi.connect.websocket.handler.test.TestChannel;
@@ -24,7 +26,8 @@ public class WebSocketConfig implements WebSocketConfigurer {
 
     private final OmniRealTimeNoVADTestService omniRealTimeNoVADTestService;
     private final ThreadPoolConfig threadPoolConfig;
-    private final PersistentConnectionManager persistentConnectionManager;
+    private final SessionConfig sessionConfig;
+    private final PersistentConnectionService persistentConnectionService;
 
     /**
      * 注册 WebSocket 处理器
@@ -53,7 +56,8 @@ public class WebSocketConfig implements WebSocketConfigurer {
 //                        ),
 //                        "/agent/realtime/chat")
                 .addHandler(new WsChatHandler(
-                                persistentConnectionManager
+                                sessionConfig,
+                                persistentConnectionService
                         ),
                         "/agent/realtime/chat")
                 .setAllowedOrigins("*"); // 根据需要设置允许的源
