@@ -20,7 +20,7 @@ public interface ModelConstant {
     int LIMIT_FETCH_CHAT_HISTORY_LENGTH = 50;
 
     // llm connect reset 最大重连次数
-    int LLM_CONNECT_RESET_MAX_RETRY_COUNT = 3;
+    int CONNECT_RESET_MAX_RETRY_COUNT = 3;
     // 模型响应超时时间
     long LLM_CONNECT_TIMEOUT_MILLIS = 3500;
     long VISION_TIMEOUT_MILLIS = 30_000L;

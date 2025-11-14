@@ -3,6 +3,7 @@ package com.openapi.domain.entity;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * @author 13225
@@ -16,7 +17,12 @@ public class STTContext {
     private final AtomicBoolean isRecording = new AtomicBoolean(false);
     // user的音频数据（STT接收的是Flowable<BufferArray>, 必须提前解析好为byte[]）
     private final Queue<byte[]> requestAudioBuffer = new ConcurrentLinkedQueue<>();
-
+    // 录音重试次数
+    private final AtomicInteger recordRetryCount = new AtomicInteger(0);
+    // 获取重试次数
+    public int getRecordRetryCountAndIncrement() {
+        return recordRetryCount.incrementAndGet();
+    }
     /**
      * 录音开始
      */
@@ -71,5 +77,6 @@ public class STTContext {
         requestAudioBuffer.clear();
         isAudioChat.set(false);
         isRecording.set(false);
+        recordRetryCount.set(0);
     }
 }

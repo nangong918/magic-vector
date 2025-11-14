@@ -343,7 +343,7 @@ public class RealtimeChatContextManager implements
     public int[] addCountAndCheckIsOverLimit(){
         int[] countAndLimit = new int[2];
         int currentLLMErrorCount = getLLMErrorCount();
-        boolean isOverLimit = currentLLMErrorCount >= ModelConstant.LLM_CONNECT_RESET_MAX_RETRY_COUNT;
+        boolean isOverLimit = currentLLMErrorCount >= ModelConstant.CONNECT_RESET_MAX_RETRY_COUNT;
         countAndLimit[0] = currentLLMErrorCount;
         countAndLimit[1] = isOverLimit ? 1 : 0;
         return countAndLimit;
