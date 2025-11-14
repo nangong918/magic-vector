@@ -19,6 +19,7 @@ import java.util.concurrent.atomic.AtomicReference;
 /**
  * @author 13225
  * @date 2025/11/13 17:52
+ * 连接管理器
  */
 @Slf4j
 public class PersistentConnectionManager implements IPersistentConnectionManager {

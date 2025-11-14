@@ -1,12 +1,10 @@
 package com.openapi.connect.websocket.config;
 
-import com.alibaba.cloud.ai.dashscope.chat.DashScopeChatModel;
-import com.openapi.config.SessionConfig;
+import com.openapi.component.manager.realTimeChat.PersistentConnectionManager;
 import com.openapi.config.ThreadPoolConfig;
+import com.openapi.connect.websocket.handler.WsChatHandler;
 import com.openapi.service.test.OmniRealTimeNoVADTestService;
-import com.openapi.service.RealtimeChatService;
 import com.openapi.connect.websocket.handler.test.OmniRealTimeNoVADTestChannel;
-import com.openapi.connect.websocket.handler.RealtimeChatChannel;
 import com.openapi.connect.websocket.handler.test.TestChannel;
 import com.openapi.connect.websocket.manager.PersistentConnectMessageManager;
 import lombok.RequiredArgsConstructor;
@@ -26,10 +24,7 @@ public class WebSocketConfig implements WebSocketConfigurer {
 
     private final OmniRealTimeNoVADTestService omniRealTimeNoVADTestService;
     private final ThreadPoolConfig threadPoolConfig;
-    private final RealtimeChatService realtimeChatService;
-    private final DashScopeChatModel dashScopeChatModel;
-    private final SessionConfig sessionConfig;
-    private final PersistentConnectMessageManager webSocketMessageManager;
+    private final PersistentConnectionManager persistentConnectionManager;
 
     /**
      * 注册 WebSocket 处理器
@@ -49,12 +44,16 @@ public class WebSocketConfig implements WebSocketConfigurer {
 //                                new RealtimeChatContextManager(webSocketMessageManager)
 //                        ),
 //                        "/realtime-test")
-                .addHandler(new RealtimeChatChannel(
-                                threadPoolConfig.taskExecutor(),
-                                realtimeChatService,
-                                dashScopeChatModel,
-                                sessionConfig,
-                                webSocketMessageManager
+//                .addHandler(new RealtimeChatChannel(
+//                                threadPoolConfig.taskExecutor(),
+//                                realtimeChatService,
+//                                dashScopeChatModel,
+//                                sessionConfig,
+//                                webSocketMessageManager
+//                        ),
+//                        "/agent/realtime/chat")
+                .addHandler(new WsChatHandler(
+                                persistentConnectionManager
                         ),
                         "/agent/realtime/chat")
                 .setAllowedOrigins("*"); // 根据需要设置允许的源

@@ -39,7 +39,7 @@ import java.util.concurrent.atomic.AtomicReference;
 public class PersistentConnectionServiceImpl implements PersistentConnectionService {
 
     private final ThreadPoolTaskExecutor taskExecutor;
-    private final PersistentConnectMessageManager webSocketMessageManager;
+    private final PersistentConnectMessageManager connectMessageManager;
     private final RealtimeChatService realtimeChatService;
     private final SessionConfig sessionConfig;
     private final DashScopeChatModel dashScopeChatModel;
@@ -60,7 +60,7 @@ public class PersistentConnectionServiceImpl implements PersistentConnectionServ
             log.info("[PersistentConnection] 连接，收集用户会话信息, agentId: {}", agentIdR.get());
 
             // 重新连接就是新的会话信息
-            var contextManager = new RealtimeChatContextManager(webSocketMessageManager);
+            var contextManager = new RealtimeChatContextManager(connectMessageManager);
             contextManager.userId = connectRequest.getUserId();
             contextManager.agentId = connectRequest.getAgentId();
             contextManager.session = connectionSession;
