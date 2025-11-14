@@ -36,15 +36,16 @@ class AgentEmojiVm(
      * @param callback      回调
      */
     fun doUploadImageVision(context: Context,
-                            image: File,
+                            images: List<File>,
                             agentId: String,
                             userId: String,
                             messageId: String,
                             callback: SyncRequestCallback){
 
-        val imageParam: MultipartBody.Part? = FileUtil.createImageMultipartBodyPart(
-            image,
-            "image"
+        // 创建 MultipartBody.Part 列表
+        val imageParam: List<MultipartBody.Part>? = FileUtil.createImageMultipartBodyParts(
+            images,
+            "images"
         )
 
         if (imageParam == null){
@@ -58,7 +59,7 @@ class AgentEmojiVm(
         val messageIdParam = RequestBody.create("text/plain".toMediaTypeOrNull(), messageId)
 
         mApi.uploadImageVision(
-            image = imageParam,
+            images = imageParam,
             agentId = agentIdParam,
             userId = userIdParam,
             messageId = messageIdParam,

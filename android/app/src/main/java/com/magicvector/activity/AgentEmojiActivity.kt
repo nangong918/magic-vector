@@ -351,7 +351,7 @@ class AgentEmojiActivity : BaseAppCompatVmActivity<ActivityAgentEmojiBinding, Ag
                     VisionUploadTypeEnum.HTTP -> {
                         // http上传
                         httpUploadSingleImageVision(
-                            bitmap = bitmap,
+                            bitmaps = listOf(bitmap),
                             agentId = agentId!!,
                             userId = userId,
                             messageId = messageId!!
@@ -376,15 +376,15 @@ class AgentEmojiActivity : BaseAppCompatVmActivity<ActivityAgentEmojiBinding, Ag
 
     /// vision 任务
     // http 上传
-    private fun httpUploadSingleImageVision(bitmap: Bitmap, agentId: String, userId: String, messageId: String){
-        val file = VisionMcpManager.bitmapToFile(
-            bitmap = bitmap,
+    private fun httpUploadSingleImageVision(bitmaps: List<Bitmap>, agentId: String, userId: String, messageId: String){
+        val files = VisionMcpManager.bitmapsToFlies(
+            bitmaps = bitmaps,
             context = this
         )
         NetworkLoadUtils.showDialog(this)
         vm.doUploadImageVision(
             context = this,
-            image = file,
+            images = files,
             agentId = agentId,
             userId = userId,
             messageId = messageId,

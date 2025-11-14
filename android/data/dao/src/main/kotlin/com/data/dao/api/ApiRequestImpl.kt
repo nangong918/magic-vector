@@ -148,15 +148,15 @@ open class ApiRequestImpl(apiRequest: ApiRequest) : BaseApiRequestImpl() {
     }
 
     //    @Multipart
-    //    @POST("/vision/upload/img")
+    //    @POST("/chat/vision/upload/img")
     //    suspend fun uploadImageVision(
-    //        @Part image: MultipartBody.Part,
+    //        @Part images: List<MultipartBody.Part>,
     //        @Part("agentId") agentId: RequestBody,
     //        @Part("userId") userId: RequestBody,
     //        @Part("messageId") messageId: RequestBody,
     //    ): BaseResponse<String>
     fun uploadImageVision(
-        image: MultipartBody.Part,
+        images: List<MultipartBody.Part>,
         agentId: RequestBody,
         userId: RequestBody,
         messageId: RequestBody,
@@ -166,7 +166,7 @@ open class ApiRequestImpl(apiRequest: ApiRequest) : BaseApiRequestImpl() {
         sendRequestCallback(
             apiCall = {
                 mApi.uploadImageVision(
-                    image,
+                    images,
                     agentId,
                     userId,
                     messageId

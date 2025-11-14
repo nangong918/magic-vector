@@ -50,6 +50,14 @@ object VisionMcpManager {
         }
     }
 
+    fun bitmapsToFlies(bitmaps: List<Bitmap>, context: Context): List<File> {
+        val files = mutableListOf<File>()
+        for (bitmap in bitmaps) {
+            files.add(bitmapToFile(bitmap, context))
+        }
+        return files
+    }
+
     // 将Base64分片填充到Queue中
     fun fileBase64toQueue(base64Str: String): Queue<String> {
         val queue: Queue<String> = LinkedList()
