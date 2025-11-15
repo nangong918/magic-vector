@@ -155,12 +155,37 @@ class UdpVisionManager {
 //            sessionId = currentSessionId ?: generateSessionId(),
             chunkIndex = chunkIndex,
             totalChunks = totalChunks,
-            timestamp = System.currentTimeMillis(),
+//            timestamp = System.currentTimeMillis(),
             data = base64Data
         )
     }
 
     private fun sendUdpChunk(udpPacket: VideoUdpPacket) {
+        try {
+            val packetData = VideoUdpPacket.toBytes(udpPacket)
+
+            // 检查包大小
+            if (packetData.size > maxPacketSize) {
+                Log.w("UdpVisionManager", "UDP包过大: ${packetData.size} bytes")
+                return
+            }
+
+            val serverAddress = InetAddress.getByName(serverIp)
+            val packet = DatagramPacket(
+                packetData,
+                packetData.size,
+                serverAddress,
+                serverPort
+            )
+
+            datagramSocket?.send(packet)
+
+        } catch (e: Exception) {
+            Log.e("UdpVisionManager", "发送UDP分片失败: ${e.message}")
+        }
+    }
+
+    private fun sendUdpChunkJSON(udpPacket: VideoUdpPacket) {
         try {
             val jsonString = gson.toJson(udpPacket)
             Log.i("UdpVisionManager", "发送UDP分片: $jsonString")

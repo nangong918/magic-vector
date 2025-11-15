@@ -25,6 +25,7 @@ public class VideoSession {
 
     public synchronized void addChunk(int index, String data) {
         if (index >= 0 && index < totalChunks && chunks[index] == null) {
+            // 数据重排序
             chunks[index] = data;
             receivedCount.incrementAndGet();
         }

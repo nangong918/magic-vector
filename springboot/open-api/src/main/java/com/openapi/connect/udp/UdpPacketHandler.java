@@ -115,7 +115,7 @@ public class UdpPacketHandler extends SimpleChannelInboundHandler<DatagramPacket
     /**
      * 处理复制的数据
      */
-    private void processPacketString(byte[] data) {
+    private void processPacketJSON(byte[] data) {
         try {
             String json = new String(data, StandardCharsets.UTF_8);
             System.out.println("收到UDP数据包: " + json);
