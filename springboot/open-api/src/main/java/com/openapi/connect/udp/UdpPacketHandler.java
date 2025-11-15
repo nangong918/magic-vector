@@ -1,12 +1,14 @@
 package com.openapi.connect.udp;
 
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import com.openapi.domain.constant.UdpDataType;
 import com.openapi.domain.dto.udp.VideoUdpPacket;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.socket.DatagramPacket;
+import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
@@ -58,10 +60,62 @@ public class UdpPacketHandler extends SimpleChannelInboundHandler<DatagramPacket
         // businessExecutor.execute(() -> processPacketWithRefCount(packet.retain()));
     }
 
+    private void processPacket(byte[] data) {
+        if (data == null || data.length == 0){
+            log.warn("收到空数据包");
+            return;
+        }
+        try {
+            // 1. 解析数据类型（第一个字节）
+            byte typeByte = data[0];
+            UdpDataType dataType;
+            try {
+                dataType = UdpDataType.fromByte(typeByte);
+            } catch (IllegalArgumentException e) {
+                log.warn("未知的数据类型: {}", typeByte);
+                return;
+            }
+
+            switch (dataType) {
+                case VIDEO -> {
+                    processVideoPacket(data);
+                }
+                case AUDIO -> {
+                    log.debug("收到音频数据包，暂未实现");
+                }
+                case CONTROL -> {
+                    log.debug("收到控制指令数据包，暂未实现");
+                }
+                case HEARTBEAT -> {
+                    log.debug("收到心跳包，暂未实现");
+                }
+            }
+        } catch (Exception e) {
+            log.error("处理UDP数据包异常", e);
+        }
+    }
+
+    private void processVideoPacket(byte @NonNull [] bytes) {
+        try {
+            // 解析二进制协议
+            VideoUdpPacket packet = VideoUdpPacket.fromBytes(bytes);
+
+            // 处理视频数据包
+            videoSessionManager.processVideoPacket(packet);
+
+            log.debug("收到视频数据包 - 用户: {}, 分片: {}/{}",
+                    packet.getUserId(),
+                    packet.getChunkIndex() + 1, packet.getTotalChunks());
+
+        } catch (Exception e) {
+            log.error("处理视频数据包异常", e);
+        }
+    }
+
     /**
      * 处理复制的数据
      */
-    private void processPacket(byte[] data) {
+    private void processPacketString(byte[] data) {
         try {
             String json = new String(data, StandardCharsets.UTF_8);
             System.out.println("收到UDP数据包: " + json);
