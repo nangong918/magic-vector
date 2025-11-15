@@ -44,17 +44,27 @@ public class UdpPacketHandler extends SimpleChannelInboundHandler<DatagramPacket
 
     @Override
     protected void channelRead0(ChannelHandlerContext channelHandlerContext, DatagramPacket packet) throws Exception {
-        // 提交到业务线程池处理，不阻塞Netty IO线程
-        businessExecutor.execute(() -> processPacket(packet));
+        // 在IO线程中立即复制数据，然后提交到业务线程池
+        ByteBuf content = packet.content();
+
+        // 方法1：立即复制数据到字节数组
+        byte[] data = new byte[content.readableBytes()];
+        content.readBytes(data); // 这里会移动readIndex，但不会释放原始buffer
+
+        // 提交复制的数据到线程池
+        businessExecutor.execute(() -> processPacket(data));
+
+        // 或者使用方法2：增加引用计数并传递ByteBuf（更复杂）
+        // businessExecutor.execute(() -> processPacketWithRefCount(packet.retain()));
     }
 
-    private void processPacket(DatagramPacket packet) {
+    /**
+     * 处理复制的数据
+     */
+    private void processPacket(byte[] data) {
         try {
-            ByteBuf content = packet.content();
-            byte[] data = new byte[content.readableBytes()]; // 4. 立即复制数据，避免竞争
-            content.readBytes(data);
-
             String json = new String(data, StandardCharsets.UTF_8);
+            System.out.println("收到UDP数据包: " + json);
             VideoUdpPacket videoPacket = VideoUdpPacket.fromJson(json);
 
             // 处理视频数据包
@@ -69,7 +79,6 @@ public class UdpPacketHandler extends SimpleChannelInboundHandler<DatagramPacket
             log.error("处理UDP数据包异常", e);
         }
     }
-
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
         if (cause instanceof IOException) {

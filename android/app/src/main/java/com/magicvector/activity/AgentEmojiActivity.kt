@@ -200,6 +200,7 @@ class AgentEmojiActivity : BaseAppCompatVmActivity<ActivityAgentEmojiBinding, Ag
                     Log.e(TAG, "setVadChatState: ${state.message}")
                 }
             }
+            vadChatState = state
         }
     }
 

@@ -55,10 +55,12 @@ public class PersistentConnectionManager implements IPersistentConnectionManager
         var agentIdStr = agentId.get();
         if (agentIdStr != null) {
             var contextManager = sessionConfig.realtimeChatContextManagerMap().get(agentIdStr);
-            // 取消聊天任务
-            contextManager.reset();
-            // 清理资源
-            sessionConfig.realtimeChatContextManagerMap().remove(agentIdStr);
+            if (contextManager != null){
+                // 取消聊天任务
+                contextManager.reset();
+                // 清理资源
+                sessionConfig.realtimeChatContextManagerMap().remove(agentIdStr);
+            }
         }
 
         agentId.set(null);

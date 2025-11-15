@@ -4,7 +4,7 @@ import android.graphics.Bitmap
 import android.util.Base64
 import com.core.baseutil.log.Log
 import com.data.domain.constant.BaseConstant
-import com.data.domain.dto.udp.VideoChunkData
+import com.data.domain.dto.udp.VideoUdpPacket
 import com.magicvector.MainApplication
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -29,7 +29,7 @@ class UdpVisionManager {
     }
 
     // 配置参数
-    private val serverIp = BaseConstant.ConstantUrl.TEST_ADDRESS // 替换为实际服务器IP
+    private val serverIp = BaseConstant.ConstantUrl.TEST_HOST // 替换为实际服务器IP
     private val serverPort = BaseConstant.UDP.PORT
     private val chunkSize = BaseConstant.UDP.CHUNK_SIZE // 4KB分片大小
     private val maxPacketSize = BaseConstant.UDP.MAX_PACKET_SIZE // UDP包最大64KB
@@ -112,7 +112,7 @@ class UdpVisionManager {
 
         // 3. 发送每个分片
         for (chunkIndex in 0 until totalChunks) {
-            val chunkData = getChunkData(jpegData, chunkIndex, totalChunks)
+            val chunkData = createUdpPacket(jpegData, chunkIndex, totalChunks)
             sendUdpChunk(chunkData)
 
             // 小延迟避免网络拥塞
@@ -137,11 +137,11 @@ class UdpVisionManager {
     /**
      * 获取分片数据
      */
-    private fun getChunkData(
+    private fun createUdpPacket(
         videoData: ByteArray,
         chunkIndex: Int,
         totalChunks: Int
-    ): VideoChunkData {
+    ): VideoUdpPacket {
         val start = chunkIndex * chunkSize
         val end = minOf(start + chunkSize, videoData.size)
         val chunkBytes = videoData.copyOfRange(start, end)
@@ -149,19 +149,21 @@ class UdpVisionManager {
         // Base64编码
         val base64Data = Base64.encodeToString(chunkBytes, Base64.NO_WRAP)
 
-        return VideoChunkData(
+        return VideoUdpPacket(
             userId = currentUserId,
             agentId = currentAgentId,
 //            sessionId = currentSessionId ?: generateSessionId(),
             chunkIndex = chunkIndex,
             totalChunks = totalChunks,
+            timestamp = System.currentTimeMillis(),
             data = base64Data
         )
     }
 
-    private fun sendUdpChunk(chunkData: VideoChunkData) {
+    private fun sendUdpChunk(udpPacket: VideoUdpPacket) {
         try {
-            val jsonString = gson.toJson(chunkData)
+            val jsonString = gson.toJson(udpPacket)
+            Log.i("UdpVisionManager", "发送UDP分片: $jsonString")
             val packetData = jsonString.toByteArray(Charsets.UTF_8)
 
             // 检查包大小
