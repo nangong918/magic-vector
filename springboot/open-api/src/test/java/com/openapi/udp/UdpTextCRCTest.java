@@ -80,6 +80,22 @@ public class UdpTextCRCTest {
     public static void main(String[] args) {
         System.out.println("=== UDP文本分片传输测试 (带CRC校验) ===\n");
 
+        // 测试1: 正常传输（不模拟数据损坏）
+        System.out.println("🎯 测试1: 正常传输测试");
+        testNormalTransmission();
+
+        System.out.println("\n" + "=".repeat(50) + "\n");
+
+        // 测试2: 数据损坏传输（模拟数据损坏）
+        System.out.println("🎯 测试2: 数据损坏传输测试");
+        testCorruptedTransmission();
+    }
+
+    /**
+     * UDP传输测试主方法
+     * @param simulateCorruption 是否模拟数据损坏
+     */
+    private static void testUdpTransmission(boolean simulateCorruption) {
         // 原始文本信息
         byte[] textBytes = text.getBytes(StandardCharsets.UTF_8);
         System.out.println("原始文本长度: " + text.length() + " 字符");
@@ -114,27 +130,32 @@ public class UdpTextCRCTest {
             }
         }
 
-        // 模拟网络传输：打乱包顺序并模拟数据损坏
-        System.out.println("\n=== 模拟网络传输 (打乱顺序 + 数据损坏测试) ===");
+        // 模拟网络传输
+        if (simulateCorruption) {
+            System.out.println("\n=== 模拟网络传输 (打乱顺序 + 数据损坏测试) ===");
+        } else {
+            System.out.println("\n=== 模拟网络传输 (只打乱顺序，不模拟数据损坏) ===");
+        }
+
         List<byte[]> receivedPackets = new ArrayList<>(sentPackets);
         Collections.shuffle(receivedPackets);
 
-        // 模拟数据损坏：修改第一个包的数据部分，而不是CRC字段
-//        if (!receivedPackets.isEmpty()) {
-//            byte[] corruptedPacket = receivedPackets.get(0).clone();
-//
-//            // 更精确的计算数据开始位置
-//            int headerSize = 4 + 1 + 1 + 1 + 4 + 4 + 2; // 魔数4 + 版本1 + 长度2 + 索引8 + CRC2 = 16字节
-//            int userIdLen = 9; // "test_user" 长度
-//            int agentIdLen = 19; // "1984264579602534400" 长度
-//            int dataStart = headerSize + userIdLen + agentIdLen;
-//
-//            if (corruptedPacket.length > dataStart) {
-//                corruptedPacket[dataStart] ^= 0xFF; // 翻转数据部分的第一个字节
-//                receivedPackets.set(0, corruptedPacket);
-//                System.out.println("已模拟数据损坏: 修改了第一个包的数据部分，位置=" + dataStart);
-//            }
-//        }
+        // 根据参数决定是否模拟数据损坏
+        if (simulateCorruption && !receivedPackets.isEmpty()) {
+            byte[] corruptedPacket = receivedPackets.get(0).clone();
+
+            // 更精确的计算数据开始位置
+            int headerSize = 4 + 1 + 1 + 1 + 4 + 4 + 2; // 魔数4 + 版本1 + 长度2 + 索引8 + CRC2 = 16字节
+            int userIdLen = 9; // "test_user" 长度
+            int agentIdLen = 19; // "1984264579602534400" 长度
+            int dataStart = headerSize + userIdLen + agentIdLen;
+
+            if (corruptedPacket.length > dataStart) {
+                corruptedPacket[dataStart] ^= 0xFF; // 翻转数据部分的第一个字节
+                receivedPackets.set(0, corruptedPacket);
+                System.out.println("已模拟数据损坏: 修改了第一个包的数据部分，位置=" + dataStart);
+            }
+        }
 
         System.out.println("接收到的包顺序: ");
         for (int i = 0; i < receivedPackets.size(); i++) {
@@ -175,32 +196,27 @@ public class UdpTextCRCTest {
             }
         }
 
-        // 重组数据 - 修改逻辑，允许部分重组
+        // 重组数据
         System.out.println("\n=== 数据重组 ===");
-        boolean reassemblySuccessful = false;
-        byte[] reassembledData = null;
 
         if (corruptedPackets > 0) {
             System.out.println("⚠️ 有 " + corruptedPackets + " 个数据包CRC校验失败");
             System.out.println("✅ 有 " + validPackets + " 个数据包校验成功");
 
-            // 检查是否还能重组（如果损坏的包不是关键分片）
             if (receivedChunks.size() == totalChunks) {
                 System.out.println("🎉 幸运！损坏的包不影响完整重组");
-                reassembledData = reassembleData(receivedChunks, totalChunks, textBytes.length);
-                reassemblySuccessful = true;
+                // 继续执行重组
             } else {
                 System.out.println("❌ 损坏的包导致无法完整重组");
                 System.out.println("缺失的分片索引: " + findMissingChunks(receivedChunks, totalChunks));
+                System.out.println("跳过数据验证，因为重组失败");
+                return;
             }
-        } else {
-            // 所有包都正常的情况
-            reassembledData = reassembleData(receivedChunks, totalChunks, textBytes.length);
-            reassemblySuccessful = true;
         }
 
-        // 只有在重组成功时才进行验证
-        if (reassemblySuccessful) {
+        // 执行重组和验证
+        try {
+            byte[] reassembledData = reassembleData(receivedChunks, totalChunks, textBytes.length);
             String reassembledText = new String(reassembledData, StandardCharsets.UTF_8);
 
             // 验证结果
@@ -212,12 +228,26 @@ public class UdpTextCRCTest {
             // 显示部分重组文本
             System.out.println("\n=== 重组文本预览 ===");
             System.out.println(reassembledText);
-        } else {
-            System.out.println("跳过数据验证，因为重组失败");
-        }
 
-        // 测试边界情况
-        testEdgeCases();
+        } catch (IllegalStateException e) {
+            System.out.println("❌ 重组失败: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 单独测试正常传输（不模拟数据损坏）
+     */
+    private static void testNormalTransmission() {
+        System.out.println("🎯 正常传输测试");
+        testUdpTransmission(false);
+    }
+
+    /**
+     * 单独测试数据损坏传输（模拟数据损坏）
+     */
+    private static void testCorruptedTransmission() {
+        System.out.println("🎯 数据损坏传输测试");
+        testUdpTransmission(true);
     }
 
     /**
