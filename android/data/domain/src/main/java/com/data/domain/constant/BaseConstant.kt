@@ -100,8 +100,7 @@ class BaseConstant {
 
     object UDP {
         const val PORT = 45000
-        const val CHUNK_SIZE = 4 * 1024
-        const val MAX_PACKET_SIZE = 64 * 1024
+        const val MAX_PACKET_SIZE = 1450
         const val MIN_FRAME_INTERVAL = 100L
         const val BITMAP_QUALITY = 70
         const val UDP_TIMEOUT = 5000

@@ -31,7 +31,7 @@ class UdpVisionManager {
     // 配置参数
     private val serverIp = BaseConstant.ConstantUrl.TEST_HOST // 替换为实际服务器IP
     private val serverPort = BaseConstant.UDP.PORT
-    private val chunkSize = BaseConstant.UDP.CHUNK_SIZE // 4KB分片大小
+    private val chunkSize = VideoUdpPacket.DATA_CHUNK_SIZE // 4KB分片大小
     private val maxPacketSize = BaseConstant.UDP.MAX_PACKET_SIZE // UDP包最大64KB
 
     // 会话管理
@@ -112,8 +112,15 @@ class UdpVisionManager {
 
         // 3. 发送每个分片
         for (chunkIndex in 0 until totalChunks) {
-            val chunkData = createUdpPacket(jpegData, chunkIndex, totalChunks)
-            sendUdpChunk(chunkData)
+            val chunkData = VideoUdpPacket.createVideoPacket(
+                jpegData,
+                chunkIndex,
+                totalChunks,
+                currentUserId,
+                currentAgentId
+            )
+            val packetData = VideoUdpPacket.createBinaryProtocolWithCRC(chunkData)
+            sendUdpChunk(packetData)
 
             // 小延迟避免网络拥塞
             if (chunkIndex % 5 == 0) {
@@ -134,46 +141,18 @@ class UdpVisionManager {
         }
     }
 
-    /**
-     * 获取分片数据
-     */
-    private fun createUdpPacket(
-        videoData: ByteArray,
-        chunkIndex: Int,
-        totalChunks: Int
-    ): VideoUdpPacket {
-        val start = chunkIndex * chunkSize
-        val end = minOf(start + chunkSize, videoData.size)
-        val chunkBytes = videoData.copyOfRange(start, end)
-
-        // Base64编码
-        val base64Data = Base64.encodeToString(chunkBytes, Base64.NO_WRAP)
-
-        return VideoUdpPacket(
-            userId = currentUserId,
-            agentId = currentAgentId,
-//            sessionId = currentSessionId ?: generateSessionId(),
-            chunkIndex = chunkIndex,
-            totalChunks = totalChunks,
-//            timestamp = System.currentTimeMillis(),
-            data = base64Data
-        )
-    }
-
-    private fun sendUdpChunk(udpPacket: VideoUdpPacket) {
+    private fun sendUdpChunk(udpPacket: ByteArray) {
         try {
-            val packetData = VideoUdpPacket.toBytes(udpPacket)
-
             // 检查包大小
-            if (packetData.size > maxPacketSize) {
-                Log.w("UdpVisionManager", "UDP包过大: ${packetData.size} bytes")
+            if (udpPacket.size > maxPacketSize) {
+                Log.w("UdpVisionManager", "UDP包过大: ${udpPacket.size} bytes")
                 return
             }
 
             val serverAddress = InetAddress.getByName(serverIp)
             val packet = DatagramPacket(
-                packetData,
-                packetData.size,
+                udpPacket,
+                udpPacket.size,
                 serverAddress,
                 serverPort
             )
