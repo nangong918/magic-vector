@@ -342,7 +342,7 @@ public class UdpTextCRCTest {
         System.arraycopy(data, 0, buffer, offset, data.length);
 
         // 计算CRC (从版本号开始到CRC字段之前 + CRC字段之后到数据结束)
-        short crc = calculateCRC16(buffer, 4, crcOffset, crcOffset + 2, totalSize);
+        short crc = calculateCRC16(buffer, 0, crcOffset, crcOffset + 2, totalSize);
 
         // 写入CRC
         writeShort(crc, buffer, crcOffset);
@@ -394,7 +394,7 @@ public class UdpTextCRCTest {
         offset += 2; // 跳过CRC字段
 
         // 8. 计算期望的CRC (跳过CRC字段本身)
-        short expectedCRC = calculateCRC16(data, 4, crcOffset, crcOffset + 2, data.length);
+        short expectedCRC = calculateCRC16(data, 0, crcOffset, crcOffset + 2, data.length);
 
         if (receivedCRC != expectedCRC) {
             throw new IllegalArgumentException("CRC校验失败, 期望: " + expectedCRC + ", 实际: " + receivedCRC);

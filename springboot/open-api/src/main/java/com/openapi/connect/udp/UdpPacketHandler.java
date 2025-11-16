@@ -98,7 +98,7 @@ public class UdpPacketHandler extends SimpleChannelInboundHandler<DatagramPacket
     private void processVideoPacket(byte @NonNull [] bytes) {
         try {
             // 解析二进制协议
-            VideoUdpPacket packet = VideoUdpPacket.fromBytes(bytes);
+            VideoUdpPacket packet = VideoUdpPacket.parseBinaryProtocolWithCRC(bytes);
 
             // 处理视频数据包
             videoSessionManager.processVideoPacket(packet);

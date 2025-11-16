@@ -1,7 +1,9 @@
 package com.openapi.connect.udp;
 
+import com.openapi.domain.dto.udp.VideoUdpPacket;
 import lombok.Data;
 
+import java.util.Base64;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -23,10 +25,12 @@ public class VideoSession {
         this.chunks = new String[totalChunks];
     }
 
-    public synchronized void addChunk(int index, String data) {
+    public synchronized void addChunk(int index, byte[] data) {
         if (index >= 0 && index < totalChunks && chunks[index] == null) {
+            // byte[] -> Base64Str
+            String dataBase64 = Base64.getEncoder().encodeToString(data);
             // 数据重排序
-            chunks[index] = data;
+            chunks[index] = dataBase64;
             receivedCount.incrementAndGet();
         }
     }
