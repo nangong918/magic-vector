@@ -58,23 +58,23 @@ public class UdpTextCRCTest {
 
     private static final int MAX_PACKET_SIZE = 1450; // MTU安全值
     /**
-     * 4字节: 魔数 "UDPV"
      * 1字节: 版本号
      * 1字节: userId长度字段
      * 1字节: agentId长度字段
      * 4字节: chunkIndex
      * 4字节: totalChunks
      * 2字节: CRC16校验
+     * 1 + 1 + 1 + 4 + 4 + 2 = 13字节
      * 头部预留
      * userId: 20字符，UTF-8编码: 英文数字：1字节/字符 × 20 = 20字节
      * agentId: 20字符，UTF-8编码 英文数字：20字节
-     * 固定头部: 17字节 (15 + 2字节CRC)
+     * 固定头部: 13字节 (11 + 2字节CRC)
      * userId数据: 20字节
      * agentId数据: 20字节
      * ---
-     * 总计: 57字节
+     * 总计: 53字节
      */
-    private static final int HEADER_SIZE = 57;
+    private static final int HEADER_SIZE = 53;
     private static final int DATA_CHUNK_SIZE = MAX_PACKET_SIZE - HEADER_SIZE; // 实际数据分片大小
 
     public static void main(String[] args) {
@@ -145,13 +145,13 @@ public class UdpTextCRCTest {
             byte[] corruptedPacket = receivedPackets.get(0).clone();
 
             // 更精确的计算数据开始位置
-            int headerSize = 4 + 1 + 1 + 1 + 4 + 4 + 2; // 魔数4 + 版本1 + 长度2 + 索引8 + CRC2 = 16字节
+            int headerSize = 1 + 1 + 1 + 4 + 4 + 2; // 版本1 + 长度2 + 索引8 + CRC2 = 16字节
             int userIdLen = 9; // "test_user" 长度
             int agentIdLen = 19; // "1984264579602534400" 长度
             int dataStart = headerSize + userIdLen + agentIdLen;
 
             if (corruptedPacket.length > dataStart) {
-                corruptedPacket[dataStart] ^= 0xFF; // 翻转数据部分的第一个字节
+                corruptedPacket[dataStart] ^= (byte) 0xFF; // 翻转数据部分的第一个字节
                 receivedPackets.set(0, corruptedPacket);
                 System.out.println("已模拟数据损坏: 修改了第一个包的数据部分，位置=" + dataStart);
             }
@@ -298,15 +298,15 @@ public class UdpTextCRCTest {
         byte[] data = packet.getData();
 
         // 头部固定部分 + 2字节CRC
-        int fixedHeaderSize = 15 + 2;  // 原15字节 + 2字节CRC
+        int fixedHeaderSize = 11 + 2;  // 原15字节 + 2字节CRC
         int totalSize = fixedHeaderSize + userIdBytes.length + agentIdBytes.length + data.length;
 
         byte[] buffer = new byte[totalSize];
         int offset = 0;
 
-        // 1. 魔数
-        System.arraycopy("UDPT".getBytes(StandardCharsets.UTF_8), 0, buffer, offset, 4);
-        offset += 4;
+//        // 1. 魔数
+//        System.arraycopy("UDPT".getBytes(StandardCharsets.UTF_8), 0, buffer, offset, 4);
+//        offset += 4;
 
         // 2. 版本号
         buffer[offset++] = 1;
@@ -355,18 +355,18 @@ public class UdpTextCRCTest {
      * 解析带CRC校验的二进制协议包
      */
     private static BinaryTextPacket parseBinaryProtocolWithCRC(byte[] data) {
-        if (data.length < 17) {
+        if (data.length < 13) {
             throw new IllegalArgumentException("数据包过短: " + data.length + " bytes");
         }
 
         int offset = 0;
 
-        // 1. 检查魔数
-        byte[] magic = Arrays.copyOfRange(data, offset, offset + 4);
-        if (!Arrays.equals(magic, "UDPT".getBytes(StandardCharsets.UTF_8))) {
-            throw new IllegalArgumentException("无效的协议魔数");
-        }
-        offset += 4;
+//        // 1. 检查魔数
+//        byte[] magic = Arrays.copyOfRange(data, offset, offset + 4);
+//        if (!Arrays.equals(magic, "UDPT".getBytes(StandardCharsets.UTF_8))) {
+//            throw new IllegalArgumentException("无效的协议魔数");
+//        }
+//        offset += 4;
 
         // 2. 版本号
         byte version = data[offset++];

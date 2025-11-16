@@ -70,7 +70,7 @@ data class VideoUdpPacket(
             System.arraycopy(dataBytes, 0, buffer, offset, dataBytes.size)
 
             // 计算CRC (从userId长度开始到数据结束，跳过CRC字段本身)
-            val crc = ByteUtils.calculateCRC16(buffer, 1, crcOffset, crcOffset + 2, totalSize)
+            val crc = ByteUtils.calculateCRC16(buffer, 0, crcOffset, crcOffset + 2, totalSize)
 
             // 写入CRC
             ByteUtils.writeShort(crc, buffer, crcOffset)

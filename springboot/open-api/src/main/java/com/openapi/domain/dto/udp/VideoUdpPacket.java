@@ -68,7 +68,7 @@ public class VideoUdpPacket {
         offset += 2;
 
         // 7. 验证CRC (从userId长度开始到数据结束，跳过CRC字段本身)
-        short expectedCRC = ByteUtils.calculateCRC16(bytes, 1, crcOffset, crcOffset + 2, bytes.length);
+        short expectedCRC = ByteUtils.calculateCRC16(bytes, 0, crcOffset, crcOffset + 2, bytes.length);
         if (receivedCRC != expectedCRC) {
             throw new IllegalArgumentException("CRC校验失败, 期望: " + expectedCRC + ", 实际: " + receivedCRC);
         }
