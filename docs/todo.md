@@ -67,10 +67,14 @@ UML 设计状态机：UML绘制状态机状态
 面向可测试编程.
 
 今日任务：
-1.Android在connect的时候需要传递MCP的设置，暂时在MainApplication中写死。
-2.Spring 和 Android 都改为接收MixLLM输入，并解析。
-3.Android上传图片到后端的阻塞测试。
-测试上述功能
+1. 操作系统各种线程的测试
+2. 完成UDP传输并调用vision模型的测试
+
+明日任务：
+1. 继续完成操作系统的线程测试
+2. 完成Android设计模式的重构
+3. 尝试进进行Spring AOP重构
+4. 绘制状态机的UML图，尝试线程调度升级。
 
 
 各种模式的测试demo
