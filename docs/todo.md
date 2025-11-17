@@ -75,6 +75,7 @@ UML 设计状态机：UML绘制状态机状态
 2. 完成Android设计模式的重构
 3. 尝试进进行Spring AOP重构
 4. 绘制状态机的UML图，尝试线程调度升级。
+5. Android 创建ChatService，用于管理各种跟Chat相关的事件。
 
 
 各种模式的测试demo
