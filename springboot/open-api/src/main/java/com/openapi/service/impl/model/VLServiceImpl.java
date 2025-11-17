@@ -66,7 +66,9 @@ public class VLServiceImpl implements VLService {
         if (base64ImageList.isEmpty()){
             return "无图片数据";
         }
-        if (base64ImageList.size() == 1){
+        // 至少4张图片 模型的入参决定的
+        if (base64ImageList.size() < 4){
+            log.warn("[vlListFileBase64] 图片数量不足4张, base64ImageList: {}", base64ImageList.size());
             return vlSingleFileBase64(base64ImageList.getFirst(), userQuestion);
         }
 
@@ -77,8 +79,11 @@ public class VLServiceImpl implements VLService {
         Map<String, Object> params = Map.of(
                 "video", processedBase64ImageList,
                 // 若模型属于Qwen2.5-VL系列且传入图像列表时，可设置fps参数，表示图像列表是由原视频每隔 1/fps 秒抽取的，其他模型设置则不生效
-                "fps",2
+                "fps",ModelConstant.VISION_FPS
         );
+
+        log.info("[vlListFileBase64] 参数校验: {}", processedBase64ImageList.getFirst());
+
         MultiModalMessage userMessage = MultiModalMessage.builder()
                 .role(Role.USER.getValue())
                 .content(Arrays.asList(params,

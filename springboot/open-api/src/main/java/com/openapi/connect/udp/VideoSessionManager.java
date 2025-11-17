@@ -34,14 +34,15 @@ public class VideoSessionManager {
         session.addChunk(packet.getChunkIndex(), packet.getData());
 
         if (session.isComplete()) {
-            processCompleteVideo(session, sessionKey);
+//            processCompleteVideo(session, sessionKey);
+            processCompleteImage(session, sessionKey);
         }
     }
 
     private void processCompleteVideo(VideoSession session, String sessionKey) {
         try {
             long startTime = System.currentTimeMillis();
-            String completeBase64 = session.getCompleteData();
+            String completeBase64 = session.getCompleteVideoData();
 
             log.info("收到完整视频 - 用户: {}, 数据大小: {} bytes, 耗时: {}ms",
                      session.getUserId(),
@@ -63,6 +64,33 @@ public class VideoSessionManager {
             log.error("处理完整视频异常 - 会话: {}", sessionKey, e);
         }
     }
+
+    private void processCompleteImage(VideoSession session, String sessionKey) {
+        try {
+            long startTime = System.currentTimeMillis();
+            String imageBase64 =  session.getCompleteImageData();
+
+            log.info("收到完整图片 - 用户: {}, 数据大小: {} bytes, 耗时: {}ms",
+                    session.getUserId(),
+                    imageBase64.length(), System.currentTimeMillis() - startTime);
+
+            // 完成之后将数据流交给VLManager
+            var vlManager = sessionConfig.getVLManager(session.getAgentId());
+            if (vlManager != null){
+                vlManager.addImageBase64(imageBase64);
+            }
+            else {
+                log.warn("[processCompleteVideo] 未找到对应的VLManager - agentId: {}", session.getAgentId());
+            }
+
+            // 处理完成后移除会话
+            sessions.remove(sessionKey);
+
+        } catch (Exception e) {
+            log.error("处理完整视频异常 - 会话: {}", sessionKey, e);
+        }
+    }
+
 
     private String buildSessionKey(String userId, String agentId) {
         return userId + ":" + agentId;

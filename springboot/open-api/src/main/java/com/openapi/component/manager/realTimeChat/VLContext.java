@@ -1,7 +1,9 @@
 package com.openapi.component.manager.realTimeChat;
 
 import lombok.Getter;
+import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.util.CollectionUtils;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -21,6 +23,15 @@ public class VLContext {
     private String videoBase64;
     @Getter
     private final List<String> imagesBase64 = new ArrayList<>();
+
+    public void addImageBase64(String imageBase64){
+        if (imageBase64 != null && !imageBase64.isEmpty()){
+            imagesBase64.add(imageBase64);
+        }
+        else {
+            log.warn("[VLContext::addImageBase64] 图片数据为空");
+        }
+    }
 
     public void setVideoBase64(String videoBase64){
         if (videoBase64 != null && !videoBase64.isEmpty()){

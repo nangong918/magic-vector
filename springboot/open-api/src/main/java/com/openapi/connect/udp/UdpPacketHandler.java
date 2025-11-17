@@ -112,27 +112,27 @@ public class UdpPacketHandler extends SimpleChannelInboundHandler<DatagramPacket
         }
     }
 
-    /**
-     * 处理复制的数据
-     */
-    private void processPacketJSON(byte[] data) {
-        try {
-            String json = new String(data, StandardCharsets.UTF_8);
-            System.out.println("收到UDP数据包: " + json);
-            VideoUdpPacket videoPacket = VideoUdpPacket.fromJson(json);
-
-            // 处理视频数据包
-            videoSessionManager.processVideoPacket(videoPacket);
-
-            // 记录接收统计
-            log.debug("收到UDP数据包 - 用户: {}, 分片: {}/{}",
-                    videoPacket.getUserId(),
-                    videoPacket.getChunkIndex() + 1, videoPacket.getTotalChunks());
-
-        } catch (Exception e) {
-            log.error("处理UDP数据包异常", e);
-        }
-    }
+//    /**
+//     * 处理复制的数据
+//     */
+//    private void processPacketJSON(byte[] data) {
+//        try {
+//            String json = new String(data, StandardCharsets.UTF_8);
+//            System.out.println("收到UDP数据包: " + json);
+//            VideoUdpPacket videoPacket = VideoUdpPacket.fromJson(json);
+//
+//            // 处理视频数据包
+//            videoSessionManager.processVideoPacket(videoPacket);
+//
+//            // 记录接收统计
+//            log.debug("收到UDP数据包 - 用户: {}, 分片: {}/{}",
+//                    videoPacket.getUserId(),
+//                    videoPacket.getChunkIndex() + 1, videoPacket.getTotalChunks());
+//
+//        } catch (Exception e) {
+//            log.error("处理UDP数据包异常", e);
+//        }
+//    }
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
         if (cause instanceof IOException) {
