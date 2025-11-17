@@ -67,7 +67,6 @@ public class RealtimeChatContextManager implements
 
     /// 会话任务
     private final List<Object> chatTasks = new ArrayList<>();
-    private final List<Object> functionCallTasks = new ArrayList<>();
 
     /// 会话状态
     @Getter
@@ -76,9 +75,6 @@ public class RealtimeChatContextManager implements
     // 添加任务
     public void addChatTask(Object task) {
         addTask(task, chatTasks);
-    }
-    public void addFunctionCallTask(Object task) {
-        addTask(task, functionCallTasks);
     }
     private void addTask(Object task, @NotNull List<Object> tasks){
         if (task == null){
@@ -100,10 +96,7 @@ public class RealtimeChatContextManager implements
         cancelTask(chatTasks);
         llmProxyContext.resetFunctionCall();
     }
-    public final void cancelFunctionCallTask(){
-        cancelTask(functionCallTasks);
-        llmProxyContext.resetSimpleLLM();
-    }
+
     private synchronized void cancelTask(@NotNull List<Object> tasks){
         if (tasks.isEmpty()){
             return;
@@ -329,7 +322,6 @@ public class RealtimeChatContextManager implements
         mixLLMManager.reset();
         // 取消正在执行的任务
         cancelTask(chatTasks);
-        cancelTask(functionCallTasks);
         // 取消任务并不会清除userQuestion
         userRequestQuestion = "";
         agentResponseStringBuffer.setLength(0);
