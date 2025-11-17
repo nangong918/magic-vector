@@ -401,6 +401,10 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
                 log.error("保存用户语音识别结果到数据库失败：", e);
             }
 
+            /**
+             * STT生成成功文本之后，应该保存数据库，但是这本质上是对STT业务逻辑的侵入，传统实现方法是让STT各个实现阶段对外暴露，就是接口的方法，这样也能解耦，然后AOP就是直接接口都懒得写，直接切入控制存储
+             * 这部分代码应该使用AOP
+             */
             // 发送给Client
             Map<String, String> responseMap = new HashMap<>();
             responseMap.put(RealtimeResponseDataTypeEnum.TYPE, RealtimeResponseDataTypeEnum.TEXT_CHAT_RESPONSE.getType());

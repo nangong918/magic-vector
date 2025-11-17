@@ -80,7 +80,7 @@ lombok可以直接实现，相当于是数据填充。
 
 #### 原型模式
 [PrototypePattern.java](../../springboot/demo/src/test/java/designPattern/create/PrototypePattern.java)
-目的是防止对象的指针引用，而是使用复制对象的数据
+目的是防止对象的指针引用，而是使用复制对象的数据；Spring框架的@Bean就是原型模式
 
 ### 结构型模式
 #### 适配器模式
@@ -96,7 +96,7 @@ Android的RecyclerViewAdapter就会根据不同的View和ViewHolder进行不同�
 [ProxyPattern.java](../../springboot/demo/src/test/java/designPattern/build_/ProxyPattern.java)
 代理模式允许通过一个代理对象来控制对另一个对象的访问。这种模式常用于实现懒加载、访问控制、日志记录等功能
 
-#### 外观模式
+#### 外观模式（门面模式）
 [FacadePattern.java](../../springboot/demo/src/test/java/designPattern/build_/FacadePattern.java)
 外观模式的本质确实可以看作是一个“管理者”（或称为“门面”）类，它对多个子系统对象进行管理，并向外部提供一个统一的接口，从而简化了对这些子系统的访问
 
@@ -147,7 +147,7 @@ Android的Activity生命周期就是一个模板方法，允许开发者重写�
 
 #### 备忘录模式
 [MementoPattern.java](../../springboot/demo/src/test/java/designPattern/action/MementoPattern.java)
-备忘录模式: 创建一个可以撤销的缓存
+备忘录模式: 创建一个可以撤销的缓存（创建一个Memory，让整个系统回归到Memory状态，比如尝试某个操作之前存储，如果发生异常就回到Memory，有些类似事务）
 
 #### 状态模式
 [StatePattern.java](../../springboot/demo/src/test/java/designPattern/action/StatePattern.java)
@@ -167,11 +167,12 @@ Android的Activity生命周期就是一个模板方法，允许开发者重写�
 # 框架设计模式
 ## SpringBoot设计模式
 
-AOP代理模式
+AOP代理模式: 面向切面编程
+IoC控制反转
 
 ## Android设计模式
 
-Mvc，Mvp，Mvvm, Jetpack Compose
+Mvc，Mvp，Mvvm, Mvi, Jetpack Compose
 
 ### MVVM
 viewModel可以在Activity中进行切换，实现activity的view根据数据切换

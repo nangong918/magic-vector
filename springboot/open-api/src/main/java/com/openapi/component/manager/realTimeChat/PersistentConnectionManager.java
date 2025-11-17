@@ -20,6 +20,10 @@ import java.util.concurrent.atomic.AtomicReference;
  * @author 13225
  * @date 2025/11/13 17:52
  * 连接管理器
+ * 设计模式：适配器，代理，抽象工厂
+ * 抽象工厂：分别对Mqtt和Ws进行抽象，抽象出基本功能分别创建，
+ * 代理：ConnectSession代理Mqtt和Ws的发送和接收消息
+ * 适配器：将Mqtt和Ws的连接逻辑进行适配，同一个PersistentConnectionManager根据不同的对象进行适配对象，
  */
 @Slf4j
 public class PersistentConnectionManager implements IPersistentConnectionManager {
