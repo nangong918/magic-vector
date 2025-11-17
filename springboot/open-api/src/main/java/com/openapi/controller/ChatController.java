@@ -121,7 +121,7 @@ public class ChatController {
         for (MultipartFile image : images) {
             try {
                 String base64Str = FileUtils.multipartFileToBase64(image);
-                vlManager.imagesBase64.add(base64Str);
+                vlManager.getImagesBase64().add(base64Str);
             } catch (Exception e) {
                 log.error("提供给前端上传视觉图片的接口：MultipartFile -> base64Str error: ", e);
                 return BaseResponse.LogBackError(CommonExceptions.MULTIPART_FILE_TO_BASE64_ERROR);

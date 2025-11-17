@@ -40,17 +40,16 @@ public class VisionToolServiceImpl implements VisionToolService {
 
     // 识别意图，意图是进行视觉识别
     @Tool(description = """
-            用于调用请求调用前端摄像头。
-            当用户问Agent看看当前摄像头前是什么，或者询问Agent能看到用户给Agent展示的物品的时等涉及视觉任务调用此方法，
-            此方法用于告知前端传递一张当前相机的照片。
+            获取当前视觉的结果。当用户问你的问题设计到视觉任务就调用此方法，如果仅仅问你是否能听得到这类问题就无需调用。
+            当用户问Agent看看当前摄像头前是什么，或者询问Agent能看到用户给Agent展示的物品的时等涉及视觉任务调用此方法。
             """)
     @Override
-    public String tellFrontTakePhoto(
+    public String getVisionResult(
             @ToolParam(description = "agentId") String agentId,
             @ToolParam(description = "用户Id") String userId,
             @ToolParam(description = "消息Id") String messageId
     ) {
-        log.info("[visionTool::tellFrontTakePhoto] Agent传入入参检查, agentId: {}, userId: {}, messageId: {}", agentId, userId, messageId);
+        log.info("[visionTool::getVisionResult] Agent传入入参检查, agentId: {}, userId: {}, messageId: {}", agentId, userId, messageId);
 
         RealtimeChatContextManager chatContextManager = Optional.ofNullable(sessionConfig.realtimeChatContextManagerMap())
                 .map(map -> map.get(agentId))
@@ -85,6 +84,7 @@ public class VisionToolServiceImpl implements VisionToolService {
             // 发送之后阻塞，设置超时30m，等待回复: 1. 如果获取到结果，结束阻塞。2.超过30_000Lms未获取到结果就直接返回告诉视觉处理超时适当回复。
             long startTime = System.currentTimeMillis();
             try {
+                // 学习NIO，看看此类问题是否可以用NIO解决
                 while (System.currentTimeMillis() - startTime < ModelConstant.VISION_TIMEOUT_MILLIS) {
                     // 检查是否有结果
                     String visionResult = chatContextManager.llmProxyContext.getVlContext().getVisionResult();
@@ -112,11 +112,11 @@ public class VisionToolServiceImpl implements VisionToolService {
         // 有缓存直接调用缓存
         else {
             try {
-                if (vlManager.videoBase64 != null && !vlManager.videoBase64.isEmpty()) {
-                    return vlService.vlVideoBase64(vlManager.videoBase64, chatContextManager.getUserRequestQuestion());
+                if (vlManager.isHasVideo()) {
+                    return vlService.vlVideoBase64(vlManager.getVideoBase64(), chatContextManager.getUserRequestQuestion());
                 }
                 else {
-                    return vlService.vlListFileBase64(vlManager.imagesBase64, chatContextManager.getUserRequestQuestion());
+                    return vlService.vlListFileBase64(vlManager.getImagesBase64(), chatContextManager.getUserRequestQuestion());
                 }
             } catch (UploadFileException upe) {
                 log.error("[visionTool] 文件上传失败", upe);

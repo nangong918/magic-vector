@@ -50,7 +50,7 @@ public class VideoSessionManager {
             // 完成之后将数据流交给VLManager
             var vlManager = sessionConfig.getVLManager(session.getAgentId());
             if (vlManager != null){
-                vlManager.videoBase64 = completeBase64;
+                vlManager.setVideoBase64(completeBase64);
             }
             else {
                 log.warn("[processCompleteVideo] 未找到对应的VLManager - agentId: {}", session.getAgentId());
