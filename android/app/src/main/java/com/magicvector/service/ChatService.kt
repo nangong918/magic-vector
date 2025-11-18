@@ -31,7 +31,7 @@ class ChatService : Service() {
         chatMessageHandler = ChatMessageHandler()
     }
 
-    fun getChatHandler(): ChatMessageHandler {
+    private fun getChatHandler(): ChatMessageHandler {
         if (chatMessageHandler == null) {
             chatMessageHandler = ChatMessageHandler()
         }
@@ -45,6 +45,7 @@ class ChatService : Service() {
 
     inner class ChatServiceBinder : Binder() {
         fun getChatMessageHandler(): ChatMessageHandler = getChatHandler()
+        fun getService(): ChatService = this@ChatService
     }
 
     override fun onBind(intent: Intent): IBinder {

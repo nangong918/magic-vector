@@ -1,27 +1,26 @@
 package com.magicvector.activity
 
+import android.content.ComponentName
 import android.content.Intent
+import android.content.ServiceConnection
 import android.os.Bundle
+import android.os.IBinder
 import android.util.Log
 import android.util.SparseArray
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.ColorRes
 import androidx.fragment.app.Fragment
-import androidx.fragment.app.FragmentActivity
 import androidx.fragment.app.FragmentManager
 import androidx.fragment.app.FragmentTransaction
-import com.core.appcore.api.handler.SyncRequestCallback
-import com.core.baseutil.fragmentActivity.BaseAppCompatActivity
-import com.core.baseutil.network.networkLoad.NetworkLoadUtils
 import com.data.domain.OnPositionItemClick
 import com.magicvector.callback.OnCreateAgentCallback
 import com.magicvector.databinding.ActivityMainBinding
 import com.magicvector.fragment.MessageListFragment
 import com.magicvector.fragment.MineFragment
+import com.magicvector.service.ChatService
 import com.magicvector.utils.BaseAppCompatVmActivity
 import com.magicvector.viewModel.activity.MainVm
-import com.magicvector.viewModel.fragment.MessageListVm
 import com.view.appview.MainSelectItemEnum
 
 class MainActivity : BaseAppCompatVmActivity<ActivityMainBinding, MainVm>(
@@ -54,6 +53,13 @@ class MainActivity : BaseAppCompatVmActivity<ActivityMainBinding, MainVm>(
         super.initView()
     }
 
+    override fun initViewModel() {
+        super.initViewModel()
+
+        // 绑定服务
+        bindChatService()
+    }
+
     override fun initWindow() {
         super.initWindow()
 
@@ -80,6 +86,48 @@ class MainActivity : BaseAppCompatVmActivity<ActivityMainBinding, MainVm>(
                 changeFragment()
             }
         })
+    }
+
+    //------------------------Service------------------------
+
+    private var chatService: ChatService? = null
+    private var isBound = false
+
+    private val serviceConnection = object : ServiceConnection {
+        override fun onServiceConnected(
+            name: ComponentName?,
+            service: IBinder?
+        ) {
+            val binder = service as ChatService.ChatServiceBinder
+            chatService = binder.getService()
+            isBound = true
+
+            // 连接成功后使用
+            val handler = binder.getChatMessageHandler()
+            vm.setChatMessageHandler(handler)
+        }
+
+        override fun onServiceDisconnected(name: ComponentName?) {
+            isBound = false
+            chatService = null
+        }
+    }
+
+    private fun bindChatService() {
+        val intent = Intent(this, ChatService::class.java)
+
+        // 先启动服务（保证后台运行）
+        startService(intent)
+        // 再绑定服务（获取Binder接口）
+        bindService(intent, serviceConnection, BIND_AUTO_CREATE)
+    }
+
+    private fun unbindAndStopChatService() {
+        unbindService(serviceConnection)
+        val intent = Intent(this, ChatService::class.java)
+        stopService(intent)
+        isBound = false
+        chatService = null
     }
 
     //------------------------Fragment------------------------
@@ -226,5 +274,12 @@ class MainActivity : BaseAppCompatVmActivity<ActivityMainBinding, MainVm>(
         init {
             System.loadLibrary("magicvector")
         }
+    }
+
+    //------------------------lifecycle------------------------
+
+    override fun onDestroy() {
+        super.onDestroy()
+        unbindAndStopChatService()
     }
 }
