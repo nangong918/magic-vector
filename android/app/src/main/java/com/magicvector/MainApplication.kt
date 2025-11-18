@@ -97,7 +97,7 @@ class MainApplication : Application() {
         private var chatMessageHandler: ChatMessageHandler? = null
         fun getChatMessageHandler(): ChatMessageHandler {
             if (chatMessageHandler == null) {
-                chatMessageHandler = ChatMessageHandler() // 关键：要赋值！
+                chatMessageHandler = ChatMessageHandler()
             }
             return chatMessageHandler!!
         }
