@@ -27,7 +27,14 @@
   * 项目问题：
     1. 任务活动域分析：
        * websocket/mqtt长连接：MainActivity启动；不同的Agent进行不同的绑定。messageFragment只进行TextChannel绑定；chat和agentEmoji页面需要进行AudioChannel绑定。该任务适合使用Service。并且需要长期保持活跃，可能需要FrontGroundService。
-       * 缓冲池音频异步播放：audio播放，在AgentEmoji接收到的音频播放，返回到Chat不希望音频播放结束。由于kotlin协程的生命周期交给的是Activity，需要使用Worker/IntentService解决异步问题。在Chat返回Main的时候需要取消音频播放，因为要启动其他的Agent了，所以需要取消Worker。
+       * 缓冲池音频异步播放：audio播放，在AgentEmoji接收到的音频播放，返回到Chat不希望音频播放结束。由于kotlin协程的生命周期交给的是Activity，需要使用Worker/IntentService解决异步问题。在Chat返回Main的时候需要取消音频播放，因为要启动其他的Agent了，所以需要取消Worker（worker基本取代了IntentService和HandlerThread）。
        * VAD音频活动检测：在Chat的Call和AgentEmoji需要启动。跨越Activity生命周期。需要放入Service中进行绑定，通过AtomicBoolean控制VAD是否启用。
        * YOLOv8目标活动检测：在AgentEmoji中进行检测，仅仅属于单个Activity生命周期。无需放入Service，交给ViewModel进行管理。
        * 项目中没有IPC跨进程通讯需求，无需使用RemoteService。
+    2. Service绑定获取资源初始化异步问题：ServiceConnect是异步的，需要连接成功之后进行资源设置。
+    3. websocket长连接的心跳机制和重连接机制：BroadcastReceiver监听系统网络变化，监听变化进行重连。
+    4. 系统消息：websocket产生的本地消息应该使用EventBus传递而不是使用BroadcastReceiver
+
+* Android 资源
+  * 项目问题：
+    1. 选择系统照片进行上传：使用 `ContentResolver` 与 `ContentProvider` 交互来访问选定的照片数据，`ContentObserver` 则在监听数据变更时使用。
