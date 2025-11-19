@@ -14,6 +14,7 @@
 5. 性能检测：Activity跳转到了新的Activity之后，原先的View是重新绘制还是复用？Fragment在ViewPager2切换之后呢？
 6. 项目中AgentEmojiActivity是可以旋转的，换砖会导致什么生命周期变化？数据是由ViewModel进行保障的吗？
 7. Websocket的管理者放在MainApplication中作为全局跟放在Service中有什么区别呢？数据的生命作用域不好控制吗？
+8. 尝试使用Dagger管理项目生命周期
 
 ### Android Activity嵌套跳转，Activity结束跳转问题
 #### Activity的四种启动模式：
@@ -26,7 +27,7 @@
 项目需要使用的模式：场景：点击用户头像跳转到详情，详情点击发送消息跳转到消息，再次点击头像，是单例的详情Activity。如果是详情打开的消息，返回详情。
 singleInstance模式 (MessageFragment) -> (ChatActivity) -> (UserDetailActivity) -> (ChatActivity) -back-> (UserDetailActivity) -back-> (MessageFragment)
 
-### Android 后台任务模式
+### Android 异步任务、后台任务
 #### 项目问题：
 1. 任务活动域分析：
    * websocket/mqtt长连接：MainActivity启动；不同的Agent进行不同的绑定。messageFragment只进行TextChannel绑定；chat和agentEmoji页面需要进行AudioChannel绑定。该任务适合使用Service。并且需要长期保持活跃，可能需要FrontGroundService。
@@ -37,6 +38,8 @@ singleInstance模式 (MessageFragment) -> (ChatActivity) -> (UserDetailActivity)
 2. Service绑定获取资源初始化异步问题：ServiceConnect是异步的，需要连接成功之后进行资源设置。
 3. websocket长连接的心跳机制和重连接机制：BroadcastReceiver监听系统网络变化，监听变化进行重连。
 4. 系统消息：websocket产生的本地消息应该使用EventBus传递而不是使用BroadcastReceiver
+5. Base64编解码字节流数据考虑在后台执行。
+6. kotlin协程：原先RxJava的Disposable手动取消任务改为Job取消；其余的异步使用协程lifecycleScope进行管理。
 
 ### Android 设计模式
 #### 项目问题：
@@ -48,6 +51,7 @@ singleInstance模式 (MessageFragment) -> (ChatActivity) -> (UserDetailActivity)
 #### 项目问题：
 1. 聊天记录中的ScrollView中的RecyclerView下拉触摸焦点丢失。需要重构TouchEvent的事件分发机制。
 2. AgentEmoji的动效与绘制：需要使用帧动画进行绘制。
+3. 重构事件分发机制，修复EditText输入完成之后点击空白处键盘仍然显示的问题。
 
 ### 数据持久化与缓存
 #### 项目问题：
@@ -57,7 +61,16 @@ singleInstance模式 (MessageFragment) -> (ChatActivity) -> (UserDetailActivity)
 #### 项目问题：
 1. 选择系统照片进行上传：使用 `ContentResolver` 与 `ContentProvider` 交互来访问选定的照片数据，`ContentObserver` 则在监听数据变更时使用。
 
+### Android序列化
+#### 项目问题：
+1. Intent传递的时候Serializable方法过时，需要使用Parcelable
+
 ## 进阶问题
+
+### Android网络
+#### 项目问题：
+1. websocket / netty / mqtt长连接更加稳定，增加心跳连接机制。
+2. 配置可以选择视频流传输方式：纯UDP，WebRTC，RTMP/RTSP
 
 ### Android JNI
 #### 项目需求：
@@ -65,13 +78,16 @@ singleInstance模式 (MessageFragment) -> (ChatActivity) -> (UserDetailActivity)
 2. 使用JNI调用RTMP协议进行向后端推拉流
 3. 使用JNI调用FFmpeg 将Bitmap转为视频流
 
+### Binder，AIDL
+正在考虑，目前项目暂时不需要使用Binder和AIDL
 
 ### Android 音视频
 #### 项目问题：
 1. 音频获取数据过大：AudioRecord的数据过大，音频输出频率过快。
 2. 音频播放：AudioTrack：1. 码率需要跟后端对齐 2. 播放的任务需要放在后台跑
 3. YOLOv8目标检测 + VL视觉模型理解：记录的总是Bitmap而不是视频流，看看能不能用 MediaRecorder + MediaCodec + CameraX 解决这个问题
-
+4. 上传的Bitmap需要进行压缩，节省AgentToken
+5. 使用SurfaceView进行CameraX预览 + YOLOv8目标识别检测实时绘制。
 
 ### Android 性能
 #### 项目问题：
@@ -86,6 +102,12 @@ singleInstance模式 (MessageFragment) -> (ChatActivity) -> (UserDetailActivity)
    * 检查不合理的布局和绘制：频繁调用 invalidate() 或 requestLayout()，可能触发多次布局和绘制，导致主线程卡顿。
 3. View全重绘问题：
    * RecyclerView更新/插入一个Item不能重新绘制整个RecyclerView，需要使用DiffUtil
+
+### 信息安全：混淆，反编译，抓包
+#### 项目问题
+1. 混淆会出现很多问题，需要仔细研究配置混淆文件。
+2. JADX反编译检查回校结果
+3. Wireshark进行网络请求数据抓包，检查数据加密。
 
 ### Android 依赖
 #### 项目问题：
