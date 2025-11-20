@@ -11,7 +11,7 @@ Activity生命周期
 1. onCreate()：创建的时候
    * 绑定View：binding = Binding.inflate(layoutInflater)
    * 注册ActivityResultLauncher
-   * 注册viewModel，注册监听者。
+   * 注册viewModel，注册观察者。
    * 初始化CameraX（但是不绑定生命周期）
    * Service绑定
    * Button监听器绑定
@@ -61,6 +61,57 @@ Activity的行为导致生命周期的变化：
    按下Home键: onPause() -> onStop()
    从桌面返回: onRestart() -> onStart() -> onResume()
    ```
+
+#### ViewModel的生命周期
+ViewModel的生命周期比Activity长，能在Activity不是真正销毁的时候保留数据。
+Activity的 finish() 和 屏幕旋转 都会导致 onDestroy() ，但是两者的销毁步兵不同。
+* 屏幕旋转：清理viewModel的viewModelScope
+* finish()：清理viewModel的viewModelScope
+
+创建ViewModel：
+由于viewModel的生命周期比Activity长，所以创建的时候需要借助ViewModelProvider进行获取和管理viewModel。首次获取则创建，非首次则获取。
+```kotlin
+class MyActivity : AppCompatActivity() {
+    // 最简单的方式
+    private val viewModel: MyViewModel by viewModels()
+    
+    // 带Factory的方式
+    private val viewModelWithFactory: MyViewModel by viewModels { 
+        MyViewModelFactory("参数") 
+    }
+}
+
+class MyActivity : AppCompatActivity() {
+   private lateinit var viewModel: MyViewModel
+
+   override fun onCreate(savedInstanceState: Bundle?) {
+      super.onCreate(savedInstanceState)
+
+      // 传统方式
+      viewModel = ViewModelProvider(this).get(MyViewModel::class.java)
+
+      // 带Factory的传统方式
+      val factory = MyViewModelFactory("参数")
+      viewModel = ViewModelProvider(this, factory).get(MyViewModel::class.java)
+   }
+}
+```
+销毁viewModel：
+系统调用onDestroy()之后，viewModel的onCleared()会被调用。
+```kotlin
+class MyViewModel : ViewModel() {
+    private val networkRequest: Job? = null
+    private val databaseConnection: Closeable? = null
+    
+    override fun onCleared() {
+        super.onCleared()
+        // 清理持有的资源
+        networkRequest?.cancel()
+        databaseConnection?.close()
+        Log.d("ViewModel", "清理所有资源")
+    }
+}
+```
 
 #### 项目问题：
 1. Fragment中调用PermissionUtils进行注册ActivityLauncher会出现问题，提示我不能重复注册ActivityLauncher，因为Fragment再次创建的时候，Activity并不会被暂停，此时的Activity是START状态。
