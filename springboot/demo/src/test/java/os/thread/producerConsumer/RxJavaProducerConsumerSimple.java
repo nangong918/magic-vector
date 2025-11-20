@@ -7,6 +7,9 @@ import io.reactivex.schedulers.Schedulers;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicInteger;
 
+/**
+ * RxJava是事件驱动，对象发生了变化采取执行响应操作，而不是Thread循环检查sleep
+ */
 public class RxJavaProducerConsumerSimple {
 
     private static final PublishSubject<String> subject = PublishSubject.create();

@@ -3,8 +3,8 @@ package os.thread.producerConsumer;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
 /**
- * @author 13225
- * @date 2025/11/20 13:34
+ * 线程循环阻塞检查生产和消费
+ * 非常的垃圾啊，不如Observer观察者模式、RxJava
  */
 public class ThreadProducerConsumer {
 
