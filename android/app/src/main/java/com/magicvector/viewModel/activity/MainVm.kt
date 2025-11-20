@@ -12,11 +12,4 @@ class MainVm (
     }
 
     var chatMessageHandler : ChatMessageHandler? = null
-
-    fun setChatMessageHandler(chatMessageHandler: ChatMessageHandler){
-        this.chatMessageHandler = chatMessageHandler
-    }
-    fun getChatMessageHandler(): ChatMessageHandler?{
-        return chatMessageHandler
-    }
 }
