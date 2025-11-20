@@ -189,9 +189,6 @@ Application的生命周期：
 Application可以放置任何全局变量。
 Service应该放置跨Activity任务。
 
-#### Worker和IntentService
-都是处理`跨Activity非阻塞异步`任务，IntentService出现在API 4，Worker出现在Android Jetpack (API 14+)。IntentService已经废弃。
-
 ### Android Activity嵌套跳转，Activity结束跳转问题
 #### Activity的四种启动模式：
 1. standard 默认启动模式：Activity可多次创建压入栈
@@ -199,23 +196,10 @@ Service应该放置跨Activity任务。
 3. singleTask 栈内复用模式：栈内Activity复用不会再次创建。如果再次创建Activity1，23会被销毁。
 4. singleInstance 全局唯一模式：A1启动A2，A2会存放在Task2。A2启动A1，Task2返回Task1。 (Twitter一直点击用户胡转发的帖子)
 
-#### 项目问题：
-项目需要使用的模式：场景：点击用户头像跳转到详情，详情点击发送消息跳转到消息，再次点击头像，是单例的详情Activity。如果是详情打开的消息，返回详情。
-singleInstance模式 (MessageFragment) -> (ChatActivity) -> (UserDetailActivity) -> (ChatActivity) -back-> (UserDetailActivity) -back-> (MessageFragment)
-
 ### Android 异步任务、后台任务
-#### 项目问题：
-1. 任务活动域分析：
-   * websocket/mqtt长连接：MainActivity启动；不同的Agent进行不同的绑定。messageFragment只进行TextChannel绑定；chat和agentEmoji页面需要进行AudioChannel绑定。该任务适合使用Service。并且需要长期保持活跃，可能需要FrontGroundService。
-   * 缓冲池音频异步播放：audio播放，在AgentEmoji接收到的音频播放，返回到Chat不希望音频播放结束。由于kotlin协程的生命周期交给的是Activity，需要使用Worker/IntentService解决异步问题。在Chat返回Main的时候需要取消音频播放，因为要启动其他的Agent了，所以需要取消Worker（worker基本取代了IntentService和HandlerThread）。
-   * VAD音频活动检测：在Chat的Call和AgentEmoji需要启动。跨越Activity生命周期。需要放入Service中进行绑定，通过AtomicBoolean控制VAD是否启用。
-   * YOLOv8目标活动检测：在AgentEmoji中进行检测，仅仅属于单个Activity生命周期。无需放入Service，交给ViewModel进行管理。
-   * 项目中没有IPC跨进程通讯需求，无需使用RemoteService。
-2. Service绑定获取资源初始化异步问题：ServiceConnect是异步的，需要连接成功之后进行资源设置。
-3. websocket长连接的心跳机制和重连接机制：BroadcastReceiver监听系统网络变化，监听变化进行重连。
-4. 系统消息：websocket产生的本地消息应该使用EventBus传递而不是使用BroadcastReceiver
-5. Base64编解码字节流数据考虑在后台执行。
-6. kotlin协程：原先RxJava的Disposable手动取消任务改为Job取消；其余的异步使用协程lifecycleScope进行管理。
+
+#### Worker和IntentService
+都是处理`跨Activity非阻塞异步`任务，IntentService出现在API 4，Worker出现在Android Jetpack (API 14+)。IntentService已经废弃。
 
 ### Android 设计模式
 #### 项目问题：
