@@ -21,11 +21,24 @@ class StartActivity : ComponentActivity() {
             AppDemoTheme {
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
                     Greeting(
-                        name = "Android",
+                        name = stringFromJNI(),
                         modifier = Modifier.padding(innerPadding)
                     )
                 }
             }
+        }
+    }
+
+    /**
+     * A native method that is implemented by the 'demo' native library,
+     * which is packaged with this application.
+     */
+    external fun stringFromJNI(): String
+
+    companion object {
+        // Used to load the 'demo' library on application startup.
+        init {
+            System.loadLibrary("demo")
         }
     }
 }
@@ -33,12 +46,12 @@ class StartActivity : ComponentActivity() {
 @Composable
 fun Greeting(name: String, modifier: Modifier = Modifier) {
     Text(
-        text = "Hello $name!",
+        text = name,
         modifier = modifier
     )
 }
 
-@Preview(showBackground = true)
+@Preview(showBackground = true, widthDp = 1080, heightDp = 1960)
 @Composable
 fun GreetingPreview() {
     AppDemoTheme {
