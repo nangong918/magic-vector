@@ -7,7 +7,8 @@
 ### Android 生命周期问题
 
 #### 项目问题：
-1. Fragment中调用PermissionUtils进行注册ActivityLauncher会出现问题，提示我不能重复注册ActivityLauncher，因为Fragment再次创建的时候，Activity并不会被暂停，此时的Activity是START状态。
+1. Fragment中调用PermissionUtils进行注册注册ActivityResultLauncher会出现问题，提示我不能重复注册注册ActivityResultLauncher，因为Fragment再次创建的时候，Activity并不会被暂停，此时的Activity是START状态。
+   * Activity切换Fragment使用Navigation而不是FragmentManager
 2. 确认viewBinding的时机，viewBinding会执行几次。viewModel需要在什么时机进行初始化。
 3. ViewModel和Activity的生命周期，在为什么要用ViewModel保证数据不丢失？
 4. 需要Service保证WebSocket为什么要用Service保证后台任务的生命周期？
@@ -35,6 +36,7 @@ singleInstance模式 (MessageFragment) -> (ChatActivity) -> (UserDetailActivity)
 4. 系统消息：websocket产生的本地消息应该使用EventBus传递而不是使用BroadcastReceiver
 5. Base64编解码字节流数据考虑在后台执行。
 6. kotlin协程：原先RxJava的Disposable手动取消任务改为Job取消；其余的异步使用协程lifecycleScope进行管理。
+7. YOLOv8中CameraX预览销毁的时机应。
 
 ### Android 设计模式
 #### 项目问题：

@@ -6,6 +6,62 @@
 
 ### Android 生命周期问题
 
+#### Activity的生命周期
+Activity生命周期
+1. onCreate()：创建的时候
+   * 绑定View：binding = Binding.inflate(layoutInflater)
+   * 注册ActivityResultLauncher
+   * 注册viewModel，注册监听者。
+   * 初始化CameraX（但是不绑定生命周期）
+   * Service绑定
+   * Button监听器绑定
+2. onStart()：不可见，准备前台可见
+   * 广播接收器
+   * EventBus注册
+   * 初始化网络请求（可能需要Service绑定后的资源，一般在Service绑定成功的回调中执行。）
+   * CameraX绑定生命周期
+3. onResume()：与用户交互阶段
+   * 开启CameraX
+   * 开启YOLOv8检测
+   * 开启AudioRecord
+   * 开启AudioTrack
+   * 动画绘制
+4. onPause()：暂停交互 (不要在此处解绑生命周期和释放资源，因为系统可能只是短暂失去焦点（如弹出对话框）)
+   * 暂停音频/视频播放
+   * 提交未保存的更改（例如草稿）
+5. onStop()：清理可见相关资源
+   * 停止YOLOv8检测
+   * 停止AudioRecord
+   * 停止AudioTrack
+   * CameraX解绑生命周期
+6. onDestroy()：最终清理
+   * 解绑Service
+   * 释放资源
+
+
+Activity的行为导致生命周期的变化：
+* 横屏反转、横竖屏反转
+   ```text
+   原Activity: onPause() -> onStop() -> onDestroy()
+   新Activity: onCreate() -> onStart() -> onResume()
+   ```
+* Activity1 startActivity(intent) 跳转 Activity2 -> Activity2 finish销毁回到 Activity1
+   ```text
+   Activity1: onPause() -> onStop()
+   Activity2: onCreate() -> onStart() -> onResume()
+   --- 用户在Activity2中按返回或调用finish() ---
+   Activity2: onPause()
+   Activity1: onRestart() -> onStart() -> onResume()
+   Activity2: onStop() -> onDestroy()
+   ```
+* Activity1 ActivityResultLauncher(intent) 跳转 Activity2 -> Activity2 finish销毁回到 Activity1
+   * 流程同上，但是在Activity2中调用setResult()后调用finish()。Activity1在onResume()之后，会通过ActivityResultLauncher的回调接收到结果
+* Android Home键回到桌面 -> 从桌面返回App时的生命周期
+   ```text
+   按下Home键: onPause() -> onStop()
+   从桌面返回: onRestart() -> onStart() -> onResume()
+   ```
+
 #### 项目问题：
 1. Fragment中调用PermissionUtils进行注册ActivityLauncher会出现问题，提示我不能重复注册ActivityLauncher，因为Fragment再次创建的时候，Activity并不会被暂停，此时的Activity是START状态。
 2. 确认viewBinding的时机，viewBinding会执行几次。viewModel需要在什么时机进行初始化。
@@ -21,7 +77,7 @@
 1. standard 默认启动模式：Activity可多次创建压入栈
 2. singleTop 栈顶复用模式：栈顶部的Activity复用不会再次创建，其他Activity创建压入栈
 3. singleTask 栈内复用模式：栈内Activity复用不会再次创建。如果再次创建Activity1，23会被销毁。
-4. singleInstance 全局唯一模式：A1启动A2，A2会存放在Task2。A2启动A1，Task2返回Task1。 
+4. singleInstance 全局唯一模式：A1启动A2，A2会存放在Task2。A2启动A1，Task2返回Task1。 (Twitter一直点击用户胡转发的帖子)
 
 #### 项目问题：
 项目需要使用的模式：场景：点击用户头像跳转到详情，详情点击发送消息跳转到消息，再次点击头像，是单例的详情Activity。如果是详情打开的消息，返回详情。
