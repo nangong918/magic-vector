@@ -16,6 +16,7 @@
 6. 项目中AgentEmojiActivity是可以旋转的，换砖会导致什么生命周期变化？数据是由ViewModel进行保障的吗？
 7. Websocket的管理者放在MainApplication中作为全局跟放在Service中有什么区别呢？数据的生命作用域不好控制吗？
 8. 尝试使用Dagger管理项目对象的依赖注入生命周期
+9. `单一Activity阻塞同步的http请求` 直接在ViewModel上传就可以，`跨Activity非阻塞异步Http请求` 改译为使用Worker
 
 ### Android Activity嵌套跳转，Activity结束跳转问题
 

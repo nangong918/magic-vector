@@ -62,6 +62,66 @@ Activity的行为导致生命周期的变化：
    从桌面返回: onRestart() -> onStart() -> onResume()
    ```
 
+#### Fragment的生命周期
+Fragment生命周期类似Activity：
+```text
+onAttach() → onCreate() → onCreateView() → onViewCreated() → onStart() → onResume()
+→ onPause() → onStop() → onDestroyView() → onDestroy() → onDetach()
+```
+不同点：
+`onAttach()`: Fragment与Activity关联时调用
+  * 此时的Fragment的 `isAdded()` 方法是true
+`onCreateView()`: 创建Fragment的UI布局
+  * 进行binding填充
+`onViewCreated()`: View已创建完成，最适合初始化UI相关操作
+  * 初始化View数据, liveData观察数据
+`onDestroyView()`: View被销毁，但Fragment实例仍然存在
+
+关于`isAdded()`：在`onAttach()`之后是true，在 `onDetach()` 之后是false。
+
+关于什么时候能获取到Fragment的ViewModel？
+* 场景1：获取Fragment自己的ViewModel
+```kotlin
+// 在任何生命周期方法中都可以，但推荐在onCreate或onViewCreated中
+class MyFragment : Fragment() {
+    // ✅ 方式1：在onCreate中获取（最早的位置）
+    private lateinit var viewModel: MyViewModel
+    
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        viewModel = ViewModelProvider(this).get(MyViewModel::class.java)
+    }
+    
+    // ✅ 方式2：使用property delegate（推荐）
+    private val viewModel: MyViewModel by viewModels()
+    
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+        // 这里可以安全使用viewModel
+        viewModel.data.observe(viewLifecycleOwner) { data ->
+            binding.textView.text = data
+        }
+    }
+}
+```
+* 场景2：获取共享的Activity ViewModel（Fragment间通信）
+```kotlin
+class MyFragment : Fragment() {
+    // 获取所在Activity的ViewModel
+    private val sharedViewModel: SharedViewModel by activityViewModels()
+    
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+        sharedViewModel.sharedData.observe(viewLifecycleOwner) { data ->
+            // 多个Fragment可以观察同一个数据
+        }
+    }
+}
+```
+Fragment自己的ViewModel: 从onCreate()开始就可以获取
+
+Activity的共享ViewModel: 从onAttach()之后就可以获取
+
 #### ViewModel的生命周期
 ViewModel的生命周期比Activity长，能在Activity不是真正销毁的时候保留数据。
 Activity的 finish() 和 屏幕旋转 都会导致 onDestroy() ，但是两者的销毁步兵不同。
@@ -113,15 +173,24 @@ class MyViewModel : ViewModel() {
 }
 ```
 
-#### 项目问题：
-1. Fragment中调用PermissionUtils进行注册ActivityLauncher会出现问题，提示我不能重复注册ActivityLauncher，因为Fragment再次创建的时候，Activity并不会被暂停，此时的Activity是START状态。
-2. 确认viewBinding的时机，viewBinding会执行几次。viewModel需要在什么时机进行初始化。
-3. ViewModel和Activity的生命周期，在为什么要用ViewModel保证数据不丢失？
-4. 需要Service保证WebSocket为什么要用Service保证后台任务的生命周期？
-5. 性能检测：Activity跳转到了新的Activity之后，原先的View是重新绘制还是复用？Fragment在ViewPager2切换之后呢？
-6. 项目中AgentEmojiActivity是可以旋转的，换砖会导致什么生命周期变化？数据是由ViewModel进行保障的吗？
-7. Websocket的管理者放在MainApplication中作为全局跟放在Service中有什么区别呢？数据的生命作用域不好控制吗？
-8. 尝试使用Dagger管理项目生命周期
+#### Service和Application的生命周期
+Service的生命周期：
+* 创建：onCreate()
+* 启动：onStart()
+* 停止：onStop()
+* 销毁：onDestroy()
+* 绑定：onBind()
+* 解绑：onUnbind()
+
+Application的生命周期：
+* 创建：onCreate()
+* 销毁：onTerminate()
+
+Application可以放置任何全局变量。
+Service应该放置跨Activity任务。
+
+#### Worker和IntentService
+都是处理`跨Activity非阻塞异步`任务，IntentService出现在API 4，Worker出现在Android Jetpack (API 14+)。IntentService已经废弃。
 
 ### Android Activity嵌套跳转，Activity结束跳转问题
 #### Activity的四种启动模式：
