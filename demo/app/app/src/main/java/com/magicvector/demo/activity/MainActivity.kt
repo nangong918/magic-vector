@@ -1,4 +1,4 @@
-package com.magicvector.demo
+package com.magicvector.demo.activity
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -15,6 +15,7 @@ import com.magicvector.demo.ui.theme.AppDemoTheme
 
 class MainActivity : ComponentActivity() {
 
+    // todo 制作RecyclerView item
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()

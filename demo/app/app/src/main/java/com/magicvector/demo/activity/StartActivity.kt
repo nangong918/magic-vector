@@ -1,4 +1,4 @@
-package com.magicvector.demo
+package com.magicvector.demo.activity
 
 import android.content.Intent
 import android.os.Bundle
@@ -23,6 +23,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.magicvector.demo.R
 import com.magicvector.demo.domain.constant.BaseConstant
 import com.magicvector.demo.ui.theme.AppDemoTheme
 import com.magicvector.demo.utils.activity.ActivityLaunchUtils
