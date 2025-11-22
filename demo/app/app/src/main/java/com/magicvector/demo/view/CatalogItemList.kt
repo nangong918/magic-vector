@@ -12,13 +12,15 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.magicvector.demo.domain.vo.SelectItem
+import com.magicvector.demo.activity.NetworkActivity
+import com.magicvector.demo.domain.vo.CatalogItem
+import com.magicvector.demo.manager.OnClickCatalogItem
 import com.magicvector.demo.ui.theme.*
 
 @Composable
-fun SelectItemList(
-    items: List<SelectItem>,
-    onItemClick: (SelectItem) -> Unit = {},
+fun CatalogItemList(
+    items: List<CatalogItem>,
+    onItemClick: OnClickCatalogItem,
     @SuppressLint("ModifierParameter") modifier: Modifier = Modifier
 ) {
     LazyColumn(
@@ -31,7 +33,7 @@ fun SelectItemList(
             SelectItemView(
                 title = item.title,
                 subtitle = item.subtitle,
-                onItemClick = { onItemClick(item) },
+                onItemClick = { onItemClick.onClick(item) },
                 icon = if (item.iconRes != null) {
                     {
                         Icon(
@@ -45,7 +47,6 @@ fun SelectItemList(
 
             // 添加分割线
             HorizontalDivider(
-                modifier = Modifier.padding(start = 12.dp),
                 thickness = 1.dp,
                 color = Pink40
             )
@@ -56,35 +57,40 @@ fun SelectItemList(
 
 // 预览数据
 private val previewItems = listOf(
-    SelectItem(
+    CatalogItem(
         id = "1",
         title = "选项一",
         subtitle = "这是第一个选项的详细描述信息",
-        iconRes = 1 // 任意非空值，用于显示图标
+        iconRes = 1,
+        cls = NetworkActivity::class.java
     ),
-    SelectItem(
+    CatalogItem(
         id = "2",
         title = "选项二",
         subtitle = "第二个选项的副标题内容",
-        iconRes = null // 没有图标
+        iconRes = null,
+        cls = NetworkActivity::class.java
     ),
-    SelectItem(
+    CatalogItem(
         id = "3",
         title = "选项三",
         subtitle = "这是一个很长的副标题，用来测试文本过长时的显示效果，看看是否会正确换行",
-        iconRes = 1
+        iconRes = 1,
+        cls = NetworkActivity::class.java
     ),
-    SelectItem(
+    CatalogItem(
         id = "4",
         title = "选项四",
         subtitle = null, // 没有副标题
-        iconRes = 1
+        iconRes = 1,
+        cls = NetworkActivity::class.java
     ),
-    SelectItem(
+    CatalogItem(
         id = "5",
         title = "选项五",
         subtitle = "最后一个选项",
-        iconRes = null
+        iconRes = null,
+        cls = NetworkActivity::class.java
     )
 )
 
@@ -93,13 +99,14 @@ private val previewItems = listOf(
 @Composable
 fun SelectItemListWithIconsPreview() {
     AppDemoTheme {
-        SelectItemList(
+        CatalogItemList(
             items = previewItems,
-            onItemClick = { item ->
-                // 预览中的点击处理
-                println("点击了: ${item.title}")
-            },
-            modifier = Modifier.padding(16.dp)
+            onItemClick = object : OnClickCatalogItem {
+                override fun onClick(item: CatalogItem) {
+                    // 预览中的点击处理
+                    println("点击了: ${item.title}")
+                }
+            }
         )
     }
 }
@@ -109,15 +116,21 @@ fun SelectItemListWithIconsPreview() {
 @Composable
 fun SelectItemListSimplePreview() {
     val simpleItems = listOf(
-        SelectItem(id = "1", title = "简洁选项一", subtitle = null, iconRes = null),
-        SelectItem(id = "2", title = "简洁选项二", subtitle = null, iconRes = null),
-        SelectItem(id = "3", title = "简洁选项三", subtitle = null, iconRes = null)
+        CatalogItem(id = "1", title = "简洁选项一", subtitle = null, iconRes = null,
+            cls = NetworkActivity::class.java),
+        CatalogItem(id = "2", title = "简洁选项二", subtitle = null, iconRes = null,
+            cls = NetworkActivity::class.java),
+        CatalogItem(id = "3", title = "简洁选项三", subtitle = null, iconRes = null,
+            cls = NetworkActivity::class.java)
     )
 
     AppDemoTheme {
-        SelectItemList(
+        CatalogItemList(
             items = simpleItems,
-            onItemClick = { },
+            onItemClick = object : OnClickCatalogItem {
+                override fun onClick(item: CatalogItem) {
+                }
+            },
             modifier = Modifier.padding(16.dp)
         )
     }
@@ -128,28 +141,21 @@ fun SelectItemListSimplePreview() {
 @Composable
 fun SelectItemListIconsOnlyPreview() {
     val iconItems = listOf(
-        SelectItem(id = "1", title = "图标选项一", subtitle = null, iconRes = 1),
-        SelectItem(id = "2", title = "图标选项二", subtitle = null, iconRes = 1),
-        SelectItem(id = "3", title = "图标选项三", subtitle = null, iconRes = 1)
+        CatalogItem(id = "1", title = "图标选项一", subtitle = null, iconRes = 1,
+            cls = NetworkActivity::class.java),
+        CatalogItem(id = "2", title = "图标选项二", subtitle = null, iconRes = 1,
+            cls = NetworkActivity::class.java),
+        CatalogItem(id = "3", title = "图标选项三", subtitle = null, iconRes = 1,
+            cls = NetworkActivity::class.java)
     )
 
     AppDemoTheme {
-        SelectItemList(
+        CatalogItemList(
             items = iconItems,
-            onItemClick = { },
-            modifier = Modifier.padding(16.dp)
-        )
-    }
-}
-
-// 空列表预览
-@Preview(showBackground = true, name = "空列表")
-@Composable
-fun SelectItemListEmptyPreview() {
-    AppDemoTheme {
-        SelectItemList(
-            items = emptyList(),
-            onItemClick = { },
+            onItemClick = object : OnClickCatalogItem {
+                override fun onClick(item: CatalogItem) {
+                }
+            },
             modifier = Modifier.padding(16.dp)
         )
     }
@@ -160,18 +166,22 @@ fun SelectItemListEmptyPreview() {
 @Composable
 fun SelectItemListSinglePreview() {
     val singleItem = listOf(
-        SelectItem(
+        CatalogItem(
             id = "1",
             title = "单独选项",
             subtitle = "只有一个项目的列表",
-            iconRes = 1
+            iconRes = 1,
+            cls = NetworkActivity::class.java
         )
     )
 
     AppDemoTheme {
-        SelectItemList(
+        CatalogItemList(
             items = singleItem,
-            onItemClick = { },
+            onItemClick = object : OnClickCatalogItem {
+                override fun onClick(item: CatalogItem) {
+                }
+            },
             modifier = Modifier.padding(16.dp)
         )
     }

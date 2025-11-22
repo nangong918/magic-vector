@@ -37,11 +37,11 @@ fun SelectItemView(
         modifier = modifier
             .fillMaxWidth()
             .clickable { onItemClick() }
-            .padding(12.dp)
     ) {
         // 第一行：图标和标题水平排列
         Row(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth()
+                .padding(start = 12.dp, end = 12.dp, bottom = 5.dp, top = 5.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
@@ -71,7 +71,7 @@ fun SelectItemView(
                 text = subtitle,
                 fontSize = 14.sp,
                 color = PurpleGrey80,
-                modifier = Modifier.padding(start = if (icon != null) 36.dp else 0.dp) // 与标题对齐
+                modifier = Modifier.padding(start = if (icon != null) 48.dp else 12.dp) // 与标题对齐
             )
         }
     }
