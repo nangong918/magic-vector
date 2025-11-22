@@ -132,7 +132,7 @@ fun Logo(modifier: Modifier = Modifier) {
 
 @Preview(showBackground = true, widthDp = 360, heightDp = 640)
 @Composable
-fun GreetingPreview() {
+fun StartPreview() {
     AppDemoTheme {
         StartScreen()
     }
