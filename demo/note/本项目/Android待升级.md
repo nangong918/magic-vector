@@ -110,3 +110,22 @@ singleInstance模式 (MessageFragment) -> (ChatActivity) -> (UserDetailActivity)
 ### Android 依赖
 #### 项目问题：
 1. 取消非官方的任何依赖库：FastJson -> Gson; PermissionX -> PermissionUtils;
+
+
+# Demo App
+* Websocket的心跳请求demo
+* 广播监听网络状态变化Demo
+* 聊天记录的多数据源合并Demo
+* Room本地存储Demo
+* MKKV, SharedPreferences, LruCache缓存Demo
+* 线程Demo: Kotlin协程(生命周期执行), RxJava, Handler(Handler, Looper, MessageQueue, HandlerThread, 线程池)
+* Worker处理异步任务
+* ViewPager2, Navigation切换Fragment
+* CameraX预览 + 获取流 + MediaCore Demo
+* JNI编写库Demo (Cpp的STL库)
+* JNI 调用 FFmpeg编辑的Demo -> Github获取.
+* View绘制与事件分发机制Demo
+* Dagger注入Demo
+* Jetpack compose实现传统的一些view (Jetpack compose在github上的的viewDemo App)
+* Activity, Fragment通讯以及生命周期
+* 性能测试, 内存泄露检测demo

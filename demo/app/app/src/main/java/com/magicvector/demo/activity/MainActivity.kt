@@ -175,7 +175,7 @@ fun MainScreen() {
     }
 }
 
-@Preview(showBackground = true, widthDp = 1080, heightDp = 1960)
+@Preview(showBackground = true, widthDp = 360, heightDp = 640)
 @Composable
 fun MainScreenPreview() {
     AppDemoTheme {
