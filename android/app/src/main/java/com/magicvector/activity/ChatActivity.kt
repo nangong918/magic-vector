@@ -16,7 +16,6 @@ import com.data.domain.ao.message.MessageContactItemAo
 import com.data.domain.constant.VadChatState
 import com.data.domain.fragmentActivity.intentAo.ChatIntentAo
 import com.data.domain.vo.test.RealtimeChatState
-import com.magicvector.MainApplication
 import com.magicvector.callback.OnVadChatStateChange
 import com.magicvector.callback.VADCallTextCallback
 import com.magicvector.databinding.ActivityChatBinding
@@ -38,21 +37,17 @@ class ChatActivity : BaseAppCompatVmActivity<ActivityChatBinding, ChatVm>(
     companion object {
     }
 
-    var chatMessageHandler = MainApplication.getChatMessageHandler()
-
     override fun initBinding(): ActivityChatBinding {
         return ActivityChatBinding.inflate(layoutInflater)
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
-        chatMessageHandler = MainApplication.getChatMessageHandler()
     }
 
     override fun onResume() {
         super.onResume()
-        chatMessageHandler.setCurrentVADStateChange(this)
+        vm.chatMessageHandler?.setCurrentVADStateChange(this)
     }
 
     override fun initViewModel() {
@@ -69,51 +64,55 @@ class ChatActivity : BaseAppCompatVmActivity<ActivityChatBinding, ChatVm>(
             Log.e(TAG, "ChatActivity::intentAo转换失败", e)
         }
 
-        try {
-            vm.initResource(
-                activity = this@ChatActivity,
-                ao = ao,
-                whereNeedUpdate = getWhereNeedUpdate(),
-                vadCallTextCallback = this@ChatActivity,
-                onVadChatStateChange = this@ChatActivity
+        val onBoundChatService = kotlinx.coroutines.Runnable {
+            try {
+                vm.initResource(
+                    activity = this@ChatActivity,
+                    ao = ao,
+                    whereNeedUpdate = getWhereNeedUpdate(),
+                    vadCallTextCallback = this@ChatActivity,
+                    onVadChatStateChange = this@ChatActivity
+                )
+            } catch (e: IllegalArgumentException){
+                Log.e(TAG, "ChatActivity::initResource失败", e)
+                ToastUtils.showToastActivity(this@ChatActivity,
+                    getString(com.view.appview.R.string.init_agent_failed))
+                finish()
+            }
+
+            // adapter
+            vm.initAdapter(
+                object : OnChatMessageClick{
+                    override fun onMessageClick(position: Int) {
+                    }
+
+                    override fun onAvatarClick(position: Int) {
+                    }
+
+                    override fun onQuoteClick(position: Int) {
+                    }
+                }
             )
-        } catch (e: IllegalArgumentException){
-            Log.e(TAG, "ChatActivity::initResource失败", e)
-            ToastUtils.showToastActivity(this@ChatActivity,
-                getString(com.view.appview.R.string.init_agent_failed))
-            finish()
+
+            // 反转layout
+            val layoutManager = LinearLayoutManager(this)
+            layoutManager.reverseLayout = true // 反转布局
+            binding.rclvMessage.layoutManager = layoutManager
+
+            binding.rclvMessage.adapter = vm.adapter
+
+            // 监听设置
+            binding.smSendMessage.getEditText().addTextChangedListener(
+                vm.getTextWatcher()
+            )
+
+            // 图片选择器
+            vm.initPictureSelectorLauncher(this)
+
+            observeData()
         }
 
-        // adapter
-        vm.initAdapter(
-            object : OnChatMessageClick{
-                override fun onMessageClick(position: Int) {
-                }
-
-                override fun onAvatarClick(position: Int) {
-                }
-
-                override fun onQuoteClick(position: Int) {
-                }
-            }
-        )
-
-        // 反转layout
-        val layoutManager = LinearLayoutManager(this)
-        layoutManager.reverseLayout = true // 反转布局
-        binding.rclvMessage.layoutManager = layoutManager
-
-        binding.rclvMessage.adapter = vm.adapter
-
-        // 监听设置
-        binding.smSendMessage.getEditText().addTextChangedListener(
-            vm.getTextWatcher()
-        )
-
-        // 图片选择器
-        vm.initPictureSelectorLauncher(this)
-
-        observeData()
+        vm.initService(onBoundChatService)
     }
 
     @SuppressLint("NotifyDataSetChanged")
@@ -148,7 +147,7 @@ class ChatActivity : BaseAppCompatVmActivity<ActivityChatBinding, ChatVm>(
 
         // 录制状态
         // 状态
-        chatMessageHandler.realtimeChatState.observe(this) { state ->
+        vm.chatMessageHandler?.realtimeChatState?.observe(this) { state ->
             when (state){
                 is RealtimeChatState.NotInitialized -> {
                     binding.smSendMessage.setIsEnableSend(false)
@@ -195,7 +194,7 @@ class ChatActivity : BaseAppCompatVmActivity<ActivityChatBinding, ChatVm>(
 
         // 共享boolean值
         callDialog?.let {
-            MainApplication.getChatMessageHandler().initIsChatCalling(
+            vm.chatMessageHandler?.initIsChatCalling(
                 it.isCalling
             )
         }
@@ -221,11 +220,11 @@ class ChatActivity : BaseAppCompatVmActivity<ActivityChatBinding, ChatVm>(
         binding.smSendMessage.setTakAudioOnTouchListener(
             {
                 // 开始录制
-                chatMessageHandler.startRecordRealtimeChatAudio()
+                vm.chatMessageHandler?.startRecordRealtimeChatAudio()
             },
             {
                 // 结束录制
-                chatMessageHandler.stopAndSendRealtimeChatAudio()
+                vm.chatMessageHandler?.stopAndSendRealtimeChatAudio()
             }
         )
 
@@ -266,11 +265,11 @@ class ChatActivity : BaseAppCompatVmActivity<ActivityChatBinding, ChatVm>(
                 ),
                 object : GainPermissionCallback{
                     override fun allGranted() {
-                        if (chatMessageHandler.messageContactItemAo != null){
+                        if (vm.chatMessageHandler?.messageContactItemAo != null){
                             // 跳转页面
                             val intent = Intent(this@ChatActivity, AgentEmojiActivity::class.java)
-                            intent.putExtra("agentId", chatMessageHandler.messageContactItemAo?.contactId?: "")
-                            intent.putExtra("agentName", chatMessageHandler.messageContactItemAo?.vo?.name?: "")
+                            intent.putExtra("agentId", vm.chatMessageHandler?.messageContactItemAo?.contactId?: "")
+                            intent.putExtra("agentName", vm.chatMessageHandler?.messageContactItemAo?.vo?.name?: "")
                             startActivity(intent)
                         }
                         else {
@@ -296,12 +295,19 @@ class ChatActivity : BaseAppCompatVmActivity<ActivityChatBinding, ChatVm>(
 
     fun getWhereNeedUpdate(): RecyclerViewWhereNeedUpdate {
         return object : RecyclerViewWhereNeedUpdate {
+
+            val chatManager = vm.chatMessageHandler?.getChatManagerPointer()
+
             override fun whereNeedUpdate(updateInfos: List<UpdateRecyclerViewItem>) {
                 if (updateInfos.isEmpty()){
                     Log.d(tag, "whereNeedUpdate: updateInfos is empty")
                     return
                 }
-                Log.d(tag, "当前的chatList长度为：${chatMessageHandler.getChatManagerPointer().getViewChatMessageList().size}")
+                if (chatManager == null) {
+                    Log.w(tag, "whereNeedUpdate: chatManager is null")
+                    return
+                }
+                Log.d(tag, "当前的chatList长度为：${chatManager.getViewChatMessageList().size}")
                 for (updateInfo in updateInfos) {
                     when (updateInfo.type){
                         // 单个覆盖更新
@@ -313,9 +319,9 @@ class ChatActivity : BaseAppCompatVmActivity<ActivityChatBinding, ChatVm>(
                             // 单个更新
                             // 找到id当前的position然后更新
                             var viewIndex = -1
-                            for (chatItemAo in chatMessageHandler.getChatManagerPointer().getViewChatMessageList()){
+                            for (chatItemAo in chatManager.getViewChatMessageList()){
                                 if (chatItemAo.messageId == updateInfo.singleUpdateId){
-                                    viewIndex = chatMessageHandler.getChatManagerPointer().getViewChatMessageList().indexOf(chatItemAo)
+                                    viewIndex = chatManager.getViewChatMessageList().indexOf(chatItemAo)
                                 }
                             }
                             if (viewIndex != -1){
@@ -333,13 +339,13 @@ class ChatActivity : BaseAppCompatVmActivity<ActivityChatBinding, ChatVm>(
                             }
                             // 找到id当前的position然后更新
                             var viewIndex = -1
-                            for (chatItemAo in chatMessageHandler.getChatManagerPointer().getViewChatMessageList()){
+                            for (chatItemAo in chatManager.getViewChatMessageList()){
                                 if (chatItemAo.messageId == updateInfo.idToEndUpdateId){
-                                    viewIndex = chatMessageHandler.getChatManagerPointer().getViewChatMessageList().indexOf(chatItemAo)
+                                    viewIndex = chatManager.getViewChatMessageList().indexOf(chatItemAo)
                                 }
                             }
                             if (viewIndex >= 0){
-                                val endPosition = chatMessageHandler.getChatManagerPointer().getViewChatMessageList().size - 1
+                                val endPosition = chatManager.getViewChatMessageList().size - 1
                                 vm.adapter.notifyItemRangeChanged(
                                     viewIndex,
                                     endPosition
@@ -358,9 +364,9 @@ class ChatActivity : BaseAppCompatVmActivity<ActivityChatBinding, ChatVm>(
                             }
                             // 找到id当前的position然后更新
                             var viewIndex = -1
-                            for (chatItemAo in chatMessageHandler.getChatManagerPointer().getViewChatMessageList()){
+                            for (chatItemAo in chatManager.getViewChatMessageList()){
                                 if (chatItemAo.messageId == updateInfo.idToEndUpdateId){
-                                    viewIndex = chatMessageHandler.getChatManagerPointer().getViewChatMessageList().indexOf(chatItemAo)
+                                    viewIndex = chatManager.getViewChatMessageList().indexOf(chatItemAo)
                                 }
                             }
                             if (viewIndex >= 0) {
@@ -388,16 +394,16 @@ class ChatActivity : BaseAppCompatVmActivity<ActivityChatBinding, ChatVm>(
                 callDialog?.let {
                     // 停止了再点击就开始录音
                     if (it.getIsCloseMic()){
-                        chatMessageHandler.startVadCall()
+                        vm.chatMessageHandler?.startVadCall()
                     }
                     // 停止了再点击就开始录音
                     else {
-                        chatMessageHandler.stopVadCall()
+                        vm.chatMessageHandler?.stopVadCall()
                     }
                 }
             }, {
                 callDialog?.dismiss()
-                chatMessageHandler.destroyVadCall()
+                vm.chatMessageHandler?.destroyVadCall()
             })
         )
     }
@@ -412,7 +418,7 @@ class ChatActivity : BaseAppCompatVmActivity<ActivityChatBinding, ChatVm>(
 
     fun showCallDialog() {
         // 初始化
-        chatMessageHandler.initVadCall(this@ChatActivity)
+        vm.chatMessageHandler?.initVadCall(this@ChatActivity)
 
         // 展示
         callDialog?.show()
@@ -420,8 +426,6 @@ class ChatActivity : BaseAppCompatVmActivity<ActivityChatBinding, ChatVm>(
 
     override fun onDestroy() {
         super.onDestroy()
-
-        vm.destroy()
     }
 
 }

@@ -1,7 +1,6 @@
 package com.magicvector
 
 import android.app.Application
-import android.util.Log
 import com.core.appcore.api.ApiRequest
 import com.core.appcore.api.ApiRequestProvider
 import com.core.baseutil.image.ImageManager
@@ -17,9 +16,7 @@ import com.magicvector.manager.yolo.VisionManager
 
 class MainApplication : Application() {
 
-    val tag = MainApplication::class.simpleName
-
-    lateinit var mApp: MainApplication
+    val tag = "MainApplication"
 
     //----------------------------启动APP调用----------------------------
 
@@ -36,6 +33,13 @@ class MainApplication : Application() {
     }
 
     companion object {
+        //==========App
+        private lateinit var mApp: MainApplication
+        fun getApp(): MainApplication {
+            return mApp
+        }
+
+        //==========Gson
 
         val GSON: Gson = GsonBuilder().setPrettyPrinting().create()
 
@@ -93,15 +97,6 @@ class MainApplication : Application() {
             return chatMapManager!!
         }
 
-        // 聊天资源管理
-        private var chatMessageHandler: ChatMessageHandler? = null
-        fun getChatMessageHandler(): ChatMessageHandler {
-            if (chatMessageHandler == null) {
-                chatMessageHandler = ChatMessageHandler()
-            }
-            return chatMessageHandler!!
-        }
-
         // VisionManager
         private var visionManager: VisionManager? = null
         fun getVisionManager(): VisionManager {
@@ -139,6 +134,7 @@ class MainApplication : Application() {
 
 
     //----------------------------APP终止的时候调用----------------------------
+
     override fun onTerminate() {
         super.onTerminate()
     }

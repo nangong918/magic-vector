@@ -29,6 +29,7 @@ Android User管理登录页面
 ### lv0(当前任务/核心任务)
 
 编辑测试Android App (Jetpack Compose + kotlin + Cpp) + 测试SpringBoot
+直接进行一轮AI测试
 
 #### 本月任务
 1. 完成状态机

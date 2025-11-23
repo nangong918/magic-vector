@@ -37,8 +37,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.util.LinkedList
-import java.util.Queue
 
 class AgentEmojiActivity : BaseAppCompatVmActivity<ActivityAgentEmojiBinding, AgentEmojiVm>(
     AgentEmojiActivity::class,
@@ -51,7 +49,6 @@ class AgentEmojiActivity : BaseAppCompatVmActivity<ActivityAgentEmojiBinding, Ag
     }
 
     var visionManager = MainApplication.getVisionManager()
-    var chatMessageHandler = MainApplication.getChatMessageHandler()
 
     override fun initBinding(): ActivityAgentEmojiBinding {
         return ActivityAgentEmojiBinding.inflate(layoutInflater)
@@ -62,7 +59,6 @@ class AgentEmojiActivity : BaseAppCompatVmActivity<ActivityAgentEmojiBinding, Ag
 
         visionManager = MainApplication.getVisionManager()
         visionManager.setVisionCallback(this)
-        chatMessageHandler = MainApplication.getChatMessageHandler()
     }
 
     override fun initViewModel() {
@@ -70,6 +66,8 @@ class AgentEmojiActivity : BaseAppCompatVmActivity<ActivityAgentEmojiBinding, Ag
 
         val agentId = intent.getStringExtra("agentId")
         val agentName = intent.getStringExtra("agentName")
+
+        vm.initService()
 
         visionManager.initStart(
             context = this,
@@ -90,33 +88,9 @@ class AgentEmojiActivity : BaseAppCompatVmActivity<ActivityAgentEmojiBinding, Ag
     }
 
     fun observeData(){
-/*        chatMessageHandler.realtimeChatState.observe(this) {
-            runOnUiThread {
-                when (it) {
-                    RealtimeChatState.NotInitialized -> {
-                        binding.tvCallState.text = "未初始化"
-                    }
-                    RealtimeChatState.Initializing -> {
-                        binding.tvCallState.text = "正在初始化"
-                    }
-                    RealtimeChatState.InitializedConnected -> {
-                        binding.tvCallState.text = "已初始化并连接"
-                    }
-                    RealtimeChatState.RecordingAndSending -> {
-                        binding.tvCallState.text = "正在记录消息"
-                    }
-                    RealtimeChatState.Receiving -> {
-                        binding.tvCallState.text = "正在接收消息"
-                    }
-                    RealtimeChatState.Disconnected -> {
-                        binding.tvCallState.text = "已断开连接"
-                    }
-                    is RealtimeChatState.Error -> {
-                        binding.tvCallState.text = "错误"
-                    }
-                }
-            }
-        }*/
+        vm.chatServiceBoundLd.observe(this@AgentEmojiActivity) {
+
+        }
     }
 
     override fun initView() {
@@ -156,10 +130,10 @@ class AgentEmojiActivity : BaseAppCompatVmActivity<ActivityAgentEmojiBinding, Ag
 
         // 关闭了Mic
         if (isCloseMic) {
-            chatMessageHandler.stopVadCall()
+            vm.chatMessageHandler?.stopVadCall()
         }
         else {
-            chatMessageHandler.startVadCall()
+            vm.chatMessageHandler?.startVadCall()
         }
     }
 
@@ -237,7 +211,9 @@ class AgentEmojiActivity : BaseAppCompatVmActivity<ActivityAgentEmojiBinding, Ag
 
         // vision测试
         binding.btnVisionTest.setOnClickListener {
-            vm.visionTest(chatMessageHandler)
+            vm.chatMessageHandler?.let {
+                vm.visionTest(it)
+            }
         }
     }
 
@@ -362,7 +338,7 @@ class AgentEmojiActivity : BaseAppCompatVmActivity<ActivityAgentEmojiBinding, Ag
                     RealtimeRequestDataTypeEnum.DATA to uploadPhotoRequestJson
                 )
 
-                chatMessageHandler.realtimeChatWsClient?.sendMessage(dataMap)
+                vm.chatMessageHandler?.realtimeChatWsClient?.sendMessage(dataMap)
                 ToastUtils.showToastActivity(this, getString(R.string.fetch_photo_fail))
             }
             else {
@@ -457,7 +433,7 @@ class AgentEmojiActivity : BaseAppCompatVmActivity<ActivityAgentEmojiBinding, Ag
                         RealtimeRequestDataTypeEnum.DATA to uploadPhotoRequestJson
                     )
 
-                    chatMessageHandler.realtimeChatWsClient?.sendMessage(dataMap)
+                    vm.chatMessageHandler?.realtimeChatWsClient?.sendMessage(dataMap)
 
                     // 添加休眠，避免网络拥塞（不是最后一个分片时休眠）
                     if (base64FragmentQueue.isNotEmpty()) {
@@ -521,23 +497,27 @@ class AgentEmojiActivity : BaseAppCompatVmActivity<ActivityAgentEmojiBinding, Ag
     override fun onResume() {
         super.onResume()
         visionManager.onResume(window = window)
-        // 启动VAD录音
-        chatMessageHandler.initVadCall(this@AgentEmojiActivity)
-        chatMessageHandler.currentIsEmoji.set(true)
-        chatMessageHandler.setCurrentVADStateChange(this)
-        // 系统回调
-        chatMessageHandler.setHandleSystemResponse(this)
+        vm.chatMessageHandler?.let { chatMessageHandler ->
+            // 启动VAD录音
+            chatMessageHandler.initVadCall(this@AgentEmojiActivity)
+            chatMessageHandler.currentIsEmoji.set(true)
+            chatMessageHandler.setCurrentVADStateChange(this)
+            // 系统回调
+            chatMessageHandler.setHandleSystemResponse(this)
+        }
     }
 
     // 暂停
     override fun onPause() {
         super.onPause()
         visionManager.onPause()
-        // 关闭VAD录音
-        chatMessageHandler.stopVadCall()
-        chatMessageHandler.currentIsEmoji.set(false)
-        // 取消系统回调
-        chatMessageHandler.setHandleSystemResponse(null)
+        vm.chatMessageHandler?.let { chatMessageHandler ->
+            // 关闭VAD录音
+            chatMessageHandler.stopVadCall()
+            chatMessageHandler.currentIsEmoji.set(false)
+            // 取消系统回调
+            chatMessageHandler.setHandleSystemResponse(null)
+        }
     }
 
     // 销毁

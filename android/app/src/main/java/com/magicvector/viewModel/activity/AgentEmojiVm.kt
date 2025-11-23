@@ -1,7 +1,15 @@
 package com.magicvector.viewModel.activity
 
+import android.content.ComponentName
 import android.content.Context
-import androidx.lifecycle.ViewModel
+import android.content.Context.BIND_AUTO_CREATE
+import android.content.Intent
+import android.content.ServiceConnection
+import android.os.IBinder
+import android.util.Log
+import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.MutableLiveData
+import androidx.lifecycle.application
 import com.core.appcore.api.handler.SyncRequestCallback
 import com.core.appcore.utils.AppResponseUtil
 import com.core.baseutil.file.FileUtil
@@ -11,14 +19,16 @@ import com.core.baseutil.network.OnThrowableCallback
 import com.data.domain.constant.chat.RealtimeRequestDataTypeEnum
 import com.magicvector.MainApplication
 import com.magicvector.manager.ChatMessageHandler
+import com.magicvector.service.ChatService
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
 import okhttp3.RequestBody
 import java.io.File
 
 class AgentEmojiVm(
-
-) : ViewModel(){
+) : AndroidViewModel(
+    application = MainApplication.getApp()
+){
 
     companion object {
         val TAG: String = AgentEmojiVm::class.java.name
@@ -26,10 +36,79 @@ class AgentEmojiVm(
         val mApi = MainApplication.getApiRequestImplInstance()
     }
 
+    //-----------------------Ao-----------------------
+
+    // service
+    // ❌ 不要这样：private var chatService: ChatService? = null 因为Service本身是一个Context而且生命周期大于ViewModel，ViewModel直接持有会造成内存泄露
+    // ✅ 改为：只持有 Binder 或通过 Binder 调用方法
+    private var chatServiceBinder: ChatService.ChatServiceBinder? = null
+    val chatServiceBoundLd = MutableLiveData(false)
+    private val chatServiceConnection = object : ServiceConnection {
+        override fun onServiceConnected(
+            name: ComponentName?,
+            service: IBinder?
+        ) {
+            val binder = service as ChatService.ChatServiceBinder
+            chatServiceBoundLd.postValue(true)
+            // 连接成功使用之后
+            chatMessageHandler = binder.getChatMessageHandler()
+        }
+
+        override fun onServiceDisconnected(name: ComponentName?) {
+            chatServiceBoundLd.postValue(false)
+            chatServiceBinder = null
+            chatMessageHandler = null
+        }
+
+        override fun onBindingDied(name: ComponentName?) {
+            super.onBindingDied(name)
+            // 1. Service 所在的进程被系统杀死（内存不足）
+            // 2. Service 进程崩溃
+            // 3. 系统资源紧张时主动清理
+
+            Log.w(TAG, "Service binding died - process was killed")
+            chatServiceBoundLd.postValue(false)
+
+            // 需要重新绑定
+            // rebindService() // 可以在这里自动重试
+        }
+
+        override fun onNullBinding(name: ComponentName?) {
+            super.onNullBinding(name)
+            // Service 的 onBind() 返回了 null
+            Log.e(TAG, "Service returned null binding - check Service implementation")
+            chatServiceBoundLd.postValue(false)
+        }
+    }
+    fun initService(){
+        // 启动Service的intent
+        val intent = Intent(application, ChatService::class.java)
+        // 尝试绑定服务，乐观认为mainActivity已经启动了service
+        application.bindService(intent, chatServiceConnection, BIND_AUTO_CREATE)
+    }
+
+    fun disconnectService() {
+        application.let { context ->
+            if (chatServiceBoundLd.value == true) {
+                try {
+                    context.unbindService(chatServiceConnection)
+                    Log.d(TAG, "Service disconnected successfully")
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error disconnecting service", e)
+                }
+            }
+        }
+        chatServiceBoundLd.postValue(false)
+        chatServiceBinder = null
+        chatMessageHandler = null
+    }
+
+    //-----------------------Repository-----------------------
+
     /**
      * vision任务，http方式上传single图片
      * @param context       上下文
-     * @param image         图片文件
+     * @param images        图片文件
      * @param agentId       客服id
      * @param userId        用户id
      * @param messageId     消息id
@@ -104,5 +183,15 @@ class AgentEmojiVm(
             dataMap,
             true
         )
+    }
+
+    //-----------------------Logic-----------------------
+
+    var chatMessageHandler: ChatMessageHandler? = null
+
+    override fun onCleared() {
+        super.onCleared()
+
+        disconnectService()
     }
 }

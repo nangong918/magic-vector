@@ -113,6 +113,7 @@ class MainActivity : BaseAppCompatVmActivity<ActivityMainBinding, MainVm>(
         }
     }
 
+    // todo 需要检查Service是否已经启动了，如果没有启动Service就启动service
     private fun bindChatService() {
         val intent = Intent(this, ChatService::class.java)
 
