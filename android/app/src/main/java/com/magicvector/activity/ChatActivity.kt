@@ -106,13 +106,13 @@ class ChatActivity : BaseAppCompatVmActivity<ActivityChatBinding, ChatVm>(
                 vm.getTextWatcher()
             )
 
-            // 图片选择器
-            vm.initPictureSelectorLauncher(this)
-
             observeData()
         }
 
         vm.initService(onBoundChatService)
+
+        // 图片选择器
+        vm.initPictureSelectorLauncher(this)
     }
 
     @SuppressLint("NotifyDataSetChanged")
@@ -295,10 +295,8 @@ class ChatActivity : BaseAppCompatVmActivity<ActivityChatBinding, ChatVm>(
 
     fun getWhereNeedUpdate(): RecyclerViewWhereNeedUpdate {
         return object : RecyclerViewWhereNeedUpdate {
-
-            val chatManager = vm.chatMessageHandler?.getChatManagerPointer()
-
             override fun whereNeedUpdate(updateInfos: List<UpdateRecyclerViewItem>) {
+                val chatManager = vm.chatMessageHandler?.getChatManagerPointer()
                 if (updateInfos.isEmpty()){
                     Log.d(tag, "whereNeedUpdate: updateInfos is empty")
                     return
