@@ -20,10 +20,7 @@ import org.jetbrains.annotations.NotNull;
 import org.springframework.ai.chat.client.ChatClient;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -65,7 +62,7 @@ public class RealtimeChatContextManager implements
     @Getter
     public ChatClient chatClient;
 
-    /// 会话任务
+    /// 会话任务   <p>出现了线程异常ConcurrentModificationException，需要进行线程同步
     private final List<Object> chatTasks = new ArrayList<>();
 
     /// 会话状态
@@ -74,7 +71,9 @@ public class RealtimeChatContextManager implements
 
     // 添加任务
     public void addChatTask(Object task) {
-        addTask(task, chatTasks);
+        synchronized (chatTasks) {
+            addTask(task, chatTasks);
+        }
     }
     private void addTask(Object task, @NotNull List<Object> tasks){
         if (task == null){
@@ -93,31 +92,44 @@ public class RealtimeChatContextManager implements
 
     // 取消任务(方法模板)
     public final void cancelChatTask(){
-        cancelTask(chatTasks);
-        llmProxyContext.resetFunctionCall();
+        synchronized (chatTasks) {
+            cancelTask(chatTasks);
+            llmProxyContext.reset();
+        }
     }
 
-    private synchronized void cancelTask(@NotNull List<Object> tasks){
-        if (tasks.isEmpty()){
+    private void cancelTask(@NotNull List<Object> tasks) {
+        if (tasks.isEmpty()) {
             return;
         }
+
+        // 使用迭代器安全遍历
+        Iterator<Object> iterator = tasks.iterator();
         int cancelCount = 0;
-        for (Object task: tasks){
-            if (task == null){
+        while (iterator.hasNext()) {
+            Object task = iterator.next();
+            if (task == null) {
                 log.warn("task is null");
                 continue;
             }
-            switch (task) {
-                case io.reactivex.disposables.Disposable disposable -> disposable.dispose();
-                case reactor.core.Disposable disposable -> disposable.dispose();
-                case Future<?> future -> future.cancel(true);
-                default -> {
-                    log.warn("task is not a Disposable or a Future");
-                    continue;
+
+            try {
+                switch (task) {
+                    case io.reactivex.disposables.Disposable disposable -> disposable.dispose();
+                    case reactor.core.Disposable disposable -> disposable.dispose();
+                    case Future<?> future -> future.cancel(true);
+                    default -> {
+                        log.warn("task is not a Disposable or a Future");
+                        continue;
+                    }
                 }
+                cancelCount++;
+            } catch (Exception e) {
+                log.error("取消任务失败: {}", task.getClass().getSimpleName(), e);
             }
-            cancelCount++;
         }
+
+        // 遍历完成后统一清空
         tasks.clear();
         log.info("取消了: {}条任务", cancelCount);
     }
@@ -321,7 +333,7 @@ public class RealtimeChatContextManager implements
         llmProxyContext.reset();
         mixLLMManager.reset();
         // 取消正在执行的任务
-        cancelTask(chatTasks);
+        cancelChatTask();
         // 取消任务并不会清除userQuestion
         userRequestQuestion = "";
         agentResponseStringBuffer.setLength(0);

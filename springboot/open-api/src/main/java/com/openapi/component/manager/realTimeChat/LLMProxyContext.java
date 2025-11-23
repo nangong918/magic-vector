@@ -165,15 +165,7 @@ public class LLMProxyContext implements RealtimeProcess, ChatRealtimeState{
         sttRecordContext.reset();
         setState(RealTimeChatState.UNCONVERSATION);
     }
-    public void resetFunctionCall(){
-        sttRecordContext.reset();
-        setState(RealTimeChatState.UNCONVERSATION);
-    }
-    public void resetSimpleLLM(){
-        simpleLLMContext.reset();
-        sttRecordContext.reset();
-        setState(RealTimeChatState.UNCONVERSATION);
-    }
+
     ///===========会话Context===========
     // llm + tts
     private final SimpleLLMContext simpleLLMContext = new SimpleLLMContext();
