@@ -698,4 +698,55 @@ public class ConcurrentResourcesTest {
             log.info("最终资源大小: {}", sharedResource.size());
         }
     }
+
+
+    /// 场景测试
+    static class ProjectCanCelTaskTest {
+
+        private final List<String> sharedResource = new ArrayList<>();
+
+        private void addResource(String resource) {
+            synchronized (sharedResource) {
+                sharedResource.add(resource);
+            }
+        }
+
+        private void changeAndRemoveResource() {
+            synchronized (sharedResource) {
+                for (String resource : sharedResource) {
+                    // 每10个一次输出
+                    if (sharedResource.indexOf(resource) % 10 == 0) {
+                        System.out.println("resource = " + resource);
+                    }
+                }
+
+                int size = sharedResource.size();
+                sharedResource.clear();
+                log.info("changeAndRemoveResource: 共{}个资源被清空", size);
+            }
+        }
+
+        public void addResource(){
+            for (int i = 0; i < 100; i++) {
+                addResource("resource" + i);
+            }
+            log.info("addResource: 共{}个资源被添加", sharedResource.size());
+        }
+
+        public static void main(String[] args) throws InterruptedException {
+            ProjectCanCelTaskTest test = new ProjectCanCelTaskTest();
+            Thread addThread = new Thread(test::addResource);
+            Thread changeAndRemoveThread = new Thread(test::changeAndRemoveResource);
+
+            addThread.start();
+            changeAndRemoveThread.start();
+
+            for (int i = 0; i < 3; i++) {
+                Thread.sleep(100);
+                new Thread(test::changeAndRemoveResource).start();
+            }
+
+            Thread.sleep(10_000L);
+        }
+    }
 }

@@ -417,7 +417,7 @@ class ChatVm(
     override fun onCleared() {
         super.onCleared()
 
-        chatMessageHandler?.destroy()
+//        chatMessageHandler?.destroy()
         disconnectService()
     }
 }

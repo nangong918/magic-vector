@@ -107,6 +107,15 @@ class ChatActivity : BaseAppCompatVmActivity<ActivityChatBinding, ChatVm>(
             )
 
             observeData()
+
+            initCallDialog()
+
+            // 共享boolean值
+            callDialog?.let {
+                vm.chatMessageHandler?.initIsChatCalling(
+                    it.isCalling
+                )
+            }
         }
 
         vm.initService(onBoundChatService)
@@ -189,15 +198,6 @@ class ChatActivity : BaseAppCompatVmActivity<ActivityChatBinding, ChatVm>(
         binding.smSendMessage.setKeyboardOpen(true)
         
         binding.vVoiceWave.init()
-
-        initCallDialog()
-
-        // 共享boolean值
-        callDialog?.let {
-            vm.chatMessageHandler?.initIsChatCalling(
-                it.isCalling
-            )
-        }
     }
 
     override fun setListener() {

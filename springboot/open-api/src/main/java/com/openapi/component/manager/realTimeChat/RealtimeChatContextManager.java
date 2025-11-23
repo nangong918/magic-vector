@@ -62,76 +62,72 @@ public class RealtimeChatContextManager implements
     @Getter
     public ChatClient chatClient;
 
-    /// 会话任务   <p>出现了线程异常ConcurrentModificationException，需要进行线程同步
-    private final List<Object> chatTasks = new ArrayList<>();
-
     /// 会话状态
     @Getter
     public final LLMProxyContext llmProxyContext = new LLMProxyContext();
 
+    /// 会话任务   <p>出现了线程异常ConcurrentModificationException，需要进行线程同步
+    private final List<Object> chatTasks = new ArrayList<>();
+
     // 添加任务
     public void addChatTask(Object task) {
         synchronized (chatTasks) {
-            addTask(task, chatTasks);
-        }
-    }
-    private void addTask(Object task, @NotNull List<Object> tasks){
-        if (task == null){
-            log.warn("task is null");
-            return;
-        }
-        if (task instanceof io.reactivex.disposables.Disposable ||
-                task instanceof reactor.core.Disposable ||
-                task instanceof Future<?>){
-            tasks.add(task);
-        }
-        else {
-            log.warn("task is not a Disposable or a Future");
-        }
-    }
-
-    // 取消任务(方法模板)
-    public final void cancelChatTask(){
-        synchronized (chatTasks) {
-            cancelTask(chatTasks);
-            llmProxyContext.reset();
-        }
-    }
-
-    private void cancelTask(@NotNull List<Object> tasks) {
-        if (tasks.isEmpty()) {
-            return;
-        }
-
-        // 使用迭代器安全遍历
-        Iterator<Object> iterator = tasks.iterator();
-        int cancelCount = 0;
-        while (iterator.hasNext()) {
-            Object task = iterator.next();
-            if (task == null) {
+            if (task == null){
                 log.warn("task is null");
-                continue;
+                return;
             }
-
-            try {
-                switch (task) {
-                    case io.reactivex.disposables.Disposable disposable -> disposable.dispose();
-                    case reactor.core.Disposable disposable -> disposable.dispose();
-                    case Future<?> future -> future.cancel(true);
-                    default -> {
-                        log.warn("task is not a Disposable or a Future");
-                        continue;
-                    }
-                }
-                cancelCount++;
-            } catch (Exception e) {
-                log.error("取消任务失败: {}", task.getClass().getSimpleName(), e);
+            if (task instanceof io.reactivex.disposables.Disposable ||
+                    task instanceof reactor.core.Disposable ||
+                    task instanceof Future<?>){
+                chatTasks.add(task);
+            }
+            else {
+                log.warn("task is not a Disposable or a Future");
             }
         }
+    }
 
-        // 遍历完成后统一清空
-        tasks.clear();
-        log.info("取消了: {}条任务", cancelCount);
+    // 取消任务
+    public final void cancelChatTask(){
+        log.info("取消任务1");
+        synchronized (chatTasks) {
+            log.info("取消任务2");
+            llmProxyContext.reset();
+
+            if (chatTasks.isEmpty()) {
+                return;
+            }
+
+            // 使用迭代器安全遍历
+            Iterator<Object> iterator = chatTasks.iterator();
+            int cancelCount = 0;
+            while (iterator.hasNext()) {
+                Object task = iterator.next();
+                if (task == null) {
+                    log.warn("task is null");
+                    continue;
+                }
+
+                try {
+                    switch (task) {
+                        case io.reactivex.disposables.Disposable disposable -> disposable.dispose();
+                        case reactor.core.Disposable disposable -> disposable.dispose();
+                        case Future<?> future -> future.cancel(true);
+                        default -> {
+                            log.warn("task is not a Disposable or a Future");
+                            continue;
+                        }
+                    }
+                    cancelCount++;
+                } catch (Exception e) {
+                    log.error("取消任务失败: {}", task.getClass().getSimpleName(), e);
+                }
+            }
+
+            // 遍历完成后统一清空
+            chatTasks.clear();
+            log.info("取消了: {}条任务", cancelCount);
+        }
     }
 
     /// agent会话信息

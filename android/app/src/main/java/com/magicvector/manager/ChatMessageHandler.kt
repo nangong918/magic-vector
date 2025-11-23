@@ -464,11 +464,11 @@ class ChatMessageHandler {
         onVadChatStateChange: OnVadChatStateChange
     ) {
         // 在初始化之前先清理全部资源
-        try {
-            releaseAllResource()
-        } catch (e: Exception){
-            Log.e(TAG, "initResource: ${e.message}")
-        }
+//        try {
+//            releaseAllResource()
+//        } catch (e: Exception){
+//            Log.e(TAG, "initResource: ${e.message}")
+//        }
 
         realtimeChatState.postValue(RealtimeChatState.NotInitialized)
 
@@ -544,11 +544,11 @@ class ChatMessageHandler {
                     Log.d(TAG, "handleTextMessage:: 正在Emoji VAD通话:AI正在回复, 停止录音")
                 }
                 else if (isChatCalling?.get() == true) {
-                    vadSileroManager?.startRecording()
+                    vadSileroManager?.stopRecording()
                     Log.d(TAG, "handleTextMessage:: 正在VAD通话:AI正在回复, 停止录音")
                 }
                 else {
-                    Log.d(TAG, "handleTextMessage:: 停止VAD通话: 不管理VAD录音")
+                    Log.d(TAG, "START_TTS::handleTextMessage:: 停止VAD通话: 不管理VAD录音, isChatCalling: $isChatCalling")
                 }
             }
             // 结束TTS + 结束会话
@@ -572,7 +572,7 @@ class ChatMessageHandler {
                     Log.d(TAG, "handleTextMessage:: 正在VAD通话:AI回复结束, 继续录音")
                 }
                 else {
-                    Log.d(TAG, "handleTextMessage:: 停止VAD通话: 不管理VAD录音")
+                    Log.d(TAG, "STOP_TTS::handleTextMessage:: 停止VAD通话: 不管理VAD录音, isChatCalling: $isChatCalling")
                 }
             }
             // 音频流
