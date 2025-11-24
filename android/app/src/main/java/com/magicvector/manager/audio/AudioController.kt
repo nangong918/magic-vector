@@ -1,6 +1,7 @@
 package com.magicvector.manager.audio
 
 import android.Manifest
+import android.content.Context
 import android.media.AudioFormat
 import android.media.AudioManager
 import android.media.AudioRecord
@@ -10,24 +11,29 @@ import android.util.Base64
 import android.util.Log
 import androidx.annotation.RequiresPermission
 import com.data.domain.constant.BaseConstant
-import com.magicvector.manager.RealtimeChatController.Companion.TAG
-import com.magicvector.manager.audio.vad.VadSileroManager
+import com.magicvector.manager.audio.vad.VadDetectionCallback
+import com.magicvector.manager.audio.vad.VadSileroController
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.yield
-import java.util.concurrent.atomic.AtomicBoolean
+import java.lang.ref.WeakReference
 
 /**
  * Audio管理者，负责维护Audio录音，播放，VAD
  */
 class AudioController(
-    val audioHandleCallback: AudioHandleCallback
+    val audioHandleCallback: AudioHandleCallback,
+    val vadDetectionCallback: VadDetectionCallback
 ) {
+
+    companion object {
+        private const val TAG = "AudioController"
+    }
 
     private var realtimeChatAudioRecord: AudioRecord? = null
     private var realtimeChatAudioTrack: AudioTrack? = null
-    private var vadSileroManager: VadSileroManager? = null
+    private var vadSileroController: VadSileroController? = null
 
     /**
      * 初始化AudioRecord和AudioTrack
@@ -62,6 +68,29 @@ class AudioController(
     }
 
     /**
+     * 初始化VAD
+     * @param weakContext   弱引用的Context (上有会在Service中，长生命周期引用短生命周期可能造成内存泄漏)
+     */
+    @RequiresPermission(Manifest.permission.RECORD_AUDIO)
+    fun initVadController(weakContext: WeakReference<Context>){
+        if (vadSileroController == null){
+            vadSileroController = VadSileroController()
+        }
+
+        val context = weakContext.get()
+        context?.let {
+            vadSileroController?.init(
+                context = context,
+                vadDetectionCallback = vadDetectionCallback
+            ) ?: run {
+                Log.e(TAG, "VadController init failed")
+            }
+        } ?: run {
+            Log.e(TAG, "Context is null")
+        }
+    }
+
+    /**
      * 开始播放音频
      */
     fun startAudioTrackPlay(){
@@ -80,6 +109,32 @@ class AudioController(
     fun stopAudioTrackPlay(){
         realtimeChatAudioTrack?.stop() ?: run {
             Log.e(TAG, "AudioTrack is null")
+        }
+    }
+
+    /**
+     * 开始VAD
+     * @param onStart   录制开始回调
+     */
+    fun startVAD(onStart: Runnable){
+        vadSileroController?.let { controller ->
+            controller.startRecording()
+            onStart.run()
+        } ?: run {
+            Log.e(TAG, "VadController is null")
+        }
+    }
+
+    /**
+     * 停止VAD
+     * @param onStop   录制结束回调
+     */
+    fun stopVAD(onStop: () -> Unit) {
+        vadSileroController?.let { controller ->
+            controller.stopRecording()
+            onStop()
+        } ?: run {
+            Log.e(TAG, "VadController is null")
         }
     }
 
@@ -110,7 +165,7 @@ class AudioController(
      * @param isRecording   是否正在录制
      * @param scope         协程作用域
      */
-    fun startRecordingAudio(isRecording: AtomicBoolean, scope: CoroutineScope) {
+    fun startRecordingAudio(isAudioRecording: IsAudioRecording, scope: CoroutineScope) {
         // 录制音频 -> 音频流bytes实时转为Base64的PCM格式 -> 调用websocket的sendAudioMessage
         val bufferSize = AudioRecord.getMinBufferSize(
             BaseConstant.AUDIO.REALTIME_CHAT_SAMPLE_RATE,
@@ -137,7 +192,7 @@ class AudioController(
                         return@launch
                     }
 
-                    while (isRecording.get()) {
+                    while (isAudioRecording.isAudioRecording()) {
                         val readSize = audioRecord.read(
                             audioBuffer,
                             0,
@@ -174,9 +229,7 @@ class AudioController(
                 } finally {
                     // 停止录音
                     try {
-                        if (audioRecord.recordingState == AudioRecord.RECORDSTATE_RECORDING) {
-                            audioRecord.stop()
-                        }
+                        audioRecord.stop()
                     } catch (e: Exception) {
                         Log.e(TAG, "AudioRecord stop error: ${e.message}")
                     }
@@ -192,6 +245,9 @@ class AudioController(
         }
     }
 
+    /**
+     * 释放AudioRecord
+     */
     fun releaseAudioRecord(){
         realtimeChatAudioRecord?.let {
             try {
@@ -203,6 +259,9 @@ class AudioController(
             }
         }
     }
+    /**
+     * 释放AudioTrack
+     */
     fun releaseAudioTrack(){
         realtimeChatAudioTrack?.let {
             try {
@@ -215,4 +274,26 @@ class AudioController(
         }
     }
 
+    /**
+     * 释放VADSileroController
+     */
+    fun releaseVADController(){
+        vadSileroController?.let {
+            try {
+                it.onDestroy()
+                vadSileroController = null
+            } catch (e: Exception){
+                Log.e(TAG, "releaseAllResource::vadSileroController error", e)
+            }
+        }
+    }
+
+    /**
+     * 释放所有资源
+     */
+    fun releaseAll(){
+        releaseAudioRecord()
+        releaseAudioTrack()
+        releaseVADController()
+    }
 }

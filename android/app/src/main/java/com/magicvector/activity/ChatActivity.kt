@@ -3,11 +3,14 @@ package com.magicvector.activity
 
 import android.Manifest
 import android.annotation.SuppressLint
+import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.text.TextUtils
 import android.util.Log
 import android.view.View
+import androidx.annotation.RequiresPermission
+import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.core.baseutil.permissions.GainPermissionCallback
 import com.core.baseutil.permissions.PermissionUtil
@@ -26,6 +29,8 @@ import com.view.appview.chat.OnChatMessageClick
 import com.view.appview.recycler.RecyclerViewWhereNeedUpdate
 import com.view.appview.recycler.UpdateRecyclerViewItem
 import com.view.appview.recycler.UpdateRecyclerViewTypeEnum
+import kotlinx.coroutines.CoroutineScope
+import java.lang.ref.WeakReference
 
 class ChatActivity : BaseAppCompatVmActivity<ActivityChatBinding, ChatVm>(
     ChatActivity::class,
@@ -220,7 +225,8 @@ class ChatActivity : BaseAppCompatVmActivity<ActivityChatBinding, ChatVm>(
         binding.smSendMessage.setTakAudioOnTouchListener(
             {
                 // 开始录制
-                vm.realtimeChatController?.startRecordRealtimeChatAudio()
+                val weakScope = WeakReference<CoroutineScope>(lifecycleScope)
+                vm.realtimeChatController?.startRecordRealtimeChatAudio(weakScope)
             },
             {
                 // 结束录制
@@ -416,7 +422,27 @@ class ChatActivity : BaseAppCompatVmActivity<ActivityChatBinding, ChatVm>(
 
     fun showCallDialog() {
         // 初始化
-        vm.realtimeChatController?.initVadCall(this@ChatActivity)
+        PermissionUtil.requestPermissionSelectX(
+            this@ChatActivity,
+            mustPermission = arrayOf(
+                Manifest.permission.RECORD_AUDIO,
+            ),
+            optionalPermission = arrayOf(
+            ),
+            object : GainPermissionCallback{
+                @RequiresPermission(Manifest.permission.RECORD_AUDIO)
+                override fun allGranted() {
+                    val weakContext = WeakReference<Context>(this@ChatActivity)
+                    vm.realtimeChatController?.initVadCall(weakContext)
+                }
+
+                override fun notGranted(notGrantedPermissions: Array<String?>?) {
+                }
+
+                override fun always() {
+                }
+            }
+        )
 
         // 展示
         callDialog?.show()

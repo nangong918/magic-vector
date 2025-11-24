@@ -1,16 +1,21 @@
 package com.magicvector.activity
 
+import android.Manifest
 import android.annotation.SuppressLint
+import android.content.Context
 import android.graphics.Bitmap
 import android.os.Bundle
 import android.text.TextUtils
 import android.util.Log
 import android.view.View
 import android.view.WindowManager
+import androidx.annotation.RequiresPermission
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.lifecycleScope
 import com.core.appcore.api.handler.SyncRequestCallback
 import com.core.baseutil.network.networkLoad.NetworkLoadUtils
+import com.core.baseutil.permissions.GainPermissionCallback
+import com.core.baseutil.permissions.PermissionUtil
 import com.core.baseutil.ui.ToastUtils
 import com.data.domain.constant.BaseConstant
 import com.data.domain.constant.VadChatState
@@ -37,6 +42,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.lang.ref.WeakReference
 
 class AgentEmojiActivity : BaseAppCompatVmActivity<ActivityAgentEmojiBinding, AgentEmojiVm>(
     AgentEmojiActivity::class,
@@ -498,12 +504,34 @@ class AgentEmojiActivity : BaseAppCompatVmActivity<ActivityAgentEmojiBinding, Ag
         super.onResume()
         visionManager.onResume(window = window)
         vm.realtimeChatController?.let { chatMessageHandler ->
-            // 启动VAD录音
-            chatMessageHandler.initVadCall(this@AgentEmojiActivity)
-            chatMessageHandler.currentIsEmoji.set(true)
-            chatMessageHandler.setCurrentVADStateChange(this)
-            // 系统回调
-            chatMessageHandler.setHandleSystemResponse(this)
+            PermissionUtil.requestPermissionSelectX(
+                this@AgentEmojiActivity,
+                mustPermission = arrayOf(
+                    Manifest.permission.RECORD_AUDIO,
+                ),
+                optionalPermission = arrayOf(
+                ),
+                object : GainPermissionCallback {
+                    @RequiresPermission(Manifest.permission.RECORD_AUDIO)
+                    override fun allGranted() {
+                        // 启动VAD录音
+                        val weakContext = WeakReference<Context>(this@AgentEmojiActivity)
+                        chatMessageHandler.initVadCall(weakContext)
+                        chatMessageHandler.currentIsEmoji.set(true)
+                        // vad状态回调
+                        chatMessageHandler.setCurrentVADStateChange(this@AgentEmojiActivity)
+                        // 系统回调
+                        chatMessageHandler.setHandleSystemResponse(this@AgentEmojiActivity)
+                    }
+
+                    override fun notGranted(notGrantedPermissions: Array<String?>?) {
+                    }
+
+                    override fun always() {
+                    }
+                }
+            )
+
         }
     }
 

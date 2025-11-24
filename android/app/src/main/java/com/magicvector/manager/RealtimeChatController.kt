@@ -2,11 +2,6 @@ package com.magicvector.manager
 
 import android.Manifest
 import android.content.Context
-import android.media.AudioFormat
-import android.media.AudioManager
-import android.media.AudioRecord
-import android.media.AudioTrack
-import android.media.MediaRecorder
 import android.os.Handler
 import android.os.Looper
 import android.util.Base64
@@ -32,17 +27,22 @@ import com.google.gson.reflect.TypeToken
 import com.magicvector.MainApplication
 import com.magicvector.callback.OnVadChatStateChange
 import com.magicvector.callback.OnReceiveAgentTextCallback
+import com.magicvector.manager.audio.AudioController
+import com.magicvector.manager.audio.AudioHandleCallback
+import com.magicvector.manager.audio.IsAudioRecording
 import com.magicvector.manager.mcp.HandleSystemResponse
 import com.magicvector.manager.audio.vad.VadDetectionCallback
-import com.magicvector.manager.audio.vad.VadSileroManager
 import com.magicvector.manager.ws.ChatWsTextMessageHandler
 import com.magicvector.manager.ws.WsManager
 import com.magicvector.utils.chat.RealtimeChatWsClient
 import com.view.appview.recycler.RecyclerViewWhereNeedUpdate
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Runnable
 import okhttp3.Response
 import okhttp3.WebSocket
 import okhttp3.WebSocketListener
 import okio.ByteString
+import java.lang.ref.WeakReference
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.math.sqrt
 
@@ -56,7 +56,7 @@ import kotlin.math.sqrt
  * UdpVision
  * todo 解耦chatMessageHandler，绘制UML图，多数据源合并问题。（具体需要先实现AppDemo中的Jetpack Compose的多数据源插入LazyColumn）
  */
-class RealtimeChatController {
+class RealtimeChatController : IsAudioRecording{
 
     companion object {
         const val TAG = "RealtimeChatController"
@@ -93,7 +93,7 @@ class RealtimeChatController {
 
     var realtimeChatWsClient: RealtimeChatWsClient? = null // 长连接，可为null，允许销毁
 
-    private fun getRealtimeChatWsClient(): RealtimeChatWsClient {
+    private fun initRealtimeChatWsClient(): RealtimeChatWsClient {
         return realtimeChatWsClient ?: synchronized(this) {
             realtimeChatWsClient ?: RealtimeChatWsClient(
                 GSON,
@@ -105,7 +105,7 @@ class RealtimeChatController {
     // ws
     fun initRealtimeChatWsClient(activity: FragmentActivity) {
         // 初始化
-        realtimeChatWsClient = getRealtimeChatWsClient()
+        realtimeChatWsClient = initRealtimeChatWsClient()
 
         PermissionUtil.requestPermissionSelectX(
             activity,
@@ -116,7 +116,12 @@ class RealtimeChatController {
                 override fun allGranted() {
                     Log.i(TAG, "获取录音权限成功")
 
-                    initRealtimeChatRecorderAndPlayer()
+                    // 初始化AudioController
+                    initAudioController()
+
+                    audioController?.initAudioRecorderAndPlayer() ?: run {
+                        Log.w(TAG, "初始化AudioRecorderAndPlayer失败")
+                    }
 
                     startRealtimeWs()
                 }
@@ -209,183 +214,48 @@ class RealtimeChatController {
 
     //---------------------------Logic---------------------------
 
-    //===========音频
-    private var realtimeChatAudioRecord: AudioRecord? = null
-    private var realtimeChatAudioTrack: AudioTrack? = null
-    private var vadSileroManager: VadSileroManager? = null
-
-    @RequiresPermission(Manifest.permission.RECORD_AUDIO)
-    private fun initRealtimeChatRecorderAndPlayer(){
-        // 配置音频参数
-        val inChannelConfig = AudioFormat.CHANNEL_IN_MONO
-        val outChannelConfig = AudioFormat.CHANNEL_OUT_MONO
-        val audioFormat = AudioFormat.ENCODING_PCM_16BIT
-        val audioRecordBufferSize = AudioRecord.getMinBufferSize(BaseConstant.AUDIO.REALTIME_CHAT_SAMPLE_RATE, inChannelConfig, audioFormat)
-        val audioTrackBufferSize = AudioTrack.getMinBufferSize(BaseConstant.AUDIO.REALTIME_CHAT_SAMPLE_RATE, outChannelConfig, audioFormat)
-
-        // 创建AudioRecord
-        realtimeChatAudioRecord = AudioRecord(
-            MediaRecorder.AudioSource.MIC,
-            BaseConstant.AUDIO.REALTIME_CHAT_SAMPLE_RATE,
-            inChannelConfig,
-            audioFormat,
-            audioRecordBufferSize
-        )
-
-        // 创建AudioTrack
-        realtimeChatAudioTrack = AudioTrack(
-            AudioManager.STREAM_MUSIC,
-            BaseConstant.AUDIO.REALTIME_CHAT_SAMPLE_RATE,
-            outChannelConfig,
-            audioFormat,
-            audioTrackBufferSize,
-            AudioTrack.MODE_STREAM
-        )
-    }
-
-    fun playBase64Audio(base64Audio: String) {
-
-        val audioBytes = Base64.decode(base64Audio, Base64.DEFAULT)
-
-        // 写入音频数据
-        realtimeChatAudioTrack?.write(
-            audioBytes,
-            0,
-            audioBytes.size
-        )
-
-        Log.i(TAG, "播放音频数据::: ${audioBytes.take(50)}")
-    }
-
-    // 按下录制音频
-    fun startRecordRealtimeChatAudio() {
-        // 录制音频 -> 音频流bytes实时转为Base64的PCM格式 -> 调用websocket的sendAudioMessage
-        val bufferSize = AudioRecord.getMinBufferSize(
-            BaseConstant.AUDIO.REALTIME_CHAT_SAMPLE_RATE,
-            AudioFormat.CHANNEL_IN_MONO,
-            AudioFormat.ENCODING_PCM_16BIT
-        )
-
-        // 发送启动录音
-        val dataMap = mapOf(
-            RealtimeRequestDataTypeEnum.TYPE to RealtimeRequestDataTypeEnum.START_AUDIO_RECORD.type,
-            RealtimeRequestDataTypeEnum.DATA to RealtimeRequestDataTypeEnum.START_AUDIO_RECORD.name
-        )
-        realtimeChatWsClient?.sendMessage(dataMap)
-
-        // 录制状态
-        realtimeChatState.value = RealtimeChatState.RecordingAndSending
-
-        val audioBuffer = ByteArray(bufferSize)
-        realtimeChatAudioRecord?.startRecording()
-
-        // 录制音频并转换为 Base64
-        Thread {
-            val handler = Handler(Looper.getMainLooper())
-            val updateInterval = 100L // 100ms
-
-
-            // 定时更新音量的 Runnable
-            val volumeUpdateRunnable = object : Runnable {
-                override fun run() {
-                    if (realtimeChatState.value == RealtimeChatState.RecordingAndSending) {
-                        // 使用最近读取的数据计算音量
-                        /*                        val amplitude = calculateRMSAmplitude(audioBuffer, audioBuffer.size)
-                                                Log.i(TAG, "realtimeChat音量: $amplitude")
-                                                realtimeChatVolume.postValue(amplitude)*/
-                        handler.postDelayed(this, updateInterval)
-                    }
-                }
+    // 音频处理回调
+    fun getAudioHandleCallback(): AudioHandleCallback{
+        return object : AudioHandleCallback{
+            override fun onPlayBase64Audio(base64Audio: String) {
+                // 内部播放了，此粗只需要改变状态
+                onVadChatStateChange?.onChange(VadChatState.Replying)
             }
 
-            // 启动定时更新
-            handler.post(volumeUpdateRunnable)
+            override fun onStartRecording() {
+                // 发送启动录音
+                val dataMap = mapOf(
+                    RealtimeRequestDataTypeEnum.TYPE to RealtimeRequestDataTypeEnum.START_AUDIO_RECORD.type,
+                    RealtimeRequestDataTypeEnum.DATA to RealtimeRequestDataTypeEnum.START_AUDIO_RECORD.name
+                )
+                realtimeChatWsClient?.sendMessage(dataMap)
 
-            while (realtimeChatState.value == RealtimeChatState.RecordingAndSending) {
-                val readSize = realtimeChatAudioRecord?.read(audioBuffer, 0, bufferSize) ?: 0
-                if (readSize > 0) {
-                    val base64Audio = Base64.encodeToString(audioBuffer, 0, readSize, Base64.NO_WRAP)
-                    val dataMap = mapOf(
-                        RealtimeRequestDataTypeEnum.TYPE to RealtimeRequestDataTypeEnum.AUDIO_CHUNK.type,
-                        RealtimeRequestDataTypeEnum.DATA to base64Audio
-                    )
-                    realtimeChatWsClient!!.sendMessage(dataMap)
-//                    Log.i(TAG, "发送数据:: 类型: ${dataMap[RealtimeDataTypeEnum.TYPE]}; 长度: ${base64Audio.length}; 数据: ${base64Audio.take(100)}")
-                }
+                // 录制状态
+                realtimeChatState.value = RealtimeChatState.RecordingAndSending
             }
 
-            try {
-                realtimeChatAudioRecord?.stop()
-            } catch (e : Exception){
-                Log.e(TAG, "stopAndSendRealtimeChatAudio: ${e.message}")
+            override fun onObtainAudio(base64Audio: String) {
+                val dataMap = mapOf(
+                    RealtimeRequestDataTypeEnum.TYPE to RealtimeRequestDataTypeEnum.AUDIO_CHUNK.type,
+                    RealtimeRequestDataTypeEnum.DATA to base64Audio
+                )
+                realtimeChatWsClient!!.sendMessage(dataMap)
             }
 
-            // 发送结束录音
-            val dataMap = mapOf(
-                RealtimeRequestDataTypeEnum.TYPE to RealtimeRequestDataTypeEnum.STOP_AUDIO_RECORD.type,
-                RealtimeRequestDataTypeEnum.DATA to RealtimeRequestDataTypeEnum.STOP_AUDIO_RECORD.name
-            )
-            realtimeChatWsClient!!.sendMessage(dataMap)
-//            Log.i(TAG, "发送数据:: 类型: ${dataMap[RealtimeDataTypeEnum.TYPE]}")
-
-        }.start()
+            override fun onStopRecording() {
+                // 发送结束录音
+                val dataMap = mapOf(
+                    RealtimeRequestDataTypeEnum.TYPE to RealtimeRequestDataTypeEnum.STOP_AUDIO_RECORD.type,
+                    RealtimeRequestDataTypeEnum.DATA to RealtimeRequestDataTypeEnum.STOP_AUDIO_RECORD.name
+                )
+                realtimeChatWsClient!!.sendMessage(dataMap)
+            }
+        }
     }
 
-    // 松手发送音频
-    fun stopAndSendRealtimeChatAudio(){
-        realtimeChatState.postValue(RealtimeChatState.InitializedConnected)
-    }
-
-    fun stopRealtimeChat() {
-        try {
-            realtimeChatAudioRecord?.stop()
-            realtimeChatAudioRecord?.release()
-        } catch (e : Exception){
-            Log.e(TAG, "释放录音失败", e)
-        }
-        try {
-            realtimeChatAudioTrack?.stop()
-            realtimeChatAudioTrack?.release()
-        } catch (e : Exception){
-            Log.e(TAG, "释放播放失败", e)
-        }
-        realtimeChatWsClient?.close()
-        realtimeChatState.postValue(RealtimeChatState.Disconnected)
-    }
-
-    // 计算音量（RMS - 均方根值，更准确）
-    // RMS 计算（最准确）
-    fun calculateRMSAmplitude(buffer: ByteArray, bytesRead: Int): Float {
-        if (bytesRead < 2) return 0f
-
-        var sumSquares = 0.0
-        var sampleCount = 0
-
-        for (i in 0 until bytesRead - 1 step 2) {
-            // 假设小端序（Android 通常使用）
-            val low = buffer[i].toInt() and 0xFF
-            val high = buffer[i + 1].toInt() and 0xFF
-            val sample = (high shl 8) or low
-            val signedSample = if (sample > 32767) sample - 65536 else sample
-
-            sumSquares += signedSample * signedSample
-            sampleCount++
-        }
-
-        if (sampleCount == 0) return 0f
-
-        val rms = sqrt(sumSquares / sampleCount)
-        return minOf(1.0f, (rms / 32767.0).toFloat())
-    }
-
-    // 语音通话
-    fun initVadCall(context: Context){
-        // 改为单例
-        if (vadSileroManager == null){
-            vadSileroManager = VadSileroManager()
-        }
-
-        vadSileroManager!!.init(context, object : VadDetectionCallback{
+    // vad识别结果回调
+    fun getVadDetectionCallback(): VadDetectionCallback{
+        return object : VadDetectionCallback{
             override fun onStartSpeech(audioBuffer: ByteArray) {
                 // 发送启动录音
                 val dataMap = mapOf(
@@ -430,36 +300,104 @@ class RealtimeChatController {
 
                 onVadChatStateChange?.onChange(VadChatState.Silent)
             }
-        })
+        }
+    }
+
+    var audioController : AudioController? = null
+
+    private fun initAudioController(){
+        if (audioController == null) {
+
+            val audioHandleCallback = getAudioHandleCallback()
+            val vadDetectionCallback = getVadDetectionCallback()
+
+            audioController = AudioController(
+                audioHandleCallback = audioHandleCallback,
+                vadDetectionCallback = vadDetectionCallback
+            )
+        }
+    }
+
+    override fun isAudioRecording(): Boolean {
+        return realtimeChatState.value == RealtimeChatState.RecordingAndSending
+    }
+
+    //===========音频
+
+    // 按下录制音频
+    fun startRecordRealtimeChatAudio(weakScope: WeakReference<CoroutineScope>) {
+        val scope = weakScope.get() ?: return
+
+        audioController?.startRecordingAudio(isAudioRecording = this, scope)
+    }
+
+    // 松手发送音频
+    fun stopAndSendRealtimeChatAudio(){
+        realtimeChatState.postValue(RealtimeChatState.InitializedConnected)
+    }
+
+    // 计算音量（RMS - 均方根值，更准确）
+    // RMS 计算（最准确）
+    fun calculateRMSAmplitude(buffer: ByteArray, bytesRead: Int): Float {
+        if (bytesRead < 2) return 0f
+
+        var sumSquares = 0.0
+        var sampleCount = 0
+
+        for (i in 0 until bytesRead - 1 step 2) {
+            // 假设小端序（Android 通常使用）
+            val low = buffer[i].toInt() and 0xFF
+            val high = buffer[i + 1].toInt() and 0xFF
+            val sample = (high shl 8) or low
+            val signedSample = if (sample > 32767) sample - 65536 else sample
+
+            sumSquares += signedSample * signedSample
+            sampleCount++
+        }
+
+        if (sampleCount == 0) return 0f
+
+        val rms = sqrt(sumSquares / sampleCount)
+        return minOf(1.0f, (rms / 32767.0).toFloat())
+    }
+
+    // 语音通话
+    @RequiresPermission(Manifest.permission.RECORD_AUDIO)
+    fun initVadCall(weakContext: WeakReference<Context>){
+
+        // 初始化VAD
+        audioController?.initVadController(weakContext)
 
         startVadCall()
     }
 
     fun startVadCall(){
-        if (vadSileroManager != null) {
-            vadSileroManager!!.startRecording()
-            onVadChatStateChange?.onChange(VadChatState.Silent)
-            Log.i(TAG, "startVadCall: ")
-        }
-        else {
-            Log.e(TAG, "startVadCall: vadSileroManager == null")
+        audioController?.let { controller ->
+            controller.startVAD(onStart = {
+                onVadChatStateChange?.onChange(VadChatState.Silent)
+                Log.i(TAG, "startVadCall")
+            })
+        } ?: run {
+            Log.e(TAG, "startVadCall: audioController == null")
         }
     }
 
     fun stopVadCall(){
-        if (vadSileroManager != null) {
-            vadSileroManager!!.stopRecording()
-            onVadChatStateChange?.onChange(VadChatState.Muted)
-            Log.i(TAG, "stopVadCall: ")
-        }
-        else {
-            Log.e(TAG, "stopVadCall: vadSileroManager == null")
+        audioController?.let { controller ->
+            controller.stopVAD(onStop = {
+                onVadChatStateChange?.onChange(VadChatState.Muted)
+                Log.i(TAG, "stopVadCall")
+            })
+        } ?: run {
+            Log.e(TAG, "stopVadCall: audioController == null")
         }
     }
 
     fun destroyVadCall(){
-        vadSileroManager?.onDestroy()
-        onVadChatStateChange?.onChange(VadChatState.Muted)
+        audioController?.let { controller ->
+            controller.releaseVADController()
+            onVadChatStateChange?.onChange(VadChatState.Muted)
+        }
     }
 
     //===========chatHistory
@@ -548,21 +486,22 @@ class RealtimeChatController {
                 Log.i(TAG, "handleTextMessage::START_TTS播放")
                 // 开始接收数据
                 realtimeChatState.postValue(RealtimeChatState.Receiving)
-                // 清空播放缓存
-                realtimeChatAudioTrack?.flush()
-                // 开始播放
-                realtimeChatAudioTrack?.play()
                 onVadChatStateChange?.onChange(VadChatState.Replying)
+
+                // 清空播放缓存 + 开始播放
+                audioController?.startAudioTrackPlay()
 
                 // VAD:设置AI回复的时候不能说话
                 // 首先检查是不是Emoji状态
                 if (currentIsEmoji.get()){
-                    vadSileroManager?.stopRecording()
-                    Log.d(TAG, "handleTextMessage:: 正在Emoji VAD通话:AI正在回复, 停止录音")
+                    audioController?.stopVAD {
+                        Log.d(TAG, "handleTextMessage:: 正在Emoji VAD通话:AI正在回复, 停止录音")
+                    }
                 }
                 else if (isChatCalling?.get() == true) {
-                    vadSileroManager?.stopRecording()
-                    Log.d(TAG, "handleTextMessage:: 正在VAD通话:AI正在回复, 停止录音")
+                    audioController?.stopVAD {
+                        Log.d(TAG, "handleTextMessage:: 正在VAD通话:AI正在回复, 停止录音")
+                    }
                 }
                 else {
                     Log.d(TAG, "START_TTS::handleTextMessage:: 停止VAD通话: 不管理VAD录音, isChatCalling: $isChatCalling")
@@ -573,20 +512,21 @@ class RealtimeChatController {
                 Log.i(TAG, "handleTextMessage::STOP_TTS播放")
                 // 结束接收数据
                 realtimeChatState.postValue(RealtimeChatState.InitializedConnected)
-                // 停止播放
-                realtimeChatAudioTrack?.stop()
-                // 清空播放缓存
-                realtimeChatAudioTrack?.flush()
                 onVadChatStateChange?.onChange(VadChatState.Silent)
+
+                // 停止播放
+                audioController?.stopAudioTrackPlay()
 
                 // VAD:设置AI回复结束的时候可以说话
                 if (currentIsEmoji.get()) {
-                    vadSileroManager?.startRecording()
-                    Log.d(TAG, "handleTextMessage:: 正在Emoji VAD通话:AI回复结束, 继续录音")
+                    audioController?.startVAD {
+                        Log.d(TAG, "handleTextMessage:: 正在Emoji VAD通话:AI回复结束, 继续录音")
+                    }
                 }
                 else if (isChatCalling?.get() == true){
-                    vadSileroManager?.startRecording()
-                    Log.d(TAG, "handleTextMessage:: 正在VAD通话:AI回复结束, 继续录音")
+                    audioController?.startVAD {
+                        Log.d(TAG, "handleTextMessage:: 正在VAD通话:AI回复结束, 继续录音")
+                    }
                 }
                 else {
                     Log.d(TAG, "STOP_TTS::handleTextMessage:: 停止VAD通话: 不管理VAD录音, isChatCalling: $isChatCalling")
@@ -597,10 +537,14 @@ class RealtimeChatController {
                 // 音频数据
                 realtimeChatState.postValue(RealtimeChatState.Receiving)
                 val data = map[RealtimeResponseDataTypeEnum.DATA]
-                data?.let {
-                    playBase64Audio(data)
+                data?.let { it ->
+                    audioController?.playBase64Audio(
+                        base64Audio = it,
+                        isShowLog = true
+                    ) ?: run {
+                        Log.w(TAG, "handleTextMessage::playBase64Audio: 播放音频失败")
+                    }
                 }
-                onVadChatStateChange?.onChange(VadChatState.Replying)
             }
             // 文本流
             RealtimeResponseDataTypeEnum.TEXT_CHAT_RESPONSE -> {
@@ -733,32 +677,14 @@ class RealtimeChatController {
                 Log.e(TAG, "releaseAllResource::realtimeChatWsClient error", e)
             }
         }
-        realtimeChatAudioRecord?.let {
-            // 考虑到已经关闭的情况或者释放资源的情况
+
+        // 5. 清理音频资源
+        audioController?.let { controller ->
             try {
-                it.stop()
-                it.release()
-                realtimeChatAudioRecord = null
+                controller.releaseAll()
+                audioController = null
             } catch (e: Exception){
-                Log.e(TAG, "releaseAllResource::realtimeChatAudioRecord error", e)
-            }
-        }
-        realtimeChatAudioTrack?.let {
-            // 考虑到已经关闭的情况或者释放资源的情况
-            try {
-                it.stop()
-                it.release()
-                realtimeChatAudioTrack = null
-            } catch (e: Exception){
-                Log.e(TAG, "releaseAllResource::realtimeChatAudioTrack error", e)
-            }
-        }
-        vadSileroManager?.let {
-            try {
-                it.onDestroy()
-                vadSileroManager = null
-            } catch (e: Exception){
-                Log.e(TAG, "releaseAllResource::vadSileroManager error", e)
+                Log.e(TAG, "releaseAllResource::audioController error", e)
             }
         }
 

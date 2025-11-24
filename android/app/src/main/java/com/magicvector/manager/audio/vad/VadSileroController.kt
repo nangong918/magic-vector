@@ -11,10 +11,12 @@ import com.magicvector.manager.audio.vad.VoiceRecorder.AudioCallback
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 
-class VadSileroManager {
+class VadSileroController {
 
-    private val TAG = VadSileroManager::class.simpleName
+    companion object{
+        private const val TAG = "VadController"
 
+    }
     private lateinit var vad: VadSilero
     private lateinit var recorder: VoiceRecorder
 

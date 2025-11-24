@@ -35,14 +35,14 @@ object WsManager {
             map?.let {
                 val typeStr = map[RealtimeResponseDataTypeEnum.TYPE]
                 typeStr?.let {
-                    responseType = RealtimeResponseDataTypeEnum.valueOf(it)
+                    responseType = RealtimeResponseDataTypeEnum.getByType(it)
                 }
             } ?: run {
                 Log.e(TAG, "handleTextMessage: map is null")
                 return null
             }
         } catch (e: Exception) {
-            Log.e(TAG, "handleTextMessage: ${e.message}")
+            Log.e(TAG, "handleTextMessage: ", e)
             return null
         }
 
