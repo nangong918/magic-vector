@@ -17,7 +17,7 @@ import com.data.domain.constant.VadChatState
 import com.data.domain.fragmentActivity.intentAo.ChatIntentAo
 import com.data.domain.vo.test.RealtimeChatState
 import com.magicvector.callback.OnVadChatStateChange
-import com.magicvector.callback.VADCallTextCallback
+import com.magicvector.callback.OnReceiveAgentTextCallback
 import com.magicvector.databinding.ActivityChatBinding
 import com.magicvector.utils.BaseAppCompatVmActivity
 import com.magicvector.viewModel.activity.ChatVm
@@ -30,7 +30,7 @@ import com.view.appview.recycler.UpdateRecyclerViewTypeEnum
 class ChatActivity : BaseAppCompatVmActivity<ActivityChatBinding, ChatVm>(
     ChatActivity::class,
     ChatVm::class
-), VADCallTextCallback, OnVadChatStateChange {
+), OnReceiveAgentTextCallback, OnVadChatStateChange {
 
     private val tag = ChatActivity::class.simpleName
 
@@ -47,7 +47,7 @@ class ChatActivity : BaseAppCompatVmActivity<ActivityChatBinding, ChatVm>(
 
     override fun onResume() {
         super.onResume()
-        vm.chatMessageHandler?.setCurrentVADStateChange(this)
+        vm.realtimeChatController?.setCurrentVADStateChange(this)
     }
 
     override fun initViewModel() {
@@ -70,7 +70,7 @@ class ChatActivity : BaseAppCompatVmActivity<ActivityChatBinding, ChatVm>(
                     activity = this@ChatActivity,
                     ao = ao,
                     whereNeedUpdate = getWhereNeedUpdate(),
-                    vadCallTextCallback = this@ChatActivity,
+                    onReceiveAgentTextCallback = this@ChatActivity,
                     onVadChatStateChange = this@ChatActivity
                 )
             } catch (e: IllegalArgumentException){
@@ -112,7 +112,7 @@ class ChatActivity : BaseAppCompatVmActivity<ActivityChatBinding, ChatVm>(
 
             // 共享boolean值
             callDialog?.let {
-                vm.chatMessageHandler?.initIsChatCalling(
+                vm.realtimeChatController?.initIsChatCalling(
                     it.isCalling
                 )
             }
@@ -156,7 +156,7 @@ class ChatActivity : BaseAppCompatVmActivity<ActivityChatBinding, ChatVm>(
 
         // 录制状态
         // 状态
-        vm.chatMessageHandler?.realtimeChatState?.observe(this) { state ->
+        vm.realtimeChatController?.realtimeChatState?.observe(this) { state ->
             when (state){
                 is RealtimeChatState.NotInitialized -> {
                     binding.smSendMessage.setIsEnableSend(false)
@@ -220,11 +220,11 @@ class ChatActivity : BaseAppCompatVmActivity<ActivityChatBinding, ChatVm>(
         binding.smSendMessage.setTakAudioOnTouchListener(
             {
                 // 开始录制
-                vm.chatMessageHandler?.startRecordRealtimeChatAudio()
+                vm.realtimeChatController?.startRecordRealtimeChatAudio()
             },
             {
                 // 结束录制
-                vm.chatMessageHandler?.stopAndSendRealtimeChatAudio()
+                vm.realtimeChatController?.stopAndSendRealtimeChatAudio()
             }
         )
 
@@ -265,11 +265,11 @@ class ChatActivity : BaseAppCompatVmActivity<ActivityChatBinding, ChatVm>(
                 ),
                 object : GainPermissionCallback{
                     override fun allGranted() {
-                        if (vm.chatMessageHandler?.messageContactItemAo != null){
+                        if (vm.realtimeChatController?.messageContactItemAo != null){
                             // 跳转页面
                             val intent = Intent(this@ChatActivity, AgentEmojiActivity::class.java)
-                            intent.putExtra("agentId", vm.chatMessageHandler?.messageContactItemAo?.contactId?: "")
-                            intent.putExtra("agentName", vm.chatMessageHandler?.messageContactItemAo?.vo?.name?: "")
+                            intent.putExtra("agentId", vm.realtimeChatController?.messageContactItemAo?.contactId?: "")
+                            intent.putExtra("agentName", vm.realtimeChatController?.messageContactItemAo?.vo?.name?: "")
                             startActivity(intent)
                         }
                         else {
@@ -296,7 +296,7 @@ class ChatActivity : BaseAppCompatVmActivity<ActivityChatBinding, ChatVm>(
     fun getWhereNeedUpdate(): RecyclerViewWhereNeedUpdate {
         return object : RecyclerViewWhereNeedUpdate {
             override fun whereNeedUpdate(updateInfos: List<UpdateRecyclerViewItem>) {
-                val chatManager = vm.chatMessageHandler?.getChatManagerPointer()
+                val chatManager = vm.realtimeChatController?.getChatManagerPointer()
                 if (updateInfos.isEmpty()){
                     Log.d(tag, "whereNeedUpdate: updateInfos is empty")
                     return
@@ -392,16 +392,16 @@ class ChatActivity : BaseAppCompatVmActivity<ActivityChatBinding, ChatVm>(
                 callDialog?.let {
                     // 停止了再点击就开始录音
                     if (it.getIsCloseMic()){
-                        vm.chatMessageHandler?.startVadCall()
+                        vm.realtimeChatController?.startVadCall()
                     }
                     // 停止了再点击就开始录音
                     else {
-                        vm.chatMessageHandler?.stopVadCall()
+                        vm.realtimeChatController?.stopVadCall()
                     }
                 }
             }, {
                 callDialog?.dismiss()
-                vm.chatMessageHandler?.destroyVadCall()
+                vm.realtimeChatController?.destroyVadCall()
             })
         )
     }
@@ -416,7 +416,7 @@ class ChatActivity : BaseAppCompatVmActivity<ActivityChatBinding, ChatVm>(
 
     fun showCallDialog() {
         // 初始化
-        vm.chatMessageHandler?.initVadCall(this@ChatActivity)
+        vm.realtimeChatController?.initVadCall(this@ChatActivity)
 
         // 展示
         callDialog?.show()

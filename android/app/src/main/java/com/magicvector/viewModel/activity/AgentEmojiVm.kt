@@ -18,7 +18,7 @@ import com.core.baseutil.network.OnSuccessCallback
 import com.core.baseutil.network.OnThrowableCallback
 import com.data.domain.constant.chat.RealtimeRequestDataTypeEnum
 import com.magicvector.MainApplication
-import com.magicvector.manager.ChatMessageHandler
+import com.magicvector.manager.RealtimeChatController
 import com.magicvector.service.ChatService
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
@@ -51,13 +51,13 @@ class AgentEmojiVm(
             val binder = service as ChatService.ChatServiceBinder
             chatServiceBoundLd.postValue(true)
             // 连接成功使用之后
-            chatMessageHandler = binder.getChatMessageHandler()
+            realtimeChatController = binder.getChatMessageHandler()
         }
 
         override fun onServiceDisconnected(name: ComponentName?) {
             chatServiceBoundLd.postValue(false)
             chatServiceBinder = null
-            chatMessageHandler = null
+            realtimeChatController = null
         }
 
         override fun onBindingDied(name: ComponentName?) {
@@ -100,7 +100,7 @@ class AgentEmojiVm(
         }
         chatServiceBoundLd.postValue(false)
         chatServiceBinder = null
-        chatMessageHandler = null
+        realtimeChatController = null
     }
 
     //-----------------------Repository-----------------------
@@ -172,14 +172,14 @@ class AgentEmojiVm(
     }
 
     // vision测试
-    fun visionTest(chatMessageHandler: ChatMessageHandler){
+    fun visionTest(realtimeChatController: RealtimeChatController){
         val userQuestion = "你表述一下现在看到的场景。"
 
         val dataMap = mapOf(
             RealtimeRequestDataTypeEnum.TYPE to RealtimeRequestDataTypeEnum.USER_TEXT_MESSAGE.type,
             RealtimeRequestDataTypeEnum.DATA to userQuestion
         )
-        chatMessageHandler.realtimeChatWsClient?.sendMessage(
+        realtimeChatController.realtimeChatWsClient?.sendMessage(
             dataMap,
             true
         )
@@ -187,7 +187,7 @@ class AgentEmojiVm(
 
     //-----------------------Logic-----------------------
 
-    var chatMessageHandler: ChatMessageHandler? = null
+    var realtimeChatController: RealtimeChatController? = null
 
     override fun onCleared() {
         super.onCleared()

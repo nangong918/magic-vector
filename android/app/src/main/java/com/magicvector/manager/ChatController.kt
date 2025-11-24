@@ -12,7 +12,7 @@ import com.view.appview.recycler.UpdateRecyclerViewItem
 import com.view.appview.recycler.UpdateRecyclerViewTypeEnum
 
 /**
- * ChatManager
+ * ChatManager：将数据源绑定到Chat View上
  * chat信息来源：后端，本地
  * 后端：
  *  1.ChatRequest请求获取List
@@ -23,10 +23,10 @@ import com.view.appview.recycler.UpdateRecyclerViewTypeEnum
  *
  *  todo 使用DiffUtil优化性能
  */
-class ChatManager(val agentId: String) {
+class ChatController(val agentId: String) {
 
     companion object {
-        val TAG = ChatManager::class.simpleName
+        val TAG = ChatController::class.simpleName
     }
 
     private val needUpdateQueue: ArrayDeque<UpdateRecyclerViewItem> = ArrayDeque()

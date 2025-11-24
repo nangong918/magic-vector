@@ -1,20 +1,21 @@
-package com.magicvector.manager
+package com.magicvector.manager.ws
 
 import android.util.Log
 import com.data.domain.constant.chat.RoleTypeEnum
 import com.data.domain.dto.ws.reponse.RealtimeChatTextResponse
 import com.google.gson.Gson
-import com.magicvector.callback.VADCallTextCallback
+import com.magicvector.callback.OnReceiveAgentTextCallback
+import com.magicvector.manager.ChatController
 
 object ChatWsTextMessageHandler {
 
     const val TAG = "ChatWsTextMessageHandler"
 
-    fun handleTextMessage(message: String, GSON: Gson, chatManagerPointer: ChatManager, vadCallTextCallback: VADCallTextCallback?){
+    fun handleTextMessage(message: String, gson: Gson, chatControllerPointer: ChatController, onReceiveAgentTextCallback: OnReceiveAgentTextCallback?){
         var response : RealtimeChatTextResponse
         try {
             Log.i(TAG, "handleTextMessage::receiveMessage: $message")
-            response = GSON.fromJson(message,
+            response = gson.fromJson(message,
                 RealtimeChatTextResponse::class.java)
         } catch (e: Exception){
             Log.e(TAG, "handleTextMessage::error: $message", e)
@@ -27,12 +28,12 @@ object ChatWsTextMessageHandler {
         }
 
         response.content?.let {
-            vadCallTextCallback?.onText(it)
+            onReceiveAgentTextCallback?.onText(it)
             Log.i(TAG, "handleTextMessage::content: $it")
         }
 
         try {
-            chatManagerPointer.setWsToViews(response)
+            chatControllerPointer.setWsToViews(response)
         } catch (e: Exception){
             Log.e(TAG, "handleTextMessage::error: $message", e)
         }

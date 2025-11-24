@@ -1,4 +1,4 @@
-package com.magicvector.manager.vad
+package com.magicvector.manager.audio.vad
 
 interface VadDetectionCallback {
     fun onStartSpeech(audioBuffer: ByteArray)

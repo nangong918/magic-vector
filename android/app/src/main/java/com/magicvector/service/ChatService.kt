@@ -4,7 +4,7 @@ import android.app.Service
 import android.content.Intent
 import android.os.Binder
 import android.os.IBinder
-import com.magicvector.manager.ChatMessageHandler
+import com.magicvector.manager.RealtimeChatController
 
 /**
  * Chat后台Service
@@ -23,19 +23,19 @@ import com.magicvector.manager.ChatMessageHandler
 class ChatService : Service() {
 
     // 聊天资源管理
-    private var chatMessageHandler: ChatMessageHandler? = null
+    private var realtimeChatController: RealtimeChatController? = null
 
     override fun onCreate() {
         super.onCreate()
         // 可以在这里进行一些初始化
-        chatMessageHandler = ChatMessageHandler()
+        realtimeChatController = RealtimeChatController()
     }
 
-    private fun getChatHandler(): ChatMessageHandler {
-        if (chatMessageHandler == null) {
-            chatMessageHandler = ChatMessageHandler()
+    private fun getChatHandler(): RealtimeChatController {
+        if (realtimeChatController == null) {
+            realtimeChatController = RealtimeChatController()
         }
-        return chatMessageHandler!!
+        return realtimeChatController!!
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -44,7 +44,7 @@ class ChatService : Service() {
     }
 
     inner class ChatServiceBinder : Binder() {
-        fun getChatMessageHandler(): ChatMessageHandler = getChatHandler()
+        fun getChatMessageHandler(): RealtimeChatController = getChatHandler()
         fun getService(): ChatService = this@ChatService
     }
 
@@ -54,7 +54,7 @@ class ChatService : Service() {
 
     override fun onDestroy() {
         super.onDestroy()
-        chatMessageHandler?.destroy()
-        chatMessageHandler = null
+        realtimeChatController?.destroy()
+        realtimeChatController = null
     }
 }

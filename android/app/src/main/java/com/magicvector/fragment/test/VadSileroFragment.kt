@@ -11,8 +11,8 @@ import android.widget.Spinner
 import android.widget.TextView
 import androidx.fragment.app.Fragment
 import com.google.android.material.floatingactionbutton.FloatingActionButton
-import com.magicvector.manager.vad.VoiceRecorder
-import com.magicvector.manager.vad.VoiceRecorder.AudioCallback
+import com.magicvector.manager.audio.vad.VoiceRecorder
+import com.magicvector.manager.audio.vad.VoiceRecorder.AudioCallback
 import com.konovalov.vad.silero.Vad
 import com.konovalov.vad.silero.VadSilero
 import com.konovalov.vad.silero.config.FrameSize

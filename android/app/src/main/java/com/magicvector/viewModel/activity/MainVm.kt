@@ -1,7 +1,7 @@
 package com.magicvector.viewModel.activity
 
 import androidx.lifecycle.ViewModel
-import com.magicvector.manager.ChatMessageHandler
+import com.magicvector.manager.RealtimeChatController
 
 class MainVm (
 
@@ -11,5 +11,5 @@ class MainVm (
         val TAG: String = MainVm::class.java.name
     }
 
-    var chatMessageHandler : ChatMessageHandler? = null
+    var realtimeChatController : RealtimeChatController? = null
 }

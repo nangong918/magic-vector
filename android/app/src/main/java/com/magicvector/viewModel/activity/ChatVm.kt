@@ -38,8 +38,8 @@ import com.data.domain.dto.response.ChatMessageResponse
 import com.data.domain.fragmentActivity.aao.ChatAAo
 import com.magicvector.MainApplication
 import com.magicvector.callback.OnVadChatStateChange
-import com.magicvector.callback.VADCallTextCallback
-import com.magicvector.manager.ChatMessageHandler
+import com.magicvector.callback.OnReceiveAgentTextCallback
+import com.magicvector.manager.RealtimeChatController
 import com.magicvector.service.ChatService
 import com.view.appview.R
 import com.view.appview.call.CallAo
@@ -83,7 +83,7 @@ class ChatVm(
             val binder = service as ChatService.ChatServiceBinder
             chatServiceBoundLd.postValue(true)
             // 连接成功使用之后
-            chatMessageHandler = binder.getChatMessageHandler()
+            realtimeChatController = binder.getChatMessageHandler()
 
             onBoundChatService?.run()
         }
@@ -91,7 +91,7 @@ class ChatVm(
         override fun onServiceDisconnected(name: ComponentName?) {
             chatServiceBoundLd.postValue(false)
             chatServiceBinder = null
-            chatMessageHandler = null
+            realtimeChatController = null
         }
 
         override fun onBindingDied(name: ComponentName?) {
@@ -138,14 +138,14 @@ class ChatVm(
         }
         chatServiceBoundLd.postValue(false)
         chatServiceBinder = null
-        chatMessageHandler = null
+        realtimeChatController = null
     }
 
     fun initResource(
         activity: FragmentActivity,
         ao : MessageContactItemAo?,
         whereNeedUpdate: RecyclerViewWhereNeedUpdate,
-        vadCallTextCallback: VADCallTextCallback,
+        onReceiveAgentTextCallback: OnReceiveAgentTextCallback,
         onVadChatStateChange: OnVadChatStateChange
     ) {
         // 初始化网络请求
@@ -165,13 +165,13 @@ class ChatVm(
         messageAo = ao
         Log.i("ChatMessageHandler", "ao1: ${GSON.toJson(ao)}")
         // 初始化ChatMessageHandler
-        chatMessageHandler?.initResource(
+        realtimeChatController?.initResource(
             chatActivity = activity,
             ao = messageAo,
             chatAAo = aao,
             initNetworkRunnable = initNetworkRunnable,
             whereNeedUpdate = whereNeedUpdate,
-            vadCallTextCallback = vadCallTextCallback,
+            onReceiveAgentTextCallback = onReceiveAgentTextCallback,
             onVadChatStateChange = onVadChatStateChange
         )
 
@@ -187,7 +187,7 @@ class ChatVm(
     fun initAdapter(onChatMessageClick : OnChatMessageClick){
         adapter = ChatMessageAdapter(
             // 这里是初始化，要是chatManagerPointer == null直接报错吧
-            chatMessageHandler!!.getChatManagerPointer().getViewChatMessageList(),
+            realtimeChatController!!.getChatManagerPointer().getViewChatMessageList(),
             onChatMessageClick
         )
     }
@@ -214,9 +214,9 @@ class ChatVm(
 
     // chatHistory First
     fun doGetLastChat(context: Context, callback: SyncRequestCallback){
-        if (chatMessageHandler?.messageContactItemAo != null) {
+        if (realtimeChatController?.messageContactItemAo != null) {
             MainApplication.getApiRequestImplInstance().getLastChat(
-                chatMessageHandler?.messageContactItemAo!!.contactId!!,
+                realtimeChatController?.messageContactItemAo!!.contactId!!,
                 object : OnSuccessCallback<BaseResponse<ChatMessageResponse>>{
                     override fun onResponse(response: BaseResponse<ChatMessageResponse>?) {
                         AppResponseUtil.handleSyncResponseEx(
@@ -246,9 +246,9 @@ class ChatVm(
 
     // 特定时间段的chat history todo: 上拉上滑获取之前的chat History
     fun doGetTimeLimitChat(context: Context, deadline: String, callback: SyncRequestCallback){
-        if (chatMessageHandler?.messageContactItemAo != null){
+        if (realtimeChatController?.messageContactItemAo != null){
             MainApplication.getApiRequestImplInstance().getTimeLimitChat(
-                chatMessageHandler?.messageContactItemAo!!.contactId!!,
+                realtimeChatController?.messageContactItemAo!!.contactId!!,
                 deadline,
                 BaseConstant.Constant.CHAT_HISTORY_LIMIT_COUNT,
                 object : OnSuccessCallback<BaseResponse<ChatMessageResponse>>{
@@ -282,8 +282,8 @@ class ChatVm(
                                      callback: SyncRequestCallback){
 
         response?.data?.chatMessages?.let {
-            chatMessageHandler?.getChatManagerPointer()?.setResponsesToViews(it)
-            chatMessageHandler?.updateMessage()
+            realtimeChatController?.getChatManagerPointer()?.setResponsesToViews(it)
+            realtimeChatController?.updateMessage()
         }
 
         callback.onAllRequestSuccess()
@@ -323,7 +323,7 @@ class ChatVm(
             RealtimeRequestDataTypeEnum.TYPE to RealtimeRequestDataTypeEnum.USER_TEXT_MESSAGE.type,
             RealtimeRequestDataTypeEnum.DATA to inputText
         )
-        chatMessageHandler?.realtimeChatWsClient!!.sendMessage(dataMap, true)
+        realtimeChatController?.realtimeChatWsClient!!.sendMessage(dataMap, true)
         // 发送的时候不用回显，因为此时还没拿到后端的messageId
     }
 
@@ -400,7 +400,7 @@ class ChatVm(
         val callAo = CallAo()
         callAo.agentName = aao.nameLd.value
         callAo.agentAvatar = aao.avatarUrlLd.value
-        callAo.agentId = chatMessageHandler?.messageContactItemAo?.contactId?:""
+        callAo.agentId = realtimeChatController?.messageContactItemAo?.contactId?:""
 
         callAo.onMuteClickRunnable = onMuteClickRunnable
         callAo.onCallEndClickRunnable = onCallEndClickRunnable
@@ -412,7 +412,7 @@ class ChatVm(
 
     //-----------------------Logic-----------------------
 
-    var chatMessageHandler: ChatMessageHandler? = null
+    var realtimeChatController: RealtimeChatController? = null
 
     override fun onCleared() {
         super.onCleared()

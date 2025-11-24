@@ -104,7 +104,7 @@ class MainActivity : BaseAppCompatVmActivity<ActivityMainBinding, MainVm>(
 
             // 连接成功后使用
             val handler = binder.getChatMessageHandler()
-            vm.chatMessageHandler = handler
+            vm.realtimeChatController = handler
         }
 
         override fun onServiceDisconnected(name: ComponentName?) {

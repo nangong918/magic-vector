@@ -1,4 +1,4 @@
-package com.magicvector.manager.vad
+package com.magicvector.manager.audio.vad
 
 import android.annotation.SuppressLint
 import android.media.AudioFormat

@@ -1,13 +1,13 @@
 package com.magicvector.manager
 
-class ChatMapManager {
+class ChatMapController {
 
-    private val chatManagers: MutableMap<String, ChatManager> = mutableMapOf()
+    private val chatManagers: MutableMap<String, ChatController> = mutableMapOf()
 
     // 获取 ChatManager
-    fun getChatManager(agentId: String): ChatManager {
+    fun getChatManager(agentId: String): ChatController {
         if (chatManagers[agentId] == null){
-            chatManagers[agentId] = ChatManager(agentId)
+            chatManagers[agentId] = ChatController(agentId)
         }
         return chatManagers[agentId]!!
     }
@@ -30,7 +30,7 @@ class ChatMapManager {
     }
 
     // 获取所有 ChatManagers
-    fun getAllChatManagers(): List<ChatManager> {
+    fun getAllChatManagers(): List<ChatController> {
         return chatManagers.values.toList()
     }
 }

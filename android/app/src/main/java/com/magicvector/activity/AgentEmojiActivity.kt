@@ -130,10 +130,10 @@ class AgentEmojiActivity : BaseAppCompatVmActivity<ActivityAgentEmojiBinding, Ag
 
         // 关闭了Mic
         if (isCloseMic) {
-            vm.chatMessageHandler?.stopVadCall()
+            vm.realtimeChatController?.stopVadCall()
         }
         else {
-            vm.chatMessageHandler?.startVadCall()
+            vm.realtimeChatController?.startVadCall()
         }
     }
 
@@ -211,7 +211,7 @@ class AgentEmojiActivity : BaseAppCompatVmActivity<ActivityAgentEmojiBinding, Ag
 
         // vision测试
         binding.btnVisionTest.setOnClickListener {
-            vm.chatMessageHandler?.let {
+            vm.realtimeChatController?.let {
                 vm.visionTest(it)
             }
         }
@@ -338,7 +338,7 @@ class AgentEmojiActivity : BaseAppCompatVmActivity<ActivityAgentEmojiBinding, Ag
                     RealtimeRequestDataTypeEnum.DATA to uploadPhotoRequestJson
                 )
 
-                vm.chatMessageHandler?.realtimeChatWsClient?.sendMessage(dataMap)
+                vm.realtimeChatController?.realtimeChatWsClient?.sendMessage(dataMap)
                 ToastUtils.showToastActivity(this, getString(R.string.fetch_photo_fail))
             }
             else {
@@ -433,7 +433,7 @@ class AgentEmojiActivity : BaseAppCompatVmActivity<ActivityAgentEmojiBinding, Ag
                         RealtimeRequestDataTypeEnum.DATA to uploadPhotoRequestJson
                     )
 
-                    vm.chatMessageHandler?.realtimeChatWsClient?.sendMessage(dataMap)
+                    vm.realtimeChatController?.realtimeChatWsClient?.sendMessage(dataMap)
 
                     // 添加休眠，避免网络拥塞（不是最后一个分片时休眠）
                     if (base64FragmentQueue.isNotEmpty()) {
@@ -497,7 +497,7 @@ class AgentEmojiActivity : BaseAppCompatVmActivity<ActivityAgentEmojiBinding, Ag
     override fun onResume() {
         super.onResume()
         visionManager.onResume(window = window)
-        vm.chatMessageHandler?.let { chatMessageHandler ->
+        vm.realtimeChatController?.let { chatMessageHandler ->
             // 启动VAD录音
             chatMessageHandler.initVadCall(this@AgentEmojiActivity)
             chatMessageHandler.currentIsEmoji.set(true)
@@ -511,7 +511,7 @@ class AgentEmojiActivity : BaseAppCompatVmActivity<ActivityAgentEmojiBinding, Ag
     override fun onPause() {
         super.onPause()
         visionManager.onPause()
-        vm.chatMessageHandler?.let { chatMessageHandler ->
+        vm.realtimeChatController?.let { chatMessageHandler ->
             // 关闭VAD录音
             chatMessageHandler.stopVadCall()
             chatMessageHandler.currentIsEmoji.set(false)

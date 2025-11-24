@@ -8,9 +8,8 @@ import com.data.dao.api.ApiRequestImpl
 import com.data.domain.ao.mixLLM.McpSwitch
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
-import com.magicvector.manager.ChatMapManager
-import com.magicvector.manager.ChatMessageHandler
-import com.magicvector.manager.MessageListManager
+import com.magicvector.manager.ChatMapController
+import com.magicvector.manager.MessageListController
 import com.magicvector.manager.vl.UdpVisionManager
 import com.magicvector.manager.yolo.VisionManager
 
@@ -83,18 +82,18 @@ class MainApplication : Application() {
             return "test_user"
         }
 
-        private val messageListManager = MessageListManager()
-        fun getMessageListManager(): MessageListManager {
-            return messageListManager
+        private val messageListController = MessageListController()
+        fun getMessageListManager(): MessageListController {
+            return messageListController
         }
 
         // chatMapManager
-        private var chatMapManager: ChatMapManager? = null
-        fun getChatMapManager(): ChatMapManager {
-            if (chatMapManager == null) {
-                chatMapManager = ChatMapManager()
+        private var chatMapController: ChatMapController? = null
+        fun getChatMapManager(): ChatMapController {
+            if (chatMapController == null) {
+                chatMapController = ChatMapController()
             }
-            return chatMapManager!!
+            return chatMapController!!
         }
 
         // VisionManager

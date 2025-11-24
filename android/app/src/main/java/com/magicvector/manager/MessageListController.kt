@@ -6,7 +6,7 @@ import com.data.domain.ao.message.MessageContactItemAo
 import com.data.domain.dto.response.AgentLastChatListResponse
 import java.util.Optional
 
-class MessageListManager {
+class MessageListController {
     // view
     val messageContactItemAos: MutableList<MessageContactItemAo> = mutableListOf()
 

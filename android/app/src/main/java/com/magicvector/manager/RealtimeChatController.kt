@@ -26,16 +26,17 @@ import com.data.domain.constant.VadChatState
 import com.data.domain.constant.chat.RealtimeRequestDataTypeEnum
 import com.data.domain.constant.chat.RealtimeResponseDataTypeEnum
 import com.data.domain.constant.chat.RealtimeSystemResponseEventEnum
-import com.data.domain.dto.ws.request.RealtimeChatConnectRequest
 import com.data.domain.fragmentActivity.aao.ChatAAo
 import com.data.domain.vo.test.RealtimeChatState
 import com.google.gson.reflect.TypeToken
 import com.magicvector.MainApplication
 import com.magicvector.callback.OnVadChatStateChange
-import com.magicvector.callback.VADCallTextCallback
+import com.magicvector.callback.OnReceiveAgentTextCallback
 import com.magicvector.manager.mcp.HandleSystemResponse
-import com.magicvector.manager.vad.VadDetectionCallback
-import com.magicvector.manager.vad.VadSileroManager
+import com.magicvector.manager.audio.vad.VadDetectionCallback
+import com.magicvector.manager.audio.vad.VadSileroManager
+import com.magicvector.manager.ws.ChatWsTextMessageHandler
+import com.magicvector.manager.ws.WsManager
 import com.magicvector.utils.chat.RealtimeChatWsClient
 import com.view.appview.recycler.RecyclerViewWhereNeedUpdate
 import okhttp3.Response
@@ -49,15 +50,16 @@ import kotlin.math.sqrt
 /**
  * ChatMessageHandler管理：
  * WS长连接
- * ChatMessage处理
- * SystemMessage处理
+ * ChatMessage处理，SystemMessage处理
  * 音频处理：AudioRecord，AudioTrack
  * VAD语音活动检测
+ * UdpVision
+ * todo 解耦chatMessageHandler，绘制UML图，多数据源合并问题。（具体需要先实现AppDemo中的Jetpack Compose的多数据源插入LazyColumn）
  */
-class ChatMessageHandler {
+class RealtimeChatController {
 
     companion object {
-        val TAG = ChatMessageHandler::class.simpleName
+        const val TAG = "RealtimeChatController"
         val GSON = MainApplication.GSON
         val mainHandler: Handler = Handler(Looper.getMainLooper())
     }
@@ -70,7 +72,7 @@ class ChatMessageHandler {
     // 当前是否在通话中（仅仅用于chatActivity中的Call；至于是null是因为这个是指针，对象直接从CallDialog中获取）
     var isChatCalling: AtomicBoolean? = null
     var recyclerViewWhereNeedUpdate: RecyclerViewWhereNeedUpdate? = null
-    var vadCallTextCallback: VADCallTextCallback? = null
+    var onReceiveAgentTextCallback: OnReceiveAgentTextCallback? = null
     var onVadChatStateChange: OnVadChatStateChange? = null
     val realtimeChatState: MutableLiveData<RealtimeChatState> = MutableLiveData(RealtimeChatState.NotInitialized)
 //    val realtimeChatVolume = MutableLiveData(0f)
@@ -89,12 +91,21 @@ class ChatMessageHandler {
 
     //---------------------------Network / Mapper---------------------------
 
+    var realtimeChatWsClient: RealtimeChatWsClient? = null // 长连接，可为null，允许销毁
+
+    private fun getRealtimeChatWsClient(): RealtimeChatWsClient {
+        return realtimeChatWsClient ?: synchronized(this) {
+            realtimeChatWsClient ?: RealtimeChatWsClient(
+                GSON,
+                ApiUrlConfig.getWsMainUrl() + BaseConstant.WSConstantUrl.AGENT_REALTIME_CHAT_URL
+            ).also { realtimeChatWsClient = it }
+        }
+    }
+
     // ws
     fun initRealtimeChatWsClient(activity: FragmentActivity) {
-        realtimeChatWsClient = RealtimeChatWsClient(
-            GSON,
-            ApiUrlConfig.getWsMainUrl() + BaseConstant.WSConstantUrl.AGENT_REALTIME_CHAT_URL
-        )
+        // 初始化
+        realtimeChatWsClient = getRealtimeChatWsClient()
 
         PermissionUtil.requestPermissionSelectX(
             activity,
@@ -123,78 +134,82 @@ class ChatMessageHandler {
     }
 
     private fun startRealtimeWs() {
-        realtimeChatWsClient!!.start(
-            object : WebSocketListener() {
-                override fun onClosed(
-                    webSocket: WebSocket,
-                    code: Int,
-                    reason: String
-                ) {
-                    super.onClosed(webSocket, code, reason)
-                    realtimeChatState.postValue(RealtimeChatState.Disconnected)
-                    Log.i(TAG, "realtimeChatWsClient::onClosed")
+        realtimeChatWsClient?.let { client ->
+            client.start(
+                object : WebSocketListener() {
+                    override fun onClosed(
+                        webSocket: WebSocket,
+                        code: Int,
+                        reason: String
+                    ) {
+                        super.onClosed(webSocket, code, reason)
+                        realtimeChatState.postValue(RealtimeChatState.Disconnected)
+                        Log.i(TAG, "realtimeChatWsClient::onClosed")
+                    }
+
+                    override fun onClosing(
+                        webSocket: WebSocket,
+                        code: Int,
+                        reason: String
+                    ) {
+                        super.onClosing(webSocket, code, reason)
+                        Log.i(TAG, "realtimeChatWsClient::onClosing")
+                    }
+
+                    override fun onFailure(
+                        webSocket: WebSocket,
+                        t: Throwable,
+                        response: Response?
+                    ) {
+                        super.onFailure(webSocket, t, response)
+                        Log.e(TAG, "realtimeChatWsClient::onFailure: ${t.message}")
+                        realtimeChatState.postValue(RealtimeChatState.Error(t.message ?: "-"))
+                    }
+
+                    override fun onMessage(webSocket: WebSocket, text: String) {
+                        super.onMessage(webSocket, text)
+                        // 处理text
+                        realtimeChatState.postValue(RealtimeChatState.Receiving)
+                        handleTextMessage(text)
+                    }
+
+                    override fun onMessage(webSocket: WebSocket, bytes: ByteString) {
+                        super.onMessage(webSocket, bytes)
+                        realtimeChatState.postValue(RealtimeChatState.Receiving)
+                        // 处理字节信息
+                        Log.i(TAG, "收到字节信息::长度: ${bytes.size}")
+                    }
+
+                    override fun onOpen(webSocket: WebSocket, response: Response) {
+                        super.onOpen(webSocket, response)
+                        // 到了此处说明: 授权 && 连接成功
+                        realtimeChatState.postValue(RealtimeChatState.InitializedConnected)
+                        Log.i(TAG, "realtimeChatWsClient::onOpen; response: $response")
+
+                        val agentId = messageContactItemAo?.contactId
+
+                        if (agentId == null || agentId.isEmpty()){
+                            Log.e(TAG, "onOpen::agentId为空")
+                            return
+                        }
+
+                        // 发送连接成功的消息
+                        WsManager.sendOnOpenInfo(
+                            agentId = agentId,
+                            userId = MainApplication.getUserId(),
+                            wsClient = client
+                        )
+                    }
                 }
-
-                override fun onClosing(
-                    webSocket: WebSocket,
-                    code: Int,
-                    reason: String
-                ) {
-                    super.onClosing(webSocket, code, reason)
-                    Log.i(TAG, "realtimeChatWsClient::onClosing")
-                }
-
-                override fun onFailure(
-                    webSocket: WebSocket,
-                    t: Throwable,
-                    response: Response?
-                ) {
-                    super.onFailure(webSocket, t, response)
-                    Log.e(TAG, "realtimeChatWsClient::onFailure: ${t.message}")
-                    realtimeChatState.postValue(RealtimeChatState.Error(t.message ?: "-"))
-                }
-
-                override fun onMessage(webSocket: WebSocket, text: String) {
-                    super.onMessage(webSocket, text)
-                    // 处理text
-                    realtimeChatState.postValue(RealtimeChatState.Receiving)
-                    handleTextMessage(text)
-                }
-
-                override fun onMessage(webSocket: WebSocket, bytes: ByteString) {
-                    super.onMessage(webSocket, bytes)
-                    realtimeChatState.postValue(RealtimeChatState.Receiving)
-                    // 处理字节信息
-                    Log.i(TAG, "收到字节信息::长度: ${bytes.size}")
-                }
-
-                override fun onOpen(webSocket: WebSocket, response: Response) {
-                    super.onOpen(webSocket, response)
-                    // 到了此处说明: 授权 && 连接成功
-                    realtimeChatState.postValue(RealtimeChatState.InitializedConnected)
-                    Log.i(TAG, "realtimeChatWsClient::onOpen; response: $response")
-                    // 发送连接成功的消息
-                    val request = RealtimeChatConnectRequest()
-                    request.agentId = messageContactItemAo!!.contactId!!
-                    request.userId = MainApplication.getUserId()
-                    request.timestamp = System.currentTimeMillis()
-
-                    val dataMap = mapOf(
-                        RealtimeRequestDataTypeEnum.TYPE to RealtimeRequestDataTypeEnum.CONNECT.type,
-                        RealtimeRequestDataTypeEnum.DATA to GSON.toJson(request)
-                    )
-
-                    // 发送连接数据
-                    realtimeChatWsClient!!.sendMessage(dataMap, true)
-                }
-            }
-        )
+            )
+        } ?: run {
+            Log.e(TAG, "startRealtimeWs::realtimeChatWsClient is null")
+        }
     }
 
     //---------------------------Logic---------------------------
 
     //===========音频
-    var realtimeChatWsClient: RealtimeChatWsClient? = null
     private var realtimeChatAudioRecord: AudioRecord? = null
     private var realtimeChatAudioTrack: AudioTrack? = null
     private var vadSileroManager: VadSileroManager? = null
@@ -449,9 +464,9 @@ class ChatMessageHandler {
 
     //===========chatHistory
 
-    private var chatManagerPointer: ChatManager? = null
-    fun getChatManagerPointer(): ChatManager {
-        return chatManagerPointer!!
+    private var chatControllerPointer: ChatController? = null
+    fun getChatManagerPointer(): ChatController {
+        return chatControllerPointer!!
     }
 
     fun initResource(
@@ -460,7 +475,7 @@ class ChatMessageHandler {
         chatAAo: ChatAAo,
         initNetworkRunnable: Runnable,
         whereNeedUpdate: RecyclerViewWhereNeedUpdate,
-        vadCallTextCallback: VADCallTextCallback,
+        onReceiveAgentTextCallback: OnReceiveAgentTextCallback,
         onVadChatStateChange: OnVadChatStateChange
     ) {
         // 在初始化之前先清理全部资源
@@ -473,7 +488,7 @@ class ChatMessageHandler {
         realtimeChatState.postValue(RealtimeChatState.NotInitialized)
 
         this.recyclerViewWhereNeedUpdate = whereNeedUpdate
-        this.vadCallTextCallback = vadCallTextCallback
+        this.onReceiveAgentTextCallback = onReceiveAgentTextCallback
         this.onVadChatStateChange = onVadChatStateChange
 
         messageContactItemAo = ao
@@ -489,7 +504,7 @@ class ChatMessageHandler {
         chatAAo.avatarUrlLd.postValue(ao?.vo?.avatarUrl?: "")
 
         // 获取chatManager
-        chatManagerPointer = MainApplication.getChatMapManager().getChatManager(
+        chatControllerPointer = MainApplication.getChatMapManager().getChatManager(
             messageContactItemAo!!.contactId!!
         )
         // 初始化网络请求
@@ -498,9 +513,9 @@ class ChatMessageHandler {
 
     // update Message
     fun updateMessage(){
-        if (chatManagerPointer != null && recyclerViewWhereNeedUpdate != null){
+        if (chatControllerPointer != null && recyclerViewWhereNeedUpdate != null){
             mainHandler.post {
-                val updateList = chatManagerPointer!!.getNeedUpdateList()
+                val updateList = chatControllerPointer!!.getNeedUpdateList()
                 if (!updateList.isEmpty()){
                     recyclerViewWhereNeedUpdate!!.whereNeedUpdate(updateList)
                     Log.d(TAG, "handleGetChatHistory::待更新数据：${updateList.size} 条")
@@ -511,7 +526,7 @@ class ChatMessageHandler {
             }
         }
         else {
-            Log.w(TAG, "更新失败，chatManagerPointer：$chatManagerPointer, " +
+            Log.w(TAG, "更新失败，chatManagerPointer：$chatControllerPointer, " +
                     "recyclerViewWhereNeedUpdate: $recyclerViewWhereNeedUpdate")
         }
     }
@@ -519,11 +534,13 @@ class ChatMessageHandler {
     //===========realtime chat
 
     private fun handleTextMessage(text: String){
-        // text --GSON--> Map<String, String>
-        val map: Map<String, String> = GSON.fromJson(text, object : TypeToken<Map<String, String>>() {}.type)
+        val chatWsTextMessageParseResult = WsManager.getTextMessageDataType(text = text)
+        if (chatWsTextMessageParseResult == null) {
+            return
+        }
 
-        val typeStr = map[RealtimeResponseDataTypeEnum.TYPE]
-        val type = RealtimeResponseDataTypeEnum.getByType(typeStr)
+        val type = chatWsTextMessageParseResult.responseType
+        val map = chatWsTextMessageParseResult.map
 
         when(type){
             // 开始TTS
@@ -591,12 +608,12 @@ class ChatMessageHandler {
                 realtimeChatState.postValue(RealtimeChatState.Receiving)
                 val data = map[RealtimeResponseDataTypeEnum.DATA]
                 if (data != null){
-                    if (chatManagerPointer != null){
+                    if (chatControllerPointer != null){
                         ChatWsTextMessageHandler.handleTextMessage(
                             message = data,
-                            GSON = GSON,
-                            chatManagerPointer = chatManagerPointer!!,
-                            vadCallTextCallback = this.vadCallTextCallback
+                            gson = GSON,
+                            chatControllerPointer = chatControllerPointer!!,
+                            onReceiveAgentTextCallback = this.onReceiveAgentTextCallback
                         )
                         updateMessage()
                     }
@@ -700,11 +717,11 @@ class ChatMessageHandler {
 
         // 3. 清空回调
         recyclerViewWhereNeedUpdate = null
-        vadCallTextCallback = null
+        onReceiveAgentTextCallback = null
 //        onVadChatStateChange = null
         realtimeChatState.postValue(RealtimeChatState.NotInitialized)
 //        realtimeChatVolume.postValue(0f)
-        chatManagerPointer = null
+        chatControllerPointer = null
 
         // 4. 清理资源
         realtimeChatWsClient?.let {

@@ -1,4 +1,4 @@
-package com.magicvector.manager.vad
+package com.magicvector.manager.audio.vad
 
 import android.content.Context
 import android.util.Log
@@ -7,10 +7,9 @@ import com.konovalov.vad.silero.VadSilero
 import com.konovalov.vad.silero.config.FrameSize
 import com.konovalov.vad.silero.config.Mode
 import com.konovalov.vad.silero.config.SampleRate
-import com.magicvector.manager.vad.VoiceRecorder.AudioCallback
+import com.magicvector.manager.audio.vad.VoiceRecorder.AudioCallback
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
-import kotlin.experimental.and
 
 class VadSileroManager {
 
