@@ -51,7 +51,6 @@ class AgentEmojiActivity : BaseAppCompatVmActivity<ActivityAgentEmojiBinding, Ag
 
     companion object {
         val GSON = MainApplication.GSON
-        val udpVisionManager = MainApplication.getUdpVisionManager()
     }
 
     var visionManager = MainApplication.getVisionManager()
@@ -73,24 +72,32 @@ class AgentEmojiActivity : BaseAppCompatVmActivity<ActivityAgentEmojiBinding, Ag
         val agentId = intent.getStringExtra("agentId")
         val agentName = intent.getStringExtra("agentName")
 
-        vm.initService()
-
-        visionManager.initStart(
-            context = this,
-            previewView = binding.viewFinder,
-            listener = getDetectListener(),
-            lifecycleOwner = this as LifecycleOwner
-        )
-
-        agentId?.let {
-            udpVisionManager.initialize(
-                userId = MainApplication.getUserId(),
-                agentId = agentId,
+        val onBoundChatService = kotlinx.coroutines.Runnable {
+            visionManager.initStart(
+                context = this,
+                previewView = binding.viewFinder,
+                listener = getDetectListener(),
+                lifecycleOwner = this as LifecycleOwner
             )
-            Log.i(TAG, "udpVisionManager initialize: userId = ${MainApplication.getUserId()}, agentId = $agentId")
+
+            agentId?.let {
+                vm.realtimeChatController?.let { controller ->
+                    controller.getInitUdpVisionManager().initialize(
+                        userId = MainApplication.getUserId(),
+                        agentId = agentId,
+                    )
+                    Log.i(TAG, "udpVisionManager initialize success")
+                }?: run {
+                    Log.e(TAG, "realtimeChatController is null")
+                }
+            } ?: run {
+                Log.e(TAG, "agentId is null")
+            }
+
+            observeData()
         }
 
-        observeData()
+        vm.initService(onBoundChatService)
     }
 
     fun observeData(){
@@ -312,7 +319,9 @@ class AgentEmojiActivity : BaseAppCompatVmActivity<ActivityAgentEmojiBinding, Ag
     // 将帧通过UDP发送给后端
     private fun handleFrameBitmapToUdpSend(bitmap: Bitmap){
         if (vadChatState == VadChatState.Speaking) {
-            udpVisionManager.sendVideoFrame(bitmap)
+            vm.realtimeChatController?.getInitUdpVisionManager()?.sendVideoFrame(bitmap) ?: {
+                Log.w(TAG, "将帧通过UDP发送给后端失败，未获得UdpVisionManager")
+            }
         }
     }
 
@@ -552,7 +561,7 @@ class AgentEmojiActivity : BaseAppCompatVmActivity<ActivityAgentEmojiBinding, Ag
     override fun onDestroy() {
         super.onDestroy()
         visionManager.onDestroy(window = window)
-        udpVisionManager.destroy()
+        vm.realtimeChatController?.udpVisionManager?.destroy()
     }
 
 }

@@ -32,7 +32,7 @@ import com.magicvector.manager.audio.AudioHandleCallback
 import com.magicvector.manager.audio.IsAudioRecording
 import com.magicvector.manager.mcp.HandleSystemResponse
 import com.magicvector.manager.audio.vad.VadDetectionCallback
-import com.magicvector.manager.ws.ChatWsTextMessageHandler
+import com.magicvector.manager.vl.UdpVisionManager
 import com.magicvector.manager.ws.WsManager
 import com.magicvector.utils.chat.RealtimeChatWsClient
 import com.view.appview.recycler.RecyclerViewWhereNeedUpdate
@@ -50,10 +50,9 @@ import kotlin.math.sqrt
 /**
  * ChatMessageHandler管理：
  * WS长连接
- * ChatMessage处理，SystemMessage处理
- * 音频处理：AudioRecord，AudioTrack
- * VAD语音活动检测
- * UdpVision
+ * 音频处理：AudioRecord, AudioTrack, VAD语音活动检测
+ * ChatHistory管理
+ * VL: UdpVision
  * todo 解耦chatMessageHandler，绘制UML图，多数据源合并问题。（具体需要先实现AppDemo中的Jetpack Compose的多数据源插入LazyColumn）
  */
 class RealtimeChatController : IsAudioRecording{
@@ -75,7 +74,6 @@ class RealtimeChatController : IsAudioRecording{
     var onReceiveAgentTextCallback: OnReceiveAgentTextCallback? = null
     var onVadChatStateChange: OnVadChatStateChange? = null
     val realtimeChatState: MutableLiveData<RealtimeChatState> = MutableLiveData(RealtimeChatState.NotInitialized)
-//    val realtimeChatVolume = MutableLiveData(0f)
 
     fun setCurrentVADStateChange(callback: OnVadChatStateChange) {
         onVadChatStateChange = callback
@@ -91,6 +89,7 @@ class RealtimeChatController : IsAudioRecording{
 
     //---------------------------Network / Mapper---------------------------
 
+    //==========WS长连接
     var realtimeChatWsClient: RealtimeChatWsClient? = null // 长连接，可为null，允许销毁
 
     private fun initRealtimeChatWsClient(): RealtimeChatWsClient {
@@ -212,8 +211,187 @@ class RealtimeChatController : IsAudioRecording{
         }
     }
 
+    //===========realtime chat
+
+    private fun handleTextMessage(text: String){
+        val chatWsTextMessageParseResult = WsManager.getTextMessageDataType(text = text)
+        if (chatWsTextMessageParseResult == null) {
+            return
+        }
+
+        val type = chatWsTextMessageParseResult.responseType
+        val map = chatWsTextMessageParseResult.map
+
+        when(type){
+            // 开始TTS
+            RealtimeResponseDataTypeEnum.START_TTS -> {
+                Log.i(TAG, "handleTextMessage::START_TTS播放")
+                // 开始接收数据
+                realtimeChatState.postValue(RealtimeChatState.Receiving)
+                onVadChatStateChange?.onChange(VadChatState.Replying)
+
+                // 清空播放缓存 + 开始播放
+                audioController?.startAudioTrackPlay()
+
+                // VAD:设置AI回复的时候不能说话
+                // 首先检查是不是Emoji状态
+                if (currentIsEmoji.get()){
+                    audioController?.stopVAD {
+                        Log.d(TAG, "handleTextMessage:: 正在Emoji VAD通话:AI正在回复, 停止录音")
+                    }
+                }
+                else if (isChatCalling?.get() == true) {
+                    audioController?.stopVAD {
+                        Log.d(TAG, "handleTextMessage:: 正在VAD通话:AI正在回复, 停止录音")
+                    }
+                }
+                else {
+                    Log.d(TAG, "START_TTS::handleTextMessage:: 停止VAD通话: 不管理VAD录音, isChatCalling: $isChatCalling")
+                }
+            }
+            // 结束TTS + 结束会话
+            RealtimeResponseDataTypeEnum.STOP_TTS -> {
+                Log.i(TAG, "handleTextMessage::STOP_TTS播放")
+                // 结束接收数据
+                realtimeChatState.postValue(RealtimeChatState.InitializedConnected)
+                onVadChatStateChange?.onChange(VadChatState.Silent)
+
+                // 停止播放
+                audioController?.stopAudioTrackPlay()
+
+                // VAD:设置AI回复结束的时候可以说话
+                if (currentIsEmoji.get()) {
+                    audioController?.startVAD {
+                        Log.d(TAG, "handleTextMessage:: 正在Emoji VAD通话:AI回复结束, 继续录音")
+                    }
+                }
+                else if (isChatCalling?.get() == true){
+                    audioController?.startVAD {
+                        Log.d(TAG, "handleTextMessage:: 正在VAD通话:AI回复结束, 继续录音")
+                    }
+                }
+                else {
+                    Log.d(TAG, "STOP_TTS::handleTextMessage:: 停止VAD通话: 不管理VAD录音, isChatCalling: $isChatCalling")
+                }
+            }
+            // 音频流
+            RealtimeResponseDataTypeEnum.AUDIO_CHUNK -> {
+                // 音频数据
+                realtimeChatState.postValue(RealtimeChatState.Receiving)
+                val data = map[RealtimeResponseDataTypeEnum.DATA]
+                data?.let { it ->
+                    audioController?.playBase64Audio(
+                        base64Audio = it,
+                        isShowLog = true
+                    ) ?: run {
+                        Log.w(TAG, "handleTextMessage::playBase64Audio: 播放音频失败")
+                    }
+                }
+            }
+            // 文本流
+            RealtimeResponseDataTypeEnum.TEXT_CHAT_RESPONSE -> {
+                // 文本数据
+                realtimeChatState.postValue(RealtimeChatState.Receiving)
+                val data = map[RealtimeResponseDataTypeEnum.DATA]
+                if (data != null){
+                    if (chatControllerPointer != null){
+                        WsManager.handleTextMessage(
+                            message = data,
+                            chatControllerPointer = chatControllerPointer!!,
+                            onReceiveAgentTextCallback = this.onReceiveAgentTextCallback
+                        )
+                        updateMessage()
+                    }
+                    else {
+                        Log.w(TAG, "handleTextMessage:更新文本数据异常 chatManagerPointer is null")
+                    }
+                }
+                else {
+                    Log.e(TAG, "handleTextMessage: data is null")
+                }
+            }
+            // 文本整句
+            RealtimeResponseDataTypeEnum.WHOLE_CHAT_RESPONSE -> {}
+            // system响应
+            RealtimeResponseDataTypeEnum.TEXT_SYSTEM_RESPONSE -> {
+                val data = map[RealtimeResponseDataTypeEnum.DATA]
+                data?.let {
+                    handleSystemMessage(it)
+                }
+                /*
+                    agentEmoji注册system事件回调。
+                    接收system消息，handle system消息，分类处理mcp消息：MCP handler：VisionHandler，EmojiHandler。
+                    找到要求拍照的消息，调用回调。
+                    回调调用拍摄照片，转为base64，组成json加入message消息，传递给后端 -> 等待响应。
+                 */
+            }
+            // 事件列表
+            RealtimeResponseDataTypeEnum.EVENT_LIST -> {
+                val data = map[RealtimeResponseDataTypeEnum.DATA]
+                data?.let {
+                    handleEventList(it)
+                }
+            }
+        }
+    }
+
+    private var handleSystemResponse: HandleSystemResponse? = null
+    fun setHandleSystemResponse(handleSystemResponse: HandleSystemResponse?) {
+        this.handleSystemResponse = handleSystemResponse
+    }
+
+    private fun handleSystemMessage(data: String){
+        if (data.isEmpty()){
+            Log.w(TAG, "handleSystemMessage: data is empty")
+            return
+        }
+        try {
+            val map: Map<String, String> = GSON.fromJson(data, object : TypeToken<Map<String, String>>() {}.type)
+            if (map[RealtimeSystemResponseEventEnum.EVENT_KET] == null) {
+                Log.w(TAG, "handleSystemMessage: event is null")
+                return
+            }
+            if (handleSystemResponse != null){
+                Log.d(TAG, "handleSystemMessage: 正在处理系统消息:: system message: $data")
+                handleSystemResponse!!.handleSystemResponse(map)
+            }
+            else {
+                Log.w(TAG, "handleSystemMessage: 无法处理系统消息，因为：handleSystemResponse is null")
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "handleSystemMessage: parse error", e)
+        }
+    }
+
+    private fun handleEventList(eventListStr: String) {
+        try {
+            val eventListType = object : TypeToken<List<MixLLMEvent>>() {}.type
+            val eventList: List<MixLLMEvent> = GSON.fromJson(eventListStr, eventListType)
+
+            // 处理解析后的事件列表
+            eventList.forEach { event ->
+                // 根据需要处理每个 event 对象
+                println("$TAG, Event Type: ${event.eventType}, Event Data: ${event.event}")
+            }
+        } catch (e: Exception){
+            Log.e(TAG, "handleEventList: parse error", e)
+        }
+    }
+
+    //===========sendMessage
+
+    fun sendMcpSwitch(mcpSwitch: McpSwitch = MainApplication.getMcpSwitch()){
+        val mcpSwitchJson = GSON.toJson(mcpSwitch)
+        val dataMap = mapOf(
+            RealtimeRequestDataTypeEnum.TYPE to RealtimeRequestDataTypeEnum.SYSTEM_MESSAGE.type,
+            RealtimeRequestDataTypeEnum.DATA to mcpSwitchJson
+        )
+        realtimeChatWsClient!!.sendMessage(dataMap)
+    }
+
     //---------------------------Logic---------------------------
 
+    //==========音频处理：AudioRecord, AudioTrack, VAD语音活动检测
     // 音频处理回调
     fun getAudioHandleCallback(): AudioHandleCallback{
         return object : AudioHandleCallback{
@@ -322,11 +500,12 @@ class RealtimeChatController : IsAudioRecording{
         return realtimeChatState.value == RealtimeChatState.RecordingAndSending
     }
 
-    //===========音频
-
     // 按下录制音频
     fun startRecordRealtimeChatAudio(weakScope: WeakReference<CoroutineScope>) {
-        val scope = weakScope.get() ?: return
+        val scope = weakScope.get() ?: run {
+            Log.e(TAG, "startRecordRealtimeChatAudio::scope is null")
+            return
+        }
 
         audioController?.startRecordingAudio(isAudioRecording = this, scope)
     }
@@ -371,6 +550,7 @@ class RealtimeChatController : IsAudioRecording{
         startVadCall()
     }
 
+    // 启动 VAD 通话
     fun startVadCall(){
         audioController?.let { controller ->
             controller.startVAD(onStart = {
@@ -382,6 +562,7 @@ class RealtimeChatController : IsAudioRecording{
         }
     }
 
+    // 停止 VAD 通话
     fun stopVadCall(){
         audioController?.let { controller ->
             controller.stopVAD(onStop = {
@@ -393,6 +574,7 @@ class RealtimeChatController : IsAudioRecording{
         }
     }
 
+    // 销毁 VAD 通话
     fun destroyVadCall(){
         audioController?.let { controller ->
             controller.releaseVADController()
@@ -400,7 +582,7 @@ class RealtimeChatController : IsAudioRecording{
         }
     }
 
-    //===========chatHistory
+    //==========ChatHistory管理
 
     private var chatControllerPointer: ChatController? = null
     fun getChatManagerPointer(): ChatController {
@@ -416,13 +598,8 @@ class RealtimeChatController : IsAudioRecording{
         onReceiveAgentTextCallback: OnReceiveAgentTextCallback,
         onVadChatStateChange: OnVadChatStateChange
     ) {
-        // 在初始化之前先清理全部资源
-//        try {
-//            releaseAllResource()
-//        } catch (e: Exception){
-//            Log.e(TAG, "initResource: ${e.message}")
-//        }
 
+        // 先清空全部的数据
         realtimeChatState.postValue(RealtimeChatState.NotInitialized)
 
         this.recyclerViewWhereNeedUpdate = whereNeedUpdate
@@ -469,183 +646,15 @@ class RealtimeChatController : IsAudioRecording{
         }
     }
 
-    //===========realtime chat
+    //==========VL: UdpVisionManager
 
-    private fun handleTextMessage(text: String){
-        val chatWsTextMessageParseResult = WsManager.getTextMessageDataType(text = text)
-        if (chatWsTextMessageParseResult == null) {
-            return
+    // Udp vision
+    var udpVisionManager: UdpVisionManager? = null
+    fun getInitUdpVisionManager(): UdpVisionManager {
+        if (udpVisionManager == null) {
+            udpVisionManager = UdpVisionManager.getInstance()
         }
-
-        val type = chatWsTextMessageParseResult.responseType
-        val map = chatWsTextMessageParseResult.map
-
-        when(type){
-            // 开始TTS
-            RealtimeResponseDataTypeEnum.START_TTS -> {
-                Log.i(TAG, "handleTextMessage::START_TTS播放")
-                // 开始接收数据
-                realtimeChatState.postValue(RealtimeChatState.Receiving)
-                onVadChatStateChange?.onChange(VadChatState.Replying)
-
-                // 清空播放缓存 + 开始播放
-                audioController?.startAudioTrackPlay()
-
-                // VAD:设置AI回复的时候不能说话
-                // 首先检查是不是Emoji状态
-                if (currentIsEmoji.get()){
-                    audioController?.stopVAD {
-                        Log.d(TAG, "handleTextMessage:: 正在Emoji VAD通话:AI正在回复, 停止录音")
-                    }
-                }
-                else if (isChatCalling?.get() == true) {
-                    audioController?.stopVAD {
-                        Log.d(TAG, "handleTextMessage:: 正在VAD通话:AI正在回复, 停止录音")
-                    }
-                }
-                else {
-                    Log.d(TAG, "START_TTS::handleTextMessage:: 停止VAD通话: 不管理VAD录音, isChatCalling: $isChatCalling")
-                }
-            }
-            // 结束TTS + 结束会话
-            RealtimeResponseDataTypeEnum.STOP_TTS -> {
-                Log.i(TAG, "handleTextMessage::STOP_TTS播放")
-                // 结束接收数据
-                realtimeChatState.postValue(RealtimeChatState.InitializedConnected)
-                onVadChatStateChange?.onChange(VadChatState.Silent)
-
-                // 停止播放
-                audioController?.stopAudioTrackPlay()
-
-                // VAD:设置AI回复结束的时候可以说话
-                if (currentIsEmoji.get()) {
-                    audioController?.startVAD {
-                        Log.d(TAG, "handleTextMessage:: 正在Emoji VAD通话:AI回复结束, 继续录音")
-                    }
-                }
-                else if (isChatCalling?.get() == true){
-                    audioController?.startVAD {
-                        Log.d(TAG, "handleTextMessage:: 正在VAD通话:AI回复结束, 继续录音")
-                    }
-                }
-                else {
-                    Log.d(TAG, "STOP_TTS::handleTextMessage:: 停止VAD通话: 不管理VAD录音, isChatCalling: $isChatCalling")
-                }
-            }
-            // 音频流
-            RealtimeResponseDataTypeEnum.AUDIO_CHUNK -> {
-                // 音频数据
-                realtimeChatState.postValue(RealtimeChatState.Receiving)
-                val data = map[RealtimeResponseDataTypeEnum.DATA]
-                data?.let { it ->
-                    audioController?.playBase64Audio(
-                        base64Audio = it,
-                        isShowLog = true
-                    ) ?: run {
-                        Log.w(TAG, "handleTextMessage::playBase64Audio: 播放音频失败")
-                    }
-                }
-            }
-            // 文本流
-            RealtimeResponseDataTypeEnum.TEXT_CHAT_RESPONSE -> {
-                // 文本数据
-                realtimeChatState.postValue(RealtimeChatState.Receiving)
-                val data = map[RealtimeResponseDataTypeEnum.DATA]
-                if (data != null){
-                    if (chatControllerPointer != null){
-                        ChatWsTextMessageHandler.handleTextMessage(
-                            message = data,
-                            gson = GSON,
-                            chatControllerPointer = chatControllerPointer!!,
-                            onReceiveAgentTextCallback = this.onReceiveAgentTextCallback
-                        )
-                        updateMessage()
-                    }
-                    else {
-                        Log.w(TAG, "handleTextMessage:更新文本数据异常 chatManagerPointer is null")
-                    }
-                }
-                else {
-                    Log.e(TAG, "handleTextMessage: data is null")
-                }
-            }
-            // 文本整句
-            RealtimeResponseDataTypeEnum.WHOLE_CHAT_RESPONSE -> {}
-            // system响应
-            RealtimeResponseDataTypeEnum.TEXT_SYSTEM_RESPONSE -> {
-                val data = map[RealtimeResponseDataTypeEnum.DATA]
-                data?.let {
-                    handleSystemMessage(it)
-                }
-                /*
-                    agentEmoji注册system事件回调。
-                    接收system消息，handle system消息，分类处理mcp消息：MCP handler：VisionHandler，EmojiHandler。
-                    找到要求拍照的消息，调用回调。
-                    回调调用拍摄照片，转为base64，组成json加入message消息，传递给后端 -> 等待响应。
-                 */
-            }
-            // 事件列表
-            RealtimeResponseDataTypeEnum.EVENT_LIST -> {
-                val data = map[RealtimeResponseDataTypeEnum.DATA]
-                data?.let {
-                    handleEventList(it)
-                }
-            }
-        }
-    }
-
-    private var handleSystemResponse: HandleSystemResponse? = null
-    fun setHandleSystemResponse(handleSystemResponse: HandleSystemResponse?) {
-        this.handleSystemResponse = handleSystemResponse
-    }
-
-    private fun handleSystemMessage(data: String){
-        if (data.isEmpty()){
-            Log.w(TAG, "handleSystemMessage: data is empty")
-            return
-        }
-        try {
-            val map: Map<String, String> = GSON.fromJson(data, object : TypeToken<Map<String, String>>() {}.type)
-            if (map[RealtimeSystemResponseEventEnum.EVENT_KET] == null) {
-                Log.w(TAG, "handleSystemMessage: event is null")
-                return
-            }
-            if (handleSystemResponse != null){
-                Log.d(TAG, "handleSystemMessage: 正在处理系统消息:: system message: $data")
-                handleSystemResponse!!.handleSystemResponse(map)
-            }
-            else {
-                Log.w(TAG, "handleSystemMessage: 无法处理系统消息，因为：handleSystemResponse is null")
-            }
-        } catch (e: Exception) {
-            Log.e(TAG, "handleSystemMessage: parse error", e)
-        }
-    }
-
-    private fun handleEventList(eventListStr: String) {
-        try {
-            val eventListType = object : TypeToken<List<MixLLMEvent>>() {}.type
-            val eventList: List<MixLLMEvent> = GSON.fromJson(eventListStr, eventListType)
-
-            // 处理解析后的事件列表
-            eventList.forEach { event ->
-                // 根据需要处理每个 event 对象
-                println("$TAG, Event Type: ${event.eventType}, Event Data: ${event.event}")
-            }
-        } catch (e: Exception){
-            Log.e(TAG, "handleEventList: parse error", e)
-        }
-    }
-
-    //===========sendMessage
-
-    fun sendMcpSwitch(mcpSwitch: McpSwitch = MainApplication.getMcpSwitch()){
-        val mcpSwitchJson = GSON.toJson(mcpSwitch)
-        val dataMap = mapOf(
-            RealtimeRequestDataTypeEnum.TYPE to RealtimeRequestDataTypeEnum.SYSTEM_MESSAGE.type,
-            RealtimeRequestDataTypeEnum.DATA to mcpSwitchJson
-        )
-        realtimeChatWsClient!!.sendMessage(dataMap)
+        return udpVisionManager!!
     }
 
     //--------------------------LifeCycle---------------------------

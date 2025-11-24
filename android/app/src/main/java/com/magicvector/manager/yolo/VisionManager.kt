@@ -26,7 +26,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 class VisionManager {
 
     companion object {
-        val TAG = VisionManager::class.simpleName
+        const val TAG = "VisionManager"
     }
 
     private var isFrontCamera = false

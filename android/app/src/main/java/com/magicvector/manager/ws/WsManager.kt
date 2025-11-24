@@ -4,9 +4,13 @@ import android.util.Log
 import com.data.domain.ao.chat.ChatWsTextMessageParseResult
 import com.data.domain.constant.chat.RealtimeRequestDataTypeEnum
 import com.data.domain.constant.chat.RealtimeResponseDataTypeEnum
+import com.data.domain.constant.chat.RoleTypeEnum
+import com.data.domain.dto.ws.reponse.RealtimeChatTextResponse
 import com.data.domain.dto.ws.request.RealtimeChatConnectRequest
 import com.google.gson.reflect.TypeToken
 import com.magicvector.MainApplication
+import com.magicvector.callback.OnReceiveAgentTextCallback
+import com.magicvector.manager.ChatController
 import com.magicvector.utils.chat.AbstractWsClient
 
 
@@ -74,6 +78,40 @@ object WsManager {
         wsClient.sendMessage(
             messageMap = dataMap, isShowAllLog = true
         )
+    }
+
+    /**
+     * 处理text文本信息
+     * @param message                       text文本信息
+     * @param chatControllerPointer         ChatController指针
+     * @param onReceiveAgentTextCallback    接收代理文本的回调
+     */
+    fun handleTextMessage(message: String, chatControllerPointer: ChatController, onReceiveAgentTextCallback: OnReceiveAgentTextCallback?){
+        var response : RealtimeChatTextResponse
+        try {
+            Log.i(TAG, "handleTextMessage::receiveMessage: $message")
+            response = GSON.fromJson(message,
+                RealtimeChatTextResponse::class.java)
+        } catch (e: Exception){
+            Log.e(TAG, "handleTextMessage::error: $message", e)
+            return
+        }
+
+        if (response.role == null ||
+            (response.role != RoleTypeEnum.USER.value && response.role != RoleTypeEnum.AGENT.value)){
+            throw IllegalArgumentException("role is null or invalid")
+        }
+
+        response.content?.let {
+            onReceiveAgentTextCallback?.onText(it)
+            Log.i(TAG, "handleTextMessage::content: $it")
+        }
+
+        try {
+            chatControllerPointer.setWsToViews(response)
+        } catch (e: Exception){
+            Log.e(TAG, "handleTextMessage::error: $message", e)
+        }
     }
 
 }

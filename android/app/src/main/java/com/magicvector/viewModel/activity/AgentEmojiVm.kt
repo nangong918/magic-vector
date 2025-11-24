@@ -19,6 +19,7 @@ import com.core.baseutil.network.OnThrowableCallback
 import com.data.domain.constant.chat.RealtimeRequestDataTypeEnum
 import com.magicvector.MainApplication
 import com.magicvector.manager.RealtimeChatController
+import com.magicvector.manager.vl.UdpVisionManager
 import com.magicvector.service.ChatService
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
@@ -51,7 +52,11 @@ class AgentEmojiVm(
             val binder = service as ChatService.ChatServiceBinder
             chatServiceBoundLd.postValue(true)
             // 连接成功使用之后
+            // 获取ChatMessageHandler
             realtimeChatController = binder.getChatMessageHandler()
+
+            // 成功绑定的回调
+            onBoundChatService?.run()
         }
 
         override fun onServiceDisconnected(name: ComponentName?) {
@@ -80,7 +85,11 @@ class AgentEmojiVm(
             chatServiceBoundLd.postValue(false)
         }
     }
-    fun initService(){
+
+    var onBoundChatService: kotlinx.coroutines.Runnable? = null
+
+    fun initService(onBoundChatService: kotlinx.coroutines.Runnable){
+        this.onBoundChatService = onBoundChatService
         // 启动Service的intent
         val intent = Intent(application, ChatService::class.java)
         // 尝试绑定服务，乐观认为mainActivity已经启动了service

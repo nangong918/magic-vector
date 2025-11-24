@@ -85,6 +85,7 @@ class ChatVm(
             // 连接成功使用之后
             realtimeChatController = binder.getChatMessageHandler()
 
+            // 成功绑定的回调
             onBoundChatService?.run()
         }
 

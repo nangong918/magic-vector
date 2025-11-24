@@ -10,7 +10,6 @@ import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import com.magicvector.manager.ChatMapController
 import com.magicvector.manager.MessageListController
-import com.magicvector.manager.vl.UdpVisionManager
 import com.magicvector.manager.yolo.VisionManager
 
 class MainApplication : Application() {
@@ -96,7 +95,12 @@ class MainApplication : Application() {
             return chatMapController!!
         }
 
-        // VisionManager
+        /**
+         * VisionManager
+         * 本地CameraX管理，无ws传输，无需放入realtimeChatController；
+         * 而udpVisionManager涉及到Udp传输，需要放入realtimeChatController
+         * 不涉及到跨Activity任务，无需使用Service
+         */
         private var visionManager: VisionManager? = null
         fun getVisionManager(): VisionManager {
             if (visionManager == null) {
@@ -116,15 +120,6 @@ class MainApplication : Application() {
                 mcpSwitch!!.equipment = McpSwitch.McpEquipment.PHONE.code
             }
             return mcpSwitch!!
-        }
-
-        // Udp vision
-        private var udpVisionManager: UdpVisionManager? = null
-        fun getUdpVisionManager(): UdpVisionManager {
-            if (udpVisionManager == null) {
-                udpVisionManager = UdpVisionManager.getInstance()
-            }
-            return udpVisionManager!!
         }
     }
 
