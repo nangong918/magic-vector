@@ -1,0 +1,7 @@
+<resources>
+    <string name="app_name">AppDemo</string>
+    <string name="title_activity_start">StartActivity</string>
+    <string name="title_activity_main">MainActivity</string>
+    <string name="title_activity_network">NetworkActivity</string>
+    <string name="title_activity_list">ListActivity</string>
+</resources>

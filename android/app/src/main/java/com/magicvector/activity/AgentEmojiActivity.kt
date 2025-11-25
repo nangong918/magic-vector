@@ -1,16 +1,21 @@
 package com.magicvector.activity
 
+import android.Manifest
 import android.annotation.SuppressLint
+import android.content.Context
 import android.graphics.Bitmap
 import android.os.Bundle
 import android.text.TextUtils
 import android.util.Log
 import android.view.View
 import android.view.WindowManager
+import androidx.annotation.RequiresPermission
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.lifecycleScope
 import com.core.appcore.api.handler.SyncRequestCallback
 import com.core.baseutil.network.networkLoad.NetworkLoadUtils
+import com.core.baseutil.permissions.GainPermissionCallback
+import com.core.baseutil.permissions.PermissionUtil
 import com.core.baseutil.ui.ToastUtils
 import com.data.domain.constant.BaseConstant
 import com.data.domain.constant.VadChatState
@@ -29,6 +34,7 @@ import com.magicvector.manager.mcp.VisionMcpManager
 import com.magicvector.manager.yolo.EyesMoveManager
 import com.magicvector.manager.yolo.OnResetCallback
 import com.magicvector.manager.yolo.TargetActivityDetectionManager
+import com.magicvector.manager.yolo.VisionCallback
 import com.magicvector.utils.BaseAppCompatVmActivity
 import com.magicvector.viewModel.activity.AgentEmojiVm
 import com.view.appview.R
@@ -36,20 +42,18 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.util.LinkedList
-import java.util.Queue
+import java.lang.ref.WeakReference
 
 class AgentEmojiActivity : BaseAppCompatVmActivity<ActivityAgentEmojiBinding, AgentEmojiVm>(
     AgentEmojiActivity::class,
     AgentEmojiVm::class
-), HandleSystemResponse, OnVadChatStateChange {
+), HandleSystemResponse, OnVadChatStateChange, VisionCallback {
 
     companion object {
         val GSON = MainApplication.GSON
     }
 
     var visionManager = MainApplication.getVisionManager()
-    var chatMessageHandler = MainApplication.getChatMessageHandler()
 
     override fun initBinding(): ActivityAgentEmojiBinding {
         return ActivityAgentEmojiBinding.inflate(layoutInflater)
@@ -59,7 +63,7 @@ class AgentEmojiActivity : BaseAppCompatVmActivity<ActivityAgentEmojiBinding, Ag
         super.onCreate(savedInstanceState)
 
         visionManager = MainApplication.getVisionManager()
-        chatMessageHandler = MainApplication.getChatMessageHandler()
+        visionManager.setVisionCallback(this)
     }
 
     override fun initViewModel() {
@@ -68,44 +72,38 @@ class AgentEmojiActivity : BaseAppCompatVmActivity<ActivityAgentEmojiBinding, Ag
         val agentId = intent.getStringExtra("agentId")
         val agentName = intent.getStringExtra("agentName")
 
-        visionManager.initStart(
-            context = this,
-            previewView = binding.viewFinder,
-            listener = getDetectListener(),
-            lifecycleOwner = this as LifecycleOwner
-        )
+        val onBoundChatService = kotlinx.coroutines.Runnable {
+            visionManager.initStart(
+                context = this,
+                previewView = binding.viewFinder,
+                listener = getDetectListener(),
+                lifecycleOwner = this as LifecycleOwner
+            )
 
-        observeData()
+            agentId?.let {
+                vm.realtimeChatController?.let { controller ->
+                    controller.getInitUdpVisionManager().initialize(
+                        userId = MainApplication.getUserId(),
+                        agentId = agentId,
+                    )
+                    Log.i(TAG, "udpVisionManager initialize success")
+                }?: run {
+                    Log.e(TAG, "realtimeChatController is null")
+                }
+            } ?: run {
+                Log.e(TAG, "agentId is null")
+            }
+
+            observeData()
+        }
+
+        vm.initService(onBoundChatService)
     }
 
     fun observeData(){
-/*        chatMessageHandler.realtimeChatState.observe(this) {
-            runOnUiThread {
-                when (it) {
-                    RealtimeChatState.NotInitialized -> {
-                        binding.tvCallState.text = "未初始化"
-                    }
-                    RealtimeChatState.Initializing -> {
-                        binding.tvCallState.text = "正在初始化"
-                    }
-                    RealtimeChatState.InitializedConnected -> {
-                        binding.tvCallState.text = "已初始化并连接"
-                    }
-                    RealtimeChatState.RecordingAndSending -> {
-                        binding.tvCallState.text = "正在记录消息"
-                    }
-                    RealtimeChatState.Receiving -> {
-                        binding.tvCallState.text = "正在接收消息"
-                    }
-                    RealtimeChatState.Disconnected -> {
-                        binding.tvCallState.text = "已断开连接"
-                    }
-                    is RealtimeChatState.Error -> {
-                        binding.tvCallState.text = "错误"
-                    }
-                }
-            }
-        }*/
+        vm.chatServiceBoundLd.observe(this@AgentEmojiActivity) {
+
+        }
     }
 
     override fun initView() {
@@ -145,10 +143,10 @@ class AgentEmojiActivity : BaseAppCompatVmActivity<ActivityAgentEmojiBinding, Ag
 
         // 关闭了Mic
         if (isCloseMic) {
-            chatMessageHandler.stopVadCall()
+            vm.realtimeChatController?.stopVadCall()
         }
         else {
-            chatMessageHandler.startVadCall()
+            vm.realtimeChatController?.startVadCall()
         }
     }
 
@@ -189,6 +187,7 @@ class AgentEmojiActivity : BaseAppCompatVmActivity<ActivityAgentEmojiBinding, Ag
                     Log.e(TAG, "setVadChatState: ${state.message}")
                 }
             }
+            vadChatState = state
         }
     }
 
@@ -225,7 +224,9 @@ class AgentEmojiActivity : BaseAppCompatVmActivity<ActivityAgentEmojiBinding, Ag
 
         // vision测试
         binding.btnVisionTest.setOnClickListener {
-            vm.visionTest(chatMessageHandler)
+            vm.realtimeChatController?.let {
+                vm.visionTest(it)
+            }
         }
     }
 
@@ -309,6 +310,21 @@ class AgentEmojiActivity : BaseAppCompatVmActivity<ActivityAgentEmojiBinding, Ag
         }
     }
 
+    // 添加一个变量来保存当前帧的Bitmap
+    private var currentFrameBitmap: Bitmap? = null
+    override fun onReceiveCurrentFrameBitmap(bitmap: Bitmap) {
+        currentFrameBitmap = bitmap
+        handleFrameBitmapToUdpSend(bitmap)
+    }
+    // 将帧通过UDP发送给后端
+    private fun handleFrameBitmapToUdpSend(bitmap: Bitmap){
+        if (vadChatState == VadChatState.Speaking) {
+            vm.realtimeChatController?.getInitUdpVisionManager()?.sendVideoFrame(bitmap) ?: {
+                Log.w(TAG, "将帧通过UDP发送给后端失败，未获得UdpVisionManager")
+            }
+        }
+    }
+
     // 处理视觉理解Response
     override fun handleSystemResponse(map: Map<String, String>) {
         val agentId = map["agentId"]
@@ -322,7 +338,7 @@ class AgentEmojiActivity : BaseAppCompatVmActivity<ActivityAgentEmojiBinding, Ag
 
         // 上传图片的指令
         if (map[RealtimeSystemResponseEventEnum.EVENT_KET] == RealtimeSystemResponseEventEnum.UPLOAD_PHOTO.code) {
-            val bitmap = visionManager.getCurrentFrameBitmap()
+            val bitmap = currentFrameBitmap
             if (bitmap == null) {
                 // 传递无图片的响应给服务器
                 val uploadPhotoRequest = UploadPhotoRequest()
@@ -337,7 +353,7 @@ class AgentEmojiActivity : BaseAppCompatVmActivity<ActivityAgentEmojiBinding, Ag
                     RealtimeRequestDataTypeEnum.DATA to uploadPhotoRequestJson
                 )
 
-                chatMessageHandler.realtimeChatWsClient?.sendMessage(dataMap)
+                vm.realtimeChatController?.realtimeChatWsClient?.sendMessage(dataMap)
                 ToastUtils.showToastActivity(this, getString(R.string.fetch_photo_fail))
             }
             else {
@@ -351,7 +367,7 @@ class AgentEmojiActivity : BaseAppCompatVmActivity<ActivityAgentEmojiBinding, Ag
                     VisionUploadTypeEnum.HTTP -> {
                         // http上传
                         httpUploadSingleImageVision(
-                            bitmap = bitmap,
+                            bitmaps = listOf(bitmap),
                             agentId = agentId!!,
                             userId = userId,
                             messageId = messageId!!
@@ -376,15 +392,15 @@ class AgentEmojiActivity : BaseAppCompatVmActivity<ActivityAgentEmojiBinding, Ag
 
     /// vision 任务
     // http 上传
-    private fun httpUploadSingleImageVision(bitmap: Bitmap, agentId: String, userId: String, messageId: String){
-        val file = VisionMcpManager.bitmapToFile(
-            bitmap = bitmap,
+    private fun httpUploadSingleImageVision(bitmaps: List<Bitmap>, agentId: String, userId: String, messageId: String){
+        val files = VisionMcpManager.bitmapsToFlies(
+            bitmaps = bitmaps,
             context = this
         )
         NetworkLoadUtils.showDialog(this)
         vm.doUploadImageVision(
             context = this,
-            image = file,
+            images = files,
             agentId = agentId,
             userId = userId,
             messageId = messageId,
@@ -432,7 +448,7 @@ class AgentEmojiActivity : BaseAppCompatVmActivity<ActivityAgentEmojiBinding, Ag
                         RealtimeRequestDataTypeEnum.DATA to uploadPhotoRequestJson
                     )
 
-                    chatMessageHandler.realtimeChatWsClient?.sendMessage(dataMap)
+                    vm.realtimeChatController?.realtimeChatWsClient?.sendMessage(dataMap)
 
                     // 添加休眠，避免网络拥塞（不是最后一个分片时休眠）
                     if (base64FragmentQueue.isNotEmpty()) {
@@ -496,29 +512,56 @@ class AgentEmojiActivity : BaseAppCompatVmActivity<ActivityAgentEmojiBinding, Ag
     override fun onResume() {
         super.onResume()
         visionManager.onResume(window = window)
-        // 启动VAD录音
-        chatMessageHandler.initVadCall(this@AgentEmojiActivity)
-        chatMessageHandler.currentIsEmoji.set(true)
-        chatMessageHandler.setCurrentVADStateChange(this)
-        // 系统回调
-        chatMessageHandler.setHandleSystemResponse(this)
+        vm.realtimeChatController?.let { chatMessageHandler ->
+            PermissionUtil.requestPermissionSelectX(
+                this@AgentEmojiActivity,
+                mustPermission = arrayOf(
+                    Manifest.permission.RECORD_AUDIO,
+                ),
+                optionalPermission = arrayOf(
+                ),
+                object : GainPermissionCallback {
+                    @RequiresPermission(Manifest.permission.RECORD_AUDIO)
+                    override fun allGranted() {
+                        // 启动VAD录音
+                        val weakContext = WeakReference<Context>(this@AgentEmojiActivity)
+                        chatMessageHandler.initVadCall(weakContext)
+                        chatMessageHandler.currentIsEmoji.set(true)
+                        // vad状态回调
+                        chatMessageHandler.setCurrentVADStateChange(this@AgentEmojiActivity)
+                        // 系统回调
+                        chatMessageHandler.setHandleSystemResponse(this@AgentEmojiActivity)
+                    }
+
+                    override fun notGranted(notGrantedPermissions: Array<String?>?) {
+                    }
+
+                    override fun always() {
+                    }
+                }
+            )
+
+        }
     }
 
     // 暂停
     override fun onPause() {
         super.onPause()
         visionManager.onPause()
-        // 关闭VAD录音
-        chatMessageHandler.stopVadCall()
-        chatMessageHandler.currentIsEmoji.set(false)
-        // 取消系统回调
-        chatMessageHandler.setHandleSystemResponse(null)
+        vm.realtimeChatController?.let { chatMessageHandler ->
+            // 关闭VAD录音
+            chatMessageHandler.stopVadCall()
+            chatMessageHandler.currentIsEmoji.set(false)
+            // 取消系统回调
+            chatMessageHandler.setHandleSystemResponse(null)
+        }
     }
 
     // 销毁
     override fun onDestroy() {
         super.onDestroy()
         visionManager.onDestroy(window = window)
+        vm.realtimeChatController?.udpVisionManager?.destroy()
     }
 
 }

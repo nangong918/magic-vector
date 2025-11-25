@@ -31,6 +31,7 @@ import java.io.OutputStream;
 import java.net.URLConnection;
 import java.nio.file.Files;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -223,6 +224,14 @@ public class FileUtil {
 
         RequestBody requestFile = RequestBody.create(MediaType.parse(mimeType), file);
         return MultipartBody.Part.createFormData(fileRequestParamName, file.getName(), requestFile);
+    }
+
+    public static List<MultipartBody.Part> createImageMultipartBodyParts(List<File> files, @NonNull String fileRequestParamName) {
+        List<MultipartBody.Part> parts = new ArrayList<>();
+        for (File file : files) {
+            parts.add(createImageMultipartBodyPart(file, fileRequestParamName));
+        }
+        return parts;
     }
 
     /**

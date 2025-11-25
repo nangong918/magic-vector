@@ -2,10 +2,14 @@ package com.magicvector.viewModel.activity
 
 import android.Manifest
 import android.annotation.SuppressLint
+import android.content.ComponentName
 import android.content.Context
+import android.content.Context.BIND_AUTO_CREATE
 import android.content.Intent
+import android.content.ServiceConnection
 import android.net.Uri
 import android.os.Handler
+import android.os.IBinder
 import android.os.Looper
 import android.text.Editable
 import android.text.TextWatcher
@@ -13,7 +17,9 @@ import android.util.Log
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.fragment.app.FragmentActivity
-import androidx.lifecycle.ViewModel
+import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.MutableLiveData
+import androidx.lifecycle.application
 import com.core.appcore.api.handler.SyncRequestCallback
 import com.core.appcore.utils.AppResponseUtil
 import com.core.baseutil.cache.HttpRequestManager
@@ -32,7 +38,9 @@ import com.data.domain.dto.response.ChatMessageResponse
 import com.data.domain.fragmentActivity.aao.ChatAAo
 import com.magicvector.MainApplication
 import com.magicvector.callback.OnVadChatStateChange
-import com.magicvector.callback.VADCallTextCallback
+import com.magicvector.callback.OnReceiveAgentTextCallback
+import com.magicvector.manager.RealtimeChatController
+import com.magicvector.service.ChatService
 import com.view.appview.R
 import com.view.appview.call.CallAo
 import com.view.appview.recycler.RecyclerViewWhereNeedUpdate
@@ -52,8 +60,7 @@ import com.view.appview.chat.OnChatMessageClick
  *      接收到TTS_STOP之后就要关闭
  */
 class ChatVm(
-
-) : ViewModel(){
+) : AndroidViewModel(application = MainApplication.getApp()){
 
     companion object {
         val TAG: String = ChatVm::class.java.name
@@ -61,17 +68,87 @@ class ChatVm(
         val mainHandler: Handler = Handler(Looper.getMainLooper())
     }
 
-    var chatMessageHandler = MainApplication.getChatMessageHandler()
+    //-----------------------Ao-----------------------
+
+    // service
+    // ❌ 不要这样：private var chatService: ChatService? = null 因为Service本身是一个Context而且生命周期大于ViewModel，ViewModel直接持有会造成内存泄露
+    // ✅ 改为：只持有 Binder 或通过 Binder 调用方法
+    private var chatServiceBinder: ChatService.ChatServiceBinder? = null
+    val chatServiceBoundLd = MutableLiveData(false)
+    private val chatServiceConnection = object : ServiceConnection {
+        override fun onServiceConnected(
+            name: ComponentName?,
+            service: IBinder?
+        ) {
+            val binder = service as ChatService.ChatServiceBinder
+            chatServiceBoundLd.postValue(true)
+            // 连接成功使用之后
+            realtimeChatController = binder.getChatMessageHandler()
+
+            // 成功绑定的回调
+            onBoundChatService?.run()
+        }
+
+        override fun onServiceDisconnected(name: ComponentName?) {
+            chatServiceBoundLd.postValue(false)
+            chatServiceBinder = null
+            realtimeChatController = null
+        }
+
+        override fun onBindingDied(name: ComponentName?) {
+            super.onBindingDied(name)
+            // 1. Service 所在的进程被系统杀死（内存不足）
+            // 2. Service 进程崩溃
+            // 3. 系统资源紧张时主动清理
+
+            Log.w(AgentEmojiVm.Companion.TAG, "Service binding died - process was killed")
+            chatServiceBoundLd.postValue(false)
+
+            // 需要重新绑定
+            // rebindService() // 可以在这里自动重试
+        }
+
+        override fun onNullBinding(name: ComponentName?) {
+            super.onNullBinding(name)
+            // Service 的 onBind() 返回了 null
+            Log.e(AgentEmojiVm.Companion.TAG, "Service returned null binding - check Service implementation")
+            chatServiceBoundLd.postValue(false)
+        }
+    }
+
+    var onBoundChatService: kotlinx.coroutines.Runnable? = null
+
+    fun initService(onBoundChatService: kotlinx.coroutines.Runnable){
+        this.onBoundChatService = onBoundChatService
+        // 启动Service的intent
+        val intent = Intent(application, ChatService::class.java)
+        // 尝试绑定服务，乐观认为mainActivity已经启动了service
+        application.bindService(intent, chatServiceConnection, BIND_AUTO_CREATE)
+    }
+
+    fun disconnectService() {
+        application.let { context ->
+            if (chatServiceBoundLd.value == true) {
+                try {
+                    context.unbindService(chatServiceConnection)
+                    Log.d(AgentEmojiVm.Companion.TAG, "Service disconnected successfully")
+                } catch (e: Exception) {
+                    Log.e(AgentEmojiVm.Companion.TAG, "Error disconnecting service", e)
+                }
+            }
+        }
+        chatServiceBoundLd.postValue(false)
+        chatServiceBinder = null
+        realtimeChatController = null
+    }
 
     fun initResource(
         activity: FragmentActivity,
         ao : MessageContactItemAo?,
         whereNeedUpdate: RecyclerViewWhereNeedUpdate,
-        vadCallTextCallback: VADCallTextCallback,
+        onReceiveAgentTextCallback: OnReceiveAgentTextCallback,
         onVadChatStateChange: OnVadChatStateChange
     ) {
-        chatMessageHandler = MainApplication.getChatMessageHandler()
-
         // 初始化网络请求
         val initNetworkRunnable = {
             NetworkLoadUtils.showDialog(activity)
@@ -89,13 +166,13 @@ class ChatVm(
         messageAo = ao
         Log.i("ChatMessageHandler", "ao1: ${GSON.toJson(ao)}")
         // 初始化ChatMessageHandler
-        MainApplication.getChatMessageHandler().initResource(
+        realtimeChatController?.initResource(
             chatActivity = activity,
             ao = messageAo,
             chatAAo = aao,
             initNetworkRunnable = initNetworkRunnable,
             whereNeedUpdate = whereNeedUpdate,
-            vadCallTextCallback = vadCallTextCallback,
+            onReceiveAgentTextCallback = onReceiveAgentTextCallback,
             onVadChatStateChange = onVadChatStateChange
         )
 
@@ -111,7 +188,7 @@ class ChatVm(
     fun initAdapter(onChatMessageClick : OnChatMessageClick){
         adapter = ChatMessageAdapter(
             // 这里是初始化，要是chatManagerPointer == null直接报错吧
-            chatMessageHandler.getChatManagerPointer().getViewChatMessageList(),
+            realtimeChatController!!.getChatManagerPointer().getViewChatMessageList(),
             onChatMessageClick
         )
     }
@@ -138,9 +215,9 @@ class ChatVm(
 
     // chatHistory First
     fun doGetLastChat(context: Context, callback: SyncRequestCallback){
-        if (chatMessageHandler.messageContactItemAo != null) {
+        if (realtimeChatController?.messageContactItemAo != null) {
             MainApplication.getApiRequestImplInstance().getLastChat(
-                chatMessageHandler.messageContactItemAo!!.contactId!!,
+                realtimeChatController?.messageContactItemAo!!.contactId!!,
                 object : OnSuccessCallback<BaseResponse<ChatMessageResponse>>{
                     override fun onResponse(response: BaseResponse<ChatMessageResponse>?) {
                         AppResponseUtil.handleSyncResponseEx(
@@ -170,9 +247,9 @@ class ChatVm(
 
     // 特定时间段的chat history todo: 上拉上滑获取之前的chat History
     fun doGetTimeLimitChat(context: Context, deadline: String, callback: SyncRequestCallback){
-        if (chatMessageHandler.messageContactItemAo != null){
+        if (realtimeChatController?.messageContactItemAo != null){
             MainApplication.getApiRequestImplInstance().getTimeLimitChat(
-                chatMessageHandler.messageContactItemAo!!.contactId!!,
+                realtimeChatController?.messageContactItemAo!!.contactId!!,
                 deadline,
                 BaseConstant.Constant.CHAT_HISTORY_LIMIT_COUNT,
                 object : OnSuccessCallback<BaseResponse<ChatMessageResponse>>{
@@ -206,8 +283,8 @@ class ChatVm(
                                      callback: SyncRequestCallback){
 
         response?.data?.chatMessages?.let {
-            chatMessageHandler.getChatManagerPointer().setResponsesToViews(it)
-            chatMessageHandler.updateMessage()
+            realtimeChatController?.getChatManagerPointer()?.setResponsesToViews(it)
+            realtimeChatController?.updateMessage()
         }
 
         callback.onAllRequestSuccess()
@@ -247,7 +324,7 @@ class ChatVm(
             RealtimeRequestDataTypeEnum.TYPE to RealtimeRequestDataTypeEnum.USER_TEXT_MESSAGE.type,
             RealtimeRequestDataTypeEnum.DATA to inputText
         )
-        chatMessageHandler.realtimeChatWsClient!!.sendMessage(dataMap, true)
+        realtimeChatController?.realtimeChatWsClient!!.sendMessage(dataMap, true)
         // 发送的时候不用回显，因为此时还没拿到后端的messageId
     }
 
@@ -324,7 +401,7 @@ class ChatVm(
         val callAo = CallAo()
         callAo.agentName = aao.nameLd.value
         callAo.agentAvatar = aao.avatarUrlLd.value
-        callAo.agentId = chatMessageHandler.messageContactItemAo?.contactId?:""
+        callAo.agentId = realtimeChatController?.messageContactItemAo?.contactId?:""
 
         callAo.onMuteClickRunnable = onMuteClickRunnable
         callAo.onCallEndClickRunnable = onCallEndClickRunnable
@@ -332,8 +409,16 @@ class ChatVm(
         return callAo
     }
 
-    // 销毁
-    fun destroy(){
-        chatMessageHandler.destroy()
+
+
+    //-----------------------Logic-----------------------
+
+    var realtimeChatController: RealtimeChatController? = null
+
+    override fun onCleared() {
+        super.onCleared()
+
+//        chatMessageHandler?.destroy()
+        disconnectService()
     }
 }

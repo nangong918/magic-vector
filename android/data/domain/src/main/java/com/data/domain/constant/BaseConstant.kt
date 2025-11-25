@@ -34,8 +34,10 @@ class BaseConstant {
 
     // url
     object ConstantUrl {
-        private const val LOCAL_ADDRESS = "192.168.1.7:48888"
-        private const val TEST_ADDRESS = "192.168.1.2:48888"
+        const val LOCAL_HOST = "192.168.1.2"
+        const val TEST_HOST = "192.168.1.2"
+        const val LOCAL_ADDRESS = "$LOCAL_HOST:48888"
+        const val TEST_ADDRESS = "$TEST_HOST:48888"
 
 
         const val LOCAL_URL = "http://$LOCAL_ADDRESS";
@@ -94,5 +96,13 @@ class BaseConstant {
         // 分片大小: 兼容ws和mqtt的最大限制
         const val FRAGMENT_SIZE = 16 * 1024 // 16kB大小
         const val WS_SHARD_UPLOAD_DELAY = 20L // 分片上传延迟50ms，避免网络拥塞
+    }
+
+    object UDP {
+        const val PORT = 45000
+        const val MAX_PACKET_SIZE = 1450
+        const val MIN_FRAME_INTERVAL = 100L
+        const val BITMAP_QUALITY = 70
+        const val UDP_TIMEOUT = 5000
     }
 }

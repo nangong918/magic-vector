@@ -26,7 +26,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 class VisionManager {
 
     companion object {
-        val TAG = VisionManager::class.simpleName
+        const val TAG = "VisionManager"
     }
 
     private var isFrontCamera = false
@@ -40,10 +40,10 @@ class VisionManager {
     // 是否初始化了相机
     private val isInitializingCamera: AtomicBoolean = AtomicBoolean(false)
 
-    // 添加一个变量来保存当前帧的Bitmap
-    private var currentFrameBitmap: Bitmap? = null
-    fun getCurrentFrameBitmap(): Bitmap? {
-        return currentFrameBitmap
+    // 当前帧管理
+    private var visionCallback: VisionCallback? = null
+    fun setVisionCallback(visionCallback: VisionCallback) {
+        this.visionCallback = visionCallback
     }
 
     private lateinit var cameraExecutor: ExecutorService
@@ -140,8 +140,8 @@ class VisionManager {
                     matrix, true
                 )
 
-                // 缓存一帧
-                currentFrameBitmap = rotatedBitmap
+                // 为外部提供当前的vision
+                visionCallback?.onReceiveCurrentFrameBitmap(rotatedBitmap)
 
                 // 识别
                 detector?.detect(rotatedBitmap)

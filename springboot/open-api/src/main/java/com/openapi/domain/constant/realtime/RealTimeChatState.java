@@ -13,32 +13,32 @@ public enum RealTimeChatState {
     会话状态：chatState
     1. 未会话 -> agent回复中(包含llm和tts) -> 会话结束
     2. 未会话 -> 录音中 -> 等待Agent回复 -> agent回复中(包含llm和tts) -> 会话结束
-    3. 未会话 -> agent回复中 -> 等待function call结果 -> agent回复中 -> 会话结束
-    4. 未会话 -> 录音中 -> 等待Agent回复 -> agent回复中 -> 等待function call结果 -> agent回复中 -> 会话结束
     状态管理需要用AtomicResource, 并且使用synchronized上锁，使用并发设计模式
     */
     // 未会话
-    UNCONVERSATION("未会话"),
+    UNCONVERSATION(0, "未会话"),
     // 录音中
-    RECORDING("录音中"),
-    // 等到Agent回复
-    WAITING_AGENT_REPLY("等待Agent回复"),
+    RECORDING(1, "录音中"),
+    // 等到Agent回复 (莫信号调用中)
+    WAITING_AGENT_REPLY(2, "等待Agent回复"),
     // agent回复中
-    AGENT_REPLYING("agent回复中"),
-    // 等待function call结果
-    WAITING_FUNCTION_CALL_RESULT("等待function call结果"),
+    AGENT_REPLYING(3, "agent回复中"),
     // 会话结束
-    CONVERSATION_END("会话结束"),
+    CONVERSATION_END(4, "会话结束"),
     ;
+    private final int code;
     private final String value;
-    RealTimeChatState(String value) {
+    RealTimeChatState(int code, String value) {
+        this.code = code;
         this.value = value;
     }
+
+    // code -> enum
     @NotNull
-    public static RealTimeChatState getByValue(String value) {
-        for (RealTimeChatState realTimeChatState : RealTimeChatState.values()) {
-            if (realTimeChatState.value.equals(value)) {
-                return realTimeChatState;
+    public static RealTimeChatState getByCode(int code) {
+        for (RealTimeChatState value : values()) {
+            if (value.code == code) {
+                return value;
             }
         }
         return UNCONVERSATION;

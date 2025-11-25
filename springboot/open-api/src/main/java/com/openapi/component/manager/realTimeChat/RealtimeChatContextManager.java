@@ -8,8 +8,9 @@ import com.openapi.domain.constant.ModelConstant;
 import com.openapi.domain.constant.RoleTypeEnum;
 import com.openapi.domain.constant.realtime.RealtimeResponseDataTypeEnum;
 import com.openapi.domain.dto.ws.response.RealtimeChatTextResponse;
+import com.openapi.interfaces.connect.ConnectionSession;
 import com.openapi.utils.DateUtils;
-import com.openapi.websocket.manager.WebSocketMessageManager;
+import com.openapi.connect.websocket.manager.PersistentConnectMessageManager;
 import lombok.Getter;
 import lombok.NonNull;
 import lombok.Setter;
@@ -17,13 +18,9 @@ import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.ai.chat.client.ChatClient;
-import org.springframework.web.socket.WebSocketSession;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -53,85 +50,84 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 @Slf4j
 public class RealtimeChatContextManager implements
-        IRealTimeChatResponseManager, RealtimeProcess, ChatRealtimeState,
-        FunctionCallMethod{
+        IRealTimeChatResponseManager, RealtimeProcess, ChatRealtimeState {
 
-    private final WebSocketMessageManager webSocketMessageManager;
+    private final PersistentConnectMessageManager webSocketMessageManager;
     public RealtimeChatContextManager(
-            @NonNull WebSocketMessageManager webSocketMessageManager){
+            @NonNull PersistentConnectMessageManager webSocketMessageManager){
         this.webSocketMessageManager = webSocketMessageManager;
-    }
-
-    public void setAllFunctionCallFinished(AllFunctionCallFinished allFunctionCallFinished){
-        this.llmProxyContext.setFunctionCallFinishCallBack(allFunctionCallFinished);
     }
 
     /// chatClient      (chatModel是单例，但是chatClient需要集成Agent的记忆，以及每个chatClient的设定不同，所以不是单例)
     @Getter
     public ChatClient chatClient;
 
-    /// 会话任务
-    private final List<Object> chatTasks = new ArrayList<>();
-    private final List<Object> functionCallTasks = new ArrayList<>();
-
     /// 会话状态
+    @Getter
     public final LLMProxyContext llmProxyContext = new LLMProxyContext();
 
-    // 添加任务
-    public boolean addChatTask(Object task) {
-        return addTask(task, chatTasks);
-    }
-    public boolean addFunctionCallTask(Object task) {
-        return addTask(task, functionCallTasks);
-    }
-    private boolean addTask(Object task, @NotNull List<Object> tasks){
-        if (task == null){
-            log.warn("task is null");
-            return false;
-        }
-        if (task instanceof io.reactivex.disposables.Disposable ||
-                task instanceof reactor.core.Disposable ||
-                task instanceof Future<?>){
-            return tasks.add(task);
-        }
-        else {
-            log.warn("task is not a Disposable or a Future");
-        }
-        return false;
-    }
+    /// 会话任务   <p>出现了线程异常ConcurrentModificationException，需要进行线程同步
+    private final List<Object> chatTasks = new ArrayList<>();
 
-    // 取消任务(方法模板)
-    public final void cancelChatTask(){
-        cancelTask(chatTasks);
-        llmProxyContext.resetFunctionCall();
-    }
-    public final void cancelFunctionCallTask(){
-        cancelTask(functionCallTasks);
-        llmProxyContext.resetSimpleLLM();
-    }
-    private synchronized void cancelTask(@NotNull List<Object> tasks){
-        if (tasks.isEmpty()){
-            return;
-        }
-        int cancelCount = 0;
-        for (Object task: tasks){
+    // 添加任务
+    public void addChatTask(Object task) {
+        synchronized (chatTasks) {
             if (task == null){
                 log.warn("task is null");
-                continue;
+                return;
             }
-            switch (task) {
-                case io.reactivex.disposables.Disposable disposable -> disposable.dispose();
-                case reactor.core.Disposable disposable -> disposable.dispose();
-                case Future<?> future -> future.cancel(true);
-                default -> {
-                    log.warn("task is not a Disposable or a Future");
+            if (task instanceof io.reactivex.disposables.Disposable ||
+                    task instanceof reactor.core.Disposable ||
+                    task instanceof Future<?>){
+                chatTasks.add(task);
+            }
+            else {
+                log.warn("task is not a Disposable or a Future");
+            }
+        }
+    }
+
+    // 取消任务
+    public final void cancelChatTask(){
+        log.info("取消任务1");
+        synchronized (chatTasks) {
+            log.info("取消任务2");
+            llmProxyContext.reset();
+
+            if (chatTasks.isEmpty()) {
+                return;
+            }
+
+            // 使用迭代器安全遍历
+            Iterator<Object> iterator = chatTasks.iterator();
+            int cancelCount = 0;
+            while (iterator.hasNext()) {
+                Object task = iterator.next();
+                if (task == null) {
+                    log.warn("task is null");
                     continue;
                 }
+
+                try {
+                    switch (task) {
+                        case io.reactivex.disposables.Disposable disposable -> disposable.dispose();
+                        case reactor.core.Disposable disposable -> disposable.dispose();
+                        case Future<?> future -> future.cancel(true);
+                        default -> {
+                            log.warn("task is not a Disposable or a Future");
+                            continue;
+                        }
+                    }
+                    cancelCount++;
+                } catch (Exception e) {
+                    log.error("取消任务失败: {}", task.getClass().getSimpleName(), e);
+                }
             }
-            cancelCount++;
+
+            // 遍历完成后统一清空
+            chatTasks.clear();
+            log.info("取消了: {}条任务", cancelCount);
         }
-        tasks.clear();
-        log.info("取消了: {}条任务", cancelCount);
     }
 
     /// agent会话信息
@@ -139,19 +135,10 @@ public class RealtimeChatContextManager implements
     @Getter
     public String agentId;
     public long connectTimestamp = 0L;
-    public WebSocketSession session;
+    public ConnectionSession session;
     @Getter
     public McpSwitch mcpSwitch = new McpSwitch();
     public MixLLMManager mixLLMManager = new MixLLMManager();
-
-    /// vision chat
-    // image chat
-    public StringBuffer imageBase64 = new StringBuffer();
-    // image list chat (开发的时候再放出来)
-//    public List<StringBuffer> imageListBase64 = new ArrayList<>();
-    // video chat (开发的时候再放出来)
-//    public StringBuffer videoBase64 = new StringBuffer();
-    public VisionContext visionContext = new VisionContext();
 
     /// userQuestion
     @Getter
@@ -340,11 +327,9 @@ public class RealtimeChatContextManager implements
     @Override
     public void reset() {
         llmProxyContext.reset();
-        visionContext.reset();
         mixLLMManager.reset();
         // 取消正在执行的任务
-        cancelTask(chatTasks);
-        cancelTask(functionCallTasks);
+        cancelChatTask();
         // 取消任务并不会清除userQuestion
         userRequestQuestion = "";
         agentResponseStringBuffer.setLength(0);
@@ -358,7 +343,7 @@ public class RealtimeChatContextManager implements
     public int[] addCountAndCheckIsOverLimit(){
         int[] countAndLimit = new int[2];
         int currentLLMErrorCount = getLLMErrorCount();
-        boolean isOverLimit = currentLLMErrorCount >= ModelConstant.LLM_CONNECT_RESET_MAX_RETRY_COUNT;
+        boolean isOverLimit = currentLLMErrorCount >= ModelConstant.CONNECT_RESET_MAX_RETRY_COUNT;
         countAndLimit[0] = currentLLMErrorCount;
         countAndLimit[1] = isOverLimit ? 1 : 0;
         return countAndLimit;
@@ -409,25 +394,4 @@ public class RealtimeChatContextManager implements
         llmProxyContext.setTTSStartTime(time);
     }
 
-
-    @Override
-    public void addFunctionCallResult(String result) {
-        llmProxyContext.addFunctionCallResult(result);
-    }
-
-    @NotNull
-    @Override
-    public String getAllFunctionCallResult() {
-        return llmProxyContext.getAllFunctionCallResult();
-    }
-
-    @Override
-    public void setIsFinalResultTTS(boolean isFinalResultTTS) {
-        llmProxyContext.setIsFinalResultTTS(isFinalResultTTS);
-    }
-
-    @Override
-    public boolean isFinalResultTTS() {
-        return llmProxyContext.isFinalResultTTS();
-    }
 }

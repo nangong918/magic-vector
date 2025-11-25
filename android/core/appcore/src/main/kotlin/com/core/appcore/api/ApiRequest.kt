@@ -101,7 +101,7 @@ interface ApiRequest {
     @Multipart
     @POST("/chat/vision/upload/img")
     suspend fun uploadImageVision(
-        @Part image: MultipartBody.Part,
+        @Part images: List<MultipartBody.Part>,
         @Part("agentId") agentId: RequestBody,
         @Part("userId") userId: RequestBody,
         @Part("messageId") messageId: RequestBody,

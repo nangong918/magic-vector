@@ -20,7 +20,7 @@ public interface ModelConstant {
     int LIMIT_FETCH_CHAT_HISTORY_LENGTH = 50;
 
     // llm connect reset 最大重连次数
-    int LLM_CONNECT_RESET_MAX_RETRY_COUNT = 3;
+    int CONNECT_RESET_MAX_RETRY_COUNT = 3;
     // 模型响应超时时间
     long LLM_CONNECT_TIMEOUT_MILLIS = 3500;
     long VISION_TIMEOUT_MILLIS = 30_000L;
@@ -30,4 +30,6 @@ public interface ModelConstant {
     String SYSTEM_PROMPT = "你是我的傲娇小女友，回答问题的时候暧昧一些。回答的之后只能输出正常语句, 不能使用表情等。对话精简一些，最好在3至5句话。";
     // tts的句子最大长度, 模型限制是(0, 600]
     int TTS_MaxLength = 550;
+    // fps: range[0.1, 10] -> 0.5表示2秒抽取一帧
+    float VISION_FPS = 0.5f;
 }

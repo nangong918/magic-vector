@@ -1,7 +1,6 @@
 package com.magicvector
 
 import android.app.Application
-import android.util.Log
 import com.core.appcore.api.ApiRequest
 import com.core.appcore.api.ApiRequestProvider
 import com.core.baseutil.image.ImageManager
@@ -9,16 +8,13 @@ import com.data.dao.api.ApiRequestImpl
 import com.data.domain.ao.mixLLM.McpSwitch
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
-import com.magicvector.manager.ChatMapManager
-import com.magicvector.manager.ChatMessageHandler
-import com.magicvector.manager.MessageListManager
+import com.magicvector.manager.ChatMapController
+import com.magicvector.manager.MessageListController
 import com.magicvector.manager.yolo.VisionManager
 
 class MainApplication : Application() {
 
-    val tag = MainApplication::class.simpleName
-
-    lateinit var mApp: MainApplication
+    val tag = "MainApplication"
 
     //----------------------------启动APP调用----------------------------
 
@@ -35,6 +31,13 @@ class MainApplication : Application() {
     }
 
     companion object {
+        //==========App
+        private lateinit var mApp: MainApplication
+        fun getApp(): MainApplication {
+            return mApp
+        }
+
+        //==========Gson
 
         val GSON: Gson = GsonBuilder().setPrettyPrinting().create()
 
@@ -78,30 +81,26 @@ class MainApplication : Application() {
             return "test_user"
         }
 
-        private val messageListManager = MessageListManager()
-        fun getMessageListManager(): MessageListManager {
-            return messageListManager
+        private val messageListController = MessageListController()
+        fun getMessageListManager(): MessageListController {
+            return messageListController
         }
 
         // chatMapManager
-        private var chatMapManager: ChatMapManager? = null
-        fun getChatMapManager(): ChatMapManager {
-            if (chatMapManager == null) {
-                chatMapManager = ChatMapManager()
+        private var chatMapController: ChatMapController? = null
+        fun getChatMapManager(): ChatMapController {
+            if (chatMapController == null) {
+                chatMapController = ChatMapController()
             }
-            return chatMapManager!!
+            return chatMapController!!
         }
 
-        // 聊天资源管理
-        private var chatMessageHandler: ChatMessageHandler? = null
-        fun getChatMessageHandler(): ChatMessageHandler {
-            if (chatMessageHandler == null) {
-                chatMessageHandler = ChatMessageHandler() // 关键：要赋值！
-            }
-            return chatMessageHandler!!
-        }
-
-        // VisionManager
+        /**
+         * VisionManager
+         * 本地CameraX管理，无ws传输，无需放入realtimeChatController；
+         * 而udpVisionManager涉及到Udp传输，需要放入realtimeChatController
+         * 不涉及到跨Activity任务，无需使用Service
+         */
         private var visionManager: VisionManager? = null
         fun getVisionManager(): VisionManager {
             if (visionManager == null) {
@@ -129,6 +128,7 @@ class MainApplication : Application() {
 
 
     //----------------------------APP终止的时候调用----------------------------
+
     override fun onTerminate() {
         super.onTerminate()
     }

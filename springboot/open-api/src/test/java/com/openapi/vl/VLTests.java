@@ -88,7 +88,7 @@ public class VLTests {
         String localPath = "C:/Users/13225/Pictures/to.jpg";
         String base64Image = encodeImageToBase64(localPath);
 
-        String result = visionChatService.callWithFileBase64(
+        String result = visionChatService.vlSingleFileBase64(
                 base64Image,
                 "你现在看得到我吗？我给你看一下我的to签？你看得见上面的字吗？我不是很认得出来。"
         );
@@ -107,7 +107,7 @@ public class VLTests {
         String localPath = "C:/Users/13225/Pictures/message.png";
         String base64Image = encodeImageToBase64(localPath);
 
-        String result = visionChatService.callWithFileBase64(
+        String result = visionChatService.vlSingleFileBase64(
                 base64Image,
                 "你看看这个聊天记里，对方是不是很高冷啊，不理我。"
         );

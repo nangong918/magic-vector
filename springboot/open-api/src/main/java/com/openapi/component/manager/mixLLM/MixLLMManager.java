@@ -8,7 +8,7 @@ import com.openapi.domain.constant.realtime.RealtimeResponseDataTypeEnum;
 import com.openapi.domain.dto.ws.response.RealtimeChatTextResponse;
 import com.openapi.interfaces.mixLLM.LLMCallback;
 import com.openapi.interfaces.mixLLM.TTSCallback;
-import com.openapi.websocket.manager.WebSocketMessageManager;
+import com.openapi.connect.websocket.manager.PersistentConnectMessageManager;
 import io.reactivex.disposables.Disposable;
 import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
@@ -50,7 +50,7 @@ public class MixLLMManager extends AbstractMixLLMManager{
 
     public static TTSCallback getDefaultTTSCallback(
             RealtimeChatContextManager chatContextManager,
-            WebSocketMessageManager webSocketMessageManager){
+            PersistentConnectMessageManager webSocketMessageManager){
         return new TTSCallback() {
             @Override
             public void onSubscribeDisposable(Disposable disposable) {
@@ -129,7 +129,7 @@ public class MixLLMManager extends AbstractMixLLMManager{
 
     public static LLMCallback getDefaultLLMCallback(
             @NotNull RealtimeChatContextManager chatContextManager,
-            @NotNull WebSocketMessageManager webSocketMessageManager){
+            @NotNull PersistentConnectMessageManager webSocketMessageManager){
         return new LLMCallback() {
             @Override
             public void handleResult(String result) {

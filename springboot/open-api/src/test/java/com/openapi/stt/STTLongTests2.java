@@ -16,8 +16,6 @@ import io.reactivex.processors.PublishProcessor;
 
 import java.nio.ByteBuffer;
 import java.util.Base64;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
@@ -49,74 +47,69 @@ public class STTLongTests2 {
             }
 
             System.out.println("开始流式 TTS -> STT 测试...");
-            testStreamCall();
+
+            testStreamCall2();
 
         } catch (Exception e) {
             System.err.println("程序执行出错: " + e.getMessage());
         }
     }
 
-    private static void testStreamCall() throws NoApiKeyException, InputRequiredException, UploadFileException {
+    private static void testStreamCall2() throws NoApiKeyException, InputRequiredException, UploadFileException, InterruptedException {
         // 创建用于TTS音频数据流转发的处理器
         PublishProcessor<ByteBuffer> audioStreamProcessor = PublishProcessor.create();
 
         // 创建STT识别结果的字符串构建器
         AtomicReference<StringBuilder> sttResultBuilder = new AtomicReference<>(new StringBuilder());
-        CountDownLatch completionLatch = new CountDownLatch(1);
 
         // 先启动STT识别
-        startSTTRecognition(audioStreamProcessor, sttResultBuilder, completionLatch);
+        startSTTRecognition2(audioStreamProcessor, sttResultBuilder);
 
         // 然后启动TTS转换，将音频数据实时转发给STT
-        startTTSToSTTStream(audioStreamProcessor, completionLatch);
+        startTTSToSTTStream2(audioStreamProcessor);
+
+        Thread.sleep(120_000L);
     }
 
     /**
      * 启动STT识别
      */
-    private static void startSTTRecognition(Flowable<ByteBuffer> audioSource,
-                                            AtomicReference<StringBuilder> resultBuilder,
-                                            CountDownLatch completionLatch) {
-        new Thread(() -> {
-            try {
-                Recognition recognizer = new Recognition();
+    private static void startSTTRecognition2(Flowable<ByteBuffer> audioSource,
+                                            AtomicReference<StringBuilder> resultBuilder) {
+        try {
+            Recognition recognizer = new Recognition();
 
-                RecognitionParam sttParam = RecognitionParam.builder()
-                        .model(STT_MODEL)
-                        .format("pcm")
-                        .sampleRate(16000)
-                        .apiKey(API_KEY)
-                        .build();
+            RecognitionParam sttParam = RecognitionParam.builder()
+                    .model(STT_MODEL)
+                    .format("pcm")
+                    .sampleRate(16000)
+                    .apiKey(API_KEY)
+                    .build();
 
-                var disposable = recognizer.streamCall(sttParam, audioSource)
-                        .subscribe(
-                                result -> {
-                                    handleRecognitionResult(result, resultBuilder);
-                                },
-                                error -> {
-                                    System.err.println("STT 识别出错: " + error.getMessage());
-                                    completionLatch.countDown();
-                                },
-                                () -> {
-                                    System.out.println("\nSTT 识别完成");
-                                    String finalResult = resultBuilder.get().toString();
-                                    System.out.println("最终识别结果: " + finalResult);
-                                    completionLatch.countDown();
-                                }
-                        );
+            var disposable = recognizer.streamCall(sttParam, audioSource)
+                    .subscribe(
+                            result -> {
+                                handleRecognitionResult(result, resultBuilder);
+                            },
+                            error -> {
+                                System.err.println("STT 识别出错: " + error.getMessage());
+                            },
+                            () -> {
+                                System.out.println("\nSTT 识别完成");
+                                String finalResult = resultBuilder.get().toString();
+                                System.out.println("最终识别结果: " + finalResult);
+                            }
+                    );
 
-            } catch (Exception e) {
-                System.err.println("STT 调用异常: " + e.getMessage());
-                completionLatch.countDown();
-            }
-        }).start();
+        } catch (Exception e) {
+            System.err.println("STT 调用异常: " + e.getMessage());
+        }
     }
 
     /**
      * 启动TTS转换并实时转发音频数据到STT
      */
-    private static void startTTSToSTTStream(PublishProcessor<ByteBuffer> audioStreamProcessor,
-                                            CountDownLatch completionLatch) throws NoApiKeyException, InputRequiredException, UploadFileException {
+    private static void startTTSToSTTStream2(PublishProcessor<ByteBuffer> audioStreamProcessor) throws NoApiKeyException, InputRequiredException, UploadFileException {
         MultiModalConversationParam ttsParam = MultiModalConversationParam.builder()
                 .model(TTS_MODEL)
                 .apiKey(API_KEY)
@@ -162,19 +155,9 @@ public class STTLongTests2 {
             public void onError(Exception e) {
                 System.err.println("TTS 流式转换出错: " + e.getMessage());
                 audioStreamProcessor.onError(e);
-                completionLatch.countDown();
             }
         });
 
-        // 等待处理完成
-        try {
-            if (!completionLatch.await(120, TimeUnit.SECONDS)) {
-                System.out.println("处理超时");
-            }
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            System.err.println("处理被中断");
-        }
     }
 
     /**
