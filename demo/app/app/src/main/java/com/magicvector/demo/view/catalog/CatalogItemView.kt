@@ -1,4 +1,4 @@
-package com.magicvector.demo.view
+package com.magicvector.demo.view.catalog
 
 import android.annotation.SuppressLint
 import androidx.compose.foundation.clickable

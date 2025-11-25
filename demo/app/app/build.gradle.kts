@@ -69,6 +69,8 @@ dependencies {
     implementation(libs.androidx.compose.material3)
     implementation(libs.androidx.constraintlayout.compose)
     implementation(libs.androidx.compose.foundation)
+    // Compose:Coil
+    implementation("io.coil-kt:coil-compose:2.6.0")
 
     // AndroidX Test
     testImplementation(libs.junit)

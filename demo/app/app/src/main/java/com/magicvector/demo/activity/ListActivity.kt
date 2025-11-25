@@ -32,7 +32,7 @@ import com.magicvector.demo.activity.ui.theme.*
 import com.magicvector.demo.activity.ui.theme.AppDemoTheme
 import com.magicvector.demo.R
 import com.magicvector.demo.activity.ui.shape.bottomRoundedBackground
-import com.magicvector.demo.view.SendMessageView
+import com.magicvector.demo.view.message.SendMessageView
 
 class ListActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {

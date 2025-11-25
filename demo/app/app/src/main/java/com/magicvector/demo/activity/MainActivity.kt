@@ -27,7 +27,7 @@ import com.magicvector.demo.domain.vo.CatalogItem
 import com.magicvector.demo.manager.CatalogManager
 import com.magicvector.demo.manager.OnClickCatalogItem
 import com.magicvector.demo.activity.ui.theme.AppDemoTheme
-import com.magicvector.demo.view.CatalogItemList
+import com.magicvector.demo.view.catalog.CatalogItemList
 
 class MainActivity : ComponentActivity() {
 
