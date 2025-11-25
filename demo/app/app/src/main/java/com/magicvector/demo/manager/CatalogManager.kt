@@ -2,6 +2,7 @@ package com.magicvector.demo.manager
 
 import android.content.Context
 import android.content.Intent
+import com.magicvector.demo.activity.ListActivity
 import com.magicvector.demo.activity.NetworkActivity
 import com.magicvector.demo.domain.vo.CatalogItem
 
@@ -14,7 +15,13 @@ object CatalogManager {
                 title = "网络",
                 subtitle = "网络相关Demo",
                 cls = NetworkActivity::class.java
-            )
+            ),
+            CatalogItem(
+                id ="2",
+                title = "列表",
+                subtitle = "列表相关Demo",
+                cls = ListActivity::class.java
+            ),
         )
     }
 

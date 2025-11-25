@@ -13,9 +13,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.magicvector.demo.activity.NetworkActivity
+import com.magicvector.demo.activity.ui.theme.AppDemoTheme
+import com.magicvector.demo.activity.ui.theme.Pink40
 import com.magicvector.demo.domain.vo.CatalogItem
 import com.magicvector.demo.manager.OnClickCatalogItem
-import com.magicvector.demo.ui.theme.*
 
 @Composable
 fun CatalogItemList(

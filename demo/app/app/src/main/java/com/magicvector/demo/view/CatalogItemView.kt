@@ -21,7 +21,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.magicvector.demo.ui.theme.*
+import com.magicvector.demo.activity.ui.theme.Pink40
+import com.magicvector.demo.activity.ui.theme.Purple40
+import com.magicvector.demo.activity.ui.theme.PurpleGrey80
 
 @Composable
 fun SelectItemView(

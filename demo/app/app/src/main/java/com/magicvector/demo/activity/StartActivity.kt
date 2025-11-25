@@ -25,7 +25,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.magicvector.demo.R
 import com.magicvector.demo.domain.constant.BaseConstant
-import com.magicvector.demo.ui.theme.AppDemoTheme
+import com.magicvector.demo.activity.ui.theme.AppDemoTheme
 import com.magicvector.demo.utils.activity.ActivityLaunchUtils
 import java.util.Timer
 import java.util.TimerTask
