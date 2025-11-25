@@ -179,7 +179,7 @@ fun SentMessage(
                         color = S1_800,
                         fontSize = 17.sp,
                         modifier = Modifier.padding(horizontal = 5.dp),
-                        textAlign = TextAlign.End // 文本右对齐
+                        textAlign = TextAlign.Start
                     )
                 }
             }

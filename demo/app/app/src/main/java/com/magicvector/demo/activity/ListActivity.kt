@@ -7,7 +7,6 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -16,11 +15,11 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextOverflow
@@ -32,7 +31,10 @@ import com.magicvector.demo.activity.ui.theme.*
 import com.magicvector.demo.activity.ui.theme.AppDemoTheme
 import com.magicvector.demo.R
 import com.magicvector.demo.activity.ui.shape.bottomRoundedBackground
+import com.magicvector.demo.view.message.MessageItem
+import com.magicvector.demo.view.message.MessageListView
 import com.magicvector.demo.view.message.SendMessageView
+import com.magicvector.demo.view.message.rememberChatListState
 
 class ListActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -89,23 +91,65 @@ fun ListScreen() {
 
 @Composable
 fun MessageList() {
-    LazyColumn (
+    val chatState = rememberChatListState()
+
+    // 初始化示例数据
+    LaunchedEffect(Unit) {
+        val initialMessages = List(20) { index ->
+            if (index % 2 == 0) {
+                MessageItem.Received(
+                    id = "received_$index",
+                    messageText = "这是收到的消息 $index",
+                    timeText = "2025/10/9 ${10 + index % 10}:${index % 60}",
+                    isShowImage = index % 5 == 0
+                )
+            } else {
+                MessageItem.Sent(
+                    id = "sent_$index",
+                    messageText = "这是发送的消息 $index",
+                    timeText = "2025/10/9 ${10 + index % 10}:${index % 60}",
+                    isShowImage = index % 5 == 0
+                )
+            }
+        }
+        chatState.addNewMessages(initialMessages)
+    }
+
+    MessageListView(
         modifier = Modifier
             .fillMaxSize()
-            .padding(start = 5.dp, end = 5.dp),
-        // 对应 app:stackFromEnd="true"
-        reverseLayout = true,
-        verticalArrangement = Arrangement.Top
-    ) {
-        items(50) { index ->
-            Text(
-                text = "消息 $index",
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(8.dp)
-            )
+            .padding(horizontal = 5.dp),
+        state = chatState,
+        onLoadMore = {
+            // 模拟加载更多数据
+            val moreMessages = List(10) { index ->
+                val newIndex = chatState.messages.size + index
+                if (newIndex % 2 == 0) {
+                    MessageItem.Received(
+                        id = "received_more_$newIndex",
+                        messageText = "加载的历史消息 $newIndex",
+                        timeText = "2025/10/8 ${10 + newIndex % 10}:${newIndex % 60}",
+                        isShowImage = newIndex % 5 == 0
+                    )
+                } else {
+                    MessageItem.Sent(
+                        id = "sent_more_$newIndex",
+                        messageText = "加载的历史消息 $newIndex",
+                        timeText = "2025/10/8 ${10 + newIndex % 10}:${newIndex % 60}",
+                        isShowImage = newIndex % 5 == 0
+                    )
+                }
+            }
+            chatState.loadMoreMessages(moreMessages)
+        },
+        onMessageClick = { message ->
+            // 处理消息点击事件
+            println("点击了消息: ${when (message) {
+                is MessageItem.Received -> "收到: ${message.messageText}"
+                is MessageItem.Sent -> "发送: ${message.messageText}"
+            }}")
         }
-    }
+    )
 }
 
 @Composable

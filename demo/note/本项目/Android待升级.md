@@ -113,6 +113,10 @@ singleInstance模式 (MessageFragment) -> (ChatActivity) -> (UserDetailActivity)
 
 
 # Demo App
+* github 上获取Compose Demo
+* RecyclerView -> Compose LazyList
+* 参考JetChat重构App的View
+* 引入Dagger注入
 * Websocket的心跳请求demo
 * 广播监听网络状态变化Demo
 * 聊天记录的多数据源合并Demo
@@ -125,7 +129,6 @@ singleInstance模式 (MessageFragment) -> (ChatActivity) -> (UserDetailActivity)
 * JNI编写库Demo (Cpp的STL库)
 * JNI 调用 FFmpeg编辑的Demo -> Github获取.
 * View绘制与事件分发机制Demo
-* Dagger注入Demo
 * Jetpack compose实现传统的一些view (Jetpack compose在github上的的viewDemo App)
 * Activity, Fragment通讯以及生命周期
 * 性能测试, 内存泄露检测demo
