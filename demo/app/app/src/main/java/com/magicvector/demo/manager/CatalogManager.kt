@@ -18,8 +18,8 @@ object CatalogManager {
             ),
             CatalogItem(
                 id ="2",
-                title = "列表",
-                subtitle = "列表相关Demo",
+                title = "My列表",
+                subtitle = "自定义compose列表相关Demo",
                 cls = ListActivity::class.java
             ),
         )

@@ -21,7 +21,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextOverflow
@@ -33,6 +32,7 @@ import com.magicvector.demo.activity.ui.theme.*
 import com.magicvector.demo.activity.ui.theme.AppDemoTheme
 import com.magicvector.demo.R
 import com.magicvector.demo.activity.ui.shape.bottomRoundedBackground
+import com.magicvector.demo.view.SendMessageView
 
 class ListActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -92,7 +92,7 @@ fun MessageList() {
     LazyColumn (
         modifier = Modifier
             .fillMaxSize()
-            .padding(start = 20.dp, end = 20.dp),
+            .padding(start = 5.dp, end = 5.dp),
         // 对应 app:stackFromEnd="true"
         reverseLayout = true,
         verticalArrangement = Arrangement.Top
@@ -110,17 +110,32 @@ fun MessageList() {
 
 @Composable
 fun SendMessagePlaceholder() {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(60.dp) // 预留高度，后续根据实际设计调整
-            .background(A1_200)
-    ) {
-        Text(
-            text = "发送消息区域 (待实现)",
-            modifier = Modifier.align(Alignment.Center)
-        )
-    }
+    SendMessageView(
+        onSendClick = { message ->
+            // 处理发送消息
+            println("发送消息: $message")
+        },
+        onImageClick = {
+            // 处理图片点击
+            println("图片按钮点击")
+        },
+        onCallClick = {
+            // 处理通话点击
+            println("通话按钮点击")
+        },
+        onVideoClick = {
+            // 处理视频点击
+            println("视频按钮点击")
+        },
+        onAudioTouch = { isStart ->
+            // 处理录音开始/结束
+            if (isStart) {
+                println("开始录音")
+            } else {
+                println("结束录音")
+            }
+        }
+    )
 }
 
 @Composable
