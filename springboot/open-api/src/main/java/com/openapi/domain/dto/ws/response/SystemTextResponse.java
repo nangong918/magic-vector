@@ -17,8 +17,6 @@ public class SystemTextResponse {
     public String agentId;
     // userId
     public String userId;
-    // 消息Id
-    public String messageId;
     /**
      * event
      * @see com.openapi.domain.constant.realtime.RealtimeSystemResponseEventEnum

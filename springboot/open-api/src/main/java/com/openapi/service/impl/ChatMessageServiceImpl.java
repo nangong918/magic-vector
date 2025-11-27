@@ -33,7 +33,7 @@ public class ChatMessageServiceImpl implements ChatMessageService {
      * @return 消息Id
      */
     @Override
-    public String insertOne(@NotNull String agentId, @NotNull String message, boolean isUser, String userId) {
+    public Long insertOne(@NotNull String agentId, @NotNull String message, boolean isUser, String userId) {
         ChatMessageDo chatMessageDo = new ChatMessageDo();
         chatMessageDo.setAgentId(agentId);
         chatMessageDo.setContent(message);
@@ -45,7 +45,7 @@ public class ChatMessageServiceImpl implements ChatMessageService {
     }
 
     @Override
-    public String insertOne(@NotNull ChatMessageDo chatMessageDo){
+    public Long insertOne(@NotNull ChatMessageDo chatMessageDo){
         chatMessageMapper.insert(chatMessageDo);
         return chatMessageDo.getId();
     }

@@ -145,10 +145,14 @@ public class RealtimeChatContextManager implements
     @Setter
     private String userRequestQuestion = "";
     public StringBuffer agentResponseStringBuffer = new StringBuffer();
-    private final AtomicInteger currentAgentResponseCount = new AtomicInteger(0);
 
     /// 当前聊天会话信息
-    private String currentMessageId = String.valueOf(IdUtil.getSnowflake().nextId());
+    @Getter
+    @Setter
+    private long userMessageId = IdUtil.getSnowflake().nextId();
+    @Getter
+    @Setter
+    private long agentMessageId = IdUtil.getSnowflake().nextId();
     public long currentUserMessageTimestamp = System.currentTimeMillis();
     public long currentAgentMessageTimestamp = System.currentTimeMillis();
     public LocalDateTime currentMessageDateTime = LocalDateTime.now();
@@ -160,18 +164,19 @@ public class RealtimeChatContextManager implements
         mcpSwitch.camera = McpSwitch.McpSwitchMode.FREELY.code;
 
         // 填充新的会话数据
-        currentMessageId = String.valueOf(IdUtil.getSnowflake().nextId());
+        userMessageId = IdUtil.getSnowflake().nextId();
+        agentMessageId = IdUtil.getSnowflake().nextId();
         currentUserMessageTimestamp = System.currentTimeMillis();
         currentMessageDateTime = LocalDateTime.now();
 
-        log.info("开启新的message，MessageId是：{}", currentMessageId);
+        log.info("开启新的message，MessageId是：{}", userMessageId);
     }
 
     public String getCurrentContextParam(){
         Map<String, String> param = Map.of(
                 "userId", userId,
-                "agentId", agentId,
-                "messageId", currentMessageId/*,
+                "agentId", agentId/*,
+                "messageId", String.valueOf(userMessageId),
                 "timestamp", currentMessageDateTime.toString(),
                 "userQuestion", userQuestion*/
         );
@@ -210,20 +215,23 @@ public class RealtimeChatContextManager implements
         response.setUserId(userId);
         response.setRole(RoleTypeEnum.AGENT.getValue());
         response.setContent(agentResponseStringBuffer.toString());
-        response.setMessageId(getCurrentAgentMessageId());
+        response.setMessageId(getAgentMessageId());
         response.setTimestamp(currentAgentMessageTimestamp);
         response.setChatTime(getCurrentMessageTimeStr());
         return response;
     }
 
     @Override
-    public @NonNull RealtimeChatTextResponse getCurrentFragmentAgentResponse(@NonNull String fragmentText) {
+    public @NonNull RealtimeChatTextResponse getCurrentFragmentAgentResponse(
+            @NonNull String fragmentText,
+            long messageId
+    ) {
         val response = new RealtimeChatTextResponse();
         response.setAgentId(agentId);
         response.setUserId(userId);
         response.setRole(RoleTypeEnum.AGENT.getValue());
         response.setContent(fragmentText);
-        response.setMessageId(getCurrentAgentMessageId());
+        response.setMessageId(messageId);
         response.setTimestamp(currentAgentMessageTimestamp);
         response.setChatTime(getCurrentMessageTimeStr());
         return response;
@@ -237,7 +245,7 @@ public class RealtimeChatContextManager implements
         response.setUserId(userId);
         response.setRole(RoleTypeEnum.USER.getValue());
         response.setContent(sttResult);
-        response.setMessageId(getCurrentUserMessageId());
+        response.setMessageId(getUserMessageId());
         response.setTimestamp(currentUserMessageTimestamp);
         response.setChatTime(getCurrentMessageTimeStr());
         return response;
@@ -251,29 +259,12 @@ public class RealtimeChatContextManager implements
         response.setUserId(userId);
         response.setRole(RoleTypeEnum.USER.getValue());
         response.setContent(userChatText);
-        response.setMessageId(getCurrentUserMessageId());
+        response.setMessageId(getUserMessageId());
         response.setTimestamp(currentUserMessageTimestamp);
         response.setChatTime(getCurrentMessageTimeStr());
         return response;
     }
 
-    private String getAgentMessageHeaderId(){
-        return RoleTypeEnum.AGENT.getValue() + String.valueOf(currentAgentResponseCount.get());
-    }
-    public int addAgentMessageHeaderCount(){
-        return currentAgentResponseCount.addAndGet(1);
-    }
-    private String getUserMessageHeaderId(){
-        return RoleTypeEnum.USER.getValue() + "0";
-    }
-    @NonNull
-    private String getCurrentAgentMessageId(){
-        return getAgentMessageHeaderId() + ":" + currentMessageId;
-    }
-    @NonNull
-    private String getCurrentUserMessageId(){
-        return getUserMessageHeaderId() + ":" + currentMessageId;
-    }
     @NonNull
     private String getCurrentMessageTimeStr(){
         return DateUtils.yyyyMMddHHmmssToString(this.currentMessageDateTime);
@@ -333,7 +324,6 @@ public class RealtimeChatContextManager implements
         // 取消任务并不会清除userQuestion
         userRequestQuestion = "";
         agentResponseStringBuffer.setLength(0);
-        currentAgentResponseCount.set(0);
 
         log.info("[Session] 重置会话");
     }

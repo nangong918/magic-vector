@@ -8,4 +8,5 @@ public interface LLMCallback {
     // 处理固定String
     void handleResult(String result);
     // 处理流式String
+    void handleStreamResult(String fragmentResult, long messageId);
 }

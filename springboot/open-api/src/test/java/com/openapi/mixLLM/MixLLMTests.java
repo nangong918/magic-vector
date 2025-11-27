@@ -306,6 +306,11 @@ public class MixLLMTests {
             public void handleResult(String result) {
                 log.info("[MixLLMManager] llm result: {}", result);
             }
+
+            @Override
+            public void handleStreamResult(String fragmentResult, long messageId) {
+                log.info("[MixLLMManager] llm stream result: {}, messageId: {}", fragmentResult, messageId);
+            }
         });
 
         Thread.sleep(30_000L);

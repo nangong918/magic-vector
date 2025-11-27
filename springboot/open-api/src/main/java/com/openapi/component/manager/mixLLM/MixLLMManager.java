@@ -1,5 +1,6 @@
 package com.openapi.component.manager.mixLLM;
 
+import cn.hutool.core.util.IdUtil;
 import com.alibaba.fastjson.JSON;
 import com.openapi.component.manager.realTimeChat.RealtimeChatContextManager;
 import com.openapi.domain.ao.mixLLM.MixLLMAudio;
@@ -13,6 +14,7 @@ import io.reactivex.disposables.Disposable;
 import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
 import org.reactivestreams.Subscription;
+import org.springframework.util.StringUtils;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -128,13 +130,46 @@ public class MixLLMManager extends AbstractMixLLMManager{
     }
 
     public static LLMCallback getDefaultLLMCallback(
-            @NotNull RealtimeChatContextManager chatContextManager,
-            @NotNull PersistentConnectMessageManager webSocketMessageManager){
+            @NotNull RealtimeChatContextManager contextManager,
+            @NotNull PersistentConnectMessageManager connectMessageManager){
         return new LLMCallback() {
             @Override
             public void handleResult(String result) {
+                if (!StringUtils.hasText(result)) {
+                    return;
+                }
+
+                // 消息添加到context
+                contextManager.agentResponseStringBuffer.append(result);
+
                 // 消息发送给设备端
-                RealtimeChatTextResponse agentFragmentResponse = chatContextManager.getCurrentFragmentAgentResponse(result);
+                RealtimeChatTextResponse agentResponse = contextManager.getUpToNowAgentResponse();
+
+                // 发送消息给Client
+                String agentResponseJson = JSON.toJSONString(agentResponse);
+                Map<String, String> fragmentResponseMap = new HashMap<>();
+                fragmentResponseMap.put(RealtimeResponseDataTypeEnum.TYPE, RealtimeResponseDataTypeEnum.TEXT_CHAT_RESPONSE.getType());
+                fragmentResponseMap.put(RealtimeResponseDataTypeEnum.DATA, agentResponseJson);
+                String response = JSON.toJSONString(fragmentResponseMap);
+                connectMessageManager.submitMessage(
+                        contextManager.agentId,
+                        response
+                );
+
+                log.info("[LLMCallback] LLM-Tools结果：{}", result);
+            }
+
+            @Override
+            public void handleStreamResult(String fragmentResult, long messageId) {
+                if (!StringUtils.hasText(fragmentResult)) {
+                    return;
+                }
+
+                // 消息添加到context
+                contextManager.agentResponseStringBuffer.append(fragmentResult);
+
+                // 消息发送给设备端
+                RealtimeChatTextResponse agentFragmentResponse = contextManager.getCurrentFragmentAgentResponse(fragmentResult, messageId);
 
                 // 发送消息给Client
                 String agentFragmentResponseJson = JSON.toJSONString(agentFragmentResponse);
@@ -142,12 +177,12 @@ public class MixLLMManager extends AbstractMixLLMManager{
                 fragmentResponseMap.put(RealtimeResponseDataTypeEnum.TYPE, RealtimeResponseDataTypeEnum.TEXT_CHAT_RESPONSE.getType());
                 fragmentResponseMap.put(RealtimeResponseDataTypeEnum.DATA, agentFragmentResponseJson);
                 String response = JSON.toJSONString(fragmentResponseMap);
-                webSocketMessageManager.submitMessage(
-                        chatContextManager.agentId,
+                connectMessageManager.submitMessage(
+                        contextManager.agentId,
                         response
                 );
 
-                log.info("[LLMCallback] LLM-Tools结果：{}", result);
+                log.info("[LLMCallback] Stream LLM-Tools结果：{}", fragmentResult);
             }
         };
     }

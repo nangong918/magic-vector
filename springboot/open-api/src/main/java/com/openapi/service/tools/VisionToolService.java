@@ -15,7 +15,6 @@ public interface VisionToolService {
             """)
     String getVisionResult(
             @ToolParam(description = "agentId") String agentId,
-            @ToolParam(description = "用户Id") String userId,
-            @ToolParam(description = "消息Id") String messageId
+            @ToolParam(description = "用户Id") String userId
     );
 }

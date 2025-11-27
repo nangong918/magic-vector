@@ -2,6 +2,7 @@ package com.openapi.domain.dto.ws.response;
 
 import com.openapi.domain.constant.RoleTypeEnum;
 import lombok.Data;
+import lombok.NonNull;
 
 @Data
 public class RealtimeChatTextResponse {
@@ -13,8 +14,13 @@ public class RealtimeChatTextResponse {
     public Integer role = RoleTypeEnum.AGENT.getValue();
     // 内容
     public String content;
-    // 消息Id
-    public String messageId;
+    // 图片url
+    public String messageImageUrl;
+    // 消息Id (也是mysqlId 暂时不做映射和加密)
+    public long messageId;
+    // 会话轮次
+    @NonNull
+    public Integer conversationTimes = 0;
     // timestamp: 消息发送的时间 用于排序
     public Long timestamp;
     // date time：消息发送时间 用于展示

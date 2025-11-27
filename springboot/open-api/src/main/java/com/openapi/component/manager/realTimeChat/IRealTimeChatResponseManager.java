@@ -19,10 +19,15 @@ public interface IRealTimeChatResponseManager {
 
     /**
      * 到目当前的Agent片段响应
+     * @param fragmentText   片段文本
+     * @param messageId       消息id
      * @return  text响应
      */
     @NonNull
-    RealtimeChatTextResponse getCurrentFragmentAgentResponse(@NonNull String fragmentText);
+    RealtimeChatTextResponse getCurrentFragmentAgentResponse(
+            @NonNull String fragmentText,
+            long messageId
+    );
 
     /**
      * 获取用户语音识别结果响应

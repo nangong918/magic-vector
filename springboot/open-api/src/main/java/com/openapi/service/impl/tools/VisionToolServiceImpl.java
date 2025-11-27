@@ -46,10 +46,9 @@ public class VisionToolServiceImpl implements VisionToolService {
     @Override
     public String getVisionResult(
             @ToolParam(description = "agentId") String agentId,
-            @ToolParam(description = "用户Id") String userId,
-            @ToolParam(description = "消息Id") String messageId
+            @ToolParam(description = "用户Id") String userId
     ) {
-        log.info("[visionTool::getVisionResult] Agent传入入参检查, agentId: {}, userId: {}, messageId: {}", agentId, userId, messageId);
+        log.info("[visionTool::getVisionResult] Agent传入入参检查, agentId: {}, userId: {}", agentId, userId);
 
         RealtimeChatContextManager chatContextManager = Optional.ofNullable(sessionConfig.realtimeChatContextManagerMap())
                 .map(map -> map.get(agentId))
@@ -67,7 +66,6 @@ public class VisionToolServiceImpl implements VisionToolService {
             SystemTextResponse systemTextResponse = new SystemTextResponse(
                     agentId,
                     userId,
-                    messageId,
                     RealtimeSystemResponseEventEnum.UPLOAD_PHOTO.getCode()
             );
 

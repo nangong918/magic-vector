@@ -13,7 +13,7 @@ import java.time.LocalDateTime;
 @Data
 public class ChatMessageDo {
     @Id
-    private String id; // 消息Id, 不自增，由RealtimeChatContextManager控制
+    private Long id; // 消息Id, 不自增，由RealtimeChatContextManager控制
     private String agentId; // 也可也理解为sessionId
     private String userId;
     private String content;

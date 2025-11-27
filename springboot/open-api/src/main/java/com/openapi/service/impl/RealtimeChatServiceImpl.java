@@ -155,7 +155,7 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
         ChatMessageDo chatMessageDo = null;
         try {
             chatMessageDo = chatMessageConverter.realtimeChatTextResponseToChatMessageDo(userAudioSttResponse, userAudioSttResponse.chatTime);
-            String messageId = chatMessageService.insertOne(chatMessageDo);
+            Long messageId = chatMessageService.insertOne(chatMessageDo);
             log.info("保存用户TextChat数据到数据库：{}", messageId);
         } catch (Exception e) {
             log.error("保存用户TextChat数据到数据库异常", e);
@@ -395,7 +395,7 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
             ChatMessageDo chatMessageDo = null;
             try {
                 chatMessageDo = chatMessageConverter.realtimeChatTextResponseToChatMessageDo(userAudioSttResponse, userAudioSttResponse.chatTime);
-                String messageId = chatMessageService.insertOne(chatMessageDo);
+                Long messageId = chatMessageService.insertOne(chatMessageDo);
                 log.info("保存用户语音识别结果到数据库：{}", messageId);
             } catch (Exception e) {
                 log.error("保存用户语音识别结果到数据库失败：", e);
