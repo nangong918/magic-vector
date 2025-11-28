@@ -1,5 +1,6 @@
 package com.magicvector.demo.activity
 
+import android.annotation.SuppressLint
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.LocalActivity
@@ -20,6 +21,12 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextOverflow
@@ -31,10 +38,12 @@ import com.magicvector.demo.activity.ui.theme.*
 import com.magicvector.demo.activity.ui.theme.AppDemoTheme
 import com.magicvector.demo.R
 import com.magicvector.demo.activity.ui.shape.bottomRoundedBackground
+import com.magicvector.demo.view.message.ChatListState
 import com.magicvector.demo.view.message.MessageItem
 import com.magicvector.demo.view.message.MessageListView
 import com.magicvector.demo.view.message.SendMessageView
 import com.magicvector.demo.view.message.rememberChatListState
+import kotlinx.coroutines.CoroutineScope
 
 class ListActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -52,6 +61,9 @@ class ListActivity : ComponentActivity() {
 @Composable
 fun ListScreen() {
     val activity = LocalActivity.current
+    // 将 ChatListState 提升到 ListScreen 级别
+    val chatState = rememberChatListState()
+    val coroutineScope = rememberCoroutineScope()
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
@@ -64,8 +76,8 @@ fun ListScreen() {
             )
         },
         bottomBar = {
-            // 预留发送消息区域
-            SendMessagePlaceholder()
+            // 传递 chatState 给发送消息组件
+            SendMessagePlaceholder(chatState = chatState, coroutineScope = coroutineScope)
         }
     ) { innerPadding ->
         Column(
@@ -74,33 +86,35 @@ fun ListScreen() {
                 .padding(innerPadding)
                 .background(color = A1_200)
         ) {
-                // 背景视图 (对应 viewBackground)
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .weight(1f)
-                        .bottomRoundedBackground(color = Green10, cornerRadius = 32.dp)
-                ) {
-                    // 消息列表 (对应 rclv_message)
-                    MessageList()
-                }
+            // 背景视图 (对应 viewBackground)
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f)
+                    .bottomRoundedBackground(color = Green10, cornerRadius = 32.dp)
+            ) {
+                // 消息列表 (对应 rclv_message)
+                MessageList(chatState = chatState)
+            }
         }
     }
-
 }
 
+// kotlin compose会执行 组合 和 重组，方法会被执行两次
 @Composable
-fun MessageList() {
-    val chatState = rememberChatListState()
+fun MessageList(chatState: ChatListState) {
+    println("🎯 MessageList 被调用，messages.size = ${chatState.messages.size}")
+    var isDataLoaded by remember { mutableStateOf(false) }
 
     // 初始化示例数据
     LaunchedEffect(Unit) {
+        println("🚀 LaunchedEffect 开始执行")
         val initialMessages = List(20) { index ->
             if (index % 2 == 0) {
                 MessageItem.Received(
                     id = "received_$index",
                     messageText = "这是收到的消息 $index",
-                    timeText = "2025/10/9 ${10 + index % 10}:${index % 60}",
+                    chatTime = "2025/10/9 ${10 + index % 10}:${index % 60}",
                     isShowImage = index % 5 == 0
                 )
             } else {
@@ -113,51 +127,76 @@ fun MessageList() {
             }
         }
         chatState.addNewMessages(initialMessages)
+        isDataLoaded = true  // 数据加载完成
+        println("✅ LaunchedEffect 执行完成，isDataLoaded = $isDataLoaded")
     }
 
-    MessageListView(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(horizontal = 5.dp),
-        state = chatState,
-        onLoadMore = {
-            // 模拟加载更多数据
-            val moreMessages = List(10) { index ->
-                val newIndex = chatState.messages.size + index
-                if (newIndex % 2 == 0) {
-                    MessageItem.Received(
-                        id = "received_more_$newIndex",
-                        messageText = "加载的历史消息 $newIndex",
-                        timeText = "2025/10/8 ${10 + newIndex % 10}:${newIndex % 60}",
-                        isShowImage = newIndex % 5 == 0
-                    )
-                } else {
-                    MessageItem.Sent(
-                        id = "sent_more_$newIndex",
-                        messageText = "加载的历史消息 $newIndex",
-                        timeText = "2025/10/8 ${10 + newIndex % 10}:${newIndex % 60}",
-                        isShowImage = newIndex % 5 == 0
-                    )
+    // 只有数据加载完成才显示列表
+    if (isDataLoaded) {
+        println("🎨 渲染 MessageListView 重组 (Recomposition)")
+        MessageListView(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 5.dp),
+            state = chatState,
+            onLoadMore = {
+                // 模拟加载更多数据
+                val moreMessages = List(10) { index ->
+                    val newIndex = chatState.messages.size + index
+                    if (newIndex % 2 == 0) {
+                        MessageItem.Received(
+                            id = "received_more_$newIndex",
+                            messageText = "加载的历史消息 $newIndex",
+                            chatTime = "2025/10/8 ${10 + newIndex % 10}:${newIndex % 60}",
+                            isShowImage = newIndex % 5 == 0
+                        )
+                    } else {
+                        MessageItem.Sent(
+                            id = "sent_more_$newIndex",
+                            messageText = "加载的历史消息 $newIndex",
+                            timeText = "2025/10/8 ${10 + newIndex % 10}:${newIndex % 60}",
+                            isShowImage = newIndex % 5 == 0
+                        )
+                    }
                 }
+                chatState.loadMoreMessages(moreMessages)
+            },
+            onMessageClick = { message ->
+                // 处理消息点击事件
+                println("点击了消息: ${when (message) {
+                    is MessageItem.Received -> "收到: ${message.messageText}"
+                    is MessageItem.Sent -> "发送: ${message.messageText}"
+                }}")
             }
-            chatState.loadMoreMessages(moreMessages)
-        },
-        onMessageClick = { message ->
-            // 处理消息点击事件
-            println("点击了消息: ${when (message) {
-                is MessageItem.Received -> "收到: ${message.messageText}"
-                is MessageItem.Sent -> "发送: ${message.messageText}"
-            }}")
+        )
+    }
+    else {
+        println("⏳ 显示加载指示器 初始组合 (Initial Composition)")
+        // 数据加载中的占位符
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) {
+            Text("加载中...")
         }
-    )
+    }
 }
 
+@SuppressLint("SimpleDateFormat")
 @Composable
-fun SendMessagePlaceholder() {
+fun SendMessagePlaceholder(chatState: ChatListState, coroutineScope: CoroutineScope) {
     SendMessageView(
         onSendClick = { message ->
-            // 处理发送消息
-            println("发送消息: $message")
+            // 处理发送消息 - 插入到聊天列表
+            val newMessage = MessageItem.Sent(
+                id = System.currentTimeMillis().toString(),
+                messageText = message,
+                timeText = java.text.SimpleDateFormat("yyyy/MM/dd HH:mm").format(java.util.Date())
+            )
+            chatState.insertMessageAndScroll(
+                message = newMessage,
+                coroutineScope = coroutineScope
+            )
         },
         onImageClick = {
             // 处理图片点击

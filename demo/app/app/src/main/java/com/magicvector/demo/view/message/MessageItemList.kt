@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
@@ -24,6 +25,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.magicvector.demo.activity.ui.theme.AppDemoTheme
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
 
 // 消息数据类
 sealed class MessageItem {
@@ -32,7 +35,7 @@ sealed class MessageItem {
         val avatarUrl: String? = null,
         val messageText: String,
         val messageImageUrl: String? = null,
-        val timeText: String,
+        val chatTime: String,
         val isShowImage: Boolean = false
     ) : MessageItem()
 
@@ -50,44 +53,66 @@ class ChatListState {
     val messages = mutableStateListOf<MessageItem>()
     var isLoading by mutableStateOf(false)
     var canLoadMore by mutableStateOf(true)
+    var listState: LazyListState? = null
 
-    // 添加新消息到顶部（时间倒序）
+    // 滚动到底部 - 使用消息数量快照避免并发问题
+    fun scrollToBottom(coroutineScope: CoroutineScope) {
+        val state = listState ?: return
+
+        coroutineScope.launch {
+            val itemCount = messages.size
+                if (itemCount > 0 && itemCount - 1 < state.layoutInfo.totalItemsCount) {
+                state.animateScrollToItem(itemCount - 1)
+            }
+        }
+    }
+
+    // 立即滚动到底部（无动画）
+    fun scrollToBottomImmediate(coroutineScope: CoroutineScope) {
+        val state = listState ?: return
+
+        coroutineScope.launch {
+            val itemCount = messages.size
+            if (itemCount > 0 && itemCount - 1 < state.layoutInfo.totalItemsCount) {
+                state.scrollToItem(itemCount - 1)
+            }
+        }
+    }
+
+    // 修改：新消息添加到尾部（时间正序）
     fun addNewMessages(newMessages: List<MessageItem>) {
-        messages.addAll(0, newMessages.sortedByDescending {
+        messages.addAll(newMessages.sortedBy { // 改为正序排序
             when (it) {
-                is MessageItem.Received -> it.timeText
+                is MessageItem.Received -> it.chatTime
                 is MessageItem.Sent -> it.timeText
             }
         })
     }
 
-    // 加载更多历史消息到底部
+    // 修改：加载更多历史消息到头部
     fun loadMoreMessages(historyMessages: List<MessageItem>) {
-        messages.addAll(historyMessages.sortedByDescending {
+        messages.addAll(0, historyMessages.sortedBy { // 添加到头部，正序排序
             when (it) {
-                is MessageItem.Received -> it.timeText
+                is MessageItem.Received -> it.chatTime
                 is MessageItem.Sent -> it.timeText
             }
         })
         canLoadMore = historyMessages.isNotEmpty()
     }
 
-    // 插入单条消息（模拟发送新消息）
+    // 修改：插入单条消息到尾部（O(1) 操作）
     fun insertMessage(message: MessageItem) {
-        // 找到插入位置（按时间倒序）
-        val index = messages.indexOfFirst {
-            val currentTime = when (it) {
-                is MessageItem.Received -> it.timeText
-                is MessageItem.Sent -> it.timeText
-            }
-            val newTime = when (message) {
-                is MessageItem.Received -> message.timeText
-                is MessageItem.Sent -> message.timeText
-            }
-            currentTime < newTime
-        }.takeIf { it != -1 } ?: messages.size
+        messages.add(message) // 直接添加到尾部，性能最优
+    }
 
-        messages.add(index, message)
+    // 修改：插入消息并滚动到底部
+    fun insertMessageAndScroll(message: MessageItem, coroutineScope: CoroutineScope) {
+        // 先添加消息，再滚动
+        insertMessage(message)
+        // 使用新的大小滚动
+        coroutineScope.launch {
+            listState?.animateScrollToItem(messages.size - 1)
+        }
     }
 
     // 更新单条消息
@@ -116,29 +141,44 @@ fun MessageListView(
     onLoadMore: () -> Unit = { },
     onMessageClick: (MessageItem) -> Unit = { }
 ) {
-    val listState = rememberLazyListState()
+    println("state.messages.size = ${state.messages.size}")
+    // 关键：在创建 listState 时直接指定初始位置
+    val listState = rememberLazyListState(
+        initialFirstVisibleItemIndex = if (state.messages.isNotEmpty()) state.messages.size - 1 else 0
+    )
 
-    // 监听滚动到顶部自动加载更多
-    val shouldLoadMore by remember {
-        derivedStateOf {
-            listState.firstVisibleItemIndex == 0 &&
-                    !state.isLoading &&
-                    state.canLoadMore
-        }
+    // 保存 listState 到 ChatListState
+    LaunchedEffect(listState) {
+        state.listState = listState
     }
 
-    LaunchedEffect(shouldLoadMore) {
-        if (shouldLoadMore) {
-            state.isLoading = true
-            onLoadMore()
-            state.isLoading = false
-        }
-    }
+//    // 监听滚动到底部自动加载更多
+//    val shouldLoadMore by remember(listState) {
+//        derivedStateOf {
+//            val layoutInfo = listState.layoutInfo
+//            val totalItems = layoutInfo.totalItemsCount
+//            if (totalItems == 0) return@derivedStateOf false
+//
+//            val lastVisibleItem = layoutInfo.visibleItemsInfo.lastOrNull()
+//            lastVisibleItem?.index == totalItems - 1 &&
+//                    !state.isLoading &&
+//                    state.canLoadMore
+//        }
+//    }
+//
+//    LaunchedEffect(shouldLoadMore) {
+//        if (shouldLoadMore) {
+//            state.isLoading = true
+//            onLoadMore()
+//            state.isLoading = false
+//        }
+//    }
 
     LazyColumn(
         modifier = modifier,
         state = listState,
-        reverseLayout = true // 时间倒序，新消息在底部
+        // 取消新消息在底部，因为ArrayList插入到头后续的item都需要位移，单次时间复杂度O(n), 而新消息插入在最后一个是O(1)
+//        reverseLayout = true
     ) {
         items(
             count = state.messages.size,
@@ -160,7 +200,7 @@ fun MessageListView(
                         avatarUrl = message.avatarUrl,
                         messageText = message.messageText,
                         messageImageUrl = message.messageImageUrl,
-                        timeText = message.timeText,
+                        timeText = message.chatTime,
                         isShowImage = message.isShowImage
                     )
                 }
@@ -211,7 +251,7 @@ fun ChatScreen() {
             MessageItem.Received(
                 id = "1",
                 messageText = "你好！",
-                timeText = "2025/10/9 10:00"
+                chatTime = "2025/10/9 10:00"
             ),
             MessageItem.Sent(
                 id = "2",
@@ -221,7 +261,7 @@ fun ChatScreen() {
             MessageItem.Received(
                 id = "3",
                 messageText = "还不错，你呢？",
-                timeText = "2025/10/9 10:02"
+                chatTime = "2025/10/9 10:02"
             )
         )
         chatState.addNewMessages(initialMessages)
@@ -237,7 +277,7 @@ fun ChatScreen() {
                     MessageItem.Received(
                         id = "history_1",
                         messageText = "这是历史消息",
-                        timeText = "2025/10/8 09:00"
+                        chatTime = "2025/10/8 09:00"
                     )
                 )
                 chatState.loadMoreMessages(historyMessages)
