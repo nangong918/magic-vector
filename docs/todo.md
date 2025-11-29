@@ -63,6 +63,7 @@ UML 设计状态机：UML绘制状态机状态
 7. 测试：1. JSON动态解析 2.Prompt提示词测试AI理解能力，Advisers拦截解析AI上传数
 8. 目标：STT，LLM，TTS，VL，FunctionCall顺利流畅的调用 + Motion，Emoji的MCP
 
+升级Compose
 
 暂时不继续优化，等真正加入mqtt之后再执行。（websocket的事件重新设计 (从开始说话就进行录制视频然后发送, 从说话就开始拍摄照片组提交) -> 抽象工厂， 学习计算机网络. 集成mqtt, 集成udp; 抽象工厂解耦Mqtt和Websocket的选择）
 
