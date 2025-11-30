@@ -4,4 +4,16 @@
     <string name="title_activity_main">MainActivity</string>
     <string name="title_activity_network">NetworkActivity</string>
     <string name="title_activity_list">ListActivity</string>
+    <string name="title_activity_compose_list">ComposeListActivity</string>
+    <string name="textfield_hint">请输入</string>
+    <string name="textfield_desc">输入文本</string>
+    <string name="swipe_to_cancel_recording">&#x25C0; Swipe to cancel</string>
+    <string name="touch_and_hold_to_record">按住录音</string>
+    <string name="record_message">录音</string>
+    <string name="attach_photo_desc">附加照片</string>
+    <string name="call_desc">语音通话</string>
+    <string name="videocam_desc">视频通话</string>
+    <string name="send">发送</string>
+    <string name="not_available">Functionality currently not available</string>
+    <string name="not_available_subtitle">Grab a beverage and check back later!</string>
 </resources>

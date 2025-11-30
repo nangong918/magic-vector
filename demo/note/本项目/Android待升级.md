@@ -121,6 +121,8 @@ singleInstance模式 (MessageFragment) -> (ChatActivity) -> (UserDetailActivity)
 * 广播监听网络状态变化Demo
 * 聊天记录的多数据源合并Demo
 * Room本地存储Demo
+* 数据结构分析
+* UML图分析
 * MKKV, SharedPreferences, LruCache缓存Demo
 * 线程Demo: Kotlin协程(生命周期执行), RxJava, Handler(Handler, Looper, MessageQueue, HandlerThread, 线程池)
 * Worker处理异步任务

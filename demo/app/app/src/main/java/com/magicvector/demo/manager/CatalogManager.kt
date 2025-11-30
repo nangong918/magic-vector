@@ -2,6 +2,7 @@ package com.magicvector.demo.manager
 
 import android.content.Context
 import android.content.Intent
+import com.magicvector.demo.activity.ComposeListActivity
 import com.magicvector.demo.activity.ListActivity
 import com.magicvector.demo.activity.NetworkActivity
 import com.magicvector.demo.domain.vo.CatalogItem
@@ -21,6 +22,12 @@ object CatalogManager {
                 title = "My列表",
                 subtitle = "自定义compose列表相关Demo",
                 cls = ListActivity::class.java
+            ),
+            CatalogItem(
+                id ="3",
+                title = "Compose 列表",
+                subtitle = "参考JetChat的列表相关Demo",
+                cls = ComposeListActivity::class.java
             ),
         )
     }

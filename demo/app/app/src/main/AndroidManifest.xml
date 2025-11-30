@@ -12,6 +12,11 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.AppDemo">
         <activity
+            android:name=".activity.ComposeListActivity"
+            android:exported="false"
+            android:label="@string/title_activity_compose_list"
+            android:theme="@style/Theme.AppDemo" />
+        <activity
             android:name=".activity.ListActivity"
             android:exported="false"
             android:label="@string/title_activity_list"
