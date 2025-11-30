@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<navigation xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/main_navigation"
+    app:startDestination="@+id/nagi_messageList">
+
+    <fragment
+        android:id="@+id/nagi_messageList"
+        android:name="com.magicvector.fragment.MessageListFragment"
+        android:label="@string/home_messagelist"
+        tools:layout="@layout/fragment_message_list" />
+
+    <fragment
+        android:id="@+id/nagi_mine"
+        android:name="com.magicvector.fragment.MineFragment"
+        android:label="@string/home_mine"
+        tools:layout="@layout/fragment_mine" />
+
+</navigation>

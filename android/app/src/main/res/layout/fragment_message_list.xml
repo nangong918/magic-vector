@@ -106,7 +106,7 @@
             android:id="@+id/fbtn_create_agent"
             android:layout_width="55dp"
             android:layout_height="55dp"
-            android:layout_marginBottom="50dp"
+            android:layout_marginBottom="80dp"
             android:layout_marginEnd="24dp"
             android:src="@xml/add_24px"
             android:backgroundTint="@color/s1_200"

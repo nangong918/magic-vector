@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:id="@+id/nagi_messageList"
+        android:icon="@xml/home_24px"
+        android:title="@string/home_messagelist" />
+
+    <item
+        android:id="@+id/nagi_option"
+        android:icon="@xml/settings_24px"
+        android:title="@string/home_option" />
+
+    <item
+        android:id="@+id/nagi_mine"
+        android:icon="@xml/person_24px"
+        android:title="@string/home_mine" />
+</menu>

@@ -8,7 +8,7 @@
 
 #### 项目问题：
 1. Fragment中调用PermissionUtils进行注册注册ActivityResultLauncher会出现问题，提示我不能重复注册注册ActivityResultLauncher，因为Fragment再次创建的时候，Activity并不会被暂停，此时的Activity是START状态。
-   * Activity切换Fragment使用Navigation而不是FragmentManager
+   * Activity切换Fragment使用Navigation而不是FragmentManager (√)
 2. 确认viewBinding的时机，viewBinding会执行几次。viewModel需要在什么时机进行初始化。
 3. ViewModel和Activity的生命周期，在为什么要用ViewModel保证数据不丢失？
 4. 需要Service保证WebSocket为什么要用Service保证后台任务的生命周期？

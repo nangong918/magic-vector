@@ -13,8 +13,8 @@ class VADMainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_vad_main)
 
-        val navView: BottomNavigationView = findViewById(R.id.nav_view)
-        val navController = findNavController(R.id.fragment_activity_main)
+        val navView: BottomNavigationView = findViewById(R.id.nav_view_vad)
+        val navController = findNavController(R.id.fragment_vad_activity_main)
 
         navView.setupWithNavController(navController)
     }

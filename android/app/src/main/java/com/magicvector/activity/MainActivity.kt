@@ -1,23 +1,20 @@
 package com.magicvector.activity
 
 import android.content.ComponentName
+import android.content.Context
 import android.content.Intent
 import android.content.ServiceConnection
 import android.os.Bundle
 import android.os.IBinder
 import android.util.Log
-import android.util.SparseArray
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.annotation.ColorRes
-import androidx.fragment.app.Fragment
-import androidx.fragment.app.FragmentManager
-import androidx.fragment.app.FragmentTransaction
-import com.data.domain.OnPositionItemClick
+import androidx.navigation.NavController
+import androidx.navigation.findNavController
+import androidx.navigation.ui.setupWithNavController
 import com.magicvector.callback.OnCreateAgentCallback
 import com.magicvector.databinding.ActivityMainBinding
-import com.magicvector.fragment.MessageListFragment
-import com.magicvector.fragment.MineFragment
+import com.magicvector.R
 import com.magicvector.service.ChatService
 import com.magicvector.utils.BaseAppCompatVmActivity
 import com.magicvector.viewModel.activity.MainVm
@@ -38,15 +35,6 @@ class MainActivity : BaseAppCompatVmActivity<ActivityMainBinding, MainVm>(
 //        binding.tvHello.text = stringFromJNI()
 
         initFragment()
-
-        fragmentMap.get(MainSelectItemEnum.HOME.position)?.let {
-            if (it is MessageListFragment){
-                initCreateAgentLuncher(it)
-            }
-            else {
-                Log.w(TAG, "initFragment::当前Fragment不是MessageListFragment")
-            }
-        }
     }
 
     override fun initView() {
@@ -75,17 +63,6 @@ class MainActivity : BaseAppCompatVmActivity<ActivityMainBinding, MainVm>(
 
     override fun setListener() {
         super.setListener()
-
-        binding.mainBottomBar.clickListener(object : OnPositionItemClick {
-            override fun onPositionItemClick(position: Int) {
-                try {
-                    currentSelected = MainSelectItemEnum.getItem(position)?: MainSelectItemEnum.HOME
-                } catch (e: Exception) {
-                    Log.e(TAG, "initFragment::获取intent的初始化数据错误: ", e)
-                }
-                changeFragment()
-            }
-        })
     }
 
     //------------------------Service------------------------
@@ -133,14 +110,7 @@ class MainActivity : BaseAppCompatVmActivity<ActivityMainBinding, MainVm>(
 
     //------------------------Fragment------------------------
 
-    /**
-     * 缓存的Fragment
-     */
-    private val fragmentMap = SparseArray<Fragment?>(MainSelectItemEnum.entries.size)
-
-    private var fragmentManager: FragmentManager? = null
     private var currentSelected: MainSelectItemEnum = MainSelectItemEnum.HOME
-    private var lastSelected: MainSelectItemEnum? = null
 
     var createAgentLauncher: ActivityResultLauncher<Intent>? = null
 
@@ -167,12 +137,11 @@ class MainActivity : BaseAppCompatVmActivity<ActivityMainBinding, MainVm>(
         }
     }
 
+    private lateinit var navController: NavController
     /**
-     * 初始化Fragment
+     * 初始化Fragment  Navigation Compose
      */
     private fun initFragment() {
-        fragmentManager = supportFragmentManager
-
         currentSelected = MainSelectItemEnum.HOME
         try {
             if (intent.hasExtra(MainSelectItemEnum.INTENT_EXTRA_NAME)) {
@@ -181,6 +150,7 @@ class MainActivity : BaseAppCompatVmActivity<ActivityMainBinding, MainVm>(
             }
         } catch (e : Exception) {
             Log.e(TAG, "initFragment::获取intent的初始化数据错误: ", e)
+            currentSelected = MainSelectItemEnum.HOME
         }
 
         changeFragment()
@@ -190,75 +160,48 @@ class MainActivity : BaseAppCompatVmActivity<ActivityMainBinding, MainVm>(
      * 切换Fragment
      */
     private fun changeFragment() {
-        if (currentSelected === lastSelected) {
-            Log.i(TAG, "changeFragment::当前Fragment和上一次Fragment一致")
-            return
+        navController = findNavController(R.id.fragment_main_activity_main)
+
+        val graph = navController.navInflater.inflate(R.navigation.main_navigation)
+        val start = when (currentSelected) {
+            MainSelectItemEnum.HOME -> R.id.nagi_messageList
+            MainSelectItemEnum.APPLY -> R.id.nagi_messageList
+            MainSelectItemEnum.MINE -> R.id.nagi_mine
         }
-        when (currentSelected) {
-            MainSelectItemEnum.HOME -> {
-//                setStatusBarColor(
-//                    com.view.appview.R.color.green_90
-//                )
-                Log.i(TAG, "changeFragment::切换到HOME")
-                this.setBaseBarColorRes(com.view.appview.R.color.s1_10)
-                turnToTargetFragment(MainSelectItemEnum.HOME, MessageListFragment::class.java, null)
-            }
-            MainSelectItemEnum.APPLY -> {}
-            MainSelectItemEnum.MINE -> {
-//                setStatusBarColor(
-//                    com.view.appview.R.color.green_90
-//                )
-                this.setBaseBarColorRes(com.view.appview.R.color.s1_10)
-                turnToTargetFragment(MainSelectItemEnum.MINE, MineFragment::class.java, null)
-            }
-        }
+        graph.setStartDestination(start)
+        navController.graph = graph
+
+        binding.navViewMain.setupWithNavController(navController)
     }
 
+
     /**
-     * 切换目标fragment
+     * 导航到目标页面
      */
-    fun turnToTargetFragment(
-        fragmentType: MainSelectItemEnum,
-        clazz: Class<out Fragment?>,
-        args: Bundle?
-    ) {
-        binding.mainBottomBar.setSelected(fragmentType)
-
-        var newFragment = fragmentMap.get(fragmentType.position)
-
-        if (newFragment == null) {
-            try {
-                // 如果没有参数，使用无参构造函数
-                newFragment = clazz.getConstructor().newInstance()
-                fragmentMap.put(fragmentType.position, newFragment)
-            } catch (e: NoSuchMethodException) {
-                Log.e(TAG, "No such constructor", e)
-            } catch (e: java.lang.Exception) {
-                Log.e(TAG, "Error creating fragment", e)
-            }
-        }
-
-        if (newFragment != null) {
-            // 如果需要，可以为 Fragment 设置参数
+    fun navigateTo(destinationId: Int, args: Bundle? = null) {
+        try {
             if (args != null) {
-                newFragment.setArguments(args)
+                navController.navigate(destinationId, args)
+            } else {
+                navController.navigate(destinationId)
             }
-
-            // 使用Add替代replace、Navigation
-            val transaction: FragmentTransaction = fragmentManager!!.beginTransaction()
-            transaction.replace(binding.fragmentContainer.id, newFragment)
-            transaction.commit()
-
-            // 缓存
-            lastSelected = currentSelected
+        } catch (e: Exception) {
+            Log.e(TAG, "导航失败: $destinationId", e)
         }
     }
 
     /**
-     * 设置底栏颜色
+     * 处理返回键
      */
-    fun setBaseBarColorRes(@ColorRes colorResId: Int) {
-        binding.mainBottomBar.setBaseBarColor(colorResId)
+    override fun onSupportNavigateUp(): Boolean {
+        return navController.navigateUp() || super.onSupportNavigateUp()
+    }
+
+    /**
+     * 获取当前 NavController
+     */
+    fun getNavController(): NavController {
+        return navController
     }
 
 
@@ -275,6 +218,16 @@ class MainActivity : BaseAppCompatVmActivity<ActivityMainBinding, MainVm>(
         init {
             System.loadLibrary("magicvector")
         }
+
+        fun startWithSelection(context: Context, selection: MainSelectItemEnum) {
+            val intent = Intent(context, MainActivity::class.java).apply {
+                putExtra(MainSelectItemEnum.INTENT_EXTRA_NAME, selection)
+            }
+            context.startActivity(intent)
+        }
+
+        fun startWithHome(context: Context) = startWithSelection(context, MainSelectItemEnum.HOME)
+        fun startWithMine(context: Context) = startWithSelection(context, MainSelectItemEnum.MINE)
     }
 
     //------------------------lifecycle------------------------
