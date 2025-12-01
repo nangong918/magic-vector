@@ -16,4 +16,7 @@
     <string name="send">发送</string>
     <string name="not_available">Functionality currently not available</string>
     <string name="not_available_subtitle">Grab a beverage and check back later!</string>
+    <string name="attached_image">Attached image</string>
+    <string name="author_me">用户name</string>
+    <string name="jumpBottom">回到底部</string>
 </resources>

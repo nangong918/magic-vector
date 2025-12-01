@@ -9,14 +9,19 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import com.magicvector.demo.activity.ui.theme.AppDemoTheme
+import com.magicvector.demo.view.jetMessage.Message
+import com.magicvector.demo.view.jetMessage.Messages
 import com.magicvector.demo.view.jetMessage.UserInput
+import com.magicvector.demo.view.jetMessage.data.exampleUiState
 import kotlinx.coroutines.launch
+import com.magicvector.demo.R
+import java.text.SimpleDateFormat
 
 class ComposeListActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -24,17 +29,20 @@ class ComposeListActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             AppDemoTheme {
-                ComposeListScreen()
+                ComposeListScreen(navigateToProfile = {})
             }
         }
     }
 }
 
+private val uiState = exampleUiState
+
 @Composable
-fun ComposeListScreen() {
+fun ComposeListScreen(navigateToProfile: (String) -> Unit) {
 
     val scope = rememberCoroutineScope()
     val scrollState = rememberLazyListState()
+    val authorMe = stringResource(R.string.author_me)
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
@@ -43,6 +51,11 @@ fun ComposeListScreen() {
             UserInput(
                 onMessageSent = { message ->
                     // 处理消息发送逻辑
+                    val timeNowL = System.currentTimeMillis()
+                    val timeNow = SimpleDateFormat("HH:mm:ss").format(timeNowL)
+                    uiState.addMessage(
+                        Message(authorMe, message, timeNow),
+                    )
                 },
                 resetScroll = {
                     scope.launch {
@@ -55,7 +68,12 @@ fun ComposeListScreen() {
         // 其他内容可以放在这里
         // 例如聊天记录的列表
         Column(modifier = Modifier.padding(innerPadding)) {
-            // 此处可以放置聊天记录
+            Messages(
+                messages = uiState.messages,
+                navigateToProfile = navigateToProfile,
+                modifier = Modifier.weight(1f),
+                scrollState = scrollState,
+            )
         }
     }
 }
@@ -64,6 +82,6 @@ fun ComposeListScreen() {
 @Composable
 fun GreetingPreview() {
     AppDemoTheme {
-        ComposeListScreen()
+        ComposeListScreen(navigateToProfile = {})
     }
 }

@@ -100,6 +100,7 @@ singleInstance模式 (MessageFragment) -> (ChatActivity) -> (UserDetailActivity)
    * 检查不合理的布局和绘制：频繁调用 invalidate() 或 requestLayout()，可能触发多次布局和绘制，导致主线程卡顿。
 3. View全重绘问题：
    * RecyclerView更新/插入一个Item不能重新绘制整个RecyclerView，需要使用DiffUtil
+4. 性能分析工具: View > Tool Windows > Android Profiler
 
 ### 信息安全：混淆，反编译，抓包
 #### 项目问题
@@ -115,7 +116,7 @@ singleInstance模式 (MessageFragment) -> (ChatActivity) -> (UserDetailActivity)
 # Demo App
 * github 上获取Compose Demo
 * RecyclerView -> Compose LazyList
-* 参考JetChat重构App的View
+* 参考JetChat重构App的View 将view整理到MagicVector
 * 引入Dagger注入
 * Websocket的心跳请求demo
 * 广播监听网络状态变化Demo
