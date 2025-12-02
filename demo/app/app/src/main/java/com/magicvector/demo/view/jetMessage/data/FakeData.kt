@@ -27,7 +27,7 @@ val initialMessages = listOf(
         "8:07 PM",
     ),
     Message(
-        "Taylor Brooks",
+        "John Glenn",
         "You can use all the same stuff",
         "8:05 PM",
     ),

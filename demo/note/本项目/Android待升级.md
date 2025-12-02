@@ -117,6 +117,10 @@ singleInstance模式 (MessageFragment) -> (ChatActivity) -> (UserDetailActivity)
 * github 上获取Compose Demo
 * RecyclerView -> Compose LazyList
 * 参考JetChat重构App的View 将view整理到MagicVector
+* 寻找FFmpeg的GitHub Demo
+* 寻找OpenGL的Demo
+* 实现CameraX + YOLOv8 + OpenGL + FFmpeg的重构Demo
+* 实现双端实时CameraX + OpenGL + FFmpeg / CameraX + WebRTC + SurfaceView的视频通话Demo
 * 引入Dagger注入
 * Websocket的心跳请求demo
 * 广播监听网络状态变化Demo
