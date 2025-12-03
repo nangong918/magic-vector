@@ -272,3 +272,11 @@ Service应该放置跨Activity任务。
 ### Android 依赖
 #### 项目问题：
 1. 取消非官方的任何依赖库：FastJson -> Gson; PermissionX -> PermissionUtils;
+
+### Android硬件相关
+#### adb
+
+连接硬件设备：
+* 数据线连接：`adb connect <设备IP>` 然后执行 `adb root` 提供root权限
+* 网络连接：网络调节助手：NetAsset，连接设备固定IP，发送命令：`adb on`
+* 然后Android Studio应该就可以看到设备的信息。

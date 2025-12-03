@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
-
     <!-- 互联网权限 -->
     <uses-permission android:name="android.permission.INTERNET" /> <!-- 音频录制和播放权限 -->
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
@@ -33,6 +32,12 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.MagicVector"
         tools:targetApi="31">
+        <activity
+            android:name=".activity.ComposeChatActivity"
+            android:exported="false"
+            android:label="@string/title_activity_compose_chat"
+            android:theme="@style/Theme.MagicVector" />
+
         <service
             android:name=".service.ChatService"
             android:enabled="true"
