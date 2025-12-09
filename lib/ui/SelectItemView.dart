@@ -23,51 +23,54 @@ class SelectItemView extends StatelessWidget {
     // 点击容器
     return GestureDetector(
       onTap: onItemClick,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            // 左侧图标（可选）
-            if (icon != null)
-              Padding(
-                padding: const EdgeInsets.only(right: 12),
-                child: icon,
-              ),
-            // 右侧文本区域（占满剩余宽度）
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // 标题
-                  Text(
-                    title,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w500,
-                      color: Colors.black87,
-                    ),
-                  ),
-                  // 副标题（非空才显示）
-                  if (subtitle != null && subtitle!.isNotEmpty)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 4),
-                      child: Text(
-                        subtitle!,
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Colors.grey[600],
-                          // 文本过长自动换行
-                          overflow: TextOverflow.visible,
-                        ),
-                        maxLines: null, // 取消行数限制（对标Compose自动换行）
+      child: Container(
+        color: Colors.transparent, // 关键：设置透明颜色，让整个区域可点击
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              // 左侧图标（可选）
+              if (icon != null)
+                Padding(
+                  padding: const EdgeInsets.only(right: 12),
+                  child: icon,
+                ),
+              // 右侧文本区域（占满剩余宽度）
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // 标题
+                    Text(
+                      title,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w500,
+                        color: Colors.black87,
                       ),
                     ),
-                ],
+                    // 副标题（非空才显示）
+                    if (subtitle != null && subtitle!.isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 4),
+                        child: Text(
+                          subtitle!,
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Colors.grey[600],
+                            // 文本过长自动换行
+                            overflow: TextOverflow.visible,
+                          ),
+                          maxLines: null, // 取消行数限制（对标Compose自动换行）
+                        ),
+                      ),
+                  ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
