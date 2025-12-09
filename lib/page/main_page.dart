@@ -5,14 +5,14 @@ import 'package:flutter3_app/manager/CatalogManager.dart';
 import '../domain/vo/CatalogItem.dart';
 import '../ui/CatalogItemList.dart';
 
-class MainScreen extends StatefulWidget {
-  const MainScreen({super.key});
+class MainPage extends StatefulWidget {
+  const MainPage({super.key});
 
   @override
-  State<MainScreen> createState() => _MainScreenState();
+  State<MainPage> createState() => _MainPageState();
 }
 
-class _MainScreenState extends State<MainScreen> {
+class _MainPageState extends State<MainPage> {
   String _searchText = '';
   final TextEditingController _searchController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
@@ -21,26 +21,27 @@ class _MainScreenState extends State<MainScreen> {
 
   // 处理列表项点击
   void _onItemClick(CatalogItem item) {
-    // 在这里处理点击事件，比如导航到对应页面
-    print('点击了: ${item.title}');
+    debugPrint('点击了: ${item.title}');
 
-    // 显示SnackBar反馈
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('即将打开: ${item.title}'),
-        duration: const Duration(milliseconds: 1000),
-        action: SnackBarAction(
-          label: '确定',
-          onPressed: () {},
+    // 如果有路由名称，则跳转到对应页面
+    if (item.routeName != null && item.routeName!.isNotEmpty) {
+      // 调用CatalogManager的统一跳转方法
+      CatalogManager.onItemClick(item, context);
+    } else {
+      // 如果没有设置路由，显示 SnackBar
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('即将打开: ${item.title}'),
+          duration: const Duration(milliseconds: 1000),
+          action: SnackBarAction(
+            label: '确定',
+            onPressed: () {},
+          ),
         ),
-      ),
-    );
-
-    // 实际项目中这里应该进行页面跳转
-    // if (item.routeName != null) {
-    //   Navigator.pushNamed(context, item.routeName!);
-    // }
+      );
+    }
   }
+
 
   @override
   void dispose() {
@@ -166,7 +167,7 @@ class MainActivity extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return const AppDemoTheme(
-      child: MainScreen(),
+      child: MainPage(),
     );
   }
 }
@@ -187,7 +188,7 @@ class MainScreenPreview extends StatelessWidget {
       ),
       home: const Scaffold(
         backgroundColor: Colors.white,
-        body: MainScreen(),
+        body: MainPage(),
       ),
     );
   }
