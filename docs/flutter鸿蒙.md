@@ -1,6 +1,10 @@
 **flutter兼容鸿蒙**
 ====
 
+Flutter兼容鸿蒙需要不同的SDK插件所以需要开启新的分支：
+Android、IOS：-> dev / main
+HarmonyOS -> dev_ohos / main_ohos
+
 ## 开发工具安装
 
 DecEco Studio 安装
@@ -56,3 +60,10 @@ Android打包方法
 
 在访达中访问上一步指定的路径，找到刚刚导出的 kylin.ipa 文件，即苹果测试包
 ![img_8.png](img_8.png)
+
+### 鸿蒙打包
+flutter本身不支持鸿蒙打包，所以需要进行鸿蒙Flutter换源
+
+[鸿蒙flutter源](https://gitee.com/openharmony-sig/flutter_flutter/)
+
+
