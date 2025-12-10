@@ -64,6 +64,62 @@ Android打包方法
 ### 鸿蒙打包
 flutter本身不支持鸿蒙打包，所以需要进行鸿蒙Flutter换源
 
-[鸿蒙flutter源](https://gitee.com/openharmony-sig/flutter_flutter/)
+
+目前`flutter 3.7.12-ohos-1.0.4`暂时不支持windows上运行，需要使用mac
+
+下拉鸿蒙源git[鸿蒙flutter源](https://gitee.com/openharmony-sig/flutter_flutter/)
+
+idea打开鸿蒙源，checkout到1.0.4，拉取最新代码。
+将此鸿蒙源配置到mac环境变量。
+
+mac的环境变量是通过vim配置到bash.profile或者zshrc.profile中
+打开终端输入：
+```shell
+vim .zshrc
+```
+打开zshrc之后按`i`进行输入，`esc`退出; 按`:`进行命令输入，输入`:wq`保存并退出，输入`:q!`退出
+
+需要配置的内容：
+```shell
+ # JDK
+ export JAVA_HOME=<JAVA_HOME path>/Contents/Home
+ export PATH=$JAVA_HOME/bin:$PATH
+ 
+ # 鸿蒙
+ export TOOL_HOME=/Applications/DevEco-Studio.app/Contents # mac环境
+ export DEVECO_SDK_HOME=$TOOL_HOME/sdk # command-line-tools/sdk
+ export PATH=$TOOL_HOME/tools/ohpm/bin:$PATH # command-line-tools/ohpm/bin
+ export PATH=$TOOL_HOME/tools/hvigor/bin:$PATH # command-line-tools/hvigor/bin
+ export PATH=$TOOL_HOME/tools/node/bin:$PATH # command-line-tools/tool/node/bin
+ export HOS_SDK_HOME=$DEVECO_SDK_HOME
+ # flutter源和缓存
+ export PUB_CACHE=D:/PUB
+ export PATH=<flutter_flutter path>/bin:$PATH # export PATH=/Users/clt/Library/flutter_flutter/bin:$PAT
+ export PUB_HOSTED_URL=https://pub.flutter-io.cn
+ export FLUTTER_STORAGE_BASE_URL=https://storage.flutter-io.cn
+```
+
+配置完成之后保存。然后再在Android Studio的Setting中设置为鸿蒙flutter
+
+配置完成之后使用flutter命令检查，清除，更新：
+```shell
+flutter doctor
+flutter --version
+flutter clean
+flutter pub get
+```
+
+然后编译会出现没有鸿蒙签名的报错。现在需要打开DevEco Studio，先连接鸿蒙真机然后在File->Project Structure->Signing Configs中点击`把支持鸿蒙`和`自动生成签名`勾选上。
+然后跳转浏览器登录鸿蒙账号。
+签名完成之后在Android Studio中进行运行或者编译打包。
+1. 运行直接点击run
+2. 编译打包安装：需要进入到项目pubspec.yaml所在的目录
+```shell
+# build打包 需要进入到项目pubspec.yaml所在的目录
+source ~/.zshrc;source ~/.bash_profile; echo $PATH; flutter build hap
+
+# 编译成功之后安装
+hdc install <outputs_path>/app-release.hap
+```
 
 
