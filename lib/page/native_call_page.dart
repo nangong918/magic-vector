@@ -1,34 +1,40 @@
-
-
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 /// Flutter调用Android，IOS，Ohos原生的demo
 class NativeCallPage extends StatefulWidget {
-
   const NativeCallPage({super.key});
-
 
   @override
   State<NativeCallPage> createState() => _NativeCallPageState();
-
 }
-
 
 class _NativeCallPageState extends State<NativeCallPage> {
   // 模拟电量数据（实际需通过MethodChannel调用原生获取）
   String _batteryLevel = "未获取";
 
+  // 创建MethodChannel，名称必须与Android端保持一致
+  static const platform = MethodChannel('com.demo.flutter3_app/battery');
+
   // 调用Android原生获取电量
   Future<void> _callAndroidNative() async {
-    // 这里仅模拟，实际需替换为MethodChannel调用Android原生代码
-    setState(() {
-      _batteryLevel = "Android原生返回：85%";
-    });
+    try {
+      // 调用Android原生方法
+      final int result = await platform.invokeMethod('getBatteryLevel');
+      setState(() {
+        _batteryLevel = "Android原生返回：$result%";
+      });
+    } on PlatformException catch (e) {
+      // 处理调用失败的情况
+      setState(() {
+        _batteryLevel = "调用失败: '${e.message}'";
+      });
+    }
   }
 
-  // 调用iOS原生获取电量
+  // 调用iOS原生获取电量（暂时保留）
   Future<void> _callIOSNative() async {
     // 这里仅模拟，实际需替换为MethodChannel调用iOS原生代码
     setState(() {
@@ -107,11 +113,3 @@ class _NativeCallPageState extends State<NativeCallPage> {
     );
   }
 }
-
-
-
-
-
-
-
-
