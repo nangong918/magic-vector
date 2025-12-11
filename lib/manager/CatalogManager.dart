@@ -26,6 +26,13 @@ class CatalogManager {
         iconRes: CupertinoIcons.chat_bubble,
         routeName: AppRoutes.chat,
       ),
+      const CatalogItem(
+        id: "3",
+        title: "animation",
+        subtitle: "animation demo",
+        iconRes: Icons.android_sharp,
+        routeName: AppRoutes.native,
+      ),
     ];
   }
 
