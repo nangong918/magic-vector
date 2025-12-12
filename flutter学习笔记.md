@@ -340,7 +340,196 @@ class WifiChannel {
 
 
 
+#### 调用IOS原生
 
+
+首先介绍一下IOS，IOS的文件目录结构：
+```plaintext
+ios/
+├── Flutter/                # Flutter 引擎桥接文件（自动生成，无需手动修改）
+│   ├── AppFrameworkInfo.plist  # Flutter 框架信息配置（含版本、架构等，自动生成）
+│   ├── Generated.xcconfig  # 编译配置（Flutter 自动生成，关联 Flutter SDK 路径/编译参数）
+│   └── Flutter-Debug/Release.xcconfig # 分环境编译配置（Debug/Release 模式差异化参数）
+├── Runner/                 # iOS 原生代码核心目录（重点关注，高频修改）
+│   ├── Assets.xcassets/    # 资源文件（App 图标、启动图、自定义图片资源）
+│   ├── Base.lproj/         # 界面布局（Storyboard 可视化布局文件）
+│   │   ├── Main.storyboard # 主界面布局（默认被 Flutter 视图覆盖，可自定义原生页面）
+│   │   └── LaunchScreen.storyboard # 启动页（App 冷启动时展示，可修改布局/图片）
+│   ├── Info.plist          # 应用核心配置（权限、Bundle ID、版本、启动项、URL Scheme 等）
+│   ├── AppDelegate.swift   # 应用入口（生命周期管理、Flutter 引擎初始化、平台通道注册）
+│   ├── Runner-Bridging-Header.h # OC/Swift 混编桥接文件（OC 代码暴露给 Swift 调用）
+│   ├── ViewController.swift # 主控制器（承载 Flutter 视图容器，可扩展原生控件交互）
+│   └── Assets/             # 自定义资源（非图标/启动图类资源，如音频、视频、配置文件）
+├── Runner.xcodeproj/       # Xcode 项目文件（工程配置，含编译目标、签名、依赖等）
+├── Runner.xcworkspace/     # Xcode 工作空间（推荐打开入口，整合项目+Pods 依赖）
+└── Podfile/Podfile.lock    # CocoaPods 依赖配置（第三方库版本/依赖关系，lock 为锁定文件）
+```
+
+
+
+一般的IOS项目中IOS继承的是`UIResponder, UIApplicationDelegate`。
+而在Flutter中，继承的是`FlutterAppDelegate`
+
+flutter调用IOS没有Android和鸿蒙的`flutterEngine`和`configureFlutterEngine`
+需要使用另一种写法：
+打开`AppDelegate.swift`，这是ios的主要控制页面
+主页面进行方法注册
+```dart
+import UIKit
+import Flutter
+
+@UIApplicationMain
+@objc class AppDelegate: FlutterAppDelegate {
+  // 定义methodChannel提供给Flutter进行调用
+  var methodChannel:FlutterMethodChannel?
+  override func application(
+    _ application: UIApplication,
+    didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
+  ) -> Bool {
+    GeneratedPluginRegistrant.register(with: self)
+    let vc = self.window?.rootViewController as! FlutterViewController
+    self.methodChannel = FlutterMethodChannel.init(name: "com.clt.kylin/local_network_permission", binaryMessenger: vc.binaryMessenger)
+    // 此处可能涉及到异步await
+    self.methodChannel!.setMethodCallHandler{(call, result) in
+      if(call.method == "isWifiConnected"){
+        result.success(WifiController.isConnectedToWifi())
+      }
+      else if (call.method == "getWifiRssi"){
+        result.success(WifiController.getWifiRssi())
+      }   
+    }
+    return super.application(application, didFinishLaunchingWithOptions: launchOptions)
+  }
+}
+```
+
+获取wifi状态的原生ios代码：
+```dart
+import UIKit
+import SystemConfiguration.CaptiveNetwork
+import CoreTelephony
+
+/// WiFi 工具类：获取连接状态、信号强度
+class WifiController: NSObject {
+    
+    /// 检查当前是否连接到 WiFi
+    /// - Returns: true=已连接 WiFi；false=未连接/无权限/获取失败
+    class func isConnectedToWifi() -> Bool {
+        // 1. 检查定位权限（iOS 13+ 获取 WiFi 信息必需）
+        guard checkLocationPermission() else {
+            print("⚠️ 定位权限未授权，无法获取 WiFi 状态")
+            return false
+        }
+        
+        // 2. 获取当前连接的 WiFi 信息
+        guard let wifiInfo = getCurrentWifiInfo() else {
+            print("⚠️ 未连接 WiFi 或获取失败")
+            return false
+        }
+        
+        // 3. 验证 SSID 非空（排除未连接状态）
+        let ssid = wifiInfo["SSID"] as? String ?? ""
+        return !ssid.isEmpty && ssid != "Unknown SSID"
+    }
+    
+    /// 获取当前 WiFi 信号强度（返回 0-4 的整数，4 最强，0 最弱）
+    /// - Returns: 信号强度值（-1 表示获取失败）
+    class func getWifiRssi() -> Int {
+        // 1. 先检查是否连接 WiFi
+        guard isConnectedToWifi() else {
+            print("⚠️ 未连接 WiFi，无法获取信号强度")
+            return -1
+        }
+        
+        // 2. 获取信号强度（两种方式兼容不同 iOS 版本）
+        if #available(iOS 12.0, *) {
+            // 方式1：CoreTelephony（iOS 12+ 推荐）
+            let telephonyInfo = CTTelephonyNetworkInfo()
+            if let serviceInfo = telephonyInfo.serviceCurrentRadioAccessTechnology,
+               let _ = serviceInfo.values.first(where: { $0 == CTRadioAccessTechnologyWiFi }) {
+                // 通过 CNCopyCurrentNetworkInfo 获取 RSSI
+                if let wifiInfo = getCurrentWifiInfo(),
+                   let rssi = wifiInfo["RSSI"] as? String,
+                   let rssiValue = Int(rssi) {
+                    return calculateSignalLevel(rssi: rssiValue)
+                }
+            }
+        }
+        
+        // 方式2：兼容低版本（直接从 WiFi 信息取 RSSI）
+        if let wifiInfo = getCurrentWifiInfo(),
+           let rssi = wifiInfo["RSSI"] as? String,
+           let rssiValue = Int(rssi) {
+            return calculateSignalLevel(rssi: rssiValue)
+        }
+        
+        return -1
+    }
+}
+
+// MARK: - 私有工具方法
+extension WifiController {
+    /// 检查定位权限（iOS 13+ 获取 WiFi 信息必需）
+    private class func checkLocationPermission() -> Bool {
+        let locationManager = CLLocationManager()
+        let status = locationManager.authorizationStatus
+        
+        // 权限状态：已授权（前台/始终）则返回 true
+        return status == .authorizedWhenInUse || status == .authorizedAlways
+    }
+    
+    /// 获取当前 WiFi 详细信息（SSID/BSSID/RSSI 等）
+    private class func getCurrentWifiInfo() -> [String: Any]? {
+        // 1. 检查系统版本
+        guard #available(iOS 9.0, *) else {
+            print("⚠️ iOS 版本低于 9.0，不支持获取 WiFi 信息")
+            return nil
+        }
+        
+        // 2. 获取 WiFi 接口列表
+        guard let interfaces = CNCopySupportedInterfaces() as? [String] else {
+            print("⚠️ 无法获取 WiFi 接口列表")
+            return nil
+        }
+        
+        // 3. 遍历接口获取当前连接的 WiFi 信息
+        for interface in interfaces {
+            guard let interfaceInfo = CNCopyCurrentNetworkInfo(interface as CFString) as? [String: Any] else {
+                continue
+            }
+            return interfaceInfo
+        }
+        
+        return nil
+    }
+    
+    /// 将 RSSI 原始值转换为 0-4 的信号强度等级（iOS 标准）
+    /// - Parameter rssi: RSSI 原始值（通常为负数，如 -50 表示强，-100 表示弱）
+    /// - Returns: 0-4 的等级值
+    private class func calculateSignalLevel(rssi: Int) -> Int {
+        // iOS 标准 RSSI 等级划分（可根据需求调整）
+        switch rssi {
+        case ...(-100): return 0
+        case -99...(-85): return 1
+        case -84...(-70): return 2
+        case -69...(-55): return 3
+        case -54...: return 4
+        default: return 0
+        }
+    }
+}
+```
+
+权限补充
+```xml
+<!-- WiFi 访问权限 -->
+<key>NSWiFiUsageDescription</key>
+<string>“麒麟可视化智控平台”需要访问 WiFi 状态，用于识别局域网设备、优化网络连接</string>
+
+<!-- 定位权限（获取 WiFi 信息必需） -->
+<key>NSLocationWhenInUseUsageDescription</key>
+<string>“麒麟可视化智控平台”需要定位权限以获取 WiFi 相关信息，实现局域网设备发现</string>
+```
 
 
 
