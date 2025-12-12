@@ -146,6 +146,201 @@ class MainActivity: FlutterActivity() {
     android:usesPermissionFlags="neverForLocation" />
 ```
 
+#### 调用鸿蒙原生
+
+首先需要使用鸿蒙的定制flutter SDK：flutter-ohos
+
+用鸿蒙定制的flutter SDK创建项目之后会生成一个ohos的文件夹，内部就是鸿蒙的原生代码
+
+需要下载`DevEce Studio`。使用`DevEce Studio`打开鸿蒙文件夹
+
+鸿蒙原生中一般会有一个`EntryAbility`相当于Android的`MainActivity`。
+鸿蒙的也是跟Android一样，主Ability继承的不是`UIAbility`而是`FlutterAbility`
+在`FlutterAbility`有个方法跟Android一样需要实现，`configureFlutterEngine(flutterEngine: FlutterEngine)`
+需要导入`import { FlutterAbility, FlutterEngine } from '@ohos/flutter_ohos';`
+
+与Android不同，在执行鸿蒙原生的时候需要先进行build编译，生成`GeneratedPluginRegistrant`然后将内容注册进去`GeneratedPluginRegistrant.registerWith(flutterEngine)`
+生成插件之后需要使用`this.addPlugin`将插件注册到鸿蒙的flutterEngine中
+
+完整代码：
+```ets
+export default class EntryAbility extends FlutterAbility {
+  configureFlutterEngine(flutterEngine: FlutterEngine) {
+    super.configureFlutterEngine(flutterEngine)
+    GeneratedPluginRegistrant.registerWith(flutterEngine)
+    // 插件注册
+    this.addPlugin(new FlutterChannelPlugin())
+  }
+}
+```
+
+
+在写插件的时候需要继承`FlutterPlugin`
+继承参考：
+`import {
+FlutterPluginBinding,
+FlutterPlugin,
+MethodCall,
+MethodChannel,
+MethodResult,
+} from "@ohos/flutter_ohos"`
+
+在`FlutterPlugin`中主要需要实现的代码是：`onAttachedToEngine`
+内部需要进行Channel注册并且实现`onMethodCall`，大致跟Android相同
+
+以Wifi为例，完整代码：
+```ets
+export class FlutterChannelPlugin implements FlutterPlugin{
+  private channel?: MethodChannel;
+
+  getUniqueClassName(): string {
+    return 'FlutterChannelPlugin';
+  }
+
+  onAttachedToEngine(binding: FlutterPluginBinding): void {
+    // 注册channel
+    this.channel = new MethodChannel(binding.getBinaryMessenger(),'com.clt.kylin/flutterPlugin')
+    this.channel.setMethodCallHandler({
+      // 包含异步的话需要使用async标注
+      onMethodCall: async (call: MethodCall, result: MethodResult) => {
+        switch (call.method) {
+          case 'isWifiConnected':
+            const isConnect: boolean = await WifiController.isWifiConnected()
+            result.success(isConnect);
+            break;
+          case 'getWifiRssi':
+            const rssi: number = await WifiController.getWifiRssi()
+            result.success(rssi);
+            break;
+        }
+      }
+    });
+  }
+
+  onDetachedFromEngine(binding: FlutterPluginBinding): void {
+    this.channel?.setMethodCallHandler(null)
+  }
+}
+```
+
+```ets
+// wifi相关代码：
+import wifi from '@ohos.wifi';
+
+export class WifiController {
+
+  // 检查WiFi连接状态
+  public static async isWifiConnected(): Promise<boolean> {
+    try {
+      const info = await wifi.getLinkedInfo();
+      console.debug("info: " + info + " info.connState: " + info.connState + " info.rssi: " + info.rssi + "wifi.ConnState.CONNECTED: " + wifi.ConnState.CONNECTED)
+      return info !== null && info.connState === wifi.ConnState.CONNECTED;
+    } catch (error) {
+      console.error('获取WiFi连接状态失败:', JSON.stringify(error));
+      return false;
+    }
+  }
+
+  // 获取WiFi信号强度
+  public static async getWifiRssi(): Promise<number> {
+    try {
+      const info = await wifi.getLinkedInfo();
+      if (info && info.connState === wifi.ConnState.CONNECTED) {
+        return info.rssi || -100; // 返回RSSI值，如果没有则返回-100
+      }
+      return -100;
+    } catch (error) {
+      console.error('获取WiFi RSSI失败:', JSON.stringify(error));
+      return -100;
+    }
+	}
+}
+```
+
+
+dart调用
+```dart
+class WifiChannel {
+  WifiChannel._privateConstructor();
+
+  static final WifiChannel _instance = WifiChannel._privateConstructor();
+
+  factory WifiChannel() {
+    return _instance;
+  }
+
+  // 创建Channel
+  late final MethodChannel _channel = const MethodChannel('com.clt.kylin/flutterPlugin');
+
+  // 异步获取数据
+  Future<bool> isConnectedToWifi() async {
+    try {
+      final bool result = await _channel.invokeMethod('isWifiConnected');
+      debugPrint('isConnectedToWifi result = $result');
+      return result;
+    } on PlatformException {
+      debugPrint(' isConnectedToWifi PlatformException');
+      return false;
+    }
+  }
+
+  // 异步获取数据
+  Future<int?> getWifiRssi() async {
+    try {
+      final int? result = await _channel.invokeMethod('getWifiRssi');
+      debugPrint('getWifiRssi result = $result');
+      return result;
+    } on PlatformException {
+      return null;
+    }
+  }
+}
+```
+
+在调用的时候需要使用await等待异步完成
+```dart
+    if (Platform.isOhos) {
+      // await等待完成
+      final connected = await WifiChannel().isConnectedToWifi();
+      if (connected) {
+        final rssi = await WifiChannel().getWifiRssi();
+        GlobalEventBus.eventBus.fire(NetEvent(NetEvent.pingValue,
+            msg: rssi ?? NetEvent.noSignal));
+      }
+      else {
+        GlobalEventBus.eventBus.fire(NetEvent(NetEvent.pingValue,
+            msg: NetEvent.noSignal));
+      }
+    }
+```
+
+当然在获取wifi信息的时候会要求添加权限，鸿蒙的权限文件entry->src->main->`module.json5`中
+获取wifi权限需要进行配置：
+
+```json5
+{
+  "module": {
+    "requestPermissions": [
+      {
+        "name": "ohos.permission.INTERNET"
+      },
+      {
+        "name": "ohos.permission.GET_NETWORK_INFO"
+      },
+      {
+        "name": "ohos.permission.GET_WIFI_INFO"
+      },
+    ]
+  }
+}
+```
+需要上述三个声明权限，不然无法获得wifi信息
+
+
+
+
+
+
 
 
 
