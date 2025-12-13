@@ -2,6 +2,7 @@
 ====
 
 
+### 打包
 
 
 ### 组件相关
@@ -377,158 +378,198 @@ flutter调用IOS没有Android和鸿蒙的`flutterEngine`和`configureFlutterEngi
 ```dart
 import UIKit
 import Flutter
+import SystemConfiguration
+import SystemConfiguration.CaptiveNetwork
+import CoreLocation  // 新增：iOS 13+ 需要位置权限获取 WiFi 信息
 
 @UIApplicationMain
 @objc class AppDelegate: FlutterAppDelegate {
-  // 定义methodChannel提供给Flutter进行调用
-  var methodChannel:FlutterMethodChannel?
+  var wifiMethodChannel: FlutterMethodChannel?
+  var locationManager: CLLocationManager?  // 新增：位置管理器
+  var wifiPermissionCompletion: ((Bool) -> Void)?  // 新增：权限回调
   override func application(
     _ application: UIApplication,
     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
   ) -> Bool {
     GeneratedPluginRegistrant.register(with: self)
     let vc = self.window?.rootViewController as! FlutterViewController
-    self.methodChannel = FlutterMethodChannel.init(name: "com.clt.kylin/local_network_permission", binaryMessenger: vc.binaryMessenger)
-    // 此处可能涉及到异步await
-    self.methodChannel!.setMethodCallHandler{(call, result) in
-      if(call.method == "isWifiConnected"){
-        result.success(WifiController.isConnectedToWifi())
-      }
-      else if (call.method == "getWifiRssi"){
-        result.success(WifiController.getWifiRssi())
-      }   
+
+    // 新增的 WiFi Channel
+    self.wifiMethodChannel = FlutterMethodChannel.init(
+        name: "com.clt.kylin/ios_wifi",
+        binaryMessenger: vc.binaryMessenger
+    )
+
+    self.wifiMethodChannel!.setMethodCallHandler{(call, result) in
+        switch call.method {
+        case "isWifiConnect":
+            self.checkWifiStatus { isConnected in
+                result(isConnected)
+            }
+
+        case "getWifiRssi":
+            self.getWifiRssiValue { rssi in
+                result(rssi)
+            }
+
+        default:
+            result(FlutterMethodNotImplemented)
+        }
     }
+
+    // 初始化位置管理器（用于获取 WiFi 信息）
+    self.locationManager = CLLocationManager()
+    self.locationManager?.delegate = self
+
     return super.application(application, didFinishLaunchingWithOptions: launchOptions)
   }
+
+    // WiFi 连接状态检测（使用异步方式）
+    private func checkWifiStatus(completion: @escaping (Bool) -> Void) {
+        // iOS 13+ 需要检查位置权限
+        self.checkLocationPermission { [weak self] hasPermission in
+            guard hasPermission else {
+                completion(false)
+                return
+            }
+
+            guard let interfaces = CNCopySupportedInterfaces() as? [String] else {
+                completion(false)
+                return
+            }
+
+            for interface in interfaces {
+                guard let interfaceInfo = CNCopyCurrentNetworkInfo(interface as CFString) as? [String: AnyObject] else {
+                    continue
+                }
+
+                // 如果能够获取到网络信息，说明已连接 WiFi
+                if let ssid = interfaceInfo[kCNNetworkInfoKeySSID as String] as? String,
+                   !ssid.isEmpty {
+                    completion(true)
+                    return
+                }
+            }
+            completion(false)
+        }
+    }
+
+    // 获取 WiFi 信号强度
+    private func getWifiRssiValue(completion: @escaping (Int?) -> Void) {
+        // 注意：在 iOS 13+ 中，CNCopyCurrentNetworkInfo 不再返回 RSSI
+        completion(-50)
+    }
+
+    // 检查位置权限（iOS 13+ 获取 WiFi 信息需要）
+    private func checkLocationPermission(completion: @escaping (Bool) -> Void) {
+        let status: CLAuthorizationStatus
+
+        if #available(iOS 14.0, *) {
+            status = self.locationManager?.authorizationStatus ?? .notDetermined
+        } else {
+            status = CLLocationManager.authorizationStatus()
+        }
+
+        switch status {
+        case .authorizedAlways, .authorizedWhenInUse:
+            // 已有权限
+            completion(true)
+
+        case .notDetermined:
+            // 请求权限
+            self.wifiPermissionCompletion = completion
+            self.locationManager?.requestWhenInUseAuthorization()
+
+        case .denied, .restricted:
+            // 用户拒绝或受限
+            print("位置权限被拒绝或受限，无法获取 WiFi 信息")
+            completion(false)
+
+        @unknown default:
+            completion(false)
+        }
+    }
+}
+
+// 当调用 locationManager.requestWhenInUseAuthorization() 请求位置权限时，系统会弹出一个权限对话框。
+extension AppDelegate: CLLocationManagerDelegate {
+    func locationManager(_ manager: CLLocationManager, didChangeAuthorization status: CLAuthorizationStatus) {
+        switch status {
+        case .authorizedAlways, .authorizedWhenInUse:
+            self.wifiPermissionCompletion?(true)
+
+        case .denied, .restricted, .notDetermined:
+            self.wifiPermissionCompletion?(false)
+
+        @unknown default:
+            self.wifiPermissionCompletion?(false)
+        }
+        self.wifiPermissionCompletion = nil
+    }
 }
 ```
 
 获取wifi状态的原生ios代码：
 ```dart
-import UIKit
-import SystemConfiguration.CaptiveNetwork
-import CoreTelephony
+import 'package:flutter/cupertino.dart';
+import 'package:flutter/services.dart';
 
-/// WiFi 工具类：获取连接状态、信号强度
-class WifiController: NSObject {
-    
-    /// 检查当前是否连接到 WiFi
-    /// - Returns: true=已连接 WiFi；false=未连接/无权限/获取失败
-    class func isConnectedToWifi() -> Bool {
-        // 1. 检查定位权限（iOS 13+ 获取 WiFi 信息必需）
-        guard checkLocationPermission() else {
-            print("⚠️ 定位权限未授权，无法获取 WiFi 状态")
-            return false
-        }
-        
-        // 2. 获取当前连接的 WiFi 信息
-        guard let wifiInfo = getCurrentWifiInfo() else {
-            print("⚠️ 未连接 WiFi 或获取失败")
-            return false
-        }
-        
-        // 3. 验证 SSID 非空（排除未连接状态）
-        let ssid = wifiInfo["SSID"] as? String ?? ""
-        return !ssid.isEmpty && ssid != "Unknown SSID"
-    }
-    
-    /// 获取当前 WiFi 信号强度（返回 0-4 的整数，4 最强，0 最弱）
-    /// - Returns: 信号强度值（-1 表示获取失败）
-    class func getWifiRssi() -> Int {
-        // 1. 先检查是否连接 WiFi
-        guard isConnectedToWifi() else {
-            print("⚠️ 未连接 WiFi，无法获取信号强度")
-            return -1
-        }
-        
-        // 2. 获取信号强度（两种方式兼容不同 iOS 版本）
-        if #available(iOS 12.0, *) {
-            // 方式1：CoreTelephony（iOS 12+ 推荐）
-            let telephonyInfo = CTTelephonyNetworkInfo()
-            if let serviceInfo = telephonyInfo.serviceCurrentRadioAccessTechnology,
-               let _ = serviceInfo.values.first(where: { $0 == CTRadioAccessTechnologyWiFi }) {
-                // 通过 CNCopyCurrentNetworkInfo 获取 RSSI
-                if let wifiInfo = getCurrentWifiInfo(),
-                   let rssi = wifiInfo["RSSI"] as? String,
-                   let rssiValue = Int(rssi) {
-                    return calculateSignalLevel(rssi: rssiValue)
-                }
-            }
-        }
-        
-        // 方式2：兼容低版本（直接从 WiFi 信息取 RSSI）
-        if let wifiInfo = getCurrentWifiInfo(),
-           let rssi = wifiInfo["RSSI"] as? String,
-           let rssiValue = Int(rssi) {
-            return calculateSignalLevel(rssi: rssiValue)
-        }
-        
-        return -1
-    }
-}
+class IosWifiInfo {
 
-// MARK: - 私有工具方法
-extension WifiController {
-    /// 检查定位权限（iOS 13+ 获取 WiFi 信息必需）
-    private class func checkLocationPermission() -> Bool {
-        let locationManager = CLLocationManager()
-        let status = locationManager.authorizationStatus
-        
-        // 权限状态：已授权（前台/始终）则返回 true
-        return status == .authorizedWhenInUse || status == .authorizedAlways
+  IosWifiInfo._privateConstructor();
+
+  static final IosWifiInfo _instance = IosWifiInfo._privateConstructor();
+
+
+  factory IosWifiInfo() {
+    return _instance;
+  }
+
+  late final MethodChannel _channel = const MethodChannel('com.clt.kylin/ios_wifi');
+
+  /// 检查是否连接 WiFi
+  Future<bool> isWifiConnect() async {
+    try {
+      final bool result = await _channel.invokeMethod('isWifiConnect');
+      return result;
+    } on PlatformException catch (e) {
+      debugPrint("Failed to check WiFi connection: '${e.message}'.");
+      return false;
     }
-    
-    /// 获取当前 WiFi 详细信息（SSID/BSSID/RSSI 等）
-    private class func getCurrentWifiInfo() -> [String: Any]? {
-        // 1. 检查系统版本
-        guard #available(iOS 9.0, *) else {
-            print("⚠️ iOS 版本低于 9.0，不支持获取 WiFi 信息")
-            return nil
-        }
-        
-        // 2. 获取 WiFi 接口列表
-        guard let interfaces = CNCopySupportedInterfaces() as? [String] else {
-            print("⚠️ 无法获取 WiFi 接口列表")
-            return nil
-        }
-        
-        // 3. 遍历接口获取当前连接的 WiFi 信息
-        for interface in interfaces {
-            guard let interfaceInfo = CNCopyCurrentNetworkInfo(interface as CFString) as? [String: Any] else {
-                continue
-            }
-            return interfaceInfo
-        }
-        
-        return nil
+  }
+
+  /// 获取 WiFi 信号强度 (RSSI)
+  Future<int?> getWifiRssi() async {
+    try {
+      final int result = await _channel.invokeMethod('getWifiRssi');
+      return result;
+    } on PlatformException catch (e) {
+      debugPrint("Failed to get WiFi RSSI: '${e.message}'.");
+      return null;
     }
-    
-    /// 将 RSSI 原始值转换为 0-4 的信号强度等级（iOS 标准）
-    /// - Parameter rssi: RSSI 原始值（通常为负数，如 -50 表示强，-100 表示弱）
-    /// - Returns: 0-4 的等级值
-    private class func calculateSignalLevel(rssi: Int) -> Int {
-        // iOS 标准 RSSI 等级划分（可根据需求调整）
-        switch rssi {
-        case ...(-100): return 0
-        case -99...(-85): return 1
-        case -84...(-70): return 2
-        case -69...(-55): return 3
-        case -54...: return 4
-        default: return 0
-        }
-    }
+  }
 }
 ```
+调用的话直接跟之前一样就好了，需要使用`await`
 
-权限补充
+权限补充, 注意IOS13之后需要动态权限申请了。
 ```xml
-<!-- WiFi 访问权限 -->
-<key>NSWiFiUsageDescription</key>
-<string>“麒麟可视化智控平台”需要访问 WiFi 状态，用于识别局域网设备、优化网络连接</string>
-
-<!-- 定位权限（获取 WiFi 信息必需） -->
+    <!-- 新增以下 WiFi 权限配置 -->
 <key>NSLocationWhenInUseUsageDescription</key>
-<string>“麒麟可视化智控平台”需要定位权限以获取 WiFi 相关信息，实现局域网设备发现</string>
+<string>需要获取WiFi信息</string>
+
+<key>NSLocationAlwaysUsageDescription</key>
+<string>需要获取WiFi信息</string>
+
+<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+<string>需要获取WiFi信息</string>
+
+<key>HotspotConfiguration</key>
+<true/>
+
+    <!-- 从 iOS 13 开始需要此权限才能获取 WiFi 信息 -->
+<key>NSLocalNetworkUsageDescription</key>
+<string>需要检查网络连接状态</string>
 ```
 
 
