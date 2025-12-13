@@ -4,6 +4,7 @@
 
 ### 打包
 
+[flutter三端打包.md](docs/flutter三端打包.md)
 
 ### 组件相关
 

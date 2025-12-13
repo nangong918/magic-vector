@@ -36,14 +36,27 @@ Android打包方法
 
 执行 Flutter Clean，清除旧的构建缓存文件
 ![清除旧的构建缓存文件](img.png)
-
 执行 Flutter Pub Get，重新获取依赖
+注意需要用非鸿蒙的SDK进行打包，参考命令：
+```shell
+# mac上选择flutter 3.7.12进行打包
+source ~/.zshrc;source ~/.bash_profile; /Users/clt/Documents/flutter-3.7.3/bin/flutter clean
+# 执行 Flutter Pub Get，重新获取依赖
+source ~/.zshrc;source ~/.bash_profile; /Users/clt/Documents/flutter-3.7.3/bin/flutter pub get
+```
+
 
 在命令行中，在/ios路径下执行 pod install
+苹果构建需要同步依赖，命令参考：
+```shell
+cd ios
+pod install
+```
 ![img_1.png](img_1.png)
 
 执行 Open iOS module in Xcode，在 Xcode 中打开
 ![img_2.png](img_2.png)
+编译也需要在XCode进行编译
 
 执行 Archive，开始打包
 ![img_3.png](img_3.png)
@@ -122,4 +135,4 @@ source ~/.zshrc;source ~/.bash_profile; echo $PATH; flutter build hap
 hdc install <outputs_path>/app-release.hap
 ```
 
-
+最后会得到：akp，hap，ipa三个文件
