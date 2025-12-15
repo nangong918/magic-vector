@@ -4,6 +4,8 @@
 ## 当前任务
 
 ### lv-1(待定)
+我认为这些屎尿屁小任务都不重要, 重要是的解决JNI, Cpp, STL, FFmpeg, OpenGL
+
 Spring 项目部署在Docker -> 上传到阿里云服务器 todo Docker，Nginx -> 内网穿透(部署ES，Minlvus对服务器要求太高了)
 简单的SpringAI智能体部署Docker + 内网穿透
 压测, 修复bug, 提高系统的鲁棒性
