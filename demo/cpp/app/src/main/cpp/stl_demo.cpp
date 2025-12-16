@@ -258,7 +258,7 @@ Java_com_demo_cpp_STLActivity_testSmartPointer(JNIEnv* env, jobject thiz) {
         ss << "   创建unique_ptr指向: " << *ptr1 << "\n";
 
         // unique_ptr不能复制，只能移动
-        unique_ptr<int> ptr2 = move(ptr1);
+        std::unique_ptr<int> ptr2 = std::move(ptr1);
         if (!ptr1) {
             ss << "   ptr1现在为空 (所有权已转移)\n";
         }
@@ -272,8 +272,6 @@ Java_com_demo_cpp_STLActivity_testSmartPointer(JNIEnv* env, jobject thiz) {
         ss << "   创建shared_ptr, use_count: " << ptr3.use_count() << "\n";
 
         {
-            shared_ptr<int> ptr4 = ptr3;  // 共享所有权
-            shared_ptr<int> ptr5 = ptr3;
             ss << "   复制2次后, use_count: " << ptr3.use_count() << "\n";
             ss << "   所有指针指向同一个值: " << *ptr3 << "\n";
         }  // ptr4, ptr5离开作用域
@@ -451,7 +449,7 @@ Java_com_demo_cpp_STLActivity_testPriorityQueue(JNIEnv* env, jobject thiz) {
     }
 
     // 小顶堆
-    priority_queue<int, vector<int>, greater<int>> minHeap;
+    priority_queue<int, vector<int>, greater<>> minHeap;
     for (int n : nums) minHeap.push(n);
 
     ss << "\n\n小顶堆出堆顺序(从小到大): ";
