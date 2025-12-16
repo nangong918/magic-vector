@@ -2,4 +2,6 @@
     <string name="app_name">cppDemo</string>
     <string name="title_activity_main">MainActivity</string>
     <string name="title_activity_stlactivity">STLActivity</string>
+    <string name="title_activity_ffmpeg">FFmpegActivity</string>
+    <string name="title_activity_open_glactivity">OpenGLActivity</string>
 </resources>

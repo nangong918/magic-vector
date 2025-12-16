@@ -12,6 +12,16 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.CppDemo">
         <activity
+            android:name=".OpenGLActivity"
+            android:exported="false"
+            android:label="@string/title_activity_open_glactivity"
+            android:theme="@style/Theme.CppDemo" />
+        <activity
+            android:name=".FFmpegActivity"
+            android:exported="false"
+            android:label="@string/title_activity_ffmpeg"
+            android:theme="@style/Theme.CppDemo" />
+        <activity
             android:name=".STLActivity"
             android:exported="false"
             android:label="@string/title_activity_stlactivity"
