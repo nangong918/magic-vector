@@ -27,6 +27,25 @@ Java_com_demo_cpp_STLActivity_testAlgorithm(JNIEnv* env, jobject thiz);
 JNIEXPORT jstring JNICALL
 Java_com_demo_cpp_STLActivity_testSmartPointer(JNIEnv* env, jobject thiz);
 
+// 新增数据结构测试
+JNIEXPORT jstring JNICALL
+Java_com_demo_cpp_STLActivity_testList(JNIEnv* env, jobject thiz);
+
+JNIEXPORT jstring JNICALL
+Java_com_demo_cpp_STLActivity_testSet(JNIEnv* env, jobject thiz);
+
+JNIEXPORT jstring JNICALL
+Java_com_demo_cpp_STLActivity_testDeque(JNIEnv* env, jobject thiz);
+
+JNIEXPORT jstring JNICALL
+Java_com_demo_cpp_STLActivity_testStack(JNIEnv* env, jobject thiz);
+
+JNIEXPORT jstring JNICALL
+Java_com_demo_cpp_STLActivity_testQueue(JNIEnv* env, jobject thiz);
+
+JNIEXPORT jstring JNICALL
+Java_com_demo_cpp_STLActivity_testPriorityQueue(JNIEnv* env, jobject thiz);
+
 #ifdef __cplusplus
 }
 #endif

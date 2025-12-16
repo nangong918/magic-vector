@@ -9,6 +9,14 @@
 #include <random>    // 随机数
 #include <iostream>
 
+// 新增数据结构需要的头文件
+#include <list>      // 双向链表
+#include <set>       // 有序集合
+#include <deque>     // 双端队列
+#include <stack>     // 栈
+#include <queue>     // 队列
+#include <functional>// greater比较器
+
 using namespace std;
 
 // 辅助函数：将C++字符串转换为jstring
@@ -305,6 +313,174 @@ Java_com_demo_cpp_STLActivity_testSmartPointer(JNIEnv* env, jobject thiz) {
     }
 
     return stringToJString(env, formatOutput("Smart Pointer测试", ss.str()));
+}
+
+// List测试（双向链表）
+JNIEXPORT jstring JNICALL
+Java_com_demo_cpp_STLActivity_testList(JNIEnv* env, jobject thiz) {
+    stringstream ss;
+    list<int> lst = {1, 2, 3};
+
+    lst.push_front(0);    // 前插
+    lst.push_back(4);     // 后插
+    lst.insert(++lst.begin(), 99);  // 中间插入
+
+    ss << "List操作:\n";
+    for (int n : lst) ss << n << " ";
+
+    lst.sort([](int a, int b) { return a > b; });  // 降序排序
+    ss << "\n排序后: ";
+    for (int n : lst) ss << n << " ";
+
+    lst.remove(99);  // 删除指定值
+    ss << "\n删除99后: ";
+    for (int n : lst) ss << n << " ";
+
+    lst.unique();  // 去重相邻相同元素
+
+    return stringToJString(env, ss.str());
+}
+
+// Set测试（有序集合）
+JNIEXPORT jstring JNICALL
+Java_com_demo_cpp_STLActivity_testSet(JNIEnv* env, jobject thiz) {
+    stringstream ss;
+    set<int> s = {3, 1, 4, 1, 5, 9};
+
+    ss << "Set自动排序去重:\n";
+    for (int n : s) ss << n << " ";
+
+    s.insert(2);
+    s.insert(7);
+    s.erase(4);
+
+    ss << "\n插入2,7,删除4后:\n";
+    for (int n : s) ss << n << " ";
+
+    // 查找测试
+    auto it = s.find(5);
+    if (it != s.end()) ss << "\n找到5";
+
+    // lower_bound/upper_bound
+    auto lb = s.lower_bound(3);
+    auto ub = s.upper_bound(7);
+    ss << "\n[3,7)范围: ";
+    for (auto i = lb; i != ub; ++i) ss << *i << " ";
+
+    return stringToJString(env, ss.str());
+}
+
+// Deque测试（双端队列）
+JNIEXPORT jstring JNICALL
+Java_com_demo_cpp_STLActivity_testDeque(JNIEnv* env, jobject thiz) {
+    stringstream ss;
+    deque<int> dq = {1, 2, 3};
+
+    dq.push_front(0);   // 前插
+    dq.push_back(4);    // 后插
+    dq.insert(dq.begin() + 2, 99);  // 中间插入
+
+    ss << "Deque操作:\n前插0,后插4,中间插99: ";
+    for (int n : dq) ss << n << " ";
+
+    ss << "\n随机访问dq[2]=" << dq[2];
+    ss << "\nfront=" << dq.front() << ", back=" << dq.back();
+
+    dq.pop_front();
+    dq.pop_back();
+    ss << "\npop_front/pop_back后: ";
+    for (int n : dq) ss << n << " ";
+
+    return stringToJString(env, ss.str());
+}
+
+// Stack测试（LIFO）
+JNIEXPORT jstring JNICALL
+Java_com_demo_cpp_STLActivity_testStack(JNIEnv* env, jobject thiz) {
+    stringstream ss;
+    stack<int> stk;
+
+    for (int i = 1; i <= 5; ++i) stk.push(i * 10);
+
+    ss << "Stack(LIFO):\n压栈5个元素后size=" << stk.size();
+    ss << "\n栈顶=" << stk.top();
+
+    ss << "\n出栈顺序: ";
+    while (!stk.empty()) {
+        ss << stk.top() << " ";
+        stk.pop();
+    }
+
+    return stringToJString(env, ss.str());
+}
+
+// Queue测试（FIFO）
+JNIEXPORT jstring JNICALL
+Java_com_demo_cpp_STLActivity_testQueue(JNIEnv* env, jobject thiz) {
+    stringstream ss;
+    queue<int> q;
+
+    for (int i = 1; i <= 5; ++i) q.push(i);
+
+    ss << "Queue(FIFO):\n入队5个元素后size=" << q.size();
+    ss << "\n队首=" << q.front() << ", 队尾=" << q.back();
+
+    ss << "\n出队顺序: ";
+    while (!q.empty()) {
+        ss << q.front() << " ";
+        q.pop();
+    }
+
+    return stringToJString(env, ss.str());
+}
+
+// Priority Queue测试（堆）
+JNIEXPORT jstring JNICALL
+Java_com_demo_cpp_STLActivity_testPriorityQueue(JNIEnv* env, jobject thiz) {
+    stringstream ss;
+    priority_queue<int> maxHeap;  // 默认大顶堆
+
+    vector<int> nums = {3, 1, 4, 1, 5, 9};
+    for (int n : nums) maxHeap.push(n);
+
+    ss << "PriorityQueue(大顶堆):\n元素: 3 1 4 1 5 9";
+    ss << "\n出堆顺序(从大到小): ";
+    while (!maxHeap.empty()) {
+        ss << maxHeap.top() << " ";
+        maxHeap.pop();
+    }
+
+    // 小顶堆
+    priority_queue<int, vector<int>, greater<int>> minHeap;
+    for (int n : nums) minHeap.push(n);
+
+    ss << "\n\n小顶堆出堆顺序(从小到大): ";
+    while (!minHeap.empty()) {
+        ss << minHeap.top() << " ";
+        minHeap.pop();
+    }
+
+    // 自定义比较器
+    struct Person {
+        string name;
+        int age;
+        bool operator<(const Person& other) const {
+            return age < other.age;  // 按年龄排序
+        }
+    };
+
+    priority_queue<Person> personHeap;
+    personHeap.push({"Alice", 25});
+    personHeap.push({"Bob", 30});
+    personHeap.push({"Charlie", 20});
+
+    ss << "\n\n自定义Person结构体(按年龄):\n";
+    while (!personHeap.empty()) {
+        ss << personHeap.top().name << ":" << personHeap.top().age << " ";
+        personHeap.pop();
+    }
+
+    return stringToJString(env, ss.str());
 }
 
 } // extern "C"
