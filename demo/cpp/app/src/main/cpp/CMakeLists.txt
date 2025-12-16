@@ -11,6 +11,15 @@ cmake_minimum_required(VERSION 3.22.1)
 # build script scope).
 project("cpp")
 
+# Set C++ standard and STL library
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+# Add STL library configuration
+# Android提供了几种STL实现，这里使用c++_shared
+find_library(log-lib log)
+
+
 # Creates and names a library, sets it as either STATIC
 # or SHARED, and provides the relative paths to its source code.
 # You can define multiple libraries, and CMake builds them for you.
@@ -24,14 +33,18 @@ project("cpp")
 # System.loadLibrary() and pass the name of the library defined here;
 # for GameActivity/NativeActivity derived applications, the same library name must be
 # used in the AndroidManifest.xml file.
+# 添加cpp_shared STL库
 add_library(${CMAKE_PROJECT_NAME} SHARED
         # List C/C++ source files with relative paths to this CMakeLists.txt.
-        native-lib.cpp)
+        native-lib.cpp
+        stl_demo.cpp)
 
 # Specifies libraries CMake should link to your target library. You
 # can link libraries from various origins, such as libraries defined in this
 # build script, prebuilt third-party libraries, or Android system libraries.
+# 链接STL库 - 使用c++_shared（推荐用于多原生库）
 target_link_libraries(${CMAKE_PROJECT_NAME}
-        # List libraries link to the target library
         android
-        log)
+        ${log-lib}
+        # 链接C++标准库
+        c++_shared)

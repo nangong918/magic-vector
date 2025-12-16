@@ -12,7 +12,7 @@ object CatalogManager {
             CatalogItem(
                 id = "1",
                 title = "STL",
-                subtitle = "cpp 数据结构 STL　Demo",
+                subtitle = "cpp 数据结构 STL Demo",
                 cls = STLActivity::class.java
             ),
         )

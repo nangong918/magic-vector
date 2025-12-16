@@ -10,7 +10,7 @@ android {
 
     defaultConfig {
         applicationId = "com.demo.cpp"
-        minSdk = 29
+        minSdk = 28
         targetSdk = 36
         versionCode = 1
         versionName = "1.0"
@@ -19,9 +19,19 @@ android {
         externalNativeBuild {
             cmake {
                 cppFlags += "-std=c++17"
+                // 指定要使用的STL版本
+                arguments += "-DANDROID_STL=c++_shared"
+                // 兼容真机(arm64-v8a) + Windows模拟器(x86_64)
+                abiFilters.add("arm64-v8a")
+                abiFilters.add("x86_64")
             }
         }
+        // 也可以直接在android块下单独配置ndk（二选一，效果一致）：
+        ndk {
+            abiFilters.addAll(listOf("arm64-v8a", "x86_64"))
+        }
     }
+
 
     buildTypes {
         release {
