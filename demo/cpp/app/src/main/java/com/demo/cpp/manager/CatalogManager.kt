@@ -2,8 +2,7 @@ package com.demo.cpp.manager
 
 import android.content.Context
 import android.content.Intent
-import com.demo.cpp.FFmpegActivity
-import com.demo.cpp.OpenGLActivity
+import com.demo.cpp.CameraFilterActivity
 import com.demo.cpp.STLActivity
 import com.demo.cpp.domain.vo.CatalogItem
 
@@ -19,15 +18,9 @@ object CatalogManager {
             ),
             CatalogItem(
                 id = "2",
-                title = "FFmpeg",
-                subtitle = "FFmpeg 视频流编解码处理 Demo",
-                cls = FFmpegActivity::class.java
-            ),
-            CatalogItem(
-                id = "3",
-                title = "OpenGL",
-                subtitle = "OpenGL视频帧GPU加速绘制 Demo",
-                cls = OpenGLActivity::class.java
+                title = "CameraFilter",
+                subtitle = "OpenGL 实现的Camera滤镜 Demo",
+                cls = CameraFilterActivity::class.java
             ),
         )
     }

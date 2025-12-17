@@ -3,6 +3,7 @@
     xmlns:tools="http://schemas.android.com/tools">
 
     <application
+        android:name=".MainApplication"
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"
@@ -12,14 +13,9 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.CppDemo">
         <activity
-            android:name=".OpenGLActivity"
+            android:name=".CameraFilterActivity"
             android:exported="false"
-            android:label="@string/title_activity_open_glactivity"
-            android:theme="@style/Theme.CppDemo" />
-        <activity
-            android:name=".FFmpegActivity"
-            android:exported="false"
-            android:label="@string/title_activity_ffmpeg"
+            android:label="@string/title_activity_camerafilteractivity"
             android:theme="@style/Theme.CppDemo" />
         <activity
             android:name=".STLActivity"
