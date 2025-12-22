@@ -9,6 +9,7 @@
 #include <random>    // 随机数
 #include <iostream>
 
+#include <syslog.h>
 // 新增数据结构需要的头文件
 #include <list>      // 双向链表
 #include <set>       // 有序集合
@@ -479,6 +480,142 @@ Java_com_demo_cpp_STLActivity_testPriorityQueue(JNIEnv* env, jobject thiz) {
     }
 
     return stringToJString(env, ss.str());
+}
+
+JNIEXPORT jint JNICALL Java_com_demo_cpp_manager_JniManager_changeJavaValue
+        (JNIEnv *env, jobject jobj, jobject jniEntity) {
+
+    // 获取JniManager的类引用
+    jclass jniManagerClass = env->FindClass("com/demo/cpp/manager/JniManager");
+    if (jniManagerClass == nullptr) {
+        syslog(LOG_ERR,"Failed to find JniManager class");
+        return -1;
+    }
+
+    // 获取changeValue方法ID
+    // 方法签名需要根据参数类型生成
+    jmethodID changeValueMethod = env->GetStaticMethodID(
+            jniManagerClass,
+            "changeValue",
+            "(Lcom/demo/cpp/domain/entity/jni/JniEntity;Ljava/lang/String;IFDBSJSC[B[I[F[D[ZLjava/util/List;)V"
+    );
+
+    if (changeValueMethod == nullptr) {
+        syslog(LOG_ERR,"Failed to find changeValue method");
+        env->DeleteLocalRef(jniManagerClass);
+        return -2;
+    }
+
+    // 准备要传递的参数
+    jstring newStr = env->NewStringUTF("New String from JNI");
+    jint newInt = 100;
+    jfloat newFloat = 100.1f;
+    jdouble newDouble = 200.2;
+    jboolean newBool = JNI_TRUE;
+    jbyte newByte = 0x7F;
+    jshort newShort = 300;
+    jlong newLong = 1234567890123L;
+    jchar newChar = L'Z';
+
+    // 创建新的byte数组
+    jbyteArray newByteArray = env->NewByteArray(5);
+    jbyte byteData[] = {0x10, 0x20, 0x30, 0x40, 0x50};
+    env->SetByteArrayRegion(newByteArray, 0, 5, byteData);
+
+    // 创建新的int数组
+    jintArray newIntArray = env->NewIntArray(5);
+    jint intData[] = {10, 20, 30, 40, 50};
+    env->SetIntArrayRegion(newIntArray, 0, 5, intData);
+
+    // 创建新的float数组
+    jfloatArray newFloatArray = env->NewFloatArray(5);
+    jfloat floatData[] = {10.1f, 20.2f, 30.3f, 40.4f, 50.5f};
+    env->SetFloatArrayRegion(newFloatArray, 0, 5, floatData);
+
+    // 创建新的double数组
+    jdoubleArray newDoubleArray = env->NewDoubleArray(5);
+    jdouble doubleData[] = {10.01, 20.02, 30.03, 40.04, 50.05};
+    env->SetDoubleArrayRegion(newDoubleArray, 0, 5, doubleData);
+
+    // 创建新的boolean数组
+    jbooleanArray newBoolArray = env->NewBooleanArray(5);
+    jboolean boolData[] = {JNI_TRUE, JNI_FALSE, JNI_TRUE, JNI_FALSE, JNI_TRUE};
+    env->SetBooleanArrayRegion(newBoolArray, 0, 5, boolData);
+
+    // 创建新的Integer List
+    jclass integerClass = env->FindClass("java/lang/Integer");
+    jmethodID integerConstructor = env->GetMethodID(integerClass, "<init>", "(I)V");
+    jclass listClass = env->FindClass("java/util/ArrayList");
+    jmethodID listConstructor = env->GetMethodID(listClass, "<init>", "()V");
+    jmethodID listAddMethod = env->GetMethodID(listClass, "add", "(Ljava/lang/Object;)Z");
+
+    jobject newIntList = env->NewObject(listClass, listConstructor);
+
+    // 添加元素到List
+    for (int i = 1; i <= 10; i++) {
+        jobject integerObj = env->NewObject(integerClass, integerConstructor, i * 100);
+        env->CallBooleanMethod(newIntList, listAddMethod, integerObj);
+        env->DeleteLocalRef(integerObj);
+    }
+
+    // 调用Java的changeValue方法
+    env->CallStaticVoidMethod(
+            jniManagerClass,
+            changeValueMethod,
+            jniEntity,            // JniEntity对象
+            newStr,              // String
+            newInt,              // int
+            newFloat,            // float
+            newDouble,           // double
+            newBool,             // boolean
+            newByte,             // byte
+            newShort,            // short
+            newLong,             // long
+            newChar,             // char
+            newByteArray,        // byte[]
+            newIntArray,         // int[]
+            newFloatArray,       // float[]
+            newDoubleArray,      // double[]
+            newBoolArray,        // boolean[]
+            newIntList           // List<Integer>
+    );
+
+    // 检查是否有Java异常
+    if (env->ExceptionCheck()) {
+        syslog(LOG_ERR,"Exception occurred when calling changeValue");
+        env->ExceptionDescribe();
+        env->ExceptionClear();
+
+        // 清理局部引用
+        env->DeleteLocalRef(jniManagerClass);
+        env->DeleteLocalRef(newStr);
+        env->DeleteLocalRef(newByteArray);
+        env->DeleteLocalRef(newIntArray);
+        env->DeleteLocalRef(newFloatArray);
+        env->DeleteLocalRef(newDoubleArray);
+        env->DeleteLocalRef(newBoolArray);
+        env->DeleteLocalRef(integerClass);
+        env->DeleteLocalRef(listClass);
+        env->DeleteLocalRef(newIntList);
+
+        return -3;
+    }
+
+    syslog(LOG_DEBUG,"Successfully called changeValue method from JNI");
+
+    // 清理局部引用
+    env->DeleteLocalRef(jniManagerClass);
+    env->DeleteLocalRef(newStr);
+    env->DeleteLocalRef(newByteArray);
+    env->DeleteLocalRef(newIntArray);
+    env->DeleteLocalRef(newFloatArray);
+    env->DeleteLocalRef(newDoubleArray);
+    env->DeleteLocalRef(newBoolArray);
+    env->DeleteLocalRef(integerClass);
+    env->DeleteLocalRef(listClass);
+    env->DeleteLocalRef(newIntList);
+
+    return 0;
 }
 
 } // extern "C"

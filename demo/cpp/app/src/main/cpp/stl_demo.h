@@ -46,6 +46,18 @@ Java_com_demo_cpp_STLActivity_testQueue(JNIEnv* env, jobject thiz);
 JNIEXPORT jstring JNICALL
 Java_com_demo_cpp_STLActivity_testPriorityQueue(JNIEnv* env, jobject thiz);
 
+/// JNI 测试 （Java调用Cpp写需要sync，调用Cpp读不需要）
+// Cpp 调用 Java对象，Java函数，给Java对象赋值
+/**
+ * 在JNI中调用Java的changeValue方法
+ * @param env JNI环境指针
+ * @param jobj Java对象实例
+ * @param jniEntity Java的JniEntity对象
+ * @return 执行结果，0表示成功，其他表示失败
+ */
+JNIEXPORT jint JNICALL Java_com_demo_cpp_manager_JniManager_changeJavaValue
+        (JNIEnv *env, jobject jobj, jobject jniEntity);
+
 #ifdef __cplusplus
 }
 #endif

@@ -19,6 +19,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.demo.cpp.domain.entity.jni.JniEntity
+import com.demo.cpp.manager.JniManager
 import com.demo.cpp.ui.theme.CppDemoTheme
 
 class STLActivity : ComponentActivity() {
@@ -195,6 +197,31 @@ fun STLDemoScreen(modifier: Modifier = Modifier) {
                 .padding(bottom = 16.dp)
         ) {
             Text("测试 Smart Pointer")
+        }
+
+        // JNI 调用测试
+        Text(
+            text = "JNI调用测试:",
+            modifier = Modifier.padding(bottom = 8.dp)
+        )
+
+        Button(
+            onClick = {
+                val entity = JniEntity()
+                val result = JniManager.changeJavaValue(entity)
+                if (result == 0) {
+                    setResult(entity.toString())
+                    setResult("JNI调用成功！返回码：${0}")
+                } else {
+                    setResult("null")
+                    setResult("JNI调用失败！返回码：$result")
+                }
+            },
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 16.dp)
+        ) {
+            Text("测试 JNI 调用 Java 方法")
         }
 
         // 结果显示
