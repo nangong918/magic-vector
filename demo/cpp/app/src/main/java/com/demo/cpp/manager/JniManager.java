@@ -1,6 +1,5 @@
 package com.demo.cpp.manager;
 
-import android.util.Log;
 
 import com.demo.cpp.domain.entity.jni.IntMsg;
 import com.demo.cpp.domain.entity.jni.JniEntity;
@@ -12,6 +11,8 @@ public class JniManager {
     public static final String TAG = "JniManager";
 
     private static final JniManager instance = new JniManager();
+    public static OnReceiveCppMessage onReceiveCppMessage;
+
     public static JniManager getInstance() {
         return instance;
     }
@@ -23,23 +24,23 @@ public class JniManager {
     // 纯Java方法，C++调用这个
 
     /**
-     *
-     * @param jniEntity
-     * @param str
-     * @param intValue
-     * @param floatValue
-     * @param doubleValue
-     * @param boolValue
-     * @param byteValue
-     * @param shortValue
-     * @param longValue
-     * @param charValue
-     * @param byteArray
-     * @param intArray
-     * @param floatArray
-     * @param doubleArray
-     * @param boolArray
-     * @param intList
+     * 纯Java方法，C++调用这个
+     * @param jniEntity     JniEntity对象     com/demo/cpp/domain/entity/jni/JniEntity
+     * @param str           字符串             Ljava/lang/String
+     * @param intValue      整数              I
+     * @param floatValue    浮点数f            F
+     * @param doubleValue   浮点数d            D
+     * @param boolValue     布尔值             Z
+     * @param byteValue     字节              B
+     * @param shortValue    短整型             S
+     * @param longValue     长整型             J
+     * @param charValue     字符              C
+     * @param byteArray     字节数组            [B
+     * @param intArray      整型数组            [I
+     * @param floatArray    浮点数数组           [F
+     * @param doubleArray   浮点数数组           [D
+     * @param boolArray     布尔数组            [Z
+     * @param intList       整型列表            Ljava/util/List （泛型擦除）
      */
     public static void changeValue(
             JniEntity jniEntity,
@@ -76,22 +77,37 @@ public class JniManager {
         jniEntity.intList = intList;
     }
 
-    // C++回调的Java方法（必须与C++中GetMethodID的方法名/签名一致）
+    /**
+     * C++回调的Java方法（必须与C++中GetMethodID的方法名/签名一致）
+     * @param msg   IntMsg对象
+     */
     public void onIntMsgReceived(IntMsg msg) {
-        // 接收C++推送的int++消息
-        Log.i(TAG, "收到C++推送的int消息：" + msg.value);
+        if (onReceiveCppMessage != null && msg != null){
+            onReceiveCppMessage.onReceiveCppMessage(msg);
+        }
     }
 
     /// java-native方法定义
-    // 在jni中调用JniManager.changeValue方法
+    /**
+     * 在jni中调用JniManager.changeValue方法
+     * @param jniEntity JniEntity对象
+     * @return  是否成功
+     */
     public native static int changeJavaValue(JniEntity jniEntity);
 
-    // 初始化JNI回调环境
+    /**
+     * 初始化JNI回调环境
+     */
     public native void initIntMsgCallback();
 
-    // 启动推送
+    /**
+     * 启动推送
+     * @param interval_ms   推送间隔
+     */
     public native void startPushIntMsg(int interval_ms);
 
-    // 停止推送
+    /**
+     * 停止推送
+     */
     public native void stopPushIntMsg();
 }

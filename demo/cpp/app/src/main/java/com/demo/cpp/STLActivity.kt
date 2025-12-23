@@ -19,8 +19,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.demo.cpp.domain.entity.jni.IntMsg
 import com.demo.cpp.domain.entity.jni.JniEntity
 import com.demo.cpp.manager.JniManager
+import com.demo.cpp.manager.OnReceiveCppMessage
 import com.demo.cpp.ui.theme.CppDemoTheme
 
 class STLActivity : ComponentActivity() {
@@ -65,6 +67,15 @@ class STLActivity : ComponentActivity() {
 fun STLDemoScreen(modifier: Modifier = Modifier) {
     val activity = androidx.compose.ui.platform.LocalContext.current as STLActivity
     val (result, setResult) = remember { mutableStateOf("点击按钮运行STL测试") }
+
+    val onReceiveCppMessage = object : OnReceiveCppMessage{
+        override fun onReceiveCppMessage(msg: IntMsg) {
+            setResult(msg.value.toString())
+        }
+    }
+
+    // 设置
+    JniManager.onReceiveCppMessage = onReceiveCppMessage
 
     Column(
         modifier = modifier
@@ -235,7 +246,7 @@ fun STLDemoScreen(modifier: Modifier = Modifier) {
 
         Button(
             onClick = {
-                JniManager.getInstance().startPushIntMsg(0)
+                JniManager.getInstance().startPushIntMsg(1000)
             },
             modifier = Modifier
                 .fillMaxWidth()
