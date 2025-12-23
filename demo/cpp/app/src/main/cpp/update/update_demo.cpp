@@ -94,7 +94,7 @@ void update_demo::push_int_msg_task(int interval_ms) {
     jmethodID callback_method = env->GetMethodID(
             callback_cls,
             "onIntMsgReceived",          // Java回调方法名
-            "(Lcom/example/demo/IntMsg;)V" // 方法签名：参数为IntMsg对象，返回void
+            "(Lcom/demo/cpp/domain/entity/jni/IntMsg;)V" // 方法签名：参数为IntMsg对象，返回void
     );
     if (!callback_method) {
         syslog(LOG_ERR, "JNI: Get callback method failed!");

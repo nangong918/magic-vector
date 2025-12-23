@@ -224,7 +224,7 @@ fun STLDemoScreen(modifier: Modifier = Modifier) {
 
         Button(
             onClick = {
-                JniManager.initIntMsgCallback()
+                JniManager.getInstance().initIntMsgCallback()
             },
             modifier = Modifier
                 .fillMaxWidth()
@@ -235,7 +235,7 @@ fun STLDemoScreen(modifier: Modifier = Modifier) {
 
         Button(
             onClick = {
-                JniManager.startPushIntMsg(0)
+                JniManager.getInstance().startPushIntMsg(0)
             },
             modifier = Modifier
                 .fillMaxWidth()
@@ -247,7 +247,7 @@ fun STLDemoScreen(modifier: Modifier = Modifier) {
 
         Button(
             onClick = {
-                JniManager.stopPushIntMsg()
+                JniManager.getInstance().stopPushIntMsg()
             },
             modifier = Modifier
                 .fillMaxWidth()

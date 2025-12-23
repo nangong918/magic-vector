@@ -11,6 +11,11 @@ public class JniManager {
 
     public static final String TAG = "JniManager";
 
+    private static final JniManager instance = new JniManager();
+    public static JniManager getInstance() {
+        return instance;
+    }
+
     static {
         System.loadLibrary("cpp"); // 加载JNI库（名称与CMakeLists一致）
     }
@@ -72,7 +77,7 @@ public class JniManager {
     }
 
     // C++回调的Java方法（必须与C++中GetMethodID的方法名/签名一致）
-    private void onIntMsgReceived(IntMsg msg) {
+    public void onIntMsgReceived(IntMsg msg) {
         // 接收C++推送的int++消息
         Log.i(TAG, "收到C++推送的int消息：" + msg.value);
     }
@@ -82,11 +87,11 @@ public class JniManager {
     public native static int changeJavaValue(JniEntity jniEntity);
 
     // 初始化JNI回调环境
-    public static native void initIntMsgCallback();
+    public native void initIntMsgCallback();
 
     // 启动推送
-    public static native void startPushIntMsg(int interval_ms);
+    public native void startPushIntMsg(int interval_ms);
 
     // 停止推送
-    public static native void stopPushIntMsg();
+    public native void stopPushIntMsg();
 }
