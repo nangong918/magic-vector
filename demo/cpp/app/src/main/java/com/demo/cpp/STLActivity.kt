@@ -211,9 +211,7 @@ fun STLDemoScreen(modifier: Modifier = Modifier) {
                 val result = JniManager.changeJavaValue(entity)
                 if (result == 0) {
                     setResult(entity.toString())
-                    setResult("JNI调用成功！返回码：${0}")
                 } else {
-                    setResult("null")
                     setResult("JNI调用失败！返回码：$result")
                 }
             },

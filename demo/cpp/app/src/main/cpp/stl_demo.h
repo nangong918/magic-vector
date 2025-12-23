@@ -56,7 +56,7 @@ Java_com_demo_cpp_STLActivity_testPriorityQueue(JNIEnv* env, jobject thiz);
  * @return 执行结果，0表示成功，其他表示失败
  */
 JNIEXPORT jint JNICALL Java_com_demo_cpp_manager_JniManager_changeJavaValue
-        (JNIEnv *env, jobject jobj, jobject jniEntity);
+        (JNIEnv *env, jclass jclazz, jobject jniEntity);
 
 #ifdef __cplusplus
 }

@@ -483,7 +483,7 @@ Java_com_demo_cpp_STLActivity_testPriorityQueue(JNIEnv* env, jobject thiz) {
 }
 
 JNIEXPORT jint JNICALL Java_com_demo_cpp_manager_JniManager_changeJavaValue
-        (JNIEnv *env, jobject jobj, jobject jniEntity) {
+        (JNIEnv *env, jclass jclazz, jobject jniEntity) {
 
     // 获取JniManager的类引用
     jclass jniManagerClass = env->FindClass("com/demo/cpp/manager/JniManager");
@@ -494,10 +494,28 @@ JNIEXPORT jint JNICALL Java_com_demo_cpp_manager_JniManager_changeJavaValue
 
     // 获取changeValue方法ID
     // 方法签名需要根据参数类型生成
+    // 正确签名：(Lcom/demo/cpp/domain/entity/jni/JniEntity;Ljava/lang/String;IFDZBSCJ[B[I[F[D[ZLjava/util/List;)V
+    // 逐段解析：
+    // Lcom/demo/cpp/domain/entity/jni/JniEntity; → JniEntity参数
+    // Ljava/lang/String; → String参数
+    // I → int
+    // F → float
+    // D → double
+    // Z → boolean
+    // B → byte
+    // S → short
+    // J → long
+    // C → char
+    // [B → byte数组
+    // [I → int数组
+    // [F → float数组
+    // [D → double数组
+    // [Z → boolean数组（你之前写成了[Z是对的，但前面的long/char顺序错了）
+    // Ljava/util/List; → List<Integer>（泛型擦除后只保留List）
     jmethodID changeValueMethod = env->GetStaticMethodID(
             jniManagerClass,
             "changeValue",
-            "(Lcom/demo/cpp/domain/entity/jni/JniEntity;Ljava/lang/String;IFDBSJSC[B[I[F[D[ZLjava/util/List;)V"
+            "(Lcom/demo/cpp/domain/entity/jni/JniEntity;Ljava/lang/String;IFDZBSJC[B[I[F[D[ZLjava/util/List;)V"
     );
 
     if (changeValueMethod == nullptr) {
