@@ -167,6 +167,28 @@ JNIEXPORT jint JNICALL Java_com_demo_cpp_manager_JniManager_changeJavaValue
     return 0;
 }
 
+JNIEXPORT void JNICALL Java_com_demo_cpp_manager_JniManager_initIntMsgCallback
+        (JNIEnv* env, jobject thiz){
+    // 1. 获取JVM全局引用
+    JavaVM* jvm = nullptr;
+    env->GetJavaVM(&jvm);
+    // 2. 获取IntMsg类
+    jclass msg_cls = env->FindClass("com/demo/cpp/domain/entity/jni/IntMsg");
+    // 3. 初始化C++的update_demo
+    update_demo::get_instance().init_jni_env(jvm, thiz, msg_cls);
+}
+
+
+JNIEXPORT void JNICALL Java_com_demo_cpp_manager_JniManager_startPushIntMsg
+        (JNIEnv* env, jobject thiz, jint interval_ms) {
+    update_demo::get_instance().start_push_int_msg(interval_ms);
+}
+
+JNIEXPORT void JNICALL Java_com_demo_cpp_manager_JniManager_stopPushIntMsg
+        (JNIEnv* env, jobject thiz) {
+    update_demo::get_instance().stop_push_int_msg();
+}
+
 } // extern "C"
 
 

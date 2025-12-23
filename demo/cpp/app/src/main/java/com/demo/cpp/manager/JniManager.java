@@ -1,10 +1,19 @@
 package com.demo.cpp.manager;
 
+import android.util.Log;
+
+import com.demo.cpp.domain.entity.jni.IntMsg;
 import com.demo.cpp.domain.entity.jni.JniEntity;
 
 import java.util.List;
 
 public class JniManager {
+
+    public static final String TAG = "JniManager";
+
+    static {
+        System.loadLibrary("cpp"); // 加载JNI库（名称与CMakeLists一致）
+    }
 
     // 纯Java方法，C++调用这个
 
@@ -62,8 +71,22 @@ public class JniManager {
         jniEntity.intList = intList;
     }
 
+    // C++回调的Java方法（必须与C++中GetMethodID的方法名/签名一致）
+    private void onIntMsgReceived(IntMsg msg) {
+        // 接收C++推送的int++消息
+        Log.i(TAG, "收到C++推送的int消息：" + msg.value);
+    }
+
     /// java-native方法定义
     // 在jni中调用JniManager.changeValue方法
-    native public static int changeJavaValue(JniEntity jniEntity);
+    public native static int changeJavaValue(JniEntity jniEntity);
 
+    // 初始化JNI回调环境
+    public static native void initIntMsgCallback();
+
+    // 启动推送
+    public static native void startPushIntMsg(int interval_ms);
+
+    // 停止推送
+    public static native void stopPushIntMsg();
 }

@@ -222,6 +222,40 @@ fun STLDemoScreen(modifier: Modifier = Modifier) {
             Text("测试 JNI 调用 Java 方法")
         }
 
+        Button(
+            onClick = {
+                JniManager.initIntMsgCallback()
+            },
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 16.dp)
+        ) {
+            Text("测试 C++ 主动推消息给 Java Init")
+        }
+
+        Button(
+            onClick = {
+                JniManager.startPushIntMsg(0)
+            },
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 16.dp)
+        ) {
+            Text("测试 C++ 主动推消息给 Java Send")
+        }
+
+
+        Button(
+            onClick = {
+                JniManager.stopPushIntMsg()
+            },
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 16.dp)
+        ) {
+            Text("测试 C++ 主动推消息给 Java Stop")
+        }
+
         // 结果显示
         Text(
             text = "测试结果:",
