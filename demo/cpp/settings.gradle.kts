@@ -22,3 +22,4 @@ dependencyResolutionManagement {
 rootProject.name = "cppDemo"
 include(":app")
 include(":CameraFilter")
+include(":Live")
