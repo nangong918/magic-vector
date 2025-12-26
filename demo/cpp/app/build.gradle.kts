@@ -89,6 +89,9 @@ dependencies {
     debugImplementation(libs.androidx.compose.ui.tooling)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
 
+    // Gson
+    implementation("com.google.code.gson:gson:2.9.0")
+
     // my libs
     implementation(project(":CameraFilter"))
     implementation(project(":Live"))
