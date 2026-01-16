@@ -3,7 +3,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context=".CameraFilterActivity"
+    tools:context=".activity.CameraFilterActivity"
     android:layout_marginTop="30dp"
     android:layout_marginBottom="30dp">
 

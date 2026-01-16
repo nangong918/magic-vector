@@ -2,8 +2,10 @@ package com.demo.cpp.manager
 
 import android.content.Context
 import android.content.Intent
-import com.demo.cpp.CameraFilterActivity
+import com.demo.cpp.activity.CameraFilterActivity
 import com.demo.cpp.STLActivity
+import com.demo.cpp.activity.LiveActivity
+import com.demo.cpp.activity.PushActivity
 import com.demo.cpp.domain.vo.CatalogItem
 
 object CatalogManager {
@@ -21,6 +23,18 @@ object CatalogManager {
                 title = "CameraFilter",
                 subtitle = "OpenGL 实现的Camera滤镜 Demo",
                 cls = CameraFilterActivity::class.java
+            ),
+            CatalogItem(
+                id = "3",
+                title = "Live",
+                subtitle = "RTMP 直播推流 Demo",
+                cls = LiveActivity::class.java
+            ),
+            CatalogItem(
+                id = "4",
+                title = "Push",
+                subtitle = "FFmpeg 推流 Demo",
+                cls = PushActivity::class.java
             ),
         )
     }

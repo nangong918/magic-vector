@@ -31,10 +31,13 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.CppDemo">
         <activity
-            android:name=".LiveActivity"
+            android:name=".activity.PushActivity"
             android:exported="false" />
         <activity
-            android:name=".CameraFilterActivity"
+            android:name=".activity.LiveActivity"
+            android:exported="false" />
+        <activity
+            android:name=".activity.CameraFilterActivity"
             android:exported="false"
             android:label="@string/title_activity_camerafilteractivity"
             android:theme="@style/Theme.CppDemo" />

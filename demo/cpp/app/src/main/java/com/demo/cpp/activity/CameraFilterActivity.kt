@@ -1,7 +1,8 @@
-package com.demo.cpp
+package com.demo.cpp.activity
 
 import android.os.Bundle
 import android.view.View
+import com.demo.cpp.R
 import com.demo.cpp.base.BaseActivity
 import com.demo.cpp.utils.FilterTypeUtil
 import com.frank.camerafilter.factory.BeautyFilterType
