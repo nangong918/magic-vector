@@ -7,7 +7,7 @@
 ### lv f(可行性feasibility)
 
 Android RTSP推流 -> SpringBoot RTSP转发 -> Android RTSP拉流
-h.264推送
+h.264推送（Android的CameraX获取到的是原始YUV格式数据，需要转为h.264格式，可以使用MediaCoder进行编码或者FFmpeg）
 
 ### lv-1(待定)
 我认为这些屎尿屁小任务都不重要, 重要是的解决JNI, Cpp, STL, FFmpeg, OpenGL
