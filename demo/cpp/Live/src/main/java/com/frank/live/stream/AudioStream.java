@@ -1,5 +1,6 @@
 package com.frank.live.stream;
 
+import android.annotation.SuppressLint;
 import android.media.AudioFormat;
 import android.media.AudioRecord;
 import android.media.MediaRecorder;
@@ -19,6 +20,7 @@ public class AudioStream {
     private final AudioRecord audioRecord;
     private final OnFrameDataCallback mCallback;
 
+    @SuppressLint("MissingPermission")
     public AudioStream(OnFrameDataCallback callback, AudioParam audioParam) {
         mCallback = callback;
         executor = Executors.newSingleThreadExecutor();
