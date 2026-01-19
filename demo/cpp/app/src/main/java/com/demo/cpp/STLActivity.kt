@@ -1,5 +1,6 @@
 package com.demo.cpp
 
+import android.annotation.SuppressLint
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -63,6 +64,7 @@ class STLActivity : ComponentActivity() {
     }
 }
 
+@SuppressLint("ContextCastToActivity")
 @Composable
 fun STLDemoScreen(modifier: Modifier = Modifier) {
     val activity = androidx.compose.ui.platform.LocalContext.current as STLActivity
