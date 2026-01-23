@@ -39,6 +39,7 @@
     <string name="video_handle">视频处理</string>
     <string name="video_push">ffmpeg推流</string>
     <string name="video_live">rtmp推流直播</string>
+    <string name="video_live_pull">rtmp拉流播放</string>
 
     <string name="media_mux">音视频合成</string>
     <string name="media_extra_audio">提取音频</string>
@@ -85,6 +86,11 @@
     <string name="sound">声音</string>
     <string name="sound_on">声音开</string>
     <string name="sound_off">声音关</string>
+
+    <string name="rtmp_url_hint">请输入 RTMP 地址</string>
+    <string name="rtmp_url_empty">RTMP 地址不能为空</string>
+    <string name="rtmp_surface_not_ready">播放器画面尚未就绪</string>
+    <string name="rtmp_player_missing">当前工程未集成 RTMP 拉流播放器</string>
 
     <string name="video_sketch">素描</string>
     <string name="video_hue">hue</string>

@@ -5,6 +5,7 @@ import android.content.Intent
 import com.demo.cpp.activity.CameraFilterActivity
 import com.demo.cpp.STLActivity
 import com.demo.cpp.activity.LiveActivity
+import com.demo.cpp.activity.LivePullActivity
 import com.demo.cpp.activity.PushActivity
 import com.demo.cpp.domain.vo.CatalogItem
 
@@ -32,6 +33,12 @@ object CatalogManager {
             ),
             CatalogItem(
                 id = "4",
+                title = "LivePull",
+                subtitle = "RTMP 拉流播放 Demo",
+                cls = LivePullActivity::class.java
+            ),
+            CatalogItem(
+                id = "5",
                 title = "Push",
                 subtitle = "FFmpeg 推流 Demo",
                 cls = PushActivity::class.java

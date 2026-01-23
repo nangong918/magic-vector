@@ -37,6 +37,9 @@
             android:name=".activity.LiveActivity"
             android:exported="false" />
         <activity
+            android:name=".activity.LivePullActivity"
+            android:exported="false" />
+        <activity
             android:name=".activity.CameraFilterActivity"
             android:exported="false"
             android:label="@string/title_activity_camerafilteractivity"
