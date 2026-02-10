@@ -2,6 +2,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter3_app/page/native_call_page.dart';
+import 'package:flutter3_app/page/network_page.dart';
 
 import '../page/chat_page.dart';
 import '../page/main_page.dart';
@@ -35,7 +36,12 @@ final Map<String, WidgetBuilder> appRoutes = {
   // 原生页面
   AppRoutes.native: (BuildContext context) {
     return const NativeCallPage();
-  }
+  },
+
+  // 网络页面
+  AppRoutes.network: (BuildContext context) {
+    return const NetworkPage();
+  },
 };
 
 
