@@ -218,33 +218,54 @@ class XfIatService {
     return frame;
   }
 
-  void _applyPartialResult(XfIatText textPayload) {
-    final words = textPayload.flattenWords();
-    if (words.isEmpty) {
-      return;
-    }
+  final List<String> _totalResultList = [];
+  String _tempResult = '';
 
-    if (textPayload.pgs == 'rpl' &&
-        textPayload.rg != null &&
-        textPayload.rg!.length >= 2) {
-      final start = textPayload.rg![0] - 1;
-      final end = textPayload.rg![1] - 1;
-      if (start >= 0 && start <= _totalWords.length) {
-        final safeEnd = end < _totalWords.length ? end : _totalWords.length - 1;
-        if (safeEnd >= start) {
-          _totalWords.replaceRange(start, safeEnd + 1, words);
-          return;
+  void _applyPartialResult(XfIatText textPayload) {
+    // 清空临时结果（对应Java: result.setLength(0)）
+    _tempResult = '';
+
+    // 1. 遍历所有ws和cw，拼接当前识别结果（对齐Java的双层for循环）
+    if (textPayload.ws.isNotEmpty) {
+      for (final ws in textPayload.ws) {
+        if (ws.cw.isNotEmpty) {
+          for (final cw in ws.cw) {
+            if (cw.w != null && cw.w!.isNotEmpty) {
+              _tempResult += cw.w!;
+            }
+          }
         }
       }
     }
 
-    _totalWords.addAll(words);
+    // 2. 处理apd/rpl类型（完全对齐Java逻辑）
+    if (textPayload.pgs == 'apd') {
+      // apd：追加当前拼接的结果到列表末尾（对应Java: totalResultList.add(result.toString())）
+      if (_tempResult.isNotEmpty) {
+        _totalResultList.add(_tempResult);
+      }
+    } else if (textPayload.pgs == 'rpl') {
+      // rpl：替换列表最后一个元素（对应Java: totalResultList.set(totalResultList.size() - 1, ...)）
+      if (_totalResultList.isNotEmpty && _tempResult.isNotEmpty) {
+        _totalResultList[_totalResultList.length - 1] = _tempResult;
+      }
+    }
+
+    // 3. 清空临时结果（对应Java最后一次result.setLength(0)）
+    _tempResult = '';
+
+    // 4. 同步更新原有_totalWords（保持和原有逻辑的兼容，用于对外返回完整结果）
+    _totalWords.clear();
+    _totalWords.addAll(_totalResultList); // _totalWords是字符列表，这里转成单个字符串的字符拆分
   }
 
   void _resetSession() {
     _seq = 0;
     _sentFirstFrame = false;
     _totalWords.clear();
+
+    _totalResultList.clear();  // 分段结果列表缓存
+    _tempResult = '';          // 临时拼接字符串缓存
   }
 
   String _buildWebSocketUrl() {
