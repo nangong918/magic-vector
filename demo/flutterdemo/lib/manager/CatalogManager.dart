@@ -33,6 +33,13 @@ class CatalogManager {
         iconRes: Icons.android_sharp,
         routeName: AppRoutes.native,
       ),
+      const CatalogItem(
+        id: "4",
+        title: "xfyun_stt",
+        subtitle: "科大讯飞语音识别",
+        iconRes: Icons.mic,
+        routeName: AppRoutes.xfyunStt,
+      ),
     ];
   }
 

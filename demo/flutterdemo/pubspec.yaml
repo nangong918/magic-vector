@@ -22,6 +22,10 @@ dependencies:
   # 序列化（对应Gson）
   json_annotation: ^4.8.1
 
+  # 音频采集 + 加密签名
+  record: ^5.0.4
+  crypto: ^3.0.2
+
   # 状态管理（对应ViewModel+LiveData）
   # provider: ^6.0.5
   riverpod: ^2.3.6        # 更现代的选择，推荐新项目使用 (异步)

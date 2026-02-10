@@ -6,6 +6,7 @@
     <!-- 可选：如果需要扫描WiFi/获取连接信息，添加以下权限 -->
     <uses-permission android:name="android.permission.CHANGE_WIFI_STATE" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
 
     <!-- Android 12+ 以上获取精确WiFi信息需要（可选） -->
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
