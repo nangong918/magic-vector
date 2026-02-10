@@ -6,21 +6,17 @@
 ### flutter环境问题
 
 
+`flutter pub get`的时候遇到flutter锁问题
+
+```shell
+Waiting for another flutter command to release the startup lock...
+```
+
 
 ### 打包
 
+
 [flutter三端打包.md](flutter/flutter三端打包.md)
-
-
-
-### 组件相关
-
-StatefulWidget: 有状态组件
-
-StatelessWidget: 无状态组件
-
-ValueNotifier: 类似Android的LiveData
-
 
 
 ### Flutter调用原生
