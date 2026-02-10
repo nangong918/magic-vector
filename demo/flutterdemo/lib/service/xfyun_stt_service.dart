@@ -42,7 +42,7 @@ class XfIatService {
   static const String apiSecret = 'Y2U0OWUyYjcyOTRiYWEwMjk0YWNlMzdh';
   static const String apiKey = 'fd775746ce819ec90bc6ec2df697dbe5';
 
-  final Record _record = Record();
+  final AudioRecorder _record = AudioRecorder();
   final StreamController<XfIatEvent> _eventController =
       StreamController<XfIatEvent>.broadcast();
 
@@ -80,7 +80,7 @@ class XfIatService {
 
     final stream = await _record.startStream(
       const RecordConfig(
-        encoder: AudioEncoder.pcm16bit,
+        encoder: AudioEncoder.pcm16bits,
         sampleRate: 16000,
         numChannels: 1,
       ),
