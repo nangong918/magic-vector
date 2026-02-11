@@ -1,7 +1,9 @@
 **Flutter**
 ====
 
-
+flutter的版本总是一个问题，因为各种适配原因，flutter版本总是不能使用最新的，
+所以维护一套flutterDemo和flutterNew，两个的内容基本一致
+主要区别就是flutter新旧版本的区别。
 
 ### flutter环境问题
 
@@ -10,6 +12,16 @@
 
 ```shell
 Waiting for another flutter command to release the startup lock...
+```
+
+JDK版本问题：
+```shell
+Android Gradle plugin requires Java 17 to run. You are currently using Java 11.
+```
+解决方法：
+```shell
+flutter config --jdk-dir="C:\Users\clt\.jdks\dragonwell-17.0.18"
+
 ```
 
 
