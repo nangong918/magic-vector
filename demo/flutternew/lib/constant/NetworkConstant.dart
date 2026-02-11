@@ -5,5 +5,8 @@ class NetworkConstant {
   static const int port = 58888;
   static const String protocol = 'http';
 
-  static String get baseUrl => '$protocol://$dns:$port';
+  static const String baseUrl = '$protocol://$dns:$port';
+
+  static const int connectTimeout = 10_000;
+  static const int receiveTimeout = 10_000;
 }

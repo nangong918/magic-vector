@@ -37,7 +37,7 @@ class NetworkViewModel extends ChangeNotifier {
       name: account,
     );
 
-    await _api.registerWithCallback(
+    await _api.register(
       req,
       _handleLoginSuccess,
       _handleThrowable,
@@ -52,7 +52,7 @@ class NetworkViewModel extends ChangeNotifier {
     if (_isLoading) return;
     _setLoading(true);
 
-    await _api.resetTokenWithCallback(
+    await _api.resetToken(
       account,
       _handleRefreshSuccess,
       _handleThrowable,
