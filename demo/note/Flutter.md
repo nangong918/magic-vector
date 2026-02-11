@@ -343,9 +343,6 @@ class WifiChannel {
 需要上述三个声明权限，不然无法获得wifi信息
 
 
-
-
-
 #### 调用IOS原生
 
 
@@ -380,7 +377,7 @@ flutter调用IOS没有Android和鸿蒙的`flutterEngine`和`configureFlutterEngi
 需要使用另一种写法：
 打开`AppDelegate.swift`，这是ios的主要控制页面
 主页面进行方法注册
-```dart
+```swift
 import UIKit
 import Flutter
 import SystemConfiguration
@@ -578,50 +575,58 @@ class IosWifiInfo {
 ```
 
 
+## Android 过度 Flutter
+
+
+### 异步网络流程
+
+参考Android的流程：
+OkHttp + Retrofit + Kotlin携程 进行响应式异步http、ws请求
+Gson进行数据序列化
+ViewModel + LiveData在Activity上进行UI更新
+
+
+Flutter对应流程
+
+| Android 端技术            | Flutter 端技术                       | 核心作用            |
+|------------------------|-----------------------------------|-----------------|
+| OkHttp3                | Dio（主流）/dart:io（底层）               | HTTP/WSS 请求底层实现 |
+| Retrofit2              | retrofit（基于 Dio 封装）               | 注解式接口封装、参数解析    |
+| Kotlin 协程（Coroutine）   | Dart 异步（async/await）+ Isolate（可选） | 响应式异步请求         |
+| Gson                   | json_serializable（编译期生成）          | JSON 序列化 / 反序列化 |
+| ViewModel + LiveData   | Riverpod/Provider/Bloc/GetX       | 跨组件状态管理、UI 更新   |
+| Activity/Fragment      | Flutter Widget（StatefulWidget）    | UI 渲染、生命周期管理    |
+
+
+网络请求首先要创建API接口：
+Android使用Retrofit自动注入创建接口：
+```kotlin
+interface ApiRequest {
+    @GET("/agent/getInfo")
+    suspend fun getAgentInfo(
+        @Query("agentId") agentId: String
+    ): BaseResponse<AgentResponse>
+}
+```
+Retrofit创建的接口能自动的将接口地址和字段名称绑定
+Flutter
 
 
 
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-### 组件相关
+### UI组件
 
 StatefulWidget: 有状态组件
 
 StatelessWidget: 无状态组件
 
 ValueNotifier: 类似Android的LiveData
+
+
+
+
 
 
 

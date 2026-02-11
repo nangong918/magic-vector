@@ -14,3 +14,7 @@ flutter版本：
 * Android、IOS：`flutter-3.7.12`
 * 鸿蒙：`flutter-3.7.12-ohos`
 
+
+
+[flutter笔记](../note/Flutter.md)
+
