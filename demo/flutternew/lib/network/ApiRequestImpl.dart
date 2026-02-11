@@ -15,8 +15,8 @@ class ApiRequestImpl extends BaseApiRequestImpl implements ApiRequest {
             Dio(
               BaseOptions(
                 baseUrl: NetworkConstant.baseUrl,
-                connectTimeout: 10000,
-                receiveTimeout: 10000,
+                connectTimeout: const Duration(milliseconds: 10000), // 10秒连接超时
+                receiveTimeout: const Duration(milliseconds: 10000), // 10秒接收超时
               ),
             );
 
