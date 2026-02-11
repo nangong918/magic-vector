@@ -69,16 +69,21 @@ class ApiRequestImpl extends BaseApiRequestImpl implements ApiRequest {
     return BaseResponse.fromJson(raw, (json) => UserTestResp.fromJson(json));
   }
 
+  // 辅助方法：将数据转换为标准 Map<String, dynamic>; dynamic相当于Java的Object
   Map<String, dynamic> _normalizeMap(dynamic data) {
+    // 情况1：如果已经是标准的 Map<String, dynamic>，直接返回（最优路径）
     if (data is Map<String, dynamic>) {
       return data;
     }
+    // 情况2：如果是非泛型 Map（比如 Map<dynamic, dynamic>），转换成标准泛型 Map
     if (data is Map) {
       return Map<String, dynamic>.from(data);
     }
+    // 情况3：如果是非空字符串，先 JSON 解码再转 Map
     if (data is String && data.isNotEmpty) {
       return jsonDecode(data) as Map<String, dynamic>;
     }
+    // 情况4：以上都不满足（比如 null/空字符串/数字等），返回空 Map 避免后续解析报错
     return <String, dynamic>{};
   }
 }

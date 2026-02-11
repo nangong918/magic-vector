@@ -610,7 +610,130 @@ Flutter对应流程
 | Activity/Fragment      | Flutter Widget（StatefulWidget）    | UI 渲染、生命周期管理    |
 
 
-网络请求首先要创建API接口：
+##### 创建网络Client + 序列化
+网络请求首先要创建网络Client和序列化方法：
+Android使用的Okhttp3创建网络Client
+```kotlin
+        // 创建 API 请求
+fun <T> createApiRequest(
+    apiClass: Class<T>,
+    mainUrl: String,
+    connectTimeOut: Long,
+    readTimeOut: Long,
+    writeTimeOut: Long,
+    callTimeOut: Long,
+    interceptors: List<Interceptor>
+): T {
+    val uploadOkHttpClient = createUploadOkHttpClient(
+        connectTimeOut,
+        readTimeOut,
+        writeTimeOut,
+        callTimeOut,
+        interceptors
+    )
+
+    return Retrofit.Builder()
+        .baseUrl(mainUrl)
+        // Gson 转换器 进行序列化
+        .addConverterFactory(GsonConverterFactory.create())
+        .client(uploadOkHttpClient)
+        .build()
+        .create(apiClass)
+}
+
+// 创建 OkHttpClient
+private fun createUploadOkHttpClient(
+    connectTimeOut: Long,
+    readTimeOut: Long,
+    writeTimeOut: Long,
+    callTimeOut: Long,
+    interceptors: List<Interceptor>
+): OkHttpClient {
+    // 创建缓存目录
+    val cacheFile = getCacheDir()
+    val cache = Cache(cacheFile, 1024 * 1024 * 50) // 50MB 缓存大小
+
+    // 创建日志拦截器实例
+    val loggingInterceptor = HttpLoggingInterceptor().apply {
+        level = if (BuildConfig.DEBUG) {
+            HttpLoggingInterceptor.Level.BODY // 记录请求和响应的完整内容
+        } else {
+            HttpLoggingInterceptor.Level.NONE // 不记录任何日志
+        }
+    }
+
+    // 创建 OkHttpClient.Builder
+    val builder = OkHttpClient.Builder()
+        .retryOnConnectionFailure(false) // 不重复请求
+        .connectTimeout(connectTimeOut, TimeUnit.MILLISECONDS)
+        .readTimeout(readTimeOut, TimeUnit.MILLISECONDS)
+        .writeTimeout(writeTimeOut, TimeUnit.MILLISECONDS)
+        .callTimeout(callTimeOut, TimeUnit.MILLISECONDS)
+        .cache(cache)
+        .addInterceptor(loggingInterceptor) // OkHttp3 日志拦截器
+        .proxy(Proxy.NO_PROXY)
+
+    // 添加传入的拦截器
+    interceptors.forEach { builder.addInterceptor(it) }
+
+    return builder.build()
+}
+```
+Android 主要是使用`OkHttpClient.Builder()`创建`GsonConverterFactory`序列化。
+
+Flutter的本身是禁用反射的，所以无法像Android一样直接使用Retrofit和Gson进行数据解析，
+需要预编译。预编译的指令是
+```shell
+flutter packages pub run build_runner build
+```
+会生成`.g.dart`文件。
+
+不使用预编译则手动序列化：
+```dart
+class UserTestReq {
+  final String account;
+  final String password;
+  final String name;
+
+  const UserTestReq({
+    required this.account,
+    required this.password,
+    required this.name,
+  });
+
+  Map<String, dynamic> toJson() {
+    return {
+      'account': account,
+      'password': password,
+      'name': name,
+    };
+  }
+}
+
+BaseResponse<UserTestResp> _parseUserResponse(Response<dynamic> response) {
+  final raw = _normalizeMap(response.data);
+  return BaseResponse.fromJson(raw, (json) => UserTestResp.fromJson(json));
+}
+```
+
+Flutter的网络请求不使用Okhttp，使用Dio
+```dart
+  ApiRequestImpl({Dio? dio})
+      : _dio = dio ??
+            Dio(
+              BaseOptions(
+                baseUrl: NetworkConstant.baseUrl,
+                connectTimeout: 10000,
+                receiveTimeout: 10000,
+              ),
+            );
+
+  final Dio _dio;
+```
+
+##### 接口创建
+
+然后创建API接口：
 Android使用Retrofit自动注入创建接口：
 ```kotlin
 interface ApiRequest {
@@ -621,10 +744,76 @@ interface ApiRequest {
 }
 ```
 Retrofit创建的接口能自动的将接口地址和字段名称绑定
-Flutter
+不适用预编译则接口：
+```dart
+// 定义接口
+abstract class ApiRequest {
+  Future<BaseResponse<UserTestResp>> register(UserTestReq req);
+  Future<BaseResponse<UserTestResp>> resetToken(String account);
+}
 
+// 继承接口，写入url和出入参
+@override
+Future<BaseResponse<UserTestResp>> register(UserTestReq req) async {
+  final response = await _dio.post(
+    '/test/network/register',
+    data: req.toJson(),
+  );
+  return _parseUserResponse(response);
+}
 
+@override
+Future<BaseResponse<UserTestResp>> resetToken(String account) async {
+  final response = await _dio.get(
+    '/test/network/resetToken',
+    queryParameters: {'account': account},
+  );
+  return _parseUserResponse(response);
+}
+```
 
+接下来需要定义全部接口的执行流程：
+Android跟Flutter的方式基本一致，都是定义接口和基类。
+```kotlin
+    fun getAgentInfo(
+        agentId: String,
+        onSuccessCallback: OnSuccessCallback<BaseResponse<AgentResponse>>?,
+        throwableCallback: OnThrowableCallback?
+    ){
+        sendRequestCallback(
+            apiCall = {
+                mApi.getAgentInfo(agentId)
+            },
+            successCallback = onSuccessCallback,
+            throwableCallback = throwableCallback
+        )
+    }
+```
+```dart
+  Future<void> registerWithCallback(
+    UserTestReq req,
+    OnSuccessCallback<BaseResponse<UserTestResp>>? successCallback,
+    OnThrowableCallback? throwableCallback,
+  ) {
+    return sendRequestCallback(
+      apiCall: () => register(req),
+      successCallback: successCallback,
+      throwableCallback: throwableCallback,
+    );
+  }
+
+  Future<void> resetTokenWithCallback(
+    String account,
+    OnSuccessCallback<BaseResponse<UserTestResp>>? successCallback,
+    OnThrowableCallback? throwableCallback,
+  ) {
+    return sendRequestCallback(
+      apiCall: () => resetToken(account),
+      successCallback: successCallback,
+      throwableCallback: throwableCallback,
+    );
+  }
+```
 
 
 
@@ -635,6 +824,30 @@ StatefulWidget: 有状态组件
 StatelessWidget: 无状态组件
 
 ValueNotifier: 类似Android的LiveData
+
+
+
+
+### 语法相关
+
+* dynamic
+`dynamic`相当于Java的Object
+
+
+* async/await
+`async/await`语法相当于Java的`Future`
+
+* Future
+  Dart 的 `Future` ≈ Java 原生的 `java.util.concurrent.Future`（基础异步结果容器）
+  Dart 的 Future ≠ RxJava 的 Future（RxJava 的 Future 是对原生 Future 的包装，
+  且 RxJava 核心是「流式响应式编程」，而 Dart Future 是「单次异步结果」）
+
+
+
+
+
+
+
 
 
 
