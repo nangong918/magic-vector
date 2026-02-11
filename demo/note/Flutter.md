@@ -983,11 +983,182 @@ class MainActivity : AppCompatActivity() {
         vm.isLoadingLd.observe(this) { isLoading ->
             // 绑定状态到ProgressBar的可见性
             binding.progressBar.visibility = if (isLoading) View.VISIBLE else View.GONE
-            binding.tvLoading.visibility = if (isLoading) View.VISIBLE else View.GONE
         }
     }
 }
 ```
+
+
+###### Android Jetpack Compose实现
+
+Jetpack Compose是声明式UI
+
+Compose 会「自动监听」viewModel.isLoading（StateFlow）的变化，一旦 isLoading 的值从 true 变成 false（或反过来），
+Compose 会自动重新执行当前可组合函数，并更新 UI
+
+Activity和UI
+```kotlin
+class MainActivity : ComponentActivity() {
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setContent {
+            // 根布局
+            LoadingScreen()
+        }
+    }
+}
+
+
+@Composable
+fun LoadingScreen(
+    viewModel: LoadingViewModel = viewModel() // 自动获取ViewModel
+) {
+    // 将StateFlow转换为Compose可感知的状态（自动监听变化）
+    val isLoading by viewModel.isLoading.collectAsState()
+
+    Column(
+        modifier = Modifier.fillMaxSize(),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        // 加载控件：CircularProgressIndicator（对应XML的ProgressBar）
+        // 实时的，只要发生变化就改变显示状态，所以不用写false的时候隐藏逻辑
+        if (isLoading) {
+            CircularProgressIndicator()
+        }
+
+        // 模拟触发加载（点击屏幕开始加载）
+        androidx.compose.foundation.clickable.ClickableText(
+            text = androidx.compose.ui.text.AnnotatedString("点击开始加载"),
+            onClick = {
+                viewModel.startLoading()
+                // 模拟2秒后结束加载
+                runBlocking {
+                    launch {
+                        delay(2000)
+                        viewModel.handleResult(BaseResponse(200, AgentResponse("1", "测试"), "success"))
+                    }
+                }
+            }
+        )
+    }
+}
+```
+定义viewModel：
+```kotlin
+class LoadingViewModel : ViewModel() {
+    // Compose推荐用StateFlow替代LiveData（响应式状态）
+    private val _isLoading = MutableStateFlow(false)
+    val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
+
+    // 对应handleResult：结束加载
+    fun handleResult(response: BaseResponse<AgentResponse>?) {
+        _isLoading.value = false
+    }
+
+    // 开始加载
+    fun startLoading() {
+        _isLoading.value = true
+    }
+}
+```
+StateFlow 与 LiveData类似
+
+###### Flutter 实现
+
+Flutter 实现（ChangeNotifier + Consumer）
+
+
+定义 ViewModel（ChangeNotifier 替代 ViewModel+LiveData）
+```dart
+import 'package:flutter/foundation.dart';
+
+// Flutter的ViewModel：继承ChangeNotifier管理状态
+class LoadingViewModel extends ChangeNotifier {
+  // 加载状态（对应isLoadingLd）
+  bool _isLoading = false;
+  bool get isLoading => _isLoading;
+
+  // 对应handleResult：结束加载
+  void handleResult(BaseResponse<AgentResponse>? response) {
+    _isLoading = false;
+    notifyListeners(); // 通知UI更新（对应postValue）
+  }
+
+  // 开始加载
+  void startLoading() {
+    _isLoading = true;
+    notifyListeners(); // 通知UI更新
+  }
+}
+```
+
+
+Flutter 页面（Consumer 绑定状态）
+```dart
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+
+void main() {
+  runApp(
+    // 全局提供ViewModel（对标Android的ViewModelProvider）
+    ChangeNotifierProvider(
+      create: (context) => LoadingViewModel(),
+      child: const MyApp(),
+    ),
+  );
+}
+
+class MyApp extends StatelessWidget {
+  const MyApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      home: Scaffold(
+        body: LoadingPage(),
+      ),
+    );
+  }
+}
+
+class LoadingPage extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Consumer<LoadingViewModel>(
+      // 监听isLoading变化，仅重建该组件（细粒度更新）
+      builder: (context, viewModel, child) {
+        return GestureDetector(
+          // 点击屏幕触发加载
+          onTap: () {
+            viewModel.startLoading();
+            // 模拟2秒后结束加载
+            Future.delayed(const Duration(seconds: 2), () {
+              viewModel.handleResult(
+                BaseResponse(200, AgentResponse("1", "测试"), "success"),
+              );
+            });
+          },
+          child: Center(
+            child: viewModel.isLoading
+                ? Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: const [
+                      // Flutter的加载控件（对应Android的ProgressBar）
+                      CircularProgressIndicator(),
+                      SizedBox(height: 16),
+                      Text("加载中...", style: TextStyle(fontSize: 16)),
+                    ],
+                  )
+                : const Text("点击屏幕开始加载"),
+          ),
+        );
+      },
+    );
+  }
+}
+```
+`Consumer<LoadingViewModel>` 类似 `LiveData.observe()` 回调，监听 ChangeNotifier 的状态变化
 
 
 ### UI组件
