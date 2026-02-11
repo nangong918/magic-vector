@@ -816,6 +816,179 @@ Android跟Flutter的方式基本一致，都是定义接口和基类。
 ```
 
 
+##### 接口调用
+
+Android一般使用ViewModel + LiveData + （ViewBinding + DataBinding / Jetpack Compose声明式）实现
+
+
+```kotlin
+    // 查询Agent
+fun doGetAgentInfo(context: Context, agentId: String, callback: SyncRequestCallback){
+    api.getAgentInfo(
+        agentId,
+        object : OnSuccessCallback<BaseResponse<AgentResponse>> {
+            override fun onResponse(response: BaseResponse<AgentResponse>?) {
+                AppResponseUtil.handleSyncResponseEx(
+                    response,
+                    context,
+                    callback,
+                    ::handleGetAgentInfo
+                )
+            }
+        },
+        object : OnThrowableCallback {
+            override fun callback(throwable: Throwable?) {
+                callback.onThrowable(throwable)
+            }
+        }
+    )
+}
+
+private fun handleGetAgentInfo(response: BaseResponse<AgentResponse>?,
+                               context: Context,
+                               callback: SyncRequestCallback) {
+    response?.data?.agentAo?.let { ao ->
+
+        ao.agentVo?.let { vo ->
+            aao.avatarUrlLd.postValue(vo.avatarUrl)
+            aao.nameLd.postValue(vo.name)
+            aao.descriptionLd.postValue(vo.description)
+        }
+    }
+    callback.onAllRequestSuccess()
+}
+```
+
+```dart
+  Future<void> login({
+    required String account,
+    required String password,
+  }) async {
+    if (_isLoading) return;
+    _setLoading(true);
+
+    final req = UserTestReq(
+      account: account,
+      password: password,
+      name: account,
+    );
+
+    await _api.register(
+      req,
+      _handleLoginSuccess,
+      _handleThrowable,
+    );
+
+    _setLoading(false);
+  }
+
+
+void _handleLoginSuccess(BaseResponse<UserTestResp> response) {
+  if (response.isSuccess && response.data != null) {
+    _account = response.data?.account ?? '';
+    _loginToken = response.data?.loginToken ?? '';
+    _isLoggedIn = true;
+    _statusColor = Colors.green;
+    _statusMessage = _buildSuccessMessage('登录成功');
+  } else {
+    _setErrorMessage(response.message ?? '登录失败');
+  }
+  notifyListeners();
+}
+```
+
+在Android中更新数据使用的是`postValue()`, 在Flutter中更新数据使用`notifyListeners();`
+
+##### 数据绑定
+
+任务例子：获取AgentAI的信息，获取过程中需要显示加载进度条。
+
+Android使用XML + （ViewBinding + DataBinding / Jetpack Compose声明式）
+
+###### Android XML实现
+
+xml终究会被淘汰，只是目前是主流，因为UI写在xml中无法动态修改（函数入参），还需要把view写在xml中。
+
+首先定义xml：
+```xml
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:gravity="center"
+    android:orientation="vertical">
+
+    <!-- 加载进度条（binding.progressBar） -->
+    <ProgressBar
+        android:id="@+id/progressBar"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:visibility="gone"/>
+
+</LinearLayout>
+```
+
+
+Android中Activity的声明周期切换或者结束会导致数据丢失，所以需要用声明周期更长的viewModel来存储数据。
+```kotlin
+class LoadingViewModel : ViewModel() {
+    // 对应你示例中的isLoadingLd
+    val isLoadingLd = MutableLiveData<Boolean>(false)
+
+    // 对应你示例的handleResult
+    fun handleResult(response: BaseResponse<AgentResponse>?) {
+        isLoadingLd.postValue(false)
+    }
+
+    // 开始加载
+    fun startLoading() {
+        isLoadingLd.postValue(true)
+    }
+}
+```
+
+在activity中调用数据加载，注册viewModel并观察数据变化，然后编写数据绑定逻辑。
+```kotlin
+class MainActivity : AppCompatActivity() {
+    // ViewBinding：替代findViewById
+    private lateinit var binding: ActivityMainBinding
+    private lateinit var vm: LoadingViewModel
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        // 初始化ViewBinding
+        binding = ActivityMainBinding.inflate(layoutInflater)
+        setContentView(binding.root)
+
+        // 用ViewModelProvider初始化ViewModel
+        vm = ViewModelProvider(this)[LoadingViewModel::class.java]
+
+        // 观察加载状态并绑定到ProgressBar
+        observeData()
+
+        // binding点击监听
+        binding.root.setOnClickListener {
+            vm.startLoading()
+            // 模拟网络请求后调用handleResult
+            kotlinx.coroutines.GlobalScope.launch {
+                kotlinx.coroutines.delay(2000)
+                vm.handleResult(BaseResponse(200, AgentResponse("1", "测试"), "success"))
+            }
+        }
+    }
+
+    // 观察数据变化
+    private fun observeData() {
+        // 观察livedata
+        vm.isLoadingLd.observe(this) { isLoading ->
+            // 绑定状态到ProgressBar的可见性
+            binding.progressBar.visibility = if (isLoading) View.VISIBLE else View.GONE
+            binding.tvLoading.visibility = if (isLoading) View.VISIBLE else View.GONE
+        }
+    }
+}
+```
+
 
 ### UI组件
 
