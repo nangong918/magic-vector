@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutternew/config/app_route.dart';
 
 import '../domain/vo/CatalogItem.dart';
+import '../l10n/app_localizations.dart';
 
 
 
@@ -10,32 +11,32 @@ typedef OnClickCatalogItem = void Function(CatalogItem item);
 
 class CatalogManager {
   // 模拟获取目录数据
-  static List<CatalogItem> getCatalogItems() {
+  static List<CatalogItem> getCatalogItems(AppLocalizations l10n) {
     return [
-      const CatalogItem(
+      CatalogItem(
         id: "1",
-        title: "network",
+        title: l10n.network,
         subtitle: "network demo",
         iconRes: Icons.network_wifi,
         routeName: AppRoutes.network,
       ),
-      const CatalogItem(
+      CatalogItem(
         id: "2",
-        title: "chat",
+        title: l10n.chat,
         subtitle: "chatList demo",
         iconRes: CupertinoIcons.chat_bubble,
         routeName: AppRoutes.chat,
       ),
-      const CatalogItem(
+      CatalogItem(
         id: "3",
-        title: "animation",
-        subtitle: "animation demo",
+        title: l10n.native,
+        subtitle: "native demo",
         iconRes: Icons.android_sharp,
         routeName: AppRoutes.native,
       ),
-      const CatalogItem(
+      CatalogItem(
         id: "4",
-        title: "xfyun_stt",
+        title: l10n.xfyun_stt,
         subtitle: "科大讯飞语音识别",
         iconRes: Icons.mic,
         routeName: AppRoutes.xfyunStt,

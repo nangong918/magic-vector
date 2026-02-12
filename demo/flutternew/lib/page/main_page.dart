@@ -4,6 +4,8 @@ import 'package:flutternew/manager/CatalogManager.dart';
 
 import '../domain/vo/CatalogItem.dart';
 import '../ui/CatalogItemList.dart';
+import '../l10n/app_localizations.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 
 class MainPage extends StatefulWidget {
   const MainPage({super.key});
@@ -52,6 +54,8 @@ class _MainPageState extends State<MainPage> {
 
   @override
   Widget build(BuildContext context) {
+    // ✅ 修复：先获取国际化实例，确保非空
+    final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
       // 启用边缘到边缘显示（对应 enableEdgeToEdge）
@@ -64,11 +68,11 @@ class _MainPageState extends State<MainPage> {
 
             // 列表内容区域
             Expanded(
-              child: CatalogManager.getCatalogItems().isEmpty
+              child: CatalogManager.getCatalogItems(l10n).isEmpty
                   ? _buildEmptyState()
                   : CatalogItemList(
                 key: ValueKey(_searchText), // 搜索变化时重建列表
-                items: CatalogManager.getCatalogItems(),
+                items: CatalogManager.getCatalogItems(l10n),
                 onItemClick: _onItemClick,
                 scrollController: _scrollController,
               ),
@@ -141,6 +145,17 @@ class AppDemoTheme extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
+      // ========== 新增：国际化核心配置 ==========
+      localizationsDelegates: const [
+        AppLocalizations.delegate,
+        GlobalMaterialLocalizations.delegate, // 材质组件国际化
+        GlobalWidgetsLocalizations.delegate, // Widgets 国际化
+        GlobalCupertinoLocalizations.delegate, // 苹果风格组件国际化
+      ],
+      supportedLocales: const [
+        Locale('en'), // 支持英文
+        Locale('zh'), // 支持中文（对应你的 AppLocalizationsZh）
+      ],
       theme: ThemeData(
         useMaterial3: true,
         colorScheme: ColorScheme.fromSeed(
