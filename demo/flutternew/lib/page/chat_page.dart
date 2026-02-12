@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
-// 聊天页面
-class ChatPage extends StatefulWidget  { // StatefulWidget能保存状态，Stateless不能保存状态。
+import '../viewmodel/chat_view_model.dart';
+
+class ChatPage extends StatefulWidget {
   final String title;
   final String? description;
 
@@ -18,113 +18,253 @@ class ChatPage extends StatefulWidget  { // StatefulWidget能保存状态，Stat
 
 
 class _ChatPageState extends State<ChatPage> {
+  final ChatViewModel _viewModel = ChatViewModel();
+  final TextEditingController _inputController = TextEditingController();
+  final ScrollController _scrollController = ScrollController();
 
-  // 1. 定义状态变量保存txt内容，初始值设为加载中
-  String _aiPrompt = '';
-  bool _isLoadFailed = false;
-
-  // 2. 读取txt文件的核心方法
-  Future<String> loadTxtFile() async {
-    try {
-      String content = await rootBundle.loadString('assets/txt/clt_agent.txt');
-      return content;
-    } catch (e) {
-      return '读取失败：$e';
-    }
-  }
-
-  // 3. 读取赋值到state并更新ui
-  void _initLoadTxt() async {
-    String result = await loadTxtFile();
-    // 更新状态变量（必须用setState触发UI刷新）
-    setState(() {
-      if (result.startsWith('读取失败')) {
-        _isLoadFailed = true;
-      }
-      _aiPrompt = result;
-    });
-  }
-
-  // 4. 页面初始化时异步读取并更新状态
   @override
   void initState() {
     super.initState();
-    // 页面启动就执行读取操作
-    _initLoadTxt();
+    _viewModel.addListener(_onViewModelChanged);
+    _viewModel.initialize();
+  }
+
+  void _onViewModelChanged() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!_scrollController.hasClients) {
+        return;
+      }
+      _scrollController.animateTo(
+        _scrollController.position.maxScrollExtent + 80,
+        duration: const Duration(milliseconds: 220),
+        curve: Curves.easeOut,
+      );
+    });
+    if (mounted && _viewModel.state.status == RealtimeChatStatus.error) {
+      final message = _viewModel.latestError;
+      if (message.isNotEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(message)),
+        );
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _viewModel.removeListener(_onViewModelChanged);
+    _viewModel.dispose();
+    _inputController.dispose();
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _send() async {
+    final text = _inputController.text.trim();
+    if (text.isEmpty || !_viewModel.canSend) {
+      return;
+    }
+    _inputController.clear();
+    setState(() {});
+    await _viewModel.sendMessage(text);
+    if (mounted) {
+      setState(() {});
+    }
+  }
+
+  String _buildStateText(RealtimeChatState state) {
+    switch (state.status) {
+      case RealtimeChatStatus.notInitialized:
+        return '未初始化';
+      case RealtimeChatStatus.initializing:
+        return '初始化中...';
+      case RealtimeChatStatus.initializedConnected:
+        return '已连接';
+      case RealtimeChatStatus.recordingAndSending:
+        return '发送中...';
+      case RealtimeChatStatus.receiving:
+        return 'AI回复中...';
+      case RealtimeChatStatus.disconnected:
+        return '已断开';
+      case RealtimeChatStatus.error:
+        return state.message == null ? '错误' : '错误: ${state.message}';
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    final canSendNow = _viewModel.canSend && _inputController.text.trim().isNotEmpty;
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.title), // 注意：State类中通过widget访问父类属性
+        title: Text(widget.title),
         backgroundColor: const Color(0xFFF48FB1),
         foregroundColor: Colors.white,
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(20.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              widget.title,
-              style: const TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            if (widget.description != null) ...[
-              const SizedBox(height: 16),
-              Text(
-                widget.description!,
-                style: TextStyle(
-                  fontSize: 16,
-                  color: Colors.grey[700],
-                ),
-              ),
-            ],
-            const SizedBox(height: 32),
-            Expanded(
-              child: Container(
-                decoration: BoxDecoration(
-                  color: Colors.grey[100],
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                // 这里展示读取到的txt内容（替换原来的空Center）
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Text(
-                    _aiPrompt, // 你的状态变量，需提前在State类中定义
-                    style: TextStyle(
-                      fontSize: 15,
-                      color: _isLoadFailed ? Colors.red : Colors.black87, // 失败标红
-                    ),
+      body: Column(
+        children: [
+          AnimatedBuilder(
+            animation: _viewModel,
+            builder: (BuildContext context, _) {
+              final statusText = _buildStateText(_viewModel.state);
+              return Container(
+                width: double.infinity,
+                color: Colors.pink.shade50,
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                child: Text(
+                  statusText,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: _viewModel.state.status == RealtimeChatStatus.error
+                        ? Colors.red
+                        : Colors.black54,
                   ),
                 ),
+              );
+            },
+          ),
+          Expanded(
+            child: AnimatedBuilder(
+              animation: _viewModel,
+              builder: (BuildContext context, _) {
+                final messages = _viewModel.messages;
+                return ListView.builder(
+                  controller: _scrollController,
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
+                  itemCount: messages.length,
+                  itemBuilder: (BuildContext context, int index) {
+                    return ChatBubbleItem(message: messages[index]);
+                  },
+                );
+              },
+            ),
+          ),
+          SafeArea(
+            top: false,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(12, 8, 12, 10),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _inputController,
+                      maxLines: 5,
+                      minLines: 1,
+                      onChanged: (_) => setState(() {}),
+                      decoration: InputDecoration(
+                        hintText: _viewModel.isReceiving ? 'AI回复中，请稍候...' : '输入消息',
+                        filled: true,
+                        fillColor: Colors.grey.shade100,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(24),
+                          borderSide: BorderSide.none,
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 12,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Material(
+                    color: canSendNow ? const Color(0xFFF48FB1) : Colors.grey.shade400,
+                    borderRadius: BorderRadius.circular(20),
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(20),
+                      onTap: canSendNow ? _send : null,
+                      child: const Padding(
+                        padding: EdgeInsets.all(12),
+                        child: Icon(Icons.send, color: Colors.white, size: 20),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
-          ],
-        ),
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          // 示例：点击按钮可以使用保存的_aiPrompt变量
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('当前Prompt：${_aiPrompt.substring(0, 20)}...'), // 截取展示
-              duration: const Duration(seconds: 1),
-            ),
-          );
-        },
-        backgroundColor: const Color(0xFFF48FB1),
-        child: const Icon(Icons.send, color: Colors.white),
+          ),
+        ],
       ),
     );
   }
 }
 
+class ChatBubbleItem extends StatelessWidget {
+  const ChatBubbleItem({super.key, required this.message});
 
+  final ChatMessage message;
 
+  @override
+  Widget build(BuildContext context) {
+    final isUser = message.role == ChatRole.user;
+    final bubbleColor = const Color(0xFFE8F5E9);
+    final align = isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start;
 
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
+        children: [
+          if (!isUser) ...[
+            const CircleAvatar(
+              radius: 15,
+              backgroundColor: Color(0xFFF48FB1),
+              child: Icon(Icons.smart_toy, color: Colors.white, size: 16),
+            ),
+            const SizedBox(width: 6),
+          ],
+          Flexible(
+            child: Column(
+              crossAxisAlignment: align,
+              children: [
+                Container(
+                  constraints: BoxConstraints(
+                    maxWidth: MediaQuery.of(context).size.width * 0.78,
+                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: bubbleColor,
+                    borderRadius: BorderRadius.only(
+                      topLeft: const Radius.circular(24),
+                      topRight: const Radius.circular(24),
+                      bottomLeft: Radius.circular(isUser ? 24 : 0),
+                      bottomRight: Radius.circular(isUser ? 0 : 24),
+                    ),
+                  ),
+                  child: ValueListenableBuilder<String>(
+                    valueListenable: message.textNotifier,
+                    builder: (context, String value, child) {
+                      return Text(
+                        value,
+                        style: const TextStyle(
+                          color: Color(0xFF263238),
+                          fontSize: 16,
+                          height: 1.4,
+                        ),
+                      );
+                    },
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  _formatTime(message.createdAt),
+                  style: const TextStyle(
+                    fontSize: 11,
+                    color: Colors.black45,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
-
+  static String _formatTime(DateTime dateTime) {
+    final hh = dateTime.hour.toString().padLeft(2, '0');
+    final mm = dateTime.minute.toString().padLeft(2, '0');
+    return '$hh:$mm';
+  }
+}
