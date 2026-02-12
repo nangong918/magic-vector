@@ -5,6 +5,7 @@ import 'package:flutternew/manager/CatalogManager.dart';
 import '../domain/vo/CatalogItem.dart';
 import '../ui/CatalogItemList.dart';
 import '../l10n/app_localizations.dart';
+import 'package:flutter/services.dart';
 
 class MainPage extends StatefulWidget {
   const MainPage({super.key});
@@ -18,7 +19,29 @@ class _MainPageState extends State<MainPage> {
   final TextEditingController _searchController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
 
+  Future<String> loadTxtFile() async {
+    try {
+      // 读取assets中的txt文件，参数是pubspec.yaml中配置的文件路径
+      String content = await rootBundle.loadString('assets/txt/clt_agent.txt');
+      return content;
+    } catch (e) {
+      // 捕获异常（比如文件路径错误、文件不存在等）
+      return '读取失败：$e';
+    }
+  }
 
+  // 封装异步逻辑
+  void _loadAndPrintTxt() async {
+    String txtContent = await loadTxtFile();
+    print('txt文本长度：${txtContent.length} \ntxt文件内容：\n$txtContent');
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    // 注意：initState 本身不能加 async，所以用匿名异步函数包裹
+    _loadAndPrintTxt();
+  }
 
   // 处理列表项点击
   void _onItemClick(CatalogItem item) {

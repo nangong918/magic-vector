@@ -59,3 +59,7 @@ dev_dependencies:
 flutter:
   uses-material-design: true # 启用Material Design图标/组件
   generate: true # 开启代码生成
+
+  # 资源文件
+  assets:
+    - assets/txt/
