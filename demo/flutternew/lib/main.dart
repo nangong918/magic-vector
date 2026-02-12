@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'config/app_route.dart';
+import 'l10n/app_localizations.dart';
 
 void main() {
   runApp(const MyApp());
@@ -12,8 +13,11 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: '功能目录',
+      onGenerateTitle: (context) =>
+          AppLocalizations.of(context)?.appTitle ?? '功能目录',
       debugShowCheckedModeBanner: false,
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       // 核心：使用routes映射表（替代onGenerateRoute）
       routes: appRoutes,
       // 初始路由（对应appRoutes中的AppRoutes.main）
