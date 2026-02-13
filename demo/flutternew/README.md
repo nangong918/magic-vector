@@ -1,23 +1,21 @@
-# flutternew
-
-A new Flutter project.
-
-## Getting Started
-
-This project is a starting point for a Flutter application.
-
-A few resources to get you started if this is your first Flutter project:
-
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
-
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+**flutternew**
+====
 
 
+## Flutter笔记
 
 
 [flutter笔记](../note/Flutter.md)
+
+
+## Demo
+
+### Flutter调用平台native
+
+[Flutter调用平台native](../note/flutter/flutter调用平台native/flutter调用平台native.md)
+
+实现页面[native_call_page.dart](lib/page/native_call_page.dart)
+
+
 
 
