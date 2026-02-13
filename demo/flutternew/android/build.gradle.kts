@@ -2,6 +2,12 @@ allprojects {
     repositories {
         google()
         mavenCentral()
+        // 正确写法：flatDir 放在 repositories 内部
+        flatDir {
+            // 指向 app 模块下的 libs 目录（AIKit.aar 所在位置）
+            dirs = setOf(file("app/libs"))
+            // 若有多个模块，可追加：dirs += file("其他模块/libs")
+        }
     }
 }
 

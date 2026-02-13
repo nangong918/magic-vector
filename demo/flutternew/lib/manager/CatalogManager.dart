@@ -41,13 +41,20 @@ class CatalogManager {
         iconRes: Icons.mic,
         routeName: AppRoutes.xfyunStt,
       ),
+      CatalogItem(
+        id: "5",
+        title: "离线语音唤醒",
+        subtitle: "AIKit IVW（上传音频/录音）",
+        iconRes: Icons.record_voice_over,
+        routeName: AppRoutes.offlineIvw,
+      ),
     ];
   }
 
   // 处理Item点击跳转逻辑
   static void onItemClick(CatalogItem item, BuildContext context) {
     if (item.routeName != null && item.routeName!.isNotEmpty) {
-      print('将要跳转到${item.routeName}');
+      debugPrint('将要跳转到${item.routeName}');
       Navigator.pushNamed(context, item.routeName!);
     } else {
       // 如果没有设置路由，显示提示
