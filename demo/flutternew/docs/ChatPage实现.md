@@ -200,9 +200,191 @@ class ChatBubbleItem extends StatelessWidget {
 }
 ```
 
+### 发送ws消息
+
+page 点击事件 发送消息
+```dart
+  Future<void> _send() async {
+    final text = _inputController.text.trim();
+    // 清空输入框
+    _inputController.clear();
+
+    // 调用ViewModel发送消息
+    await _viewModel.sendMessage(text);
+  }
+```
+
+viewModel 参数校验 + 状态设置 发送消息
+```dart
+  Future<void> sendMessage(String input) async {
+    final message = input.trim();
+    
+    // 设置状态为发送中
+    _setState(const RealtimeChatState.recordingAndSending());
+    
+    // 添加用户消息到消息列表
+    final userMessage = _addMessage(ChatRole.user, message);
+    // 添加用户消息到历史记录
+    _history.add(<String, String>{'role': 'user', 'content': userMessage.text});
+
+    // 添加空的助手消息到消息列表，用于接收AI回复
+    final assistantMessage = _addMessage(ChatRole.assistant, '');
+    // 设置状态为接收中
+    _setState(const RealtimeChatState.receiving());
+
+    try {
+      // 调用聊天服务发送消息
+      await _chatService.sendChat(
+        systemPrompt: _systemPrompt,
+        history: List<Map<String, String>>.from(_history),
+        userMessage: message,
+        // 监听AI回复并处理AI回复的增量文本
+        onDelta: (String deltaText) {
+          assistantMessage.textNotifier.value =
+              '${assistantMessage.textNotifier.value}$deltaText';
+        },
+        // 处理消息发送完成
+        onDone: () {
+          // 添加助手消息到历史记录
+          _history.add(<String, String>{
+            'role': 'assistant',
+            'content': assistantMessage.text,
+          });
+        },
+      );
+      // 消息发送完成，设置状态为已连接
+      _setState(const RealtimeChatState.initializedConnected());
+    } catch (e) {
+      // 消息发送失败，设置错误信息和状态
+      _latestError = '消息发送失败: $e';
+      _setState(RealtimeChatState.error(_latestError));
+      // 错误处理完成后，设置状态为已连接
+      _setState(const RealtimeChatState.initializedConnected());
+    }
+  }
+```
+
+service 发送消息
+```dart
+  Future<void> sendChat({
+    required String systemPrompt, // 系统提示词，用于指导AI的行为
+    required List<Map<String, String>> history, // 聊天历史记录
+    required String userMessage, // 用户消息
+    required void Function(String deltaText) onDelta, // 处理AI回复的增量文本的回调
+    required void Function() onDone, // 消息处理完成的回调
+  }) async {
+
+    // ...
+    
+    // 构建请求体
+    final requestBody = _buildRequestBody(
+      systemPrompt: systemPrompt,
+      history: history,
+      userMessage: userMessage,
+    );
+    // 发送请求到服务器
+    socket.add(jsonEncode(requestBody));
+
+    try {
+      // 等待消息处理完成
+      await doneCompleter.future;
+    } finally {
+      // 关闭WebSocket连接
+      await socket.close();
+    }
+  }
+```
 
 
+### 接收ws消息 + 渲染到view上
 
+定义接收消息的livedata
+```dart
+class ChatMessage {
+  ChatMessage({
+    required this.id,
+    required this.role,
+    required this.createdAt,
+    required String text,
+  }) : textNotifier = ValueNotifier<String>(text);
+
+  final String id;
+  final ChatRole role;
+  final DateTime createdAt;
+  // valueNotifier: 值监听器，用于监听值变化，相当于Android中的LiveData
+  final ValueNotifier<String> textNotifier;
+
+  String get text => textNotifier.value;
+
+  void dispose() {
+    textNotifier.dispose();
+  }
+}
+```
+
+接收ws消息
+```dart
+  int _handleEvent(
+    String event, { // 服务器发送的事件数据
+    required void Function(String deltaText) onDelta, // 处理增量文本的回调函数
+  }) {
+    // 解析事件JSON数据
+    final Map<String, dynamic> jsonMap =
+        jsonDecode(event) as Map<String, dynamic>;
+
+    // ...
+    
+    // 提取payload部分
+    final payload = (jsonMap['payload'] as Map?)?.cast<String, dynamic>();
+    // 提取choices部分
+    final choices = (payload?['choices'] as Map?)?.cast<String, dynamic>();
+    // 提取text列表
+    final textList = choices?['text'] as List<dynamic>? ?? <dynamic>[];
+
+    // 遍历text列表，提取content并调用回调函数
+    for (final dynamic item in textList) {
+      final itemMap = (item as Map?)?.cast<String, dynamic>();
+      final content = itemMap?['content'] as String? ?? '';
+      if (content.isNotEmpty) {
+        // 调用回调
+        onDelta(content);
+      }
+    }
+    
+    // ...
+  
+  }
+```
+
+消息会被获取传递到：onDelta然后回显
+UI回显
+
+```dart
+// 处理AI回复的增量文本
+onDelta: (String deltaText) {
+  // 相当于livedata的postValue
+  assistantMessage.textNotifier.value =
+      '${assistantMessage.textNotifier.value}$deltaText';
+},
+```
+
+渲染到view上：
+view已经设置好了监听，当value发生变化就会渲染在view上：
+```dart
+child: ValueListenableBuilder<String>(
+  valueListenable: message.textNotifier, // 监听的ValueNotifier
+  builder: (context, String value, child) {
+    return Text(
+      value, // 消息文本
+      style: const TextStyle(
+        color: Color(0xFF263238), // 文本颜色
+        fontSize: 16, // 字体大小
+        height: 1.4, // 行高
+      ),
+    );
+  },
+),
+```
 
 
 
