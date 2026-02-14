@@ -7,6 +7,11 @@
 
 ### 打AAR包
 
+* 创建新的Android项目
+* 在Android项目`File` -> `New Module`创建一个Android Library Module
+* 右侧gradle打开，选择创建的module，点击build，会在`build/outputs/aar`目录下生成AAR包
+
+
 
 ### 使用AAR
 
