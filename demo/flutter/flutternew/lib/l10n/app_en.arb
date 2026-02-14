@@ -1,0 +1,20 @@
+{
+  "@@locale": "en",
+  "appTitle": "My Awesome App",
+  "network": "Network",
+  "chat": "Chat",
+  "native": "Native",
+  "xfyun_stt": "XunFei Sound to Text",
+  "hello": "Hello",
+  "login": "Login",
+  "logout": "Logout",
+  "greetingWithName": "Hello {name}",
+  "@greetingWithName": {
+    "description": "Greeting message with a name",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  }
+}

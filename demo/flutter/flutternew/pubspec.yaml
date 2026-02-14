@@ -1,0 +1,65 @@
+# 项目基础信息配置
+name: flutternew
+description: "跨Android, IOS, 鸿蒙的AppDemo"
+publish_to: 'none'  # 私有项目，禁止发布到pub.dev
+version: 1.0.0+1    # 版本号：语义化版本+构建号
+
+# 环境约束：限定Flutter/Dart最低版本
+environment:
+  sdk: ^3.10.1       # 适配Flutter 3.38内置的Dart版本
+  flutter: ">=3.38.0" # 明确Flutter最低支持版本
+
+# 运行时核心依赖（项目打包后需要的依赖）
+dependencies:
+  # Flutter框架核心
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.8  # iOS风格图标库
+
+  # 国际化
+  flutter_localizations:
+    sdk: flutter
+
+  # 国际化
+  intl: ^0.20.2
+  # 网络通信模块（升级web_socket_channel解决冲突）
+  dio: ^5.4.3+1            # HTTP请求核心库（支持拦截、上传下载等）
+  retrofit: ^4.9.0         # 注解式API定义（对标Android Retrofit）
+  web_socket_channel: ^3.0.3 # 升级到兼容web ^1.0.0的版本
+
+  # JSON序列化/反序列化
+  json_annotation: ^4.9.0  # JSON映射注解库
+
+  # 音频采集 + 数据加密（使用最新的record 6.2.0）
+  record: ^6.2.0           # 最新稳定版，适配Flutter 3.38
+  crypto: ^3.0.3           # 加密算法（MD5/SHA/HMAC等）
+
+  # 状态管理（对标Android ViewModel）
+  riverpod: ^2.5.1         # 状态管理核心库
+  flutter_riverpod: ^2.5.1 # Flutter端状态管理适配
+
+  # 通用工具类
+  flutter_easyloading: ^3.0.5 # 全局加载/提示框
+  connectivity_plus: ^6.0.5   # 网络状态检测
+  logger: ^2.6.0              # 日志打印工具
+
+# 开发期依赖（仅编译/代码生成使用，不打包到最终应用）
+dev_dependencies:
+  # Flutter测试框架
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0    # 代码规范检查
+
+  # 代码生成工具
+  build_runner: ^2.6.0     # 代码生成核心工具
+  retrofit_generator: ^10.0.1 # Retrofit接口代码生成器
+  json_serializable: ^6.10.0  # JSON序列化代码生成器
+
+# Flutter框架配置
+flutter:
+  uses-material-design: true # 启用Material Design图标/组件
+  generate: true # 开启代码生成
+
+  # 资源文件
+  assets:
+    - assets/txt/
