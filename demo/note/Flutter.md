@@ -25,6 +25,9 @@ flutter config --jdk-dir="C:\Users\clt\.jdks\dragonwell-17.0.18"
 ```
 
 
+## flutter 编译
+
+
 ### 打包
 
 
@@ -33,6 +36,12 @@ flutter config --jdk-dir="C:\Users\clt\.jdks\dragonwell-17.0.18"
 ### flutter调用平台native
 
 [flutter调用平台native.md](flutter/flutter调用平台native/flutter调用平台native.md)
+
+
+### flutter集成AAR
+
+
+[flutter集成aar.md](flutter/flutter集成SDK/flutter集成aar.md)
 
 
 ## Android 过度 Flutter
