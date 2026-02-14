@@ -9,6 +9,7 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.flutteraar.domain.entity.DemoItem;
 import com.example.flutteraar.ui.activity.WifiDemoActivity;
+import com.example.flutteraar.ui.activity.BatteryDemoActivity;
 import com.example.flutteraar.ui.adapter.DemoListAdapter;
 
 import java.util.Arrays;
@@ -25,7 +26,8 @@ public class MainActivity extends AppCompatActivity {
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
 
         List<DemoItem> demoItems = Arrays.asList(
-                new DemoItem("WiFi Demo", "获取 WiFi 信号强度/连接状态", WifiDemoActivity.class)
+                new DemoItem("WiFi Demo", "获取 WiFi 信号强度/连接状态", WifiDemoActivity.class),
+                new DemoItem("Battery Demo", "获取 电池电量", BatteryDemoActivity.class)
         );
         DemoListAdapter adapter = new DemoListAdapter(demoItems, item ->
                 startActivity(new Intent(MainActivity.this, item.getTargetActivity())));

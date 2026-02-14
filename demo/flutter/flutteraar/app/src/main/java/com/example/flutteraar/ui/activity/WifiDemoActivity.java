@@ -1,5 +1,6 @@
 package com.example.flutteraar.ui.activity;
 
+import android.annotation.SuppressLint;
 import android.os.Bundle;
 import android.widget.Button;
 import android.widget.TextView;
@@ -24,6 +25,7 @@ public class WifiDemoActivity extends AppCompatActivity {
         refreshWifiInfo(tvSignal, tvConnected);
     }
 
+    @SuppressLint("SetTextI18n")
     private void refreshWifiInfo(TextView tvSignal, TextView tvConnected) {
         int signal = WifiNativeBridge.getWifiSignalStrength(this);
         boolean connected = WifiNativeBridge.isWifiConnected(this);

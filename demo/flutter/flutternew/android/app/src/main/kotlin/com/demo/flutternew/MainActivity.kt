@@ -16,6 +16,9 @@ import android.util.Log
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import com.demo.aarlib.WifiNativeBridge
+import com.demo.aarlib.BatteryNativeBridge
+import com.demo.flutternew.manager.WifiBridgeManager
+import com.demo.flutternew.manager.BatteryBridgeManager
 import com.iflytek.aikit.core.AiAudio
 import com.iflytek.aikit.core.AiHandle
 import com.iflytek.aikit.core.AiHelper
@@ -40,15 +43,14 @@ import java.util.Arrays
 import java.util.concurrent.atomic.AtomicBoolean
 
 
-// todo 解耦合
+
 class MainActivity: FlutterActivity() {
-    // 1. 电量Channel（原有）
-    private val BATTERY_CHANNEL = "com.demo.flutternew/battery"
-    // 2. 新增WiFi Channel（需与Flutter端一致）
-    private val WIFI_CHANNEL = "com.demo.flutternew/wifi"
-    // 3. 离线唤醒 MethodChannel / EventChannel
+    // 离线唤醒 MethodChannel / EventChannel
     private val IVW_CHANNEL = "com.demo.flutternew/ivw"
     private val IVW_EVENT_CHANNEL = "com.demo.flutternew/ivw_event"
+
+    private lateinit var wifiBridgeManager: WifiBridgeManager
+    private lateinit var batteryBridgeManager: BatteryBridgeManager
 
     private val ABILITY_ID = "e867a88f2"
     private val BUFFER_SIZE = 1280
@@ -116,45 +118,13 @@ class MainActivity: FlutterActivity() {
         super.configureFlutterEngine(flutterEngine)
         initIvwThread()
 
-        // ========== 原有：电量调用逻辑 ==========
-        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, BATTERY_CHANNEL).setMethodCallHandler { call, result ->
-            when (call.method) {
-                "getBatteryLevel" -> {
-                    val batteryLevel = getBatteryLevel()
-                    if (batteryLevel != -1) {
-                        result.success(batteryLevel)
-                    } else {
-                        result.error("UNAVAILABLE", "电池信息不可用", null)
-                    }
-                }
-                else -> {
-                    result.notImplemented()
-                }
-            }
-        }
+        // 初始化桥接管理器
+        wifiBridgeManager = WifiBridgeManager(this)
+        batteryBridgeManager = BatteryBridgeManager(this)
 
-        // ========== 新增：WiFi信号强度调用逻辑 ==========
-        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, WIFI_CHANNEL).setMethodCallHandler { call, result ->
-            when (call.method) {
-                // Flutter端调用的方法名：getWifiSignalStrength
-                "getWifiSignalStrength" -> {
-                    val signalStrength = getWifiSignalStrength()
-                    if (signalStrength != -999) { // 自定义兜底值
-                        result.success(signalStrength)
-                    } else {
-                        result.error("UNAVAILABLE", "WiFi信号强度获取失败", null)
-                    }
-                }
-                // 可选：新增获取WiFi是否连接的方法
-                "isWifiConnected" -> {
-                    val isConnected = isWifiConnected()
-                    result.success(isConnected)
-                }
-                else -> {
-                    result.notImplemented()
-                }
-            }
-        }
+        // 注册通道
+        wifiBridgeManager.registerWith(flutterEngine)
+        batteryBridgeManager.registerWith(flutterEngine)
 
         EventChannel(flutterEngine.dartExecutor.binaryMessenger, IVW_EVENT_CHANNEL)
             .setStreamHandler(object : EventChannel.StreamHandler {
@@ -247,21 +217,7 @@ class MainActivity: FlutterActivity() {
         }
     }
 
-    // ========== 原有：获取电池电量 ==========
-    private fun getBatteryLevel(): Int {
-        val batteryManager = getSystemService(Context.BATTERY_SERVICE) as BatteryManager
-        return batteryManager.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY)
-    }
 
-    // ========== 新增：获取WiFi信号强度（返回dBm值，负数，如-65） ==========
-    private fun getWifiSignalStrength(): Int {
-        return WifiNativeBridge.getWifiSignalStrength(this)
-    }
-
-    // ========== 可选：判断WiFi是否已连接 ==========
-    private fun isWifiConnected(): Boolean {
-        return WifiNativeBridge.isWifiConnected(this)
-    }
 
     private fun initIvwThread() {
         ivwHandlerThread = HandlerThread("ivw-worker")
