@@ -66,12 +66,31 @@ import com.iflytek.aikit.core.LogLvl;
 
 
 
+### Android Lib中集成AAR并打包使用
+
+#### AAR引用AAR
+创建`LocalRepo`内部创建`aar名称`的文件夹，然后再在内部创建一个`build.gradle`文件
+文件内容：
+```groovy
+configurations.maybeCreate("default")
+artifacts.add("default", file('AIKit.aar'))
+```
+其中`AIKit.aar`为AAR包名称
+
+然后再在`setting.gradle`中添加依赖
+```groovy
+include ':LocalRepo:AIKit'
+```
+
+然后在`app`和`lib`中添加依赖：
+```groovy
+api project(':LocalRepo:AIKit')
+```
+
+sync之后就可以直接使用和打包了。
 
 
-
-
-
-
+使用AAR
 
 
 

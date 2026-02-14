@@ -15,8 +15,6 @@ import android.os.HandlerThread
 import android.util.Log
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
-import com.demo.aarlib.WifiNativeBridge
-import com.demo.aarlib.BatteryNativeBridge
 import com.demo.flutternew.manager.WifiBridgeManager
 import com.demo.flutternew.manager.BatteryBridgeManager
 import com.iflytek.aikit.core.AiAudio

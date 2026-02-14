@@ -95,3 +95,4 @@ buildNumber.properties
 
 # Ignore virtual machine crash logs (Java specific)
 hs_err_pid*
+/demo/flutter/.vscode/**

@@ -22,3 +22,4 @@ dependencyResolutionManagement {
 rootProject.name = "FlutterAar"
 include ':app'
 include ':aarlib'
+include ':LocalRepo:AIKit'
