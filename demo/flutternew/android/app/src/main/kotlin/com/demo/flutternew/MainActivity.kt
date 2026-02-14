@@ -3,6 +3,8 @@ package com.demo.flutternew
 import android.Manifest
 import android.content.ContentValues.TAG
 import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
 import android.os.BatteryManager
 import android.net.wifi.WifiInfo
 import android.content.pm.PackageManager
@@ -14,6 +16,7 @@ import android.os.Build
 import android.os.Handler
 import android.os.HandlerThread
 import android.util.Log
+import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import com.iflytek.aikit.core.AiAudio
 import com.iflytek.aikit.core.AiHandle
@@ -71,6 +74,9 @@ class MainActivity: FlutterActivity() {
     private var shouldSendEndFrame = false
     private var sdkInitRequested = false
     private var abilityListenerRegistered = false
+    private var pendingRecordPermissionResult: MethodChannel.Result? = null
+
+    private val REQ_RECORD_AUDIO = 0x66
 
     private val coreListener = CoreListener { type, code ->
         if (type == ErrType.AUTH) {
@@ -198,6 +204,19 @@ class MainActivity: FlutterActivity() {
                     result.success(null)
                 }
 
+                "requestRecordPermission" -> {
+                    if (hasRecordPermission()) {
+                        result.success(true)
+                    } else {
+                        pendingRecordPermissionResult = result
+                        ActivityCompat.requestPermissions(
+                            this,
+                            arrayOf(Manifest.permission.RECORD_AUDIO),
+                            REQ_RECORD_AUDIO
+                        )
+                    }
+                }
+
                 "startFileWake" -> {
                     val keyword = call.argument<String>("keyword") ?: "你好小迪"
                     val path = call.argument<String>("audioPath") ?: ""
@@ -286,6 +305,7 @@ class MainActivity: FlutterActivity() {
         workDir = resolveWritableWorkDir()
         resDir = "${workDir}ivw"
         ensureWorkDirReady()
+        syncIvwAssetsToWorkDir()
 
         AiHelper.getInst().setLogInfo(LogLvl.VERBOSE, 1, "${workDir}aikit/aeeLog.txt")
         val params = BaseLibrary.Params.builder()
@@ -507,6 +527,43 @@ class MainActivity: FlutterActivity() {
         }
     }
 
+    private fun syncIvwAssetsToWorkDir() {
+        try {
+            val ivwDir = File(resDir)
+            copyAssetFolder("ivw", ivwDir)
+            emitEvent(type = "log", message = "离线资源已同步到: $resDir")
+        } catch (e: Exception) {
+            emitEvent(type = "error", message = "离线资源拷贝失败: ${e.message}")
+        }
+    }
+
+    private fun copyAssetFolder(assetPath: String, targetDir: File) {
+        val list = assets.list(assetPath) ?: return
+        if (!targetDir.exists()) {
+            targetDir.mkdirs()
+        }
+        for (name in list) {
+            val childAssetPath = "$assetPath/$name"
+            val childList = assets.list(childAssetPath) ?: emptyArray()
+            if (childList.isEmpty()) {
+                copyAssetFile(childAssetPath, File(targetDir, name))
+            } else {
+                copyAssetFolder(childAssetPath, File(targetDir, name))
+            }
+        }
+    }
+
+    private fun copyAssetFile(assetPath: String, outFile: File) {
+        if (!outFile.parentFile.exists()) {
+            outFile.parentFile.mkdirs()
+        }
+        assets.open(assetPath).use { input ->
+            FileOutputStream(outFile).use { output ->
+                input.copyTo(output)
+            }
+        }
+    }
+
     private fun createAudioRecordIfNeed() {
         if (audioRecord != null) {
             return
@@ -582,5 +639,19 @@ class MainActivity: FlutterActivity() {
         audioRecord = null
         ivwHandlerThread.quitSafely()
         unInitSdk()
+    }
+
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<out String>,
+        grantResults: IntArray
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode != REQ_RECORD_AUDIO) {
+            return
+        }
+        val granted = grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED
+        pendingRecordPermissionResult?.success(granted)
+        pendingRecordPermissionResult = null
     }
 }

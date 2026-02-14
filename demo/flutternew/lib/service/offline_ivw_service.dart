@@ -65,6 +65,13 @@ class OfflineIvwService {
     await _methodChannel.invokeMethod('stopRecordWake');
   }
 
+  Future<bool> requestRecordPermission() async {
+    final bool granted =
+        await _methodChannel.invokeMethod<bool>('requestRecordPermission') ??
+            false;
+    return granted;
+  }
+
   Future<void> startFileWake({
     required String keyword,
     required String audioPath,

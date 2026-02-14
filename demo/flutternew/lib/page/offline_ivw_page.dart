@@ -56,6 +56,11 @@ class _OfflineIvwPageState extends State<OfflineIvwPage>
   Future<void> _startRecord() async {
     final keyword = _normalizedKeyword;
     try {
+      final granted = await _service.requestRecordPermission();
+      if (!granted) {
+        _appendLog('录音权限未授予，无法开始录音唤醒');
+        return;
+      }
       await _service.startRecordWake(keyword: keyword);
       _appendLog('开始录音唤醒，关键词: $keyword');
       setState(() => _isListening = true);
