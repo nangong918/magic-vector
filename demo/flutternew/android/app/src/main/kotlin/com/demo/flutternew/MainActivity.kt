@@ -6,18 +6,16 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.os.BatteryManager
-import android.net.wifi.WifiInfo
 import android.content.pm.PackageManager
 import android.media.AudioFormat
 import android.media.AudioRecord
 import android.media.MediaRecorder
-import android.net.wifi.WifiManager
-import android.os.Build
 import android.os.Handler
 import android.os.HandlerThread
 import android.util.Log
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import com.demo.aarlib.WifiNativeBridge
 import com.iflytek.aikit.core.AiAudio
 import com.iflytek.aikit.core.AiHandle
 import com.iflytek.aikit.core.AiHelper
@@ -257,35 +255,12 @@ class MainActivity: FlutterActivity() {
 
     // ========== 新增：获取WiFi信号强度（返回dBm值，负数，如-65） ==========
     private fun getWifiSignalStrength(): Int {
-        // 1. 获取WifiManager实例
-        val wifiManager = getSystemService(Context.WIFI_SERVICE) as WifiManager
-
-        // 2. 检查WiFi是否开启
-        if (!wifiManager.isWifiEnabled) {
-            return -999 // 未开启WiFi，返回兜底值
-        }
-
-        // 3. 获取当前WiFi连接信息
-        val wifiInfo: WifiInfo? = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            // Android 10+ 推荐用法
-            wifiManager.connectionInfo
-        } else {
-            // 低版本兼容
-            wifiManager.connectionInfo
-        }
-
-        // 4. 获取信号强度（RSSI：Received Signal Strength Indicator，单位dBm）
-        return wifiInfo?.rssi ?: -999 // 未连接WiFi返回-999
+        return WifiNativeBridge.getWifiSignalStrength(this)
     }
 
     // ========== 可选：判断WiFi是否已连接 ==========
     private fun isWifiConnected(): Boolean {
-        val wifiManager = getSystemService(Context.WIFI_SERVICE) as WifiManager
-        if (!wifiManager.isWifiEnabled) return false
-
-        val wifiInfo = wifiManager.connectionInfo
-        // 判断是否已分配IP（已连接的标志）
-        return wifiInfo.ipAddress != 0
+        return WifiNativeBridge.isWifiConnected(this)
     }
 
     private fun initIvwThread() {
