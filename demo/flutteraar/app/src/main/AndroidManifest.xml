@@ -21,7 +21,7 @@
             </intent-filter>
         </activity>
         <activity
-            android:name=".WifiDemoActivity"
+            android:name=".ui.activity.WifiDemoActivity"
             android:exported="false" />
     </application>
 

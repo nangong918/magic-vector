@@ -7,6 +7,10 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.example.flutteraar.domain.entity.DemoItem;
+import com.example.flutteraar.ui.activity.WifiDemoActivity;
+import com.example.flutteraar.ui.adapter.DemoListAdapter;
+
 import java.util.Arrays;
 import java.util.List;
 

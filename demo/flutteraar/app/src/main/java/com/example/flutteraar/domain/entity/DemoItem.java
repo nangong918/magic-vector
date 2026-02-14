@@ -1,4 +1,4 @@
-package com.example.flutteraar;
+package com.example.flutteraar.domain.entity;
 
 import androidx.appcompat.app.AppCompatActivity;
 

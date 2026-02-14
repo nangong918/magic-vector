@@ -1,4 +1,4 @@
-package com.example.flutteraar;
+package com.example.flutteraar.ui.adapter;
 
 import android.view.LayoutInflater;
 import android.view.View;
@@ -7,6 +7,9 @@ import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
+
+import com.example.flutteraar.R;
+import com.example.flutteraar.domain.entity.DemoItem;
 
 import java.util.List;
 
