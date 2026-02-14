@@ -3,8 +3,6 @@ package com.demo.flutternew
 import android.Manifest
 import android.content.ContentValues.TAG
 import android.content.Context
-import android.content.Intent
-import android.content.IntentFilter
 import android.os.BatteryManager
 import android.net.wifi.WifiInfo
 import android.content.pm.PackageManager
@@ -40,6 +38,8 @@ import java.io.OutputStreamWriter
 import java.util.Arrays
 import java.util.concurrent.atomic.AtomicBoolean
 
+
+// todo 解耦合
 class MainActivity: FlutterActivity() {
     // 1. 电量Channel（原有）
     private val BATTERY_CHANNEL = "com.demo.flutternew/battery"
@@ -283,8 +283,9 @@ class MainActivity: FlutterActivity() {
         appId = getString(R.string.appId)
         apiKey = getString(R.string.apiKey)
         apiSecret = getString(R.string.apiSecret)
-        workDir = getString(R.string.workDir)
+        workDir = resolveWritableWorkDir()
         resDir = "${workDir}ivw"
+        ensureWorkDirReady()
 
         AiHelper.getInst().setLogInfo(LogLvl.VERBOSE, 1, "${workDir}aikit/aeeLog.txt")
         val params = BaseLibrary.Params.builder()
@@ -302,7 +303,7 @@ class MainActivity: FlutterActivity() {
             abilityListenerRegistered = true
         }
         sdkInitRequested = true
-        emitEvent(type = "log", message = "SDK初始化已发起")
+        emitEvent(type = "log", message = "SDK初始化已发起, workDir=$workDir")
     }
 
     private fun startSession(keywordInput: String): Int {
@@ -481,6 +482,28 @@ class MainActivity: FlutterActivity() {
         } catch (e: IOException) {
             emitEvent(type = "error", message = "关键词写文件失败: ${e.message}")
             return false
+        }
+    }
+
+    private fun resolveWritableWorkDir(): String {
+        val baseDir = getExternalFilesDir(null) ?: filesDir
+        val iflytekDir = File(baseDir, "iflytek")
+        val absolute = iflytekDir.absolutePath
+        return if (absolute.endsWith(File.separator)) absolute else "$absolute${File.separator}"
+    }
+
+    private fun ensureWorkDirReady() {
+        val root = File(workDir)
+        val ivw = File(resDir)
+        val aikit = File("${workDir}aikit")
+        if (!root.exists()) {
+            root.mkdirs()
+        }
+        if (!ivw.exists()) {
+            ivw.mkdirs()
+        }
+        if (!aikit.exists()) {
+            aikit.mkdirs()
         }
     }
 

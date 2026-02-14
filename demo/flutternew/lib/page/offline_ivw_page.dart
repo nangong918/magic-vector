@@ -162,6 +162,7 @@ class _OfflineIvwPageState extends State<OfflineIvwPage>
         child: Padding(
           padding: const EdgeInsets.all(12),
           child: Column(
+            mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
               Text('SDK状态: ${_sdkReady ? "已初始化" : "未初始化"}'),
@@ -211,7 +212,7 @@ class _OfflineIvwPageState extends State<OfflineIvwPage>
           ),
           const SizedBox(height: 6),
           const Text(
-            '示例: /sdcard/iflytek/ivw/test.pcm',
+            '示例: /storage/emulated/0/Android/data/<包名>/files/iflytek/ivw/test.pcm',
             style: TextStyle(fontSize: 12, color: Colors.black54),
           ),
         ],
@@ -223,6 +224,7 @@ class _OfflineIvwPageState extends State<OfflineIvwPage>
     return Padding(
       padding: const EdgeInsets.all(12),
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
           ElevatedButton(
