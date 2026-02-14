@@ -1,7 +1,0 @@
-<resources>
-    <string name="app_name">flutternew</string>
-    <string name="appId">4aa58263</string>
-    <string name="apiKey">fd775746ce819ec90bc6ec2df697dbe5</string>
-    <string name="apiSecret">Y2U0OWUyYjcyOTRiYWEwMjk0YWNlMzdh</string>
-    <string name="workDir">/sdcard/iflytek/</string>
-</resources>
