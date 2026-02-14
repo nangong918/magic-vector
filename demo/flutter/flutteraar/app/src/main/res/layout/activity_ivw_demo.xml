@@ -1,0 +1,119 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="16dp">
+
+    <EditText
+        android:id="@+id/etKeyword"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="唤醒词，多个用逗号分隔"
+        android:text="你好小迪" />
+
+    <TextView
+        android:id="@+id/tvState"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="10dp"
+        android:text="会话状态: 未开始"
+        android:textStyle="bold" />
+
+    <TextView
+        android:id="@+id/tvDb"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="6dp"
+        android:text="当前分贝: -" />
+
+    <TextView
+        android:id="@+id/tvFilePath"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="6dp"
+        android:text="文件唤醒音频: -" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:orientation="horizontal">
+
+        <Button
+            android:id="@+id/btnInitSdk"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="初始化SDK" />
+
+        <Button
+            android:id="@+id/btnReleaseSdk"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:layout_weight="1"
+            android:text="释放SDK" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:orientation="horizontal">
+
+        <Button
+            android:id="@+id/btnStartRecordWake"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="开始录音唤醒" />
+
+        <Button
+            android:id="@+id/btnStopRecordWake"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:layout_weight="1"
+            android:text="停止录音唤醒" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:orientation="horizontal">
+
+        <Button
+            android:id="@+id/btnStartFileWake"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="开始文件唤醒" />
+
+        <Button
+            android:id="@+id/btnClearLog"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:layout_weight="1"
+            android:text="清空日志" />
+    </LinearLayout>
+
+    <ScrollView
+        android:id="@+id/svLog"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_marginTop="12dp"
+        android:layout_weight="1"
+        android:background="#14000000"
+        android:padding="10dp">
+
+        <TextView
+            android:id="@+id/tvLog"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textSize="13sp" />
+    </ScrollView>
+
+</LinearLayout>
