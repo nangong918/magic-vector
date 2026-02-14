@@ -25,12 +25,9 @@ import com.iflytek.aikit.core.CoreListener;
 import com.iflytek.aikit.core.ErrType;
 import com.iflytek.aikit.core.LogLvl;
 
-import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.OutputStreamWriter;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -148,12 +145,13 @@ class VoiceWakeUpInternal {
             emitEvent("error", "startRecordWake参数无效", null);
             return;
         }
+        validateKeywordOrThrow(keyword);
         if (!hasRecordPermission(context)) {
             emitEvent("error", "缺少录音权限: RECORD_AUDIO", null);
             return;
         }
         ensureWorkerThread();
-        final String keywordInput = TextUtils.isEmpty(keyword) ? "你好小迪" : keyword;
+        final String keywordInput = keyword;
         ivwHandler.post(() -> {
             int ret = startSession(keywordInput);
             if (ret != 0) {
@@ -180,8 +178,9 @@ class VoiceWakeUpInternal {
             emitEvent("error", "startFileWake参数无效", null);
             return;
         }
+        validateKeywordOrThrow(keyword);
         ensureWorkerThread();
-        final String keywordInput = TextUtils.isEmpty(keyword) ? "你好小迪" : keyword;
+        final String keywordInput = keyword;
         ivwHandler.post(() -> {
             int ret = startSession(keywordInput);
             if (ret != 0) {
@@ -223,10 +222,16 @@ class VoiceWakeUpInternal {
         }
         appContext = app;
         abilityId = TextUtils.isEmpty(config.getAbilityId()) ? DEFAULT_ABILITY_ID : config.getAbilityId();
-        workDir = resolveWorkDir(config.getWorkDir());
-        resDir = workDir + "ivw";
-        ensureWorkDirReady();
-        syncIvwAssetsToWorkDir();
+        IvwResourceManager resourceManager = new IvwResourceManager(appContext, config.getWorkDir());
+        workDir = resourceManager.getWorkDir();
+        resDir = resourceManager.getResDir();
+        try {
+            resourceManager.prepare();
+            emitEvent("log", "离线资源已同步到: " + resDir, null);
+        } catch (IOException e) {
+            emitEvent("error", "离线资源准备失败: " + e.getMessage(), null);
+            return;
+        }
 
         AiHelper.getInst().setLogInfo(LogLvl.VERBOSE, 1, workDir + "aikit/aeeLog.txt");
         BaseLibrary.Params params = BaseLibrary.Params.builder()
@@ -250,8 +255,12 @@ class VoiceWakeUpInternal {
             emitEvent("error", "请先调用initSdk初始化", null);
             return -1;
         }
-        if (!keywordToFile(keywordInput)) {
-            emitEvent("error", "唤醒词写入失败，请检查workDir权限", null);
+        try {
+            WakeKeywordFileWriter.writeKeywordFile(resDir, keywordInput);
+        } catch (IllegalArgumentException e) {
+            throw e;
+        } catch (IOException e) {
+            emitEvent("error", "唤醒词写入失败: " + e.getMessage(), null);
             return -2;
         }
         AiRequest.Builder customBuilder = AiRequest.builder();
@@ -411,119 +420,9 @@ class VoiceWakeUpInternal {
         }
     }
 
-    private boolean keywordToFile(String keywordInput) {
-        try {
-            File dir = new File(resDir);
-            if (!dir.exists() && !dir.mkdirs()) {
-                return false;
-            }
-            File keywordFile = new File(resDir + "/keyword.txt");
-            if (keywordFile.exists() && !keywordFile.delete()) {
-                Log.w(TAG, "failed to delete keyword.txt");
-            }
-            File binFile = new File(resDir + "/keyword.bin");
-            if (binFile.exists() && !binFile.delete()) {
-                Log.w(TAG, "failed to delete keyword.bin");
-            }
-            String temp = TextUtils.isEmpty(keywordInput) ? "你好小迪" : keywordInput;
-            String normalized = temp.replace("，", ",");
-            String[] keywords = normalized.split(",");
-            if (!keywordFile.exists() && !keywordFile.createNewFile()) {
-                return false;
-            }
-            try (OutputStreamWriter writer = new OutputStreamWriter(new FileOutputStream(keywordFile),
-                    StandardCharsets.UTF_8);
-                 BufferedWriter bufferedWriter = new BufferedWriter(writer)) {
-                for (String item : keywords) {
-                    String kw = item.trim();
-                    if (!kw.isEmpty()) {
-                        bufferedWriter.write(kw);
-                        bufferedWriter.write(";");
-                        bufferedWriter.newLine();
-                    }
-                }
-            }
-            return true;
-        } catch (IOException e) {
-            emitEvent("error", "关键词写文件失败: " + e.getMessage(), null);
-            return false;
-        }
-    }
-
-    private String resolveWorkDir(String cfgDir) {
-        if (!TextUtils.isEmpty(cfgDir)) {
-            return cfgDir.endsWith(File.separator) ? cfgDir : cfgDir + File.separator;
-        }
-        File baseDir = appContext != null ? appContext.getExternalFilesDir(null) : null;
-        if (baseDir == null && appContext != null) {
-            baseDir = appContext.getFilesDir();
-        }
-        if (baseDir == null) {
-            return File.separator;
-        }
-        String path = new File(baseDir, "iflytek").getAbsolutePath();
-        return path.endsWith(File.separator) ? path : path + File.separator;
-    }
-
-    private void ensureWorkDirReady() {
-        File root = new File(workDir);
-        File ivwDir = new File(resDir);
-        File aikitDir = new File(workDir + "aikit");
-        if (!root.exists()) {
-            root.mkdirs();
-        }
-        if (!ivwDir.exists()) {
-            ivwDir.mkdirs();
-        }
-        if (!aikitDir.exists()) {
-            aikitDir.mkdirs();
-        }
-    }
-
-    private void syncIvwAssetsToWorkDir() {
-        try {
-            if (appContext == null) {
-                emitEvent("error", "应用上下文为空，无法拷贝资源", null);
-                return;
-            }
-            File ivwDir = new File(resDir);
-            copyAssetFolder("ivw", ivwDir);
-            emitEvent("log", "离线资源已同步到: " + resDir, null);
-        } catch (Exception e) {
-            emitEvent("error", "离线资源拷贝失败: " + e.getMessage(), null);
-        }
-    }
-
-    private void copyAssetFolder(String assetPath, File targetDir) throws IOException {
-        if (appContext == null) {
-            return;
-        }
-        String[] list = appContext.getAssets().list(assetPath);
-        if (list == null) {
-            return;
-        }
-        if (!targetDir.exists()) {
-            targetDir.mkdirs();
-        }
-        for (String name : list) {
-            String childAssetPath = assetPath + "/" + name;
-            String[] childList = appContext.getAssets().list(childAssetPath);
-            if (childList == null || childList.length == 0) {
-                copyAssetFile(childAssetPath, new File(targetDir, name));
-            } else {
-                copyAssetFolder(childAssetPath, new File(targetDir, name));
-            }
-        }
-    }
-
-    private void copyAssetFile(String assetPath, File targetFile) throws IOException {
-        try (java.io.InputStream in = appContext.getAssets().open(assetPath);
-             java.io.FileOutputStream out = new FileOutputStream(targetFile)) {
-            byte[] buffer = new byte[1024];
-            int read;
-            while ((read = in.read(buffer)) != -1) {
-                out.write(buffer, 0, read);
-            }
+    private void validateKeywordOrThrow(String keyword) {
+        if (TextUtils.isEmpty(keyword)) {
+            throw new IllegalArgumentException("唤醒词不能为空");
         }
     }
 
