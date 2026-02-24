@@ -51,9 +51,9 @@ class _VoiceAgentPageState extends State<VoiceAgentPage> {
   bool _wakeListening = false;
   bool _vadRunning = false;
   bool _vadSpeechStarted = false;
+  bool _speechEndHandled = false;
   bool _sttRunning = false;
   bool _sttStopRequested = false;
-  bool _sttStopped = false;
   bool _sttFinalReceived = false;
   bool _agentCallTriggered = false;
   Timer? _sttFinalTimeout;
@@ -153,8 +153,8 @@ class _VoiceAgentPageState extends State<VoiceAgentPage> {
     _latestPartialStt = '';
     _finalSttText = '';
     _vadSpeechStarted = false;
+    _speechEndHandled = false;
     _sttStopRequested = false;
-    _sttStopped = false;
     _sttFinalReceived = false;
     _agentCallTriggered = false;
     _sttFinalTimeout?.cancel();
@@ -194,9 +194,14 @@ class _VoiceAgentPageState extends State<VoiceAgentPage> {
   }
 
   Future<void> _onSpeechEndDetected() async {
-    if (_phase != VoiceAgentPhase.userSpeaking || !_vadSpeechStarted) {
+    if (_speechEndHandled) {
       return;
     }
+    if (_phase != VoiceAgentPhase.wakeDetectedWaitingSpeech &&
+        _phase != VoiceAgentPhase.userSpeaking) {
+      return;
+    }
+    _speechEndHandled = true;
     _setPhase(VoiceAgentPhase.userSpeechEnded);
     _appendLog('检测到用户说话结束');
 
@@ -207,11 +212,12 @@ class _VoiceAgentPageState extends State<VoiceAgentPage> {
       }
       _vadRunning = false;
 
+      _sttStopRequested = true;
       if (_sttRunning) {
-        _sttStopRequested = true;
         await _sttService.stop();
+        _appendLog('已停止向远端STT传输音频');
       } else {
-        _sttStopRequested = true;
+        _appendLog('STT当前未运行，直接等待最终结果');
       }
 
       _sttFinalTimeout?.cancel();
@@ -363,14 +369,16 @@ class _VoiceAgentPageState extends State<VoiceAgentPage> {
         _phase != VoiceAgentPhase.userSpeaking) {
       return;
     }
+    if (_isSpeechEnd(event)) {
+      _appendLog('VAD检测到结束事件，准备收尾');
+      _onSpeechEndDetected();
+      return;
+    }
     if (!_vadSpeechStarted && _isSpeechStart(event)) {
       _vadSpeechStarted = true;
       _setPhase(VoiceAgentPhase.userSpeaking);
       _appendLog('VAD检测到用户开始说话');
       return;
-    }
-    if (_isSpeechEnd(event)) {
-      _onSpeechEndDetected();
     }
   }
 
@@ -393,6 +401,12 @@ class _VoiceAgentPageState extends State<VoiceAgentPage> {
         _finalSttText = text;
         _sttFinalReceived = true;
         _appendLog('远端STT最终结果: $text');
+        if (_phase == VoiceAgentPhase.wakeDetectedWaitingSpeech ||
+            _phase == VoiceAgentPhase.userSpeaking) {
+          _appendLog('收到最终结果，推进到说话结束态');
+          _setPhase(VoiceAgentPhase.userSpeechEnded);
+          _sttStopRequested = true;
+        }
         if (_phase == VoiceAgentPhase.userSpeechEnded && _sttStopRequested) {
           _tryCallAgentAfterSttCompleted(force: false);
         }
@@ -400,7 +414,6 @@ class _VoiceAgentPageState extends State<VoiceAgentPage> {
       case XfIatEventType.stopped:
         _appendLog('远端STT停止');
         _sttRunning = false;
-        _sttStopped = true;
         break;
       case XfIatEventType.error:
         _sttRunning = false;
