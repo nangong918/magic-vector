@@ -40,7 +40,11 @@ class _VoiceAgentPageState extends State<VoiceAgentPage> {
           Padding(
             padding: const EdgeInsets.fromLTRB(8, 8, 12, 8),
             child: Container(
-              constraints: const BoxConstraints(maxWidth: 220),
+              constraints: const BoxConstraints(
+                maxWidth: 240,
+                minHeight: 110,
+              ),
+              alignment: Alignment.topLeft,
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
                 color: Colors.black.withValues(alpha: 0.65),
@@ -48,10 +52,12 @@ class _VoiceAgentPageState extends State<VoiceAgentPage> {
               ),
               child: Text(
                 _viewModel.buildServiceStatusText(),
+                maxLines: 6,
+                overflow: TextOverflow.visible,
                 style: const TextStyle(
                   color: Colors.white,
-                  fontSize: 10,
-                  height: 1.25,
+                  fontSize: 11,
+                  height: 1.35,
                 ),
               ),
             ),
@@ -186,7 +192,7 @@ class _VoiceAgentPageState extends State<VoiceAgentPage> {
       case VoiceAgentPhase.agentReplying:
         return 'Agent回复中';
       case VoiceAgentPhase.error:
-        return '异常（功能已禁用）';
+        return '异常（自动恢复中）';
     }
   }
 

@@ -321,7 +321,9 @@ class VoiceAgentViewModel extends ChangeNotifier {
         ? _finalSttText.trim()
         : _latestPartialStt.trim();
     if (text.isEmpty) {
-      _enterError('STT未返回有效结果');
+      _appendLog('异常: STT未返回有效结果');
+      // STT异常之后应该解除唤醒限制
+      await _recoverAfterSttNoResult();
       return;
     }
     _agentCallTriggered = true;
@@ -419,6 +421,18 @@ class VoiceAgentViewModel extends ChangeNotifier {
       _appendLog('异常后自动恢复唤醒监听');
       await _tryEnterReady();
     }
+  }
+
+  Future<void> _recoverAfterSttNoResult() async {
+    if (_disposed) {
+      return;
+    }
+    _setSttSendStatus(SttSendServiceStatus.disabled);
+    _setSttReceiveStatus(SttReceiveServiceStatus.noResult);
+    _setVadStatus(VadServiceStatus.disabled);
+    _setAgentReplyStatus(AgentReplyServiceStatus.disabled);
+    _resetRoundFlags();
+    await _tryEnterReady();
   }
 
   void _handleIvwEvent(OfflineIvwEvent event) {
