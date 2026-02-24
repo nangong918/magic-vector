@@ -54,6 +54,7 @@ class _VoiceAgentPageState extends State<VoiceAgentPage> {
   bool _sttRunning = false;
   bool _sttStopRequested = false;
   bool _sttStopped = false;
+  bool _sttFinalReceived = false;
   bool _agentCallTriggered = false;
   Timer? _sttFinalTimeout;
 
@@ -154,6 +155,7 @@ class _VoiceAgentPageState extends State<VoiceAgentPage> {
     _vadSpeechStarted = false;
     _sttStopRequested = false;
     _sttStopped = false;
+    _sttFinalReceived = false;
     _agentCallTriggered = false;
     _sttFinalTimeout?.cancel();
 
@@ -171,14 +173,17 @@ class _VoiceAgentPageState extends State<VoiceAgentPage> {
 
   Future<void> _startSileroVad() async {
     final options = await _vadService.getOptions(engine: VadEngine.silero);
-    final sampleRate = options.sampleRates.isNotEmpty
-        ? options.sampleRates.first
-        : null;
-    final frameSize = options.frameSizes.isNotEmpty ? options.frameSizes.first : null;
-    final mode = options.modes.isNotEmpty ? options.modes.first : null;
+    final sampleRate = _pick(options.sampleRates, 'SAMPLE_RATE_8K');
+    final mode = _pick(options.modes, 'NORMAL');
+    final frameOptions = await _vadService.getOptions(
+      engine: VadEngine.silero,
+      sampleRate: sampleRate,
+    );
+    final frameSize = _pick(frameOptions.frameSizes, 'FRAME_SIZE_256');
     if (sampleRate == null || frameSize == null || mode == null) {
       throw Exception('Silero参数不可用');
     }
+    _appendLog('Silero参数: sampleRate=$sampleRate, frameSize=$frameSize, mode=$mode');
     await _vadService.startVad(
       engine: VadEngine.silero,
       sampleRate: sampleRate,
@@ -198,6 +203,7 @@ class _VoiceAgentPageState extends State<VoiceAgentPage> {
     try {
       if (_vadRunning) {
         await _vadService.stopVad(engine: VadEngine.silero);
+        _appendLog('VAD已关闭（说话结束）');
       }
       _vadRunning = false;
 
@@ -212,7 +218,7 @@ class _VoiceAgentPageState extends State<VoiceAgentPage> {
       _sttFinalTimeout = Timer(const Duration(seconds: 5), () {
         if (_phase == VoiceAgentPhase.userSpeechEnded) {
           _appendLog('等待STT结束超时，尝试使用当前结果继续');
-          _tryCallAgentAfterSttStopped(force: true);
+          _tryCallAgentAfterSttCompleted(force: true);
         }
       });
     } catch (e) {
@@ -220,11 +226,11 @@ class _VoiceAgentPageState extends State<VoiceAgentPage> {
     }
   }
 
-  Future<void> _tryCallAgentAfterSttStopped({required bool force}) async {
+  Future<void> _tryCallAgentAfterSttCompleted({required bool force}) async {
     if (_agentCallTriggered || _phase != VoiceAgentPhase.userSpeechEnded) {
       return;
     }
-    if (!force && !_sttStopped) {
+    if (!force && !_sttFinalReceived) {
       return;
     }
     final text = _finalSttText.trim().isNotEmpty
@@ -318,6 +324,10 @@ class _VoiceAgentPageState extends State<VoiceAgentPage> {
         }
         break;
       case OfflineIvwEventType.wakeup:
+        if (_phase != VoiceAgentPhase.ready) {
+          _appendLog('收到唤醒事件，但当前阶段不允许处理: $_phase');
+          break;
+        }
         _startWakeupSession();
         break;
       case OfflineIvwEventType.error:
@@ -333,6 +343,9 @@ class _VoiceAgentPageState extends State<VoiceAgentPage> {
 
   void _handleVadEvent(VadEvent event) {
     if (_isDisposed) {
+      return;
+    }
+    if (event.engine != VadEngine.silero) {
       return;
     }
     if (event.engine == VadEngine.silero &&
@@ -378,15 +391,16 @@ class _VoiceAgentPageState extends State<VoiceAgentPage> {
       case XfIatEventType.finalResult:
         final text = event.text ?? '';
         _finalSttText = text;
+        _sttFinalReceived = true;
         _appendLog('远端STT最终结果: $text');
+        if (_phase == VoiceAgentPhase.userSpeechEnded && _sttStopRequested) {
+          _tryCallAgentAfterSttCompleted(force: false);
+        }
         break;
       case XfIatEventType.stopped:
         _appendLog('远端STT停止');
         _sttRunning = false;
         _sttStopped = true;
-        if (_phase == VoiceAgentPhase.userSpeechEnded && _sttStopRequested) {
-          _tryCallAgentAfterSttStopped(force: false);
-        }
         break;
       case XfIatEventType.error:
         _sttRunning = false;
@@ -396,10 +410,22 @@ class _VoiceAgentPageState extends State<VoiceAgentPage> {
   }
 
   bool _isSpeechEnd(VadEvent event) {
+    final dynamic speech = event.raw['speech'];
+    final dynamic speaking = event.raw['speaking'];
+    final dynamic voice = event.raw['voice'];
     final stateText = (event.raw['state'] ?? '').toString().toLowerCase();
     final messageText = event.message.toLowerCase();
     final rawText = event.raw.toString().toLowerCase();
-    final running = event.running;
+
+    if (speech is bool && speech == false) {
+      return true;
+    }
+    if (speaking is bool && speaking == false) {
+      return true;
+    }
+    if (voice is bool && voice == false) {
+      return true;
+    }
 
     if (stateText.contains('end') ||
         stateText.contains('stop') ||
@@ -418,18 +444,31 @@ class _VoiceAgentPageState extends State<VoiceAgentPage> {
         rawText.contains('voice=false')) {
       return true;
     }
-    return running == false;
+    return false;
   }
 
   bool _isSpeechStart(VadEvent event) {
+    final dynamic speech = event.raw['speech'];
+    final dynamic speaking = event.raw['speaking'];
+    final dynamic voice = event.raw['voice'];
     final stateText = (event.raw['state'] ?? '').toString().toLowerCase();
     final messageText = event.message.toLowerCase();
     final rawText = event.raw.toString().toLowerCase();
-    final running = event.running;
+
+    if (speech is bool && speech == true) {
+      return true;
+    }
+    if (speaking is bool && speaking == true) {
+      return true;
+    }
+    if (voice is bool && voice == true) {
+      return true;
+    }
+
     if (stateText.contains('speech_start') ||
         stateText.contains('start_speech') ||
-        stateText.contains('speech') ||
-        stateText.contains('voice')) {
+        stateText.contains('voice_start') ||
+        stateText.contains('begin')) {
       return true;
     }
     if (messageText.contains('开始说话') ||
@@ -443,7 +482,14 @@ class _VoiceAgentPageState extends State<VoiceAgentPage> {
         rawText.contains('voice=true')) {
       return true;
     }
-    return running == true && event.type == VadEventType.state;
+    return false;
+  }
+
+  String? _pick(List<String> values, String preferred) {
+    if (values.isEmpty) {
+      return null;
+    }
+    return values.contains(preferred) ? preferred : values.first;
   }
 
   void _appendLog(String message) {
