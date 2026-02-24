@@ -19,6 +19,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 class WebRtcVadInternal {
     private static final SampleRate DEFAULT_SAMPLE_RATE = SampleRate.SAMPLE_RATE_8K;
@@ -58,7 +59,23 @@ class WebRtcVadInternal {
     }
 
     List<String> getFrameSizes() {
+        return getFrameSizes(sampleRate.name());
+    }
+
+    List<String> getFrameSizes(String sampleRateName) {
+        SampleRate targetRate = parseSampleRate(sampleRateName);
         List<String> result = new ArrayList<>();
+        try {
+            ensureVad();
+            Set<FrameSize> supported = vad.getSupportedParameters().get(targetRate);
+            if (supported != null && !supported.isEmpty()) {
+                for (FrameSize value : supported) {
+                    result.add(value.name());
+                }
+                return result;
+            }
+        } catch (Exception ignore) {
+        }
         for (FrameSize value : FrameSize.values()) {
             result.add(value.name());
         }
@@ -75,7 +92,7 @@ class WebRtcVadInternal {
 
     void updateConfig(String sampleRateName, String frameSizeName, String modeName) {
         sampleRate = parseSampleRate(sampleRateName);
-        frameSize = parseFrameSize(frameSizeName);
+        frameSize = parseFrameSize(sampleRate, frameSizeName);
         mode = parseMode(modeName);
     }
 
@@ -145,7 +162,11 @@ class WebRtcVadInternal {
         }
     }
 
-    private FrameSize parseFrameSize(String value) {
+    private FrameSize parseFrameSize(SampleRate targetRate, String value) {
+        List<String> supported = getFrameSizes(targetRate.name());
+        if (supported != null && !supported.isEmpty() && (value == null || !supported.contains(value))) {
+            return FrameSize.valueOf(supported.get(0));
+        }
         try {
             return FrameSize.valueOf(value);
         } catch (Exception e) {

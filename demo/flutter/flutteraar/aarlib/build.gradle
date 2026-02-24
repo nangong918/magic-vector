@@ -25,6 +25,9 @@ android {
         sourceCompatibility JavaVersion.VERSION_11
         targetCompatibility JavaVersion.VERSION_11
     }
+    aaptOptions {
+        noCompress "onnx", "tflite"
+    }
 }
 
 dependencies {
@@ -38,4 +41,6 @@ dependencies {
     api project(':LocalRepo:SileroVad')
     api project(':LocalRepo:WebRTCVad')
     api project(':LocalRepo:YamnetVad')
+    api 'com.microsoft.onnxruntime:onnxruntime-android:1.22.0'
+    api 'org.tensorflow:tensorflow-lite-task-audio:0.4.4'
 }

@@ -6,6 +6,7 @@ import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.Spinner;
@@ -25,6 +26,9 @@ import java.util.Map;
 
 public class VadWebRtcFragment extends Fragment {
     private static final int REQ_RECORD_AUDIO = 0x301;
+    private static final String DEFAULT_SAMPLE_RATE = "SAMPLE_RATE_8K";
+    private static final String DEFAULT_FRAME_SIZE = "FRAME_SIZE_240";
+    private static final String DEFAULT_MODE = "VERY_AGGRESSIVE";
 
     private TextView tvState;
     private Spinner spinnerSampleRate;
@@ -56,8 +60,22 @@ public class VadWebRtcFragment extends Fragment {
 
     private void bindSpinners() {
         bindSpinner(spinnerSampleRate, WebRtcVadBridge.getSampleRates());
-        bindSpinner(spinnerFrameSize, WebRtcVadBridge.getFrameSizes());
         bindSpinner(spinnerMode, WebRtcVadBridge.getModes());
+        setSpinnerSelection(spinnerSampleRate, DEFAULT_SAMPLE_RATE);
+        setSpinnerSelection(spinnerMode, DEFAULT_MODE);
+
+        refreshFrameSizeBySampleRate();
+        setSpinnerSelection(spinnerFrameSize, DEFAULT_FRAME_SIZE);
+        spinnerSampleRate.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                refreshFrameSizeBySampleRate();
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> parent) {
+            }
+        });
     }
 
     private void bindActions() {
@@ -99,6 +117,30 @@ public class VadWebRtcFragment extends Fragment {
         List<String> safeValues = values == null ? new ArrayList<>() : values;
         ArrayAdapter<String> adapter = new ArrayAdapter<>(requireContext(), android.R.layout.simple_spinner_dropdown_item, safeValues);
         spinner.setAdapter(adapter);
+    }
+
+    private void refreshFrameSizeBySampleRate() {
+        String rate = selectedValue(spinnerSampleRate);
+        String currentFrameSize = selectedValue(spinnerFrameSize);
+        bindSpinner(spinnerFrameSize, WebRtcVadBridge.getFrameSizes(rate));
+        if (currentFrameSize.isEmpty()) {
+            setSpinnerSelection(spinnerFrameSize, DEFAULT_FRAME_SIZE);
+        } else {
+            setSpinnerSelection(spinnerFrameSize, currentFrameSize);
+        }
+    }
+
+    private void setSpinnerSelection(Spinner spinner, String value) {
+        if (spinner.getAdapter() == null || value == null || value.isEmpty()) {
+            return;
+        }
+        for (int i = 0; i < spinner.getAdapter().getCount(); i++) {
+            Object item = spinner.getAdapter().getItem(i);
+            if (value.equals(String.valueOf(item))) {
+                spinner.setSelection(i, false);
+                return;
+            }
+        }
     }
 
     @Override

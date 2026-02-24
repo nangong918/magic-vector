@@ -32,6 +32,10 @@ public final class WebRtcVadBridge {
         return INTERNAL.getFrameSizes();
     }
 
+    public static List<String> getFrameSizes(String sampleRate) {
+        return INTERNAL.getFrameSizes(sampleRate);
+    }
+
     public static List<String> getModes() {
         return INTERNAL.getModes();
     }
