@@ -59,7 +59,25 @@ class SileroVadInternal {
     }
 
     List<String> getFrameSizes() {
+        return getFrameSizes(sampleRate.name());
+    }
+
+    List<String> getFrameSizes(String sampleRateName) {
+        SampleRate targetRate = parseSampleRate(sampleRateName);
         List<String> result = new ArrayList<>();
+        // Keep frame options consistent with the original Silero demo setup.
+        if (targetRate == SampleRate.SAMPLE_RATE_8K) {
+            addIfExists(result, "FRAME_SIZE_256");
+            addIfExists(result, "FRAME_SIZE_512");
+            addIfExists(result, "FRAME_SIZE_768");
+        } else if (targetRate == SampleRate.SAMPLE_RATE_16K) {
+            addIfExists(result, "FRAME_SIZE_512");
+            addIfExists(result, "FRAME_SIZE_1024");
+            addIfExists(result, "FRAME_SIZE_1536");
+        }
+        if (!result.isEmpty()) {
+            return result;
+        }
         for (FrameSize value : FrameSize.values()) {
             result.add(value.name());
         }
@@ -76,7 +94,7 @@ class SileroVadInternal {
 
     void updateConfig(String sampleRateName, String frameSizeName, String modeName) {
         sampleRate = parseSampleRate(sampleRateName);
-        frameSize = parseFrameSize(frameSizeName);
+        frameSize = parseFrameSize(sampleRate, frameSizeName);
         mode = parseMode(modeName);
     }
 
@@ -149,7 +167,11 @@ class SileroVadInternal {
         }
     }
 
-    private FrameSize parseFrameSize(String value) {
+    private FrameSize parseFrameSize(SampleRate targetRate, String value) {
+        List<String> supported = getFrameSizes(targetRate.name());
+        if (supported != null && !supported.isEmpty() && (value == null || !supported.contains(value))) {
+            return FrameSize.valueOf(supported.get(0));
+        }
         try {
             return FrameSize.valueOf(value);
         } catch (Exception e) {
@@ -162,6 +184,13 @@ class SileroVadInternal {
             return Mode.valueOf(value);
         } catch (Exception e) {
             return DEFAULT_MODE;
+        }
+    }
+
+    private void addIfExists(List<String> result, String frameName) {
+        try {
+            result.add(FrameSize.valueOf(frameName).name());
+        } catch (Exception ignore) {
         }
     }
 
