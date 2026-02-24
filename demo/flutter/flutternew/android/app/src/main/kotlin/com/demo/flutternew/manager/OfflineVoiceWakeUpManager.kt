@@ -4,6 +4,7 @@ import android.Manifest
 import android.content.pm.PackageManager
 import androidx.core.app.ActivityCompat
 import com.demo.aarlib.voicewakeup.VoiceWakeUpBridge
+import com.demo.aarlib.voicewakeup.VoiceWakeUpEventListener
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.EventChannel
@@ -20,7 +21,7 @@ class OfflineVoiceWakeUpManager(private val activity: FlutterActivity) {
     private var pendingRecordPermissionResult: MethodChannel.Result? = null
     private var configReady = false
 
-    private val eventListener = VoiceWakeUpBridge.EventListener { payload: Map<String, Any> ->
+    private val eventListener = VoiceWakeUpEventListener { payload ->
         emitEvent(payload)
     }
 
@@ -151,7 +152,7 @@ class OfflineVoiceWakeUpManager(private val activity: FlutterActivity) {
         return if (absolute.endsWith(File.separator)) absolute else "$absolute${File.separator}"
     }
 
-    private fun emitEvent(payload: Map<String, Any>) {
+    private fun emitEvent(payload: Map<String, Any?>) {
         activity.runOnUiThread {
             eventSink?.success(HashMap(payload))
         }
