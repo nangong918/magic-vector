@@ -43,4 +43,7 @@ dependencies {
     androidTestImplementation libs.espresso.core
 
     api project(':LocalRepo:AIKit')
+    api project(':LocalRepo:SileroVad')
+    api project(':LocalRepo:WebRTCVad')
+    api project(':LocalRepo:YamnetVad')
 }

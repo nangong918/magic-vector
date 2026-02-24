@@ -23,3 +23,6 @@ rootProject.name = "FlutterAar"
 include ':app'
 include ':aarlib'
 include ':LocalRepo:AIKit'
+include ':LocalRepo:SileroVad'
+include ':LocalRepo:WebRTCVad'
+include ':LocalRepo:YamnetVad'

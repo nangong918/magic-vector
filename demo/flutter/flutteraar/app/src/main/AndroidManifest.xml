@@ -33,6 +33,9 @@
         <activity
             android:name=".ui.activity.IvwDemoActivity"
             android:exported="false" />
+        <activity
+            android:name=".ui.activity.VADMainActivity"
+            android:exported="false" />
     </application>
 
 </manifest>
