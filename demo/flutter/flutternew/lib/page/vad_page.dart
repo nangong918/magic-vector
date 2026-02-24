@@ -14,6 +14,7 @@ class VadPage extends StatefulWidget {
 class _VadPageState extends State<VadPage> {
   final VadService _service = VadService();
   final List<String> _logs = <String>[];
+  static const double _logPanelHeight = 300;
 
   StreamSubscription<VadEvent>? _eventSub;
   VadEngine _selectedEngine = VadEngine.webrtc;
@@ -49,30 +50,38 @@ class _VadPageState extends State<VadPage> {
   }
 
   Future<void> _reloadOptions({bool resetSelection = false}) async {
-    final options = await _service.getOptions(
+    final options = await _service.getOptions(engine: _selectedEngine);
+    String? nextSampleRate = _selectedSampleRate;
+    String? nextMode = _selectedMode;
+    if (resetSelection || !options.sampleRates.contains(nextSampleRate)) {
+      nextSampleRate = _defaultSampleRate(_selectedEngine, options.sampleRates);
+    }
+    if (resetSelection || !options.modes.contains(nextMode)) {
+      nextMode = _defaultMode(_selectedEngine, options.modes);
+    }
+
+    final frameOptions = await _service.getOptions(
       engine: _selectedEngine,
-      sampleRate: _selectedSampleRate,
+      sampleRate: nextSampleRate,
     );
+    String? nextFrameSize = _selectedFrameSize;
+    if (resetSelection || !frameOptions.frameSizes.contains(nextFrameSize)) {
+      nextFrameSize = _defaultFrameSize(
+        _selectedEngine,
+        frameOptions.frameSizes,
+      );
+    }
+
     if (!mounted) {
       return;
     }
     setState(() {
       _sampleRates = options.sampleRates;
       _modes = options.modes;
-
-      if (resetSelection || !_sampleRates.contains(_selectedSampleRate)) {
-        _selectedSampleRate =
-            _sampleRates.isNotEmpty ? _sampleRates.first : null;
-      }
-
-      _frameSizes = options.frameSizes;
-      if (resetSelection || !_frameSizes.contains(_selectedFrameSize)) {
-        _selectedFrameSize = _frameSizes.isNotEmpty ? _frameSizes.first : null;
-      }
-
-      if (resetSelection || !_modes.contains(_selectedMode)) {
-        _selectedMode = _modes.isNotEmpty ? _modes.first : null;
-      }
+      _frameSizes = frameOptions.frameSizes;
+      _selectedSampleRate = nextSampleRate;
+      _selectedFrameSize = nextFrameSize;
+      _selectedMode = nextMode;
     });
   }
 
@@ -184,8 +193,15 @@ class _VadPageState extends State<VadPage> {
       ),
       body: Column(
         children: <Widget>[
-          _buildConfigCard(),
-          Expanded(child: _buildLogPanel()),
+          Expanded(
+            child: SingleChildScrollView(
+              child: _buildConfigCard(),
+            ),
+          ),
+          SizedBox(
+            height: _logPanelHeight,
+            child: _buildLogPanel(),
+          ),
         ],
       ),
       bottomNavigationBar: BottomNavigationBar(
@@ -327,7 +343,7 @@ class _VadPageState extends State<VadPage> {
               itemBuilder: (BuildContext context, int index) {
                 return Text(
                   _logs[index],
-                  style: const TextStyle(color: Colors.white70, fontSize: 12),
+                  style: const TextStyle(color: Colors.white70, fontSize: 14),
                 );
               },
             ),
@@ -346,5 +362,50 @@ class _VadPageState extends State<VadPage> {
       case VadEngine.yamnet:
         return 'Yamnet';
     }
+  }
+
+  String? _defaultSampleRate(VadEngine engine, List<String> values) {
+    if (values.isEmpty) {
+      return null;
+    }
+    switch (engine) {
+      case VadEngine.webrtc:
+      case VadEngine.silero:
+        return _pick(values, 'SAMPLE_RATE_8K');
+      case VadEngine.yamnet:
+        return values.first;
+    }
+  }
+
+  String? _defaultFrameSize(VadEngine engine, List<String> values) {
+    if (values.isEmpty) {
+      return null;
+    }
+    switch (engine) {
+      case VadEngine.webrtc:
+        return _pick(values, 'FRAME_SIZE_240');
+      case VadEngine.silero:
+        return _pick(values, 'FRAME_SIZE_256');
+      case VadEngine.yamnet:
+        return values.first;
+    }
+  }
+
+  String? _defaultMode(VadEngine engine, List<String> values) {
+    if (values.isEmpty) {
+      return null;
+    }
+    switch (engine) {
+      case VadEngine.webrtc:
+        return _pick(values, 'VERY_AGGRESSIVE');
+      case VadEngine.silero:
+        return _pick(values, 'NORMAL');
+      case VadEngine.yamnet:
+        return values.first;
+    }
+  }
+
+  String _pick(List<String> values, String preferred) {
+    return values.contains(preferred) ? preferred : values.first;
   }
 }
