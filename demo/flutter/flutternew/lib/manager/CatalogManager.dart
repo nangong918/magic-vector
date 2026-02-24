@@ -55,6 +55,13 @@ class CatalogManager {
         iconRes: Icons.hearing,
         routeName: AppRoutes.vad,
       ),
+      CatalogItem(
+        id: "7",
+        title: "Voice Agent",
+        subtitle: "唤醒 + VAD + STT + Agent",
+        iconRes: Icons.smart_toy,
+        routeName: AppRoutes.voiceAgent,
+      ),
     ];
   }
 
