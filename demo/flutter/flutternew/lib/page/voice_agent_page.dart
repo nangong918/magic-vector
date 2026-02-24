@@ -50,6 +50,7 @@ class _VoiceAgentPageState extends State<VoiceAgentPage> {
   bool _ivwAuthPassed = false;
   bool _wakeListening = false;
   bool _vadRunning = false;
+  bool _vadTransitioning = false;
   bool _vadSpeechStarted = false;
   bool _speechEndHandled = false;
   bool _sttRunning = false;
@@ -172,6 +173,11 @@ class _VoiceAgentPageState extends State<VoiceAgentPage> {
   }
 
   Future<void> _startSileroVad() async {
+    if (_vadTransitioning) {
+      _appendLog('VAD状态切换中，跳过本次启动');
+      return;
+    }
+    _vadTransitioning = true;
     final options = await _vadService.getOptions(engine: VadEngine.silero);
     final sampleRate = _pick(options.sampleRates, 'SAMPLE_RATE_8K');
     final mode = _pick(options.modes, 'NORMAL');
@@ -181,16 +187,40 @@ class _VoiceAgentPageState extends State<VoiceAgentPage> {
     );
     final frameSize = _pick(frameOptions.frameSizes, 'FRAME_SIZE_256');
     if (sampleRate == null || frameSize == null || mode == null) {
+      _vadTransitioning = false;
       throw Exception('Silero参数不可用');
     }
-    _appendLog('Silero参数: sampleRate=$sampleRate, frameSize=$frameSize, mode=$mode');
-    await _vadService.startVad(
-      engine: VadEngine.silero,
-      sampleRate: sampleRate,
-      frameSize: frameSize,
-      mode: mode,
-    );
-    _vadRunning = true;
+    try {
+      // 对齐VAD测试页“可反复开始/停止”的行为：每次启动前先做一次stop收口。
+      await _vadService.stopVad(engine: VadEngine.silero);
+      await Future<void>.delayed(const Duration(milliseconds: 80));
+      _appendLog('Silero参数: sampleRate=$sampleRate, frameSize=$frameSize, mode=$mode');
+      await _vadService.startVad(
+        engine: VadEngine.silero,
+        sampleRate: sampleRate,
+        frameSize: frameSize,
+        mode: mode,
+      );
+      _vadRunning = true;
+    } finally {
+      _vadTransitioning = false;
+    }
+  }
+
+  Future<void> _stopSileroVad({String? logWhenStopped}) async {
+    if (_vadTransitioning) {
+      return;
+    }
+    _vadTransitioning = true;
+    try {
+      await _vadService.stopVad(engine: VadEngine.silero);
+      _vadRunning = false;
+      if (logWhenStopped != null) {
+        _appendLog(logWhenStopped);
+      }
+    } finally {
+      _vadTransitioning = false;
+    }
   }
 
   Future<void> _onSpeechEndDetected() async {
@@ -207,10 +237,8 @@ class _VoiceAgentPageState extends State<VoiceAgentPage> {
 
     try {
       if (_vadRunning) {
-        await _vadService.stopVad(engine: VadEngine.silero);
-        _appendLog('VAD已关闭（说话结束）');
+        await _stopSileroVad(logWhenStopped: 'VAD已关闭（说话结束）');
       }
-      _vadRunning = false;
 
       _sttStopRequested = true;
       if (_sttRunning) {
@@ -292,7 +320,7 @@ class _VoiceAgentPageState extends State<VoiceAgentPage> {
       await _stopWakeListeningIfNeeded();
     } catch (_) {}
     try {
-      await _vadService.stopVad(engine: VadEngine.silero);
+      await _stopSileroVad();
     } catch (_) {}
     try {
       await _sttService.stop();
@@ -340,9 +368,14 @@ class _VoiceAgentPageState extends State<VoiceAgentPage> {
         _enterError('离线唤醒异常: ${event.message}');
         break;
       case OfflineIvwEventType.log:
-      case OfflineIvwEventType.db:
       case OfflineIvwEventType.state:
         _appendLog(event.message);
+        break;
+      case OfflineIvwEventType.db:
+        // 就绪态下忽略分贝日志，避免刷屏影响关键日志可读性。
+        if (_phase != VoiceAgentPhase.ready) {
+          _appendLog(event.message);
+        }
         break;
     }
   }
@@ -364,6 +397,9 @@ class _VoiceAgentPageState extends State<VoiceAgentPage> {
     if (event.type == VadEventType.error) {
       _enterError('VAD异常: ${event.message}');
       return;
+    }
+    if (event.type == VadEventType.state && event.running != null) {
+      _vadRunning = event.running!;
     }
     if (_phase != VoiceAgentPhase.wakeDetectedWaitingSpeech &&
         _phase != VoiceAgentPhase.userSpeaking) {

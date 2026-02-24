@@ -31,7 +31,7 @@ class SileroVadInternal {
     private FrameSize frameSize = DEFAULT_FRAME_SIZE;
     private Mode mode = DEFAULT_MODE;
 
-    private VadSilero vad;
+    private volatile VadSilero vad;
     private VoiceRecorder recorder;
     private boolean running;
     private boolean lastSpeech;
@@ -111,7 +111,17 @@ class SileroVadInternal {
         stop();
         lastSpeech = false;
         recorder = new VoiceRecorder(audioData -> {
-            boolean speech = vad.isSpeech(audioData);
+            final VadSilero currentVad = vad;
+            if (!running || currentVad == null) {
+                return;
+            }
+            boolean speech;
+            try {
+                speech = currentVad.isSpeech(audioData);
+            } catch (Throwable throwable) {
+                emit("error", "silero推理异常: " + throwable.getMessage(), null);
+                return;
+            }
             byte[] bytes = AudioFrameUtils.shortArrayToBytes(audioData);
             if (speech && !lastSpeech) {
                 emit("start_speech", "检测到开始说话", extras(bytes));
