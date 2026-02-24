@@ -20,7 +20,7 @@ enum VoiceAgentPhase {
 
 enum WakeServiceStatus { disabled, enabledIdle, keywordDetected }
 
-enum VadServiceStatus { disabled, noise, speech }
+enum VadServiceStatus { disabled, noise, speech, timeout }
 
 enum SttSendServiceStatus { disabled, sending, stoppedAfterVadEnd }
 
@@ -44,6 +44,8 @@ class VoiceAgentViewModel extends ChangeNotifier {
   StreamSubscription<VadEvent>? _vadSub;
   StreamSubscription<XfIatEvent>? _sttSub;
   Timer? _sttFinalTimeout;
+  Timer? _vadDelayedStartTimer;
+  Timer? _vadSpeechTimeoutTimer;
 
   String _systemPrompt = '';
   String _latestPartialStt = '';
@@ -98,6 +100,8 @@ class VoiceAgentViewModel extends ChangeNotifier {
   Future<void> close() async {
     _disposed = true;
     _sttFinalTimeout?.cancel();
+    _vadDelayedStartTimer?.cancel();
+    _vadSpeechTimeoutTimer?.cancel();
     await _ivwSub?.cancel();
     await _vadSub?.cancel();
     await _sttSub?.cancel();
@@ -169,21 +173,51 @@ class VoiceAgentViewModel extends ChangeNotifier {
     _appendLog('唤醒');
     _resetRoundFlags();
     _setWakeStatus(WakeServiceStatus.keywordDetected);
-    _setVadStatus(VadServiceStatus.noise);
+    _setVadStatus(VadServiceStatus.disabled);
     _setSttSendStatus(SttSendServiceStatus.sending);
     _setSttReceiveStatus(SttReceiveServiceStatus.noResult);
     _setAgentReplyStatus(AgentReplyServiceStatus.disabled);
 
     try {
       await _stopWakeListeningIfNeeded();
-      await _startSileroVad();
       await _sttService.start();
       _sttRunning = true;
       _setPhase(VoiceAgentPhase.wakeDetectedWaitingSpeech);
-      _appendLog('VAD已启动，等待检测用户开始说话');
+      _appendLog('STT已启动，0~2秒不启用VAD检测');
+      _scheduleVadStartAfterDelay();
     } catch (e) {
       _enterError('唤醒后流程启动失败: $e');
     }
+  }
+
+  void _scheduleVadStartAfterDelay() {
+    _vadDelayedStartTimer?.cancel();
+    _vadSpeechTimeoutTimer?.cancel();
+    _vadDelayedStartTimer = Timer(const Duration(seconds: 2), () async {
+      if (_disposed ||
+          phase != VoiceAgentPhase.wakeDetectedWaitingSpeech ||
+          _speechEndHandled) {
+        return;
+      }
+      try {
+        await _startSileroVad();
+        _appendLog('VAD已启动，开始检测说话状态（2秒窗口）');
+        _setVadStatus(VadServiceStatus.noise);
+        _vadSpeechTimeoutTimer = Timer(const Duration(seconds: 2), () {
+          if (_disposed ||
+              phase != VoiceAgentPhase.wakeDetectedWaitingSpeech ||
+              _vadSpeechStarted ||
+              _speechEndHandled) {
+            return;
+          }
+          _setVadStatus(VadServiceStatus.timeout);
+          _appendLog('VAD超时：未检测到开始说话，按0~2秒已说完处理');
+          _onSpeechEndDetected();
+        });
+      } catch (e) {
+        _enterError('延迟启动VAD失败: $e');
+      }
+    });
   }
 
   Future<void> _startSileroVad() async {
@@ -248,6 +282,8 @@ class VoiceAgentViewModel extends ChangeNotifier {
       return;
     }
     _speechEndHandled = true;
+    _vadDelayedStartTimer?.cancel();
+    _vadSpeechTimeoutTimer?.cancel();
     _setPhase(VoiceAgentPhase.userSpeechEnded);
     _appendLog('检测到用户说话结束');
 
@@ -332,6 +368,8 @@ class VoiceAgentViewModel extends ChangeNotifier {
 
   Future<void> _stopAllFeatures() async {
     _sttFinalTimeout?.cancel();
+    _vadDelayedStartTimer?.cancel();
+    _vadSpeechTimeoutTimer?.cancel();
     try {
       await _stopWakeListeningIfNeeded();
     } catch (_) {}
@@ -346,6 +384,8 @@ class VoiceAgentViewModel extends ChangeNotifier {
   }
 
   void _resetRoundFlags() {
+    _vadDelayedStartTimer?.cancel();
+    _vadSpeechTimeoutTimer?.cancel();
     _latestPartialStt = '';
     _finalSttText = '';
     _vadSpeechStarted = false;
@@ -364,6 +404,21 @@ class VoiceAgentViewModel extends ChangeNotifier {
     _setSttSendStatus(SttSendServiceStatus.disabled);
     _setAgentReplyStatus(AgentReplyServiceStatus.disabled);
     _stopAllFeatures();
+    _recoverWakeAfterError();
+  }
+
+  Future<void> _recoverWakeAfterError() async {
+    if (_disposed) {
+      return;
+    }
+    await Future<void>.delayed(const Duration(milliseconds: 500));
+    if (_disposed) {
+      return;
+    }
+    if (_recordPermissionGranted && _ivwAuthPassed) {
+      _appendLog('异常后自动恢复唤醒监听');
+      await _tryEnterReady();
+    }
   }
 
   void _handleIvwEvent(OfflineIvwEvent event) {
@@ -428,6 +483,7 @@ class VoiceAgentViewModel extends ChangeNotifier {
     }
     if (!_vadSpeechStarted && _isSpeechStart(event)) {
       _vadSpeechStarted = true;
+      _vadSpeechTimeoutTimer?.cancel();
       _setPhase(VoiceAgentPhase.userSpeaking);
       _setVadStatus(VadServiceStatus.speech);
       _appendLog('VAD检测到用户开始说话');
@@ -597,6 +653,8 @@ class VoiceAgentViewModel extends ChangeNotifier {
         return '检测到噪音';
       case VadServiceStatus.speech:
         return '检测到说话';
+      case VadServiceStatus.timeout:
+        return 'VAD超时';
     }
   }
 
