@@ -36,105 +36,106 @@ class _VoiceAgentPageState extends State<VoiceAgentPage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Voice Agent'),
-        actions: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(8, 8, 12, 8),
-            child: Container(
-              constraints: const BoxConstraints(
-                maxWidth: 240,
-                minHeight: 110,
-              ),
-              alignment: Alignment.topLeft,
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: Colors.black.withValues(alpha: 0.65),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Text(
-                _viewModel.buildServiceStatusText(),
-                maxLines: 6,
-                overflow: TextOverflow.visible,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 11,
-                  height: 1.35,
-                ),
-              ),
-            ),
-          ),
-        ],
       ),
       body: SafeArea(
-        child: Column(
+        child: Stack(
           children: <Widget>[
-            Expanded(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: <Widget>[
-                  AnimatedContainer(
-                    duration: const Duration(milliseconds: 420),
-                    curve: Curves.elasticOut,
-                    width: targetSize,
-                    height: targetSize,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: ballColor,
-                      boxShadow: <BoxShadow>[
-                        BoxShadow(
-                          color: ballColor.withValues(alpha: 0.28),
-                          blurRadius: 18,
-                          spreadRadius: 4,
+            Column(
+              children: <Widget>[
+                Expanded(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: <Widget>[
+                      AnimatedContainer(
+                        duration: const Duration(milliseconds: 420),
+                        curve: Curves.elasticOut,
+                        width: targetSize,
+                        height: targetSize,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: ballColor,
+                          boxShadow: <BoxShadow>[
+                            BoxShadow(
+                              color: ballColor.withValues(alpha: 0.28),
+                              blurRadius: 18,
+                              spreadRadius: 4,
+                            ),
+                          ],
                         ),
-                      ],
-                    ),
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        _statusText(),
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 16),
-                  Text(
-                    _statusText(),
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                    ),
+                ),
+                Container(
+                  height: 260,
+                  margin: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.45),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.black.withValues(alpha: 0.12)),
                   ),
-                ],
-              ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      const Text(
+                        '控制台日志',
+                        style: TextStyle(
+                          color: Colors.black87,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Expanded(
+                        child: ListView.builder(
+                          controller: _logScrollController,
+                          itemCount: _viewModel.logs.length,
+                          itemBuilder: (BuildContext context, int index) {
+                            return Text(
+                              _viewModel.logs[index],
+                              style: const TextStyle(
+                                color: Colors.black87,
+                                fontSize: 12,
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
-            Container(
-              height: 260,
-              margin: const EdgeInsets.fromLTRB(12, 0, 12, 12),
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.45),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.black.withValues(alpha: 0.12)),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  const Text(
-                    '控制台日志',
-                    style: TextStyle(
-                      color: Colors.black87,
-                      fontWeight: FontWeight.w600,
-                    ),
+            Positioned(
+              top: 8,
+              right: 12,
+              child: Container(
+                constraints: const BoxConstraints(
+                  maxWidth: 260,
+                  minHeight: 120,
+                ),
+                alignment: Alignment.topLeft,
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.black.withValues(alpha: 0.65),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  _viewModel.buildServiceStatusText(),
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 11,
+                    height: 1.35,
                   ),
-                  const SizedBox(height: 6),
-                  Expanded(
-                    child: ListView.builder(
-                      controller: _logScrollController,
-                      itemCount: _viewModel.logs.length,
-                      itemBuilder: (BuildContext context, int index) {
-                        return Text(
-                          _viewModel.logs[index],
-                          style: const TextStyle(
-                            color: Colors.black87,
-                            fontSize: 12,
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                ],
+                ),
               ),
             ),
           ],
