@@ -11,6 +11,7 @@ import '../service/xfyun_stt_service.dart';
 enum VoiceAgentPhase {
   initializing,
   ready,
+  wakeDetectedWaitingSpeech,
   userSpeaking,
   userSpeechEnded,
   agentReplying,
@@ -49,8 +50,11 @@ class _VoiceAgentPageState extends State<VoiceAgentPage> {
   bool _ivwAuthPassed = false;
   bool _wakeListening = false;
   bool _vadRunning = false;
+  bool _vadSpeechStarted = false;
   bool _sttRunning = false;
   bool _sttStopRequested = false;
+  bool _sttStopped = false;
+  bool _agentCallTriggered = false;
   Timer? _sttFinalTimeout;
 
   @override
@@ -147,32 +151,36 @@ class _VoiceAgentPageState extends State<VoiceAgentPage> {
     _appendLog('唤醒');
     _latestPartialStt = '';
     _finalSttText = '';
+    _vadSpeechStarted = false;
     _sttStopRequested = false;
+    _sttStopped = false;
+    _agentCallTriggered = false;
     _sttFinalTimeout?.cancel();
 
     try {
       await _stopWakeListeningIfNeeded();
-      await _startYamnetVad();
+      await _startSileroVad();
       await _sttService.start();
       _sttRunning = true;
-      _setPhase(VoiceAgentPhase.userSpeaking);
+      _setPhase(VoiceAgentPhase.wakeDetectedWaitingSpeech);
+      _appendLog('VAD已启动，等待检测用户开始说话');
     } catch (e) {
       _enterError('唤醒后流程启动失败: $e');
     }
   }
 
-  Future<void> _startYamnetVad() async {
-    final options = await _vadService.getOptions(engine: VadEngine.yamnet);
+  Future<void> _startSileroVad() async {
+    final options = await _vadService.getOptions(engine: VadEngine.silero);
     final sampleRate = options.sampleRates.isNotEmpty
         ? options.sampleRates.first
         : null;
     final frameSize = options.frameSizes.isNotEmpty ? options.frameSizes.first : null;
     final mode = options.modes.isNotEmpty ? options.modes.first : null;
     if (sampleRate == null || frameSize == null || mode == null) {
-      throw Exception('Yamnet参数不可用');
+      throw Exception('Silero参数不可用');
     }
     await _vadService.startVad(
-      engine: VadEngine.yamnet,
+      engine: VadEngine.silero,
       sampleRate: sampleRate,
       frameSize: frameSize,
       mode: mode,
@@ -181,7 +189,7 @@ class _VoiceAgentPageState extends State<VoiceAgentPage> {
   }
 
   Future<void> _onSpeechEndDetected() async {
-    if (_phase != VoiceAgentPhase.userSpeaking) {
+    if (_phase != VoiceAgentPhase.userSpeaking || !_vadSpeechStarted) {
       return;
     }
     _setPhase(VoiceAgentPhase.userSpeechEnded);
@@ -189,7 +197,7 @@ class _VoiceAgentPageState extends State<VoiceAgentPage> {
 
     try {
       if (_vadRunning) {
-        await _vadService.stopVad(engine: VadEngine.yamnet);
+        await _vadService.stopVad(engine: VadEngine.silero);
       }
       _vadRunning = false;
 
@@ -203,20 +211,31 @@ class _VoiceAgentPageState extends State<VoiceAgentPage> {
       _sttFinalTimeout?.cancel();
       _sttFinalTimeout = Timer(const Duration(seconds: 5), () {
         if (_phase == VoiceAgentPhase.userSpeechEnded) {
-          final fallback = _finalSttText.trim().isNotEmpty
-              ? _finalSttText.trim()
-              : _latestPartialStt.trim();
-          if (fallback.isEmpty) {
-            _enterError('STT未返回有效结果');
-            return;
-          }
-          _appendLog('STT最终结果超时，使用当前结果继续');
-          _callAgentWithText(fallback);
+          _appendLog('等待STT结束超时，尝试使用当前结果继续');
+          _tryCallAgentAfterSttStopped(force: true);
         }
       });
     } catch (e) {
       _enterError('结束说话流程失败: $e');
     }
+  }
+
+  Future<void> _tryCallAgentAfterSttStopped({required bool force}) async {
+    if (_agentCallTriggered || _phase != VoiceAgentPhase.userSpeechEnded) {
+      return;
+    }
+    if (!force && !_sttStopped) {
+      return;
+    }
+    final text = _finalSttText.trim().isNotEmpty
+        ? _finalSttText.trim()
+        : _latestPartialStt.trim();
+    if (text.isEmpty) {
+      _enterError('STT未返回有效结果');
+      return;
+    }
+    _agentCallTriggered = true;
+    await _callAgentWithText(text);
   }
 
   Future<void> _callAgentWithText(String userText) async {
@@ -261,7 +280,7 @@ class _VoiceAgentPageState extends State<VoiceAgentPage> {
       await _stopWakeListeningIfNeeded();
     } catch (_) {}
     try {
-      await _vadService.stopVad(engine: VadEngine.yamnet);
+      await _vadService.stopVad(engine: VadEngine.silero);
     } catch (_) {}
     try {
       await _sttService.stop();
@@ -316,11 +335,25 @@ class _VoiceAgentPageState extends State<VoiceAgentPage> {
     if (_isDisposed) {
       return;
     }
+    if (event.engine == VadEngine.silero &&
+        (_phase == VoiceAgentPhase.wakeDetectedWaitingSpeech ||
+            _phase == VoiceAgentPhase.userSpeaking)) {
+      _appendLog(
+        'VAD事件: type=${event.type.name}, state=${event.raw['state'] ?? '-'}, msg=${event.message}',
+      );
+    }
     if (event.type == VadEventType.error) {
       _enterError('VAD异常: ${event.message}');
       return;
     }
-    if (_phase != VoiceAgentPhase.userSpeaking) {
+    if (_phase != VoiceAgentPhase.wakeDetectedWaitingSpeech &&
+        _phase != VoiceAgentPhase.userSpeaking) {
+      return;
+    }
+    if (!_vadSpeechStarted && _isSpeechStart(event)) {
+      _vadSpeechStarted = true;
+      _setPhase(VoiceAgentPhase.userSpeaking);
+      _appendLog('VAD检测到用户开始说话');
       return;
     }
     if (_isSpeechEnd(event)) {
@@ -346,13 +379,14 @@ class _VoiceAgentPageState extends State<VoiceAgentPage> {
         final text = event.text ?? '';
         _finalSttText = text;
         _appendLog('远端STT最终结果: $text');
-        if (_phase == VoiceAgentPhase.userSpeechEnded && _sttStopRequested) {
-          _callAgentWithText(text.trim());
-        }
         break;
       case XfIatEventType.stopped:
         _appendLog('远端STT停止');
         _sttRunning = false;
+        _sttStopped = true;
+        if (_phase == VoiceAgentPhase.userSpeechEnded && _sttStopRequested) {
+          _tryCallAgentAfterSttStopped(force: false);
+        }
         break;
       case XfIatEventType.error:
         _sttRunning = false;
@@ -364,6 +398,7 @@ class _VoiceAgentPageState extends State<VoiceAgentPage> {
   bool _isSpeechEnd(VadEvent event) {
     final stateText = (event.raw['state'] ?? '').toString().toLowerCase();
     final messageText = event.message.toLowerCase();
+    final rawText = event.raw.toString().toLowerCase();
     final running = event.running;
 
     if (stateText.contains('end') ||
@@ -378,7 +413,37 @@ class _VoiceAgentPageState extends State<VoiceAgentPage> {
         messageText.contains('vad stop')) {
       return true;
     }
+    if (rawText.contains('speech=false') ||
+        rawText.contains('speaking=false') ||
+        rawText.contains('voice=false')) {
+      return true;
+    }
     return running == false;
+  }
+
+  bool _isSpeechStart(VadEvent event) {
+    final stateText = (event.raw['state'] ?? '').toString().toLowerCase();
+    final messageText = event.message.toLowerCase();
+    final rawText = event.raw.toString().toLowerCase();
+    final running = event.running;
+    if (stateText.contains('speech_start') ||
+        stateText.contains('start_speech') ||
+        stateText.contains('speech') ||
+        stateText.contains('voice')) {
+      return true;
+    }
+    if (messageText.contains('开始说话') ||
+        messageText.contains('speech start') ||
+        messageText.contains('speech_begin') ||
+        messageText.contains('voice start')) {
+      return true;
+    }
+    if (rawText.contains('speech=true') ||
+        rawText.contains('speaking=true') ||
+        rawText.contains('voice=true')) {
+      return true;
+    }
+    return running == true && event.type == VadEventType.state;
   }
 
   void _appendLog(String message) {
@@ -498,6 +563,7 @@ class _VoiceAgentPageState extends State<VoiceAgentPage> {
     switch (_phase) {
       case VoiceAgentPhase.ready:
         return Colors.green;
+      case VoiceAgentPhase.wakeDetectedWaitingSpeech:
       case VoiceAgentPhase.userSpeaking:
       case VoiceAgentPhase.userSpeechEnded:
         return Colors.blue;
@@ -512,6 +578,8 @@ class _VoiceAgentPageState extends State<VoiceAgentPage> {
 
   double _ballSize() {
     switch (_phase) {
+      case VoiceAgentPhase.wakeDetectedWaitingSpeech:
+        return 150;
       case VoiceAgentPhase.userSpeaking:
         return 180;
       case VoiceAgentPhase.userSpeechEnded:
@@ -531,6 +599,8 @@ class _VoiceAgentPageState extends State<VoiceAgentPage> {
         return '初始化中';
       case VoiceAgentPhase.ready:
         return '就绪（仅唤醒监听中）';
+      case VoiceAgentPhase.wakeDetectedWaitingSpeech:
+        return '已唤醒，等待用户开始说话';
       case VoiceAgentPhase.userSpeaking:
         return '唤醒后讲话中（VAD+STT）';
       case VoiceAgentPhase.userSpeechEnded:

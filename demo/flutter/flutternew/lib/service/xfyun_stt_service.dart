@@ -50,6 +50,9 @@ class XfIatService {
   StreamSubscription? _channelSub;
   StreamSubscription<List<int>>? _recordSub;
   bool _isRecording = false;
+  bool _sessionActive = false;
+  bool _channelClosed = false;
+  bool _disposed = false;
   bool _sentFirstFrame = false;
   int _seq = 0;
   final List<String> _totalWords = [];
@@ -57,7 +60,7 @@ class XfIatService {
   Stream<XfIatEvent> get events => _eventController.stream;
 
   Future<void> start() async {
-    if (_isRecording) {
+    if (_isRecording || _disposed) {
       return;
     }
     final hasPermission = await _record.hasPermission();
@@ -67,15 +70,19 @@ class XfIatService {
     }
 
     _resetSession();
+    _sessionActive = true;
+    _channelClosed = false;
     _isRecording = true;
-    _eventController.add(XfIatEvent.started());
+    _safeEmit(XfIatEvent.started());
 
     final wsUrl = _buildWebSocketUrl();
     _channel = WebSocketChannel.connect(Uri.parse(wsUrl));
     _channelSub = _channel!.stream.listen(
       _handleSocketMessage,
-      onError: (error) => _eventController.add(XfIatEvent.error(error)),
-      onDone: () {},
+      onError: (error) => _safeEmit(XfIatEvent.error(error)),
+      onDone: () {
+        _channelClosed = true;
+      },
     );
 
     final stream = await _record.startStream(
@@ -88,7 +95,7 @@ class XfIatService {
 
     _recordSub = stream.listen(
       _sendAudioFrame,
-      onError: (error) => _eventController.add(XfIatEvent.error(error)),
+      onError: (error) => _safeEmit(XfIatEvent.error(error)),
     );
   }
 
@@ -97,28 +104,43 @@ class XfIatService {
       return;
     }
     _isRecording = false;
-    _eventController.add(XfIatEvent.stopped());
+    _sessionActive = false;
+    _safeEmit(XfIatEvent.stopped());
 
     await _recordSub?.cancel();
     _recordSub = null;
     await _record.stop();
 
-    _seq++;
-    final frame = _buildFrame(
-      status: 2,
-      seq: _seq,
-      audio: const <int>[],
-      includeParams: false,
-    );
-    _channel?.sink.add(jsonEncode(frame));
+    if (_channel != null && !_channelClosed) {
+      _seq++;
+      final frame = _buildFrame(
+        status: 2,
+        seq: _seq,
+        audio: const <int>[],
+        includeParams: false,
+      );
+      try {
+        _channel?.sink.add(jsonEncode(frame));
+      } catch (_) {
+        // ignore: channel may already be closing/closed
+      }
+    }
   }
 
   Future<void> dispose() async {
+    _disposed = true;
+    _sessionActive = false;
+    _isRecording = false;
     await _recordSub?.cancel();
     await _record.stop();
     await _channelSub?.cancel();
-    _channel?.sink.close();
-    await _eventController.close();
+    try {
+      _channel?.sink.close();
+    } catch (_) {}
+    _channelClosed = true;
+    if (!_eventController.isClosed) {
+      await _eventController.close();
+    }
   }
 
   void _handleSocketMessage(dynamic message) {
@@ -129,7 +151,7 @@ class XfIatService {
     final jsonMap = jsonDecode(message) as Map<String, dynamic>;
     final response = XfIatResponse.fromJson(jsonMap);
     if (response.header.code != 0) {
-      _eventController.add(
+      _safeEmit(
         XfIatEvent.error(
           'code=${response.header.code} msg=${response.header.message ?? ''}',
         ),
@@ -142,18 +164,22 @@ class XfIatService {
       final textPayload = XfIatText.fromBase64(result.text!);
       _applyPartialResult(textPayload);
       final current = _totalWords.join();
-      _eventController.add(XfIatEvent.partial(current));
+      _safeEmit(XfIatEvent.partial(current));
     }
 
     if (result?.status == 2) {
       final finalText = _totalWords.join();
-      _eventController.add(XfIatEvent.finalResult(finalText));
-      _channel?.sink.close();
+      _safeEmit(XfIatEvent.finalResult(finalText));
+      _sessionActive = false;
+      _channelClosed = true;
+      try {
+        _channel?.sink.close();
+      } catch (_) {}
     }
   }
 
   void _sendAudioFrame(List<int> data) {
-    if (!_isRecording || _channel == null) {
+    if (!_isRecording || !_sessionActive || _channel == null || _channelClosed) {
       return;
     }
     if (data.isEmpty) {
@@ -167,8 +193,12 @@ class XfIatService {
       audio: data,
       includeParams: isFirst,
     );
-    _channel!.sink.add(jsonEncode(frame));
-    _sentFirstFrame = true;
+    try {
+      _channel!.sink.add(jsonEncode(frame));
+      _sentFirstFrame = true;
+    } catch (_) {
+      _channelClosed = true;
+    }
   }
 
   Map<String, dynamic> _buildFrame({
@@ -262,10 +292,19 @@ class XfIatService {
   void _resetSession() {
     _seq = 0;
     _sentFirstFrame = false;
+    _sessionActive = false;
+    _channelClosed = false;
     _totalWords.clear();
 
     _totalResultList.clear();  // 分段结果列表缓存
     _tempResult = '';          // 临时拼接字符串缓存
+  }
+
+  void _safeEmit(XfIatEvent event) {
+    if (_disposed || _eventController.isClosed) {
+      return;
+    }
+    _eventController.add(event);
   }
 
   String _buildWebSocketUrl() {
