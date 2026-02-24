@@ -41,6 +41,8 @@ android {
 
 dependencies {
     implementation(fileTree(mapOf("dir" to "libs", "include" to listOf("*.jar", "*.aar"))))
+    implementation("com.microsoft.onnxruntime:onnxruntime-android:1.22.0")
+    implementation("org.tensorflow:tensorflow-lite-task-audio:0.4.4")
 }
 
 flutter {

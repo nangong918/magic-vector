@@ -48,6 +48,13 @@ class CatalogManager {
         iconRes: Icons.record_voice_over,
         routeName: AppRoutes.offlineIvw,
       ),
+      CatalogItem(
+        id: "6",
+        title: "VAD测试",
+        subtitle: "WebRTC/Silero/Yamnet",
+        iconRes: Icons.hearing,
+        routeName: AppRoutes.vad,
+      ),
     ];
   }
 

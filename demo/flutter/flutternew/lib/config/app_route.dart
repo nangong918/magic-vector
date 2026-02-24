@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutternew/page/native_call_page.dart';
 import 'package:flutternew/page/network_page.dart';
 import 'package:flutternew/page/offline_ivw_page.dart';
+import 'package:flutternew/page/vad_page.dart';
 import 'package:flutternew/page/xfyun_stt_page.dart';
 
 import '../page/chat_page.dart';
@@ -15,6 +16,7 @@ class AppRoutes {
   static const String native = '/native'; // 原生页
   static const String xfyunStt = '/xfyun-stt'; // 讯飞语音识别
   static const String offlineIvw = '/offline-ivw'; // 离线语音唤醒
+  static const String vad = '/vad'; // VAD测试页
 }
 
 
@@ -53,6 +55,11 @@ final Map<String, WidgetBuilder> appRoutes = {
   // 离线语音唤醒
   AppRoutes.offlineIvw: (BuildContext context) {
     return const OfflineIvwPage();
+  },
+
+  // VAD测试页
+  AppRoutes.vad: (BuildContext context) {
+    return const VadPage();
   },
 };
 
