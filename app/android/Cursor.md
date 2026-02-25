@@ -199,5 +199,12 @@ MessageListPage实现之后也需要写预览函数。
 
 
 
-
-
+### 组合函数Fragment2
+现在我在把项目从MVVM设计模式的AndroidX改为MVI设计模式的Compose，
+我已经了一部分MainActivity，但是MessageList还没改完。因为现在用来Compose，所以要取消使用Fragment。
+现在MessageListFragment还是一个AndroidX的写法，现在你要参考我如何把MineFragment改为MinePage的方式实现
+MessageListPage，然后向我已经实现的方式一样写道MainActivity。
+对了你注意它的xml，MessageListPage原先使用的是RecyclerView，现在需要使用Compose的View。
+然后关于自定义View，任何本次修改涉及到的自定义View全都都改为Compose的View，而且要写预览函数。
+原先我是MessageContactAdapter，数据结构你可以继续用MessageContactItemAo逻辑可以参考MessageCardItemViewHolder，
+但是现在要改成Compose的list，大概就是这些任务。

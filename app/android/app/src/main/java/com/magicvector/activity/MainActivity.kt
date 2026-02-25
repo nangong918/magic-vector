@@ -44,7 +44,10 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
+import com.data.domain.fragmentActivity.intentAo.ChatIntentAo
+import com.magicvector.activity.ChatActivity
 import com.magicvector.callback.OnCreateAgentCallback
+import com.magicvector.fragment.MessageListScreen
 import com.magicvector.fragment.MineScreen
 import com.magicvector.service.ChatService
 import com.magicvector.ui.theme.MagicVectorTheme
@@ -279,7 +282,7 @@ fun MainActivityScreen(
                     isServiceBound = state.isChatServiceBound,
                     onCreateAgent = onCreateAgent
                 )
-                MainSelectItemEnum.APPLY -> MainApplyContent()
+                MainSelectItemEnum.APPLY -> MessageListScreen()
                 MainSelectItemEnum.MINE -> MineScreen()
             }
         }
@@ -291,24 +294,9 @@ fun MainHomeContent(
     isServiceBound: Boolean,
     onCreateAgent: () -> Unit
 ) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(horizontal = 20.dp, vertical = 16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Text(text = "Main - Home (Compose + MVI)")
-        Spacer(modifier = Modifier.height(12.dp))
-        Text(text = if (isServiceBound) "ChatService: connected" else "ChatService: disconnected")
-        Spacer(modifier = Modifier.height(16.dp))
-        Button(onClick = onCreateAgent) {
-            Text(stringResource(id = com.view.appview.R.string.create_agent))
-        }
-        Spacer(modifier = Modifier.height(24.dp))
-        HorizontalDivider()
-        Spacer(modifier = Modifier.height(12.dp))
-        Text("This screen is now fully rendered by Compose.")
-    }
+    MessageListScreen(
+        onCreateAgentClick = onCreateAgent
+    )
 }
 
 @Composable
