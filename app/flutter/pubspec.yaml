@@ -43,6 +43,9 @@ dependencies:
   connectivity_plus: ^6.0.5   # 网络状态检测
   logger: ^2.6.0              # 日志打印工具
 
+  # 状态值
+  equatable: ^2.0.8
+
   # 闪屏页面
   flutter_native_splash: ^2.4.7
 

@@ -1,87 +1,68 @@
+// lib/main.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_native_splash/flutter_native_splash.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:vector/domain/constant/base_constant.dart';
+import 'package:vector/page/main_page.dart';
+import 'package:vector/viewmodel/main_viewmodel.dart';
 
 void main() {
-  // 闪屏依赖初始化
   WidgetsBinding widgetsBinding = WidgetsFlutterBinding.ensureInitialized();
   FlutterNativeSplash.preserve(widgetsBinding: widgetsBinding);
-  runApp(const MyApp());
+  runApp(const ProviderScope(child: MyApp()));
 }
 
-class MyApp extends StatelessWidget {
+class MyApp extends ConsumerStatefulWidget {
   const MyApp({super.key});
 
-  // This widget is the root of your application.
+  @override
+  ConsumerState<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends ConsumerState<MyApp> {
+  @override
+  void initState() {
+    super.initState();
+    _initialize();
+  }
+
+  Future<void> _initialize() async {
+    // 模拟加载
+    await Future.delayed(
+      Duration(milliseconds: BaseConstant.constant.startDelayTime),
+    );
+
+    // 移除闪屏
+    FlutterNativeSplash.remove();
+
+    // 监听 MainViewModel 的 Effect
+    final viewModel = ref.read(mainViewModelProvider.notifier);
+    viewModel.effect.listen((effect) {
+      if (effect is LaunchCreateAgentEffect) {
+        // 跳转到创建 Agent 页面
+        _navigateToCreateAgent();
+      }
+    });
+  }
+
+  void _navigateToCreateAgent() {
+    // 实现跳转到创建 Agent 页面的逻辑
+    // Navigator.pushNamed(context, '/create_agent');
+  }
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'vector',
       theme: ThemeData(
-        colorScheme: .fromSeed(seedColor: Colors.deepPurple),
+        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
+        useMaterial3: true,
       ),
-      home: FutureBuilder(
-          future: initialization(), // 初始化启动任务
-          builder: (_, snapshot) {
-            if (snapshot.connectionState == ConnectionState.done) {
-              FlutterNativeSplash.remove();
-              return const MyHomePage(title: 'Vector Home Page');
-            }
-            return Container(); // 保持启动画面
-          })
-    );
-  }
-
-
-  Future<void> initialization() async {
-    // 在这里执行你的初始化操作
-    await Future.delayed(Duration(milliseconds: BaseConstant.constant.startDelayTime)); // 模拟加载
-  }
-}
-
-class MyHomePage extends StatefulWidget {
-  const MyHomePage({super.key, required this.title});
-
-  final String title;
-
-  @override
-  State<MyHomePage> createState() => _MyHomePageState();
-}
-
-class _MyHomePageState extends State<MyHomePage> {
-  int _counter = 0;
-
-  void _incrementCounter() {
-    setState(() {
-      _counter++;
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-
-    return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        title: Text(widget.title),
-      ),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: .center,
-          children: [
-            const Text('You have pushed the button this many times:'),
-            Text(
-              '$_counter',
-              style: Theme.of(context).textTheme.headlineMedium,
-            ),
-          ],
-        ),
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _incrementCounter,
-        tooltip: 'Increment',
-        child: const Icon(Icons.add),
-      ),
+      home: const MainScreen(),
+      routes: {
+        // '/create_agent': (context) => const CreateAgentScreen(),
+        // '/test': (context) => const TestScreen(),
+      },
     );
   }
 }
