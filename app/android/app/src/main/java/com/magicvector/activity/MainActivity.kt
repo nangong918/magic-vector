@@ -45,6 +45,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import com.magicvector.callback.OnCreateAgentCallback
+import com.magicvector.fragment.MineScreen
 import com.magicvector.service.ChatService
 import com.magicvector.ui.theme.MagicVectorTheme
 import com.magicvector.viewModel.activity.MainEffect
@@ -279,7 +280,7 @@ fun MainActivityScreen(
                     onCreateAgent = onCreateAgent
                 )
                 MainSelectItemEnum.APPLY -> MainApplyContent()
-                MainSelectItemEnum.MINE -> MainMineContent(isServiceBound = state.isChatServiceBound)
+                MainSelectItemEnum.MINE -> MineScreen()
             }
         }
     }

@@ -28,7 +28,7 @@
                 android:layout_width="24dp"
                 android:layout_height="24dp"
                 android:layout_marginBottom="4dp"
-                android:src="@xml/home_24px"
+                android:src="@drawable/home_24px"
                 tools:tint="@color/black" />
 
         </LinearLayout>

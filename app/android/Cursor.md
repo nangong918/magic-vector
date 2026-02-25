@@ -163,5 +163,41 @@ class ChatMviViewModel(
 
 
 
-### 
+### 修改MainActivity
+
+我运行了你的修改，确实运行起来了，但是你这不是把我原先的UI给改没了吗？
+我现在需要你能用compose展示我原先的UI，如果你觉得我的MessageListFragment和MineFragment无法适配MainActivity的
+MVI + Compose化你就应该把他们也改了。当然如果能够适配更好，能适配你就不用改。
+现在用MVI + Compose还原我之前的UI（如果这俩Fragment能直接适配就不改这两个Fragment）
+
+### 放弃使用fragment
+
+是我理解错了不好意思，我才查了资料，好像有了Compose就可以不用Fragment了，
+那你看看我现在怎么完成把我的页面用Compose实现我之前的功能，
+我之前是用AndroidX + Navigation实现底部的导航栏 + 两个页面的，现在如果不需要fragment，
+用compose怎么直接实现？你参考我MessageListFragment和MineFragment和我原先MainActivity的逻辑实现
+
+
+
+### 组合函数Fragment
+
+
+你理解错我的意思了，我都删掉了，我跟你说，
+现在我在把项目从MVVM设计模式的AndroidX改为MVI设计模式的Compose，
+我已经了一部分MainActivity，但是它的Navigation是虚假的，现在需要改为真实的。
+第一个原先是MessageListFragment，
+把这个：D:\code\vector\app\android\app\src\main\java\com\magicvector\fragment\MessageListFragment.kt
+改为MessageListPage，里面是compose，还要有预览函数。
+对了你注意它的xml，MessageListPage原先使用的是RecyclerView，现在需要使用Compose的View。
+然后关于自定义View，任何本次修改涉及到的自定义View全都都改为Compose的View，而且要写预览函数。
+原先自定义view在哪就写在哪个文件夹下如果命名重复就前缀加Compose。
+MessageListPage实现之后也需要写预览函数。
+另一个是MineFragment：D:\code\vector\app\android\app\src\main\java\com\magicvector\fragment\MineFragment.kt
+这个很简单，你看xml里面就一个按钮，你随便改改，写个预览函数就行。
+然后最重要的是，把这两个写好的交给MainActivity去调用。
+
+
+
+
+
 
