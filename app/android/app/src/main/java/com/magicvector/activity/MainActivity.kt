@@ -26,6 +26,7 @@ import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.windowInsetsTopHeight
 import androidx.compose.material3.Button
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
@@ -37,7 +38,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
@@ -227,19 +230,34 @@ fun MainActivityScreen(
                 NavigationBarItem(
                     selected = state.currentSelected == MainSelectItemEnum.HOME,
                     onClick = { onSelectTab(MainSelectItemEnum.HOME) },
-                    icon = { Text("H") },
+                    {
+                        Icon(
+                            painter = painterResource(id = com.view.appview.R.drawable.home_24px),
+                            contentDescription = stringResource(id = com.view.appview.R.string.home_messagelist)
+                        )
+                    },
                     label = { Text(stringResource(id = com.view.appview.R.string.home_messagelist)) }
                 )
                 NavigationBarItem(
                     selected = state.currentSelected == MainSelectItemEnum.APPLY,
                     onClick = { onSelectTab(MainSelectItemEnum.APPLY) },
-                    icon = { Text("A") },
+                    {
+                        Icon(
+                            painter = painterResource(id = com.view.appview.R.drawable.settings_24px),
+                            contentDescription = stringResource(id = com.view.appview.R.string.home_option)
+                        )
+                    },
                     label = { Text(stringResource(id = com.view.appview.R.string.home_option)) }
                 )
                 NavigationBarItem(
                     selected = state.currentSelected == MainSelectItemEnum.MINE,
                     onClick = { onSelectTab(MainSelectItemEnum.MINE) },
-                    icon = { Text("M") },
+                    {
+                        Icon(
+                            painter = painterResource(id = com.view.appview.R.drawable.person_24px),
+                            contentDescription = stringResource(id = com.view.appview.R.string.home_mine)
+                        )
+                    },
                     label = { Text(stringResource(id = com.view.appview.R.string.home_mine)) }
                 )
             }
@@ -317,5 +335,23 @@ fun MainMineContent(isServiceBound: Boolean) {
         Text(text = "Main - Mine")
         Spacer(modifier = Modifier.height(12.dp))
         Text(text = if (isServiceBound) "Realtime service ready" else "Realtime service unavailable")
+    }
+}
+
+// 预览函数
+@Preview(showBackground = true, widthDp = 360, heightDp = 640)
+@Composable
+private fun GreetingPreview() {
+    MagicVectorTheme {
+        // 创建模拟的 State
+        val mockState = MainState(
+            currentSelected = MainSelectItemEnum.HOME,
+            isChatServiceBound = true
+        )
+        MainActivityScreen(
+            state = mockState,
+            onSelectTab = {  },
+            onCreateAgent = {  }
+        )
     }
 }
