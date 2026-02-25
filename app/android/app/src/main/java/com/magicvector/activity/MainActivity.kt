@@ -7,62 +7,74 @@ import android.content.ServiceConnection
 import android.os.Bundle
 import android.os.IBinder
 import android.util.Log
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.navigation.NavController
-import androidx.navigation.findNavController
-import androidx.navigation.ui.setupWithNavController
+import androidx.activity.viewModels
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.windowInsetsTopHeight
+import androidx.compose.material3.Button
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import com.magicvector.callback.OnCreateAgentCallback
-import com.magicvector.databinding.ActivityMainBinding
-import com.magicvector.R
 import com.magicvector.service.ChatService
-import com.magicvector.utils.BaseAppCompatVmActivity
+import com.magicvector.ui.theme.MagicVectorTheme
+import com.magicvector.viewModel.activity.MainEffect
+import com.magicvector.viewModel.activity.MainIntent
+import com.magicvector.viewModel.activity.MainState
 import com.magicvector.viewModel.activity.MainVm
+import com.magicvector.viewModel.base.ApiViewModelFactory
 import com.view.appview.MainSelectItemEnum
+import kotlinx.coroutines.launch
 
-class MainActivity : BaseAppCompatVmActivity<ActivityMainBinding, MainVm>(
-    MainActivity::class,
-    MainVm::class
-) {
-    override fun initBinding(): ActivityMainBinding {
-        return ActivityMainBinding.inflate(layoutInflater)
-    }
+class MainActivity : ComponentActivity() {
+
+    private val vm: MainVm by viewModels { ApiViewModelFactory() }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        enableEdgeToEdge()
+        initCreateAgentLauncher()
 
-        // Example of a call to a native method
-//        binding.tvHello.text = stringFromJNI()
-
-        initFragment()
-    }
-
-    override fun initView() {
-        super.initView()
-    }
-
-    override fun initViewModel() {
-        super.initViewModel()
-
-        // 绑定服务
+        vm.processIntent(MainIntent.Initialize(parseInitialSelection()))
         bindChatService()
-    }
+        observeEffects()
 
-    override fun initWindow() {
-        super.initWindow()
-
-//        setStatusBarColor(
-//            android.R.color.white
-//        )
-
-        val layoutParams = binding.statusBar.layoutParams
-        layoutParams.height = getStatusBarHeight()
-        binding.statusBar.layoutParams = layoutParams
-        Log.i("TAG", "initWindow::statusBarHeight: ${binding.statusBar.layoutParams.height}")
-    }
-
-    override fun setListener() {
-        super.setListener()
+        setContent {
+            MagicVectorTheme {
+                val state by vm.uiState.collectAsState()
+                MainActivityScreen(
+                    state = state,
+                    onSelectTab = { vm.processIntent(MainIntent.SelectTab(it)) },
+                    onCreateAgent = { vm.processIntent(MainIntent.OpenCreateAgent) }
+                )
+            }
+        }
     }
 
     //------------------------Service------------------------
@@ -79,12 +91,12 @@ class MainActivity : BaseAppCompatVmActivity<ActivityMainBinding, MainVm>(
             chatService = binder.getService()
             isBound = true
 
-            // 连接成功后使用
             val handler = binder.getChatMessageHandler()
-            vm.realtimeChatController = handler
+            vm.processIntent(MainIntent.ChatServiceBound(handler))
         }
 
         override fun onServiceDisconnected(name: ComponentName?) {
+            vm.processIntent(MainIntent.ChatServiceUnbound)
             isBound = false
             chatService = null
         }
@@ -93,127 +105,56 @@ class MainActivity : BaseAppCompatVmActivity<ActivityMainBinding, MainVm>(
     // todo 需要检查Service是否已经启动了，如果没有启动Service就启动service
     private fun bindChatService() {
         val intent = Intent(this, ChatService::class.java)
-
-        // 先启动服务（保证后台运行）
         startService(intent)
-        // 再绑定服务（获取Binder接口）
         bindService(intent, serviceConnection, BIND_AUTO_CREATE)
     }
 
     private fun unbindAndStopChatService() {
-        unbindService(serviceConnection)
+        if (isBound) {
+            unbindService(serviceConnection)
+        }
         val intent = Intent(this, ChatService::class.java)
         stopService(intent)
         isBound = false
         chatService = null
+        vm.processIntent(MainIntent.ChatServiceUnbound)
     }
 
-    //------------------------Fragment------------------------
+    //------------------------Create Agent------------------------
 
-    private var currentSelected: MainSelectItemEnum = MainSelectItemEnum.HOME
-
-    var createAgentLauncher: ActivityResultLauncher<Intent>? = null
+    private var createAgentCallback: OnCreateAgentCallback? = null
+    private lateinit var createAgentLauncher: ActivityResultLauncher<Intent>
 
     fun turnToCreateAgent() {
-        val intent = Intent(this, CreateAgentActivity::class.java)
-        createAgentLauncher?.launch(intent)
+        vm.processIntent(MainIntent.OpenCreateAgent)
     }
 
     // activity launcher必须要在LifecycleOwner 的状态为 STARTED 或更早的状态时进行注册
-    fun initCreateAgentLuncher(createAgentCallback: OnCreateAgentCallback){
+    fun initCreateAgentLuncher(createAgentCallback: OnCreateAgentCallback) {
+        this.createAgentCallback = createAgentCallback
+    }
+
+    private fun initCreateAgentLauncher() {
         createAgentLauncher = registerForActivityResult(
             ActivityResultContracts.StartActivityForResult()
         ) { result ->
-            // 如果intent 返回值中包括ok，则表明创建成功，需要进行刷新list
             val backIntent: Intent? = result.data
             if (backIntent != null) {
                 val createResult: Boolean = backIntent.getBooleanExtra(
                     CreateAgentActivity::class.simpleName,
                     false
                 )
-                // 创建成功?
-                createAgentCallback.onCreateAgent(createResult)
+                createAgentCallback?.onCreateAgent(createResult)
             }
         }
     }
-
-    private lateinit var navController: NavController
-    /**
-     * 初始化Fragment  Navigation Compose
-     */
-    private fun initFragment() {
-        currentSelected = MainSelectItemEnum.HOME
-        try {
-            if (intent.hasExtra(MainSelectItemEnum.INTENT_EXTRA_NAME)) {
-                currentSelected =
-                    intent.getSerializableExtra(MainSelectItemEnum.INTENT_EXTRA_NAME) as MainSelectItemEnum
-            }
-        } catch (e : Exception) {
-            Log.e(TAG, "initFragment::获取intent的初始化数据错误: ", e)
-            currentSelected = MainSelectItemEnum.HOME
-        }
-
-        changeFragment()
-    }
-
-    /**
-     * 切换Fragment
-     */
-    private fun changeFragment() {
-        navController = findNavController(R.id.fragment_main_activity_main)
-
-        val graph = navController.navInflater.inflate(R.navigation.main_navigation)
-        val start = when (currentSelected) {
-            MainSelectItemEnum.HOME -> R.id.nagi_messageList
-            MainSelectItemEnum.APPLY -> R.id.nagi_messageList
-            MainSelectItemEnum.MINE -> R.id.nagi_mine
-        }
-        graph.setStartDestination(start)
-        navController.graph = graph
-
-        binding.navViewMain.setupWithNavController(navController)
-    }
-
-
-    /**
-     * 导航到目标页面
-     */
-    fun navigateTo(destinationId: Int, args: Bundle? = null) {
-        try {
-            if (args != null) {
-                navController.navigate(destinationId, args)
-            } else {
-                navController.navigate(destinationId)
-            }
-        } catch (e: Exception) {
-            Log.e(TAG, "导航失败: $destinationId", e)
-        }
-    }
-
-    /**
-     * 处理返回键
-     */
-    override fun onSupportNavigateUp(): Boolean {
-        return navController.navigateUp() || super.onSupportNavigateUp()
-    }
-
-    /**
-     * 获取当前 NavController
-     */
-    fun getNavController(): NavController {
-        return navController
-    }
-
-
-    /**
-     * 调用Cpp的JNI方法
-     */
-    external fun stringFromJNI(): String
 
     /**
      * 初始化，加载JNI的Cpp库
      */
     companion object {
+        private const val TAG = "MainActivity"
+
         // Used to load the 'magicvector' library on application startup.
         init {
             System.loadLibrary("magicvector")
@@ -235,5 +176,146 @@ class MainActivity : BaseAppCompatVmActivity<ActivityMainBinding, MainVm>(
     override fun onDestroy() {
         super.onDestroy()
         unbindAndStopChatService()
+    }
+
+    private fun parseInitialSelection(): MainSelectItemEnum {
+        return try {
+            @Suppress("DEPRECATION")
+            intent.getSerializableExtra(MainSelectItemEnum.INTENT_EXTRA_NAME) as? MainSelectItemEnum
+                ?: MainSelectItemEnum.HOME
+        } catch (e: Exception) {
+            Log.e(TAG, "parseInitialSelection: error", e)
+            MainSelectItemEnum.HOME
+        }
+    }
+
+    private fun observeEffects() {
+        lifecycleScope.launch {
+            repeatOnLifecycle(androidx.lifecycle.Lifecycle.State.STARTED) {
+                vm.effect.collect { effect ->
+                    when (effect) {
+                        MainEffect.LaunchCreateAgent -> {
+                            val intent = Intent(this@MainActivity, CreateAgentActivity::class.java)
+                            createAgentLauncher.launch(intent)
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+
+@Composable
+fun MainActivityScreen(
+    state: MainState,
+    onSelectTab: (MainSelectItemEnum) -> Unit,
+    onCreateAgent: () -> Unit
+) {
+    val backgroundColor = remember {
+        Color(0xFFF6F7F8)
+    }
+
+    Scaffold(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(backgroundColor),
+        containerColor = backgroundColor,
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
+        bottomBar = {
+            NavigationBar {
+                NavigationBarItem(
+                    selected = state.currentSelected == MainSelectItemEnum.HOME,
+                    onClick = { onSelectTab(MainSelectItemEnum.HOME) },
+                    icon = { Text("H") },
+                    label = { Text(stringResource(id = com.view.appview.R.string.home_messagelist)) }
+                )
+                NavigationBarItem(
+                    selected = state.currentSelected == MainSelectItemEnum.APPLY,
+                    onClick = { onSelectTab(MainSelectItemEnum.APPLY) },
+                    icon = { Text("A") },
+                    label = { Text(stringResource(id = com.view.appview.R.string.home_option)) }
+                )
+                NavigationBarItem(
+                    selected = state.currentSelected == MainSelectItemEnum.MINE,
+                    onClick = { onSelectTab(MainSelectItemEnum.MINE) },
+                    icon = { Text("M") },
+                    label = { Text(stringResource(id = com.view.appview.R.string.home_mine)) }
+                )
+            }
+        }
+    ) { innerPadding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+        ) {
+            Spacer(
+                modifier = Modifier
+                    .windowInsetsTopHeight(WindowInsets.statusBars)
+                    .fillMaxWidth()
+            )
+            when (state.currentSelected) {
+                MainSelectItemEnum.HOME -> MainHomeContent(
+                    isServiceBound = state.isChatServiceBound,
+                    onCreateAgent = onCreateAgent
+                )
+                MainSelectItemEnum.APPLY -> MainApplyContent()
+                MainSelectItemEnum.MINE -> MainMineContent(isServiceBound = state.isChatServiceBound)
+            }
+        }
+    }
+}
+
+@Composable
+fun MainHomeContent(
+    isServiceBound: Boolean,
+    onCreateAgent: () -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = 20.dp, vertical = 16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(text = "Main - Home (Compose + MVI)")
+        Spacer(modifier = Modifier.height(12.dp))
+        Text(text = if (isServiceBound) "ChatService: connected" else "ChatService: disconnected")
+        Spacer(modifier = Modifier.height(16.dp))
+        Button(onClick = onCreateAgent) {
+            Text(stringResource(id = com.view.appview.R.string.create_agent))
+        }
+        Spacer(modifier = Modifier.height(24.dp))
+        HorizontalDivider()
+        Spacer(modifier = Modifier.height(12.dp))
+        Text("This screen is now fully rendered by Compose.")
+    }
+}
+
+@Composable
+fun MainApplyContent() {
+    Column(
+        modifier = Modifier
+            .fillMaxHeight()
+            .fillMaxWidth()
+            .padding(20.dp)
+    ) {
+        Text(text = "Main - Apply")
+        Spacer(modifier = Modifier.height(12.dp))
+        Text(text = "Compose placeholder page.")
+    }
+}
+
+@Composable
+fun MainMineContent(isServiceBound: Boolean) {
+    Column(
+        modifier = Modifier
+            .fillMaxHeight()
+            .fillMaxWidth()
+            .padding(20.dp)
+    ) {
+        Text(text = "Main - Mine")
+        Spacer(modifier = Modifier.height(12.dp))
+        Text(text = if (isServiceBound) "Realtime service ready" else "Realtime service unavailable")
     }
 }

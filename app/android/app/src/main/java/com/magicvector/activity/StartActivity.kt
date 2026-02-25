@@ -107,7 +107,7 @@ class StartActivity : ComponentActivity() {
 
 
 @Composable
-fun StartScreen() {
+private fun StartScreen() {
     Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
         Box(
             modifier = Modifier
@@ -122,7 +122,7 @@ fun StartScreen() {
 }
 
 @Composable
-fun Logo(modifier: Modifier = Modifier) {
+private fun Logo(modifier: Modifier = Modifier) {
     // 这里假设你有一个 logo 的 drawable 资源
     Image(
         painter = painterResource(id = com.view.appview.R.mipmap.vector), // 替换为你的 logo 资源 ID
@@ -134,7 +134,7 @@ fun Logo(modifier: Modifier = Modifier) {
 
 @Preview(showBackground = true, widthDp = 360, heightDp = 640)
 @Composable
-fun GreetingPreview() {
+private fun GreetingPreview() {
     MagicVectorTheme {
         StartScreen()
     }
