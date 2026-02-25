@@ -46,6 +46,9 @@ dependencies:
   # 闪屏页面
   flutter_native_splash: ^2.4.7
 
+  # logo
+  flutter_launcher_icons: ^0.14.4
+
 # 开发期依赖（仅编译/代码生成使用，不打包到最终应用）
 dev_dependencies:
   # Flutter测试框架
@@ -97,3 +100,17 @@ flutter_native_splash:
     color: "#ffffff"
     # 如果图片适配了Android 12规范，可以取消下面的注释
     image: assets/images/vector.png
+
+
+
+# 应用图标配置  生成logo: flutter pub run flutter_launcher_icons
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/images/vector.png"
+  min_sdk_android: 21  # Android最低版本
+  # 如果需要自适应图标（Android 8.0+）
+  adaptive_icon_background: "#ffffff"  # 自适应图标背景色
+  adaptive_icon_foreground: "assets/images/vector.png"  # 自适应图标前景
+  # iOS配置
+  remove_alpha_ios: true  # iOS图标不能有透明度
