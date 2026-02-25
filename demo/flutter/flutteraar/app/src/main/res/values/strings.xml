@@ -1,0 +1,15 @@
+<resources>
+    <string name="app_name">FlutterAar</string>
+    <string name="appId">4aa58263</string>
+    <string name="apiKey">fd775746ce819ec90bc6ec2df697dbe5</string>
+    <string name="apiSecret">Y2U0OWUyYjcyOTRiYWEwMjk0YWNlMzdh</string>
+    <string name="ivwAbilityId">e867a88f2</string>
+    <string name="vad_title">VAD Demo</string>
+    <string name="vad_webrtc">WebRTC VAD</string>
+    <string name="vad_silero">Silero VAD</string>
+    <string name="vad_yamnet">Yamnet VAD</string>
+    <string name="vad_start">开始监听</string>
+    <string name="vad_stop">停止监听</string>
+    <string name="vad_waiting">等待开始</string>
+    <string name="vad_permission_denied">录音权限被拒绝</string>
+</resources>
