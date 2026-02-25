@@ -43,6 +43,9 @@ dependencies:
   connectivity_plus: ^6.0.5   # 网络状态检测
   logger: ^2.6.0              # 日志打印工具
 
+  # 闪屏页面
+  flutter_native_splash: ^2.4.7
+
 # 开发期依赖（仅编译/代码生成使用，不打包到最终应用）
 dev_dependencies:
   # Flutter测试框架
@@ -63,3 +66,34 @@ flutter:
   # 资源文件
   assets:
     - assets/txt/
+    - assets/images/
+
+# 🚀 启动画面配置  生成启动画面: flutter pub run flutter_native_splash:create
+flutter_native_splash:
+  # 背景颜色 - 对应你Android代码中的 White (#FFFFFF)
+  color: "#ffffff"
+
+  # 图片配置
+  image: assets/images/vector.png
+
+  # Android配置
+  android: true
+  android_gravity: center  # 图片居中显示
+
+  # iOS配置
+  ios: true
+  ios_content_mode: center  # 图片居中显示
+
+  # 全屏模式 - 对应你的 window.setFlags(FLAG_FULLSCREEN)
+  fullscreen: true
+
+  # 深色模式支持（可选，对应你的主题配置）
+  # color_dark: "#121212"
+  # image_dark: assets/images/vector_dark.png
+
+  # Android 12+ 特殊配置（保持兼容性）
+  android_12:
+    # 对于Android 12，可以使用简单的颜色背景
+    color: "#ffffff"
+    # 如果图片适配了Android 12规范，可以取消下面的注释
+    image: assets/images/vector.png
