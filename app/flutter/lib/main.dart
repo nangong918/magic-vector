@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_native_splash/flutter_native_splash.dart';
+import 'package:vector/domain/constant/base_constant.dart';
 
 void main() {
+  // 闪屏依赖初始化
   WidgetsBinding widgetsBinding = WidgetsFlutterBinding.ensureInitialized();
   FlutterNativeSplash.preserve(widgetsBinding: widgetsBinding);
   runApp(const MyApp());
@@ -33,7 +35,7 @@ class MyApp extends StatelessWidget {
 
   Future<void> initialization() async {
     // 在这里执行你的初始化操作
-    await Future.delayed(Duration(milliseconds: 1_200)); // 模拟加载
+    await Future.delayed(Duration(milliseconds: BaseConstant.constant.startDelayTime)); // 模拟加载
   }
 }
 
