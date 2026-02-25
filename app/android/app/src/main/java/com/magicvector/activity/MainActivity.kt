@@ -1,9 +1,11 @@
 package com.magicvector.activity
 
+import android.app.ActivityManager
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.ServiceConnection
+import android.os.Build
 import android.os.Bundle
 import android.os.IBinder
 import android.util.Log
@@ -109,11 +111,37 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    // todo 需要检查Service是否已经启动了，如果没有启动Service就启动service
+    // 修正后的绑定方法：先检查，再启动/绑定 检查Service是否已经启动了，如果没有启动Service就启动service
     private fun bindChatService() {
         val intent = Intent(this, ChatService::class.java)
-        startService(intent)
+
+        // 第一步：检查 ChatService 是否已经启动
+        if (!isServiceRunning(ChatService::class.java)) {
+            // 未启动 → 先启动 Service
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                // Android 8.0+ 必须使用 startForegroundService（Service 内部需调用 startForeground）
+                startForegroundService(intent)
+            } else {
+                startService(intent)
+            }
+        }
+
+        // 第二步：绑定 Service（无论是否已启动，绑定操作都可执行）
         bindService(intent, serviceConnection, BIND_AUTO_CREATE)
+    }
+
+    // 核心工具方法：检查指定 Service 是否正在运行
+    private fun <T> isServiceRunning(serviceClass: Class<T>): Boolean {
+        val activityManager = getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
+        val serviceClassName = serviceClass.name
+        // 遍历正在运行的服务列表
+        for (service in activityManager.getRunningServices(Int.MAX_VALUE)) {
+            if (serviceClassName == service.service.className) {
+                // 找到匹配的 Service → 已启动
+                return true
+            }
+        }
+        return false
     }
 
     private fun unbindAndStopChatService() {
