@@ -19,10 +19,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.windowInsetsTopHeight
@@ -40,7 +38,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import com.magicvector.callback.OnCreateAgentCallback
@@ -56,6 +53,9 @@ import com.magicvector.viewModel.base.ApiViewModelFactory
 import com.view.appview.MainSelectItemEnum
 import kotlinx.coroutines.launch
 
+/**
+ * 启动首页
+ */
 class MainActivity : ComponentActivity() {
 
     private val vm: MainVm by viewModels { ApiViewModelFactory() }
@@ -127,7 +127,7 @@ class MainActivity : ComponentActivity() {
 
     // 核心工具方法：检查指定 Service 是否正在运行
     private fun <T> isServiceRunning(serviceClass: Class<T>): Boolean {
-        val activityManager = getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
+        val activityManager = getSystemService(ACTIVITY_SERVICE) as ActivityManager
         val serviceClassName = serviceClass.name
         // 遍历正在运行的服务列表
         for (service in activityManager.getRunningServices(Int.MAX_VALUE)) {
@@ -157,11 +157,6 @@ class MainActivity : ComponentActivity() {
 
     fun turnToCreateAgent() {
         vm.processIntent(MainIntent.OpenCreateAgent)
-    }
-
-    // activity launcher必须要在LifecycleOwner 的状态为 STARTED 或更早的状态时进行注册
-    fun initCreateAgentLuncher(createAgentCallback: OnCreateAgentCallback) {
-        this.createAgentCallback = createAgentCallback
     }
 
     private fun initCreateAgentLauncher() {
@@ -197,7 +192,10 @@ class MainActivity : ComponentActivity() {
             context.startActivity(intent)
         }
 
+        // 页面跳转
+        @Suppress("unused")
         fun startWithHome(context: Context) = startWithSelection(context, MainSelectItemEnum.HOME)
+        @Suppress("unused")
         fun startWithMine(context: Context) = startWithSelection(context, MainSelectItemEnum.MINE)
     }
 
@@ -237,7 +235,7 @@ class MainActivity : ComponentActivity() {
 
 
 @Composable
-fun MainActivityScreen(
+private fun MainActivityScreen(
     state: MainState,
     onSelectTab: (MainSelectItemEnum) -> Unit,
     onCreateAgent: () -> Unit
@@ -266,8 +264,8 @@ fun MainActivityScreen(
                     label = { Text(stringResource(id = com.view.appview.R.string.home_messagelist)) }
                 )
                 NavigationBarItem(
-                    selected = state.currentSelected == MainSelectItemEnum.APPLY,
-                    onClick = { onSelectTab(MainSelectItemEnum.APPLY) },
+                    selected = state.currentSelected == MainSelectItemEnum.MEDIA,
+                    onClick = { onSelectTab(MainSelectItemEnum.MEDIA) },
                     {
                         Icon(
                             painter = painterResource(id = com.view.appview.R.drawable.settings_24px),
@@ -301,11 +299,17 @@ fun MainActivityScreen(
                     .fillMaxWidth()
             )
             when (state.currentSelected) {
-                MainSelectItemEnum.HOME -> MainHomeContent(
+                MainSelectItemEnum.HOME -> MessageListScreen(
+                    isServiceBound = state.isChatServiceBound,
+                    onCreateAgentClick = onCreateAgent
+                )
+
+                // 暂时未实现Media页面
+                MainSelectItemEnum.MEDIA -> MediaScreen(
                     isServiceBound = state.isChatServiceBound,
                     onCreateAgent = onCreateAgent
                 )
-                MainSelectItemEnum.APPLY -> MessageListScreen()
+
                 MainSelectItemEnum.MINE -> MineScreen()
             }
         }
@@ -313,42 +317,17 @@ fun MainActivityScreen(
 }
 
 @Composable
-fun MainHomeContent(
+private fun MediaScreen(
     isServiceBound: Boolean,
     onCreateAgent: () -> Unit
 ) {
     MessageListScreen(
+        isServiceBound = isServiceBound,
         onCreateAgentClick = onCreateAgent
     )
 }
 
-@Composable
-fun MainApplyContent() {
-    Column(
-        modifier = Modifier
-            .fillMaxHeight()
-            .fillMaxWidth()
-            .padding(20.dp)
-    ) {
-        Text(text = "Main - Apply")
-        Spacer(modifier = Modifier.height(12.dp))
-        Text(text = "Compose placeholder page.")
-    }
-}
 
-@Composable
-fun MainMineContent(isServiceBound: Boolean) {
-    Column(
-        modifier = Modifier
-            .fillMaxHeight()
-            .fillMaxWidth()
-            .padding(20.dp)
-    ) {
-        Text(text = "Main - Mine")
-        Spacer(modifier = Modifier.height(12.dp))
-        Text(text = if (isServiceBound) "Realtime service ready" else "Realtime service unavailable")
-    }
-}
 
 // 预览函数
 @Preview(showBackground = true, widthDp = 360, heightDp = 640)
@@ -362,8 +341,8 @@ private fun GreetingPreview() {
         )
         MainActivityScreen(
             state = mockState,
-            onSelectTab = {  },
-            onCreateAgent = {  }
+            onSelectTab = { },
+            onCreateAgent = { }
         )
     }
 }

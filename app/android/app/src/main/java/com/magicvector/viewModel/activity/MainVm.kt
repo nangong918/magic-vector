@@ -13,6 +13,7 @@ import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
+// todo 1.界定effect和intent 2.确认intent再去调用effect是否多余行为
 class MainVm : ViewModel() {
 
     companion object {

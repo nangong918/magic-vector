@@ -2,7 +2,7 @@ package com.view.appview
 
 enum class MainSelectItemEnum(val position: Int) {
     HOME(0),
-    APPLY(1),
+    MEDIA(1),
     MINE(2);
 
     companion object {

@@ -37,6 +37,7 @@ import com.magicvector.viewModel.fragment.MessageListEffect
 @Composable
 fun MessageListScreen(
     modifier: Modifier = Modifier,
+    isServiceBound: Boolean,
     viewModel: MessageListMviVm = MessageListMviVm(),
     onCreateAgentClick: () -> Unit = {}
 ) {
