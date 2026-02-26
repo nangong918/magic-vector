@@ -24,6 +24,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.sp
+import com.core.baseutil.network.networkLoad.NetworkLoadUtils
 import com.data.domain.ao.message.MessageContactItemAo
 import com.data.domain.vo.message.MessageContactItemVo
 import com.magicvector.viewModel.fragment.MessageListIntent
@@ -55,12 +56,14 @@ fun MessageListScreen(
                 is MessageListEffect.ShowToast -> {
                     Toast.makeText(context, effect.message, Toast.LENGTH_SHORT).show()
                 }
-                MessageListEffect.ShowLoadingDialog -> {
-                    // 可以使用 Snackbar 或 Dialog
-                    // 这里简化处理，实际可以用一个 Loading 状态
+                is MessageListEffect.ShowLoadingDialog -> {
+                    NetworkLoadUtils.showDialog(context)
                 }
-                MessageListEffect.LoadNetworkData -> {
-                    // 网络请求已经在 ViewModel 中处理
+                is MessageListEffect.DismissLoadingDialog -> {
+                    NetworkLoadUtils.dismissDialogSafety(context)
+                }
+                is MessageListEffect.LoadNetworkData -> {
+
                 }
                 // 其他 effect 由父页面处理
                 else -> {}

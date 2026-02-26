@@ -1,11 +1,8 @@
 package com.magicvector.viewModel.fragment
 
-import android.app.Activity
-import android.content.Context
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.core.appcore.api.handler.SyncRequestCallback
-import com.core.appcore.utils.AppResponseUtil
 import com.core.baseutil.cache.HttpRequestManager
 import com.core.baseutil.network.BaseResponse
 import com.core.baseutil.network.OnSuccessCallback
@@ -39,7 +36,7 @@ class MessageListMviVm : ViewModel() {
     private val _effect = Channel<MessageListEffect>(Channel.BUFFERED)
     val effect: Flow<MessageListEffect> = _effect.receiveAsFlow()
 
-
+    // 意图处理 （跟事件处理什么区别？）
     fun processIntent(intent: MessageListIntent) {
         when (intent) {
             is MessageListIntent.Initialize -> {
@@ -69,27 +66,16 @@ class MessageListMviVm : ViewModel() {
 
     //---------------------------初始化---------------------------
 
-    private fun initialize(context: Context, activity: Activity) {
+    private fun initialize() {
 
         _uiState.update {
             it.copy(isLoading = true)
         }
 
-        // 检查是否第一次打开
-        val isFirstOpen = HttpRequestManager.getIsFirstOpen(TAG)
-        _uiState.update {
-            it.copy(isFirstOpen = isFirstOpen)
-        }
+        // 检查是否第一次打开 + 网络请求
+        initNetworkRequest()
 
-        if (isFirstOpen) {
-            // 第一次打开，需要显示加载对话框并加载网络数据
-            sendEffect(MessageListEffect.ShowLoadingDialog)
-            sendEffect(MessageListEffect.LoadNetworkData)
-        } else {
-            // 不是第一次打开，直接加载缓存
-            loadCachedMessages()
-            _uiState.update { it.copy(isLoading = false) }
-        }
+        _uiState.update { it.copy(isLoading = false) }
     }
 
     private fun loadCachedMessages() {
@@ -100,11 +86,6 @@ class MessageListMviVm : ViewModel() {
                 messageCount = cachedMessages.size
             )
         }
-    }
-
-    private fun initialize() {
-        _uiState.update { it.copy(isLoading = true) }
-        _uiState.update { it.copy(isLoading = false) }
     }
 
     private fun refreshMessages() {
@@ -131,33 +112,62 @@ class MessageListMviVm : ViewModel() {
 
     //---------------------------Network---------------------------
 
-
-    fun doGetLastAgentChatList(context: Context, callback: SyncRequestCallback){
-        MainApplication.getApiRequestImplInstance().getLastAgentChatList(
-            MainApplication.getUserId(),
-            object : OnSuccessCallback<BaseResponse<AgentLastChatListResponse>>{
-                override fun onResponse(response: BaseResponse<AgentLastChatListResponse>?) {
-                    AppResponseUtil.handleSyncResponseEx(
-                        response,
-                        context,
-                        callback,
-                        ::handleGetLastAgentChatList
-                    )
-                }
-
-            },
-            object : OnThrowableCallback{
-                override fun callback(throwable: Throwable?) {
-                    callback.onThrowable(throwable)
-                }
+    fun initNetworkRequest(){
+        if (HttpRequestManager.getIsFirstOpen(TAG)){
+            // 第一次打开，初始化
+            Log.i(TAG, "initNetworkRequest: 第一次打开")
+            sendEffect(MessageListEffect.ShowLoadingDialog)
+            doGetLastAgentChatList()
+        }
+        else {
+            Log.i(TAG, "initNetworkRequest: 不是第一次打开")
+            sendEffect(MessageListEffect.DismissLoadingDialog)
+            val messageContactItemAos = MainApplication.getMessageListManager().messageContactItemAos
+            _uiState.update {
+                it.copy(
+                    messages = messageContactItemAos.toList(),
+                    messageCount = messageContactItemAos.size
+                )
             }
-        )
+        }
     }
 
-    private fun handleGetLastAgentChatList(response: BaseResponse<AgentLastChatListResponse>?,
-                                           context: Context,
-                                           callback: SyncRequestCallback){
-        if (response?.data != null){
+    // 网络请求直接在 ViewModel 中
+    private fun doGetLastAgentChatList() {
+        viewModelScope.launch {
+            try {
+                // 使用 suspend 函数或回调转协程
+                val response = withContext(Dispatchers.IO) {
+                    // 这里需要将回调转为 suspend 函数
+                    suspendCoroutine { continuation ->
+                        MainApplication.getApiRequestImplInstance().getLastAgentChatList(
+                            MainApplication.getUserId(),
+                            object : OnSuccessCallback<BaseResponse<AgentLastChatListResponse>> {
+                                override fun onResponse(response: BaseResponse<AgentLastChatListResponse>?) {
+                                    continuation.resume(response!!)
+                                }
+                            },
+                            object : OnThrowableCallback {
+                                override fun callback(throwable: Throwable?) {
+                                    continuation.resumeWithException(throwable ?: Exception("Unknown error"))
+                                }
+                            }
+                        )
+                    }
+                }
+
+                // 处理响应
+                handleResponse(response)
+
+            } catch (e: Exception) {
+                handleError(e.message ?: "网络请求失败")
+            }
+        }
+    }
+
+    private fun handleResponse(response: BaseResponse<AgentLastChatListResponse>) {
+        if (response.data != null) {
+            // 缓存
             MainApplication.getMessageListManager().setAgentChatAos(response.data!!)
             // 更新 State
             loadCachedMessages()
@@ -167,8 +177,7 @@ class MessageListMviVm : ViewModel() {
                     isLoading = false
                 )
             }
-        }
-        else {
+        } else {
             MainApplication.getMessageListManager().clear()
             // 更新 State
             _uiState.update {
@@ -179,9 +188,7 @@ class MessageListMviVm : ViewModel() {
                 )
             }
         }
-        callback.onAllRequestSuccess()
     }
-
 
     private fun handleError(error: String) {
         _uiState.update {
@@ -219,6 +226,7 @@ sealed class MessageListEffect {
     data object OpenCreateAgent : MessageListEffect()
     data class NavigateToChat(val ao: MessageContactItemAo) : MessageListEffect()
     data object ShowLoadingDialog : MessageListEffect()
+    data object DismissLoadingDialog : MessageListEffect()
     data object NavigateToChatActivity : MessageListEffect()
     data class ShowToast(val message: String) : MessageListEffect()
     data object LoadNetworkData : MessageListEffect()  // 加载网络数据
