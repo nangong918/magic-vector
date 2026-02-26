@@ -1,14 +1,13 @@
 package com.magicvector.activity
 
 import android.content.Intent
-import android.os.Build
 import android.os.Bundle
 import android.view.View
-import android.view.WindowInsetsController
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.viewModels
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -24,67 +23,55 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import com.core.baseutil.fragmentActivity.ActivityLaunchUtils
-import com.data.domain.constant.BaseConstant
 import com.magicvector.ui.theme.MagicVectorTheme
 import com.magicvector.ui.theme.White
-import java.util.Timer
-import java.util.TimerTask
+import com.magicvector.viewModel.activity.StartEffect
+import com.magicvector.viewModel.activity.StartIntent
+import com.magicvector.viewModel.activity.StartVm
+import kotlinx.coroutines.launch
 
 class StartActivity : ComponentActivity() {
+
+    private val vm: StartVm by viewModels()
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+
+        // vm初始化
+        vm.processIntent(StartIntent.Initialize)
+
+        // 观察 Effect
+        observeEffects()
+
+        // initView
         setContent {
             MagicVectorTheme {
                 StartScreen()
             }
         }
-
-        initTimer()
     }
 
-    override fun onResume() {
-        super.onResume()
 
-        // 隐藏标题导航栏
-        window.setFlags(
-            WindowManager.LayoutParams.FLAG_FULLSCREEN,
-            WindowManager.LayoutParams.FLAG_FULLSCREEN
-        )
-        // 隐藏状态栏
-        val decorView = window.decorView
-        decorView.systemUiVisibility = (
-                View.SYSTEM_UI_FLAG_FULLSCREEN or
-                        View.SYSTEM_UI_FLAG_HIDE_NAVIGATION or
-                        View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
-                )
-    }
-
-    //-------------------------------定时跳转-------------------------------
-
-    private lateinit var timer: Timer
-    private lateinit var timerTask: TimerTask
-
-    private fun initTimer(){
-        timer = Timer()
-
-        timerTask = object : TimerTask() {
-            override fun run() {
-                activityTurn()
+    // 观察 Effect
+    private fun observeEffects() {
+        lifecycleScope.launch {
+            repeatOnLifecycle(androidx.lifecycle.Lifecycle.State.STARTED) {
+                vm.effect.collect { effect ->
+                    when (effect) {
+                        StartEffect.NavigateToMain -> {
+                            navigateToMain()
+                        }
+                    }
+                }
             }
         }
-
-        timer.schedule(timerTask, BaseConstant.Constant.START_DELAY_TIME)
     }
 
-    private fun destroyTimer() {
-        // 确保在 Activity 销毁时取消 Timer
-        timer.cancel()
-        timerTask.cancel()
-    }
-
-    private fun activityTurn(){
+    private fun navigateToMain() {
         val intent = Intent(this@StartActivity, MainActivity::class.java)
 
         ActivityLaunchUtils.launchNewTask(
@@ -97,11 +84,28 @@ class StartActivity : ComponentActivity() {
     }
 
 
-    override fun onDestroy() {
-        super.onDestroy()
 
-        destroyTimer()
+    override fun onResume() {
+        super.onResume()
+        // 每次恢复时设置全屏
+        setupFullScreen()
     }
+
+    private fun setupFullScreen() {
+        // 隐藏标题导航栏
+        window.setFlags(
+            WindowManager.LayoutParams.FLAG_FULLSCREEN,
+            WindowManager.LayoutParams.FLAG_FULLSCREEN
+        )
+
+        // 隐藏状态栏和导航栏
+        window.decorView.systemUiVisibility = (
+                View.SYSTEM_UI_FLAG_FULLSCREEN or
+                        View.SYSTEM_UI_FLAG_HIDE_NAVIGATION or
+                        View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
+                )
+    }
+
 
 }
 
