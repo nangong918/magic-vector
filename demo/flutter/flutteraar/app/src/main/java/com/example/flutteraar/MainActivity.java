@@ -8,6 +8,7 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.demo.aarlib.voicewakeup.VoiceWakeUpBridge;
+import com.example.flutteraar.config.ModuleKeyConfigLoader;
 import com.example.flutteraar.domain.entity.DemoItem;
 import com.example.flutteraar.ui.activity.WifiDemoActivity;
 import com.example.flutteraar.ui.activity.BatteryDemoActivity;
@@ -24,13 +25,10 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        VoiceWakeUpBridge.setDefaultConfig(new VoiceWakeUpBridge.Config(
-                getString(R.string.appId),
-                getString(R.string.apiKey),
-                getString(R.string.apiSecret),
-                "",
-                getString(R.string.ivwAbilityId)
-        ));
+        VoiceWakeUpBridge.Config config = ModuleKeyConfigLoader.loadOfflineIvwConfig(this);
+        if (config != null) {
+            VoiceWakeUpBridge.setDefaultConfig(config);
+        }
 
         RecyclerView recyclerView = findViewById(R.id.recyclerDemoList);
         recyclerView.setLayoutManager(new LinearLayoutManager(this));

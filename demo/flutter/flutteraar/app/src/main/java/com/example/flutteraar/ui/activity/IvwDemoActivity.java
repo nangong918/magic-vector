@@ -14,6 +14,7 @@ import androidx.core.app.ActivityCompat;
 
 import com.demo.aarlib.voicewakeup.VoiceWakeUpBridge;
 import com.example.flutteraar.R;
+import com.example.flutteraar.config.ModuleKeyConfigLoader;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -38,6 +39,7 @@ public class IvwDemoActivity extends AppCompatActivity {
         setContentView(R.layout.activity_ivw_demo);
         setTitle("离线唤醒 Demo");
         bindViews();
+        applyDefaultConfig();
         bindActions();
         prepareDemoAudioFile();
     }
@@ -59,7 +61,10 @@ public class IvwDemoActivity extends AppCompatActivity {
         Button btnRelease = findViewById(R.id.btnReleaseSdk);
         Button btnClearLog = findViewById(R.id.btnClearLog);
 
-        btnInit.setOnClickListener(v -> VoiceWakeUpBridge.initSdk(this));
+        btnInit.setOnClickListener(v -> {
+            applyDefaultConfig();
+            VoiceWakeUpBridge.initSdk(this);
+        });
         btnStartRecord.setOnClickListener(v -> startRecordWakeWithPermission());
         btnStopRecord.setOnClickListener(v -> VoiceWakeUpBridge.stopRecordWake());
         btnStartFile.setOnClickListener(v -> {
@@ -116,6 +121,15 @@ public class IvwDemoActivity extends AppCompatActivity {
             return;
         }
         ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.RECORD_AUDIO}, REQ_RECORD_AUDIO);
+    }
+
+    private void applyDefaultConfig() {
+        VoiceWakeUpBridge.Config config = ModuleKeyConfigLoader.loadOfflineIvwConfig(this);
+        if (config != null) {
+            VoiceWakeUpBridge.setDefaultConfig(config);
+        } else {
+            appendLog("读取module_key.json失败或offlineIvw字段不完整");
+        }
     }
 
     @Override

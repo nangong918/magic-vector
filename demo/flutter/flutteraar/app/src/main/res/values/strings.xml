@@ -1,9 +1,5 @@
 <resources>
     <string name="app_name">FlutterAar</string>
-    <string name="appId">4aa58263</string>
-    <string name="apiKey">fd775746ce819ec90bc6ec2df697dbe5</string>
-    <string name="apiSecret">Y2U0OWUyYjcyOTRiYWEwMjk0YWNlMzdh</string>
-    <string name="ivwAbilityId">e867a88f2</string>
     <string name="vad_title">VAD Demo</string>
     <string name="vad_webrtc">WebRTC VAD</string>
     <string name="vad_silero">Silero VAD</string>

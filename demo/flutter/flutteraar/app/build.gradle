@@ -2,6 +2,17 @@ plugins {
     alias(libs.plugins.android.application)
 }
 
+def sharedModuleKeySource = file("../../flutternew/assets/module_key.json")
+def generatedModuleKeyAssetsDir = layout.buildDirectory.dir("generated/moduleKeyAssets/main")
+
+tasks.register("syncSharedModuleKey", Copy) {
+    if (!sharedModuleKeySource.exists()) {
+        throw new RuntimeException("未找到共享配置文件: ${sharedModuleKeySource.absolutePath}")
+    }
+    from(sharedModuleKeySource)
+    into(generatedModuleKeyAssetsDir)
+}
+
 android {
     namespace 'com.example.flutteraar'
     compileSdk {
@@ -31,6 +42,16 @@ android {
     aaptOptions {
         noCompress "onnx", "tflite"
     }
+
+    sourceSets {
+        main {
+            assets.srcDir(generatedModuleKeyAssetsDir)
+        }
+    }
+}
+
+tasks.named("preBuild").configure {
+    dependsOn("syncSharedModuleKey")
 }
 
 dependencies {
