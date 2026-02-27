@@ -26,6 +26,10 @@
 2. MVVM设计模式中数据observer中更新数据会导致循环观察异常。
 3. 项目中的ViewModel没有发挥实际作用：1.网络请求的生命周期需要使用ViewModelScope实现。2.Activity旋转重新创建的ViewModel需要从`ViewModelProvider`获取，因为其示例是缓存在`ViewModelStore`。ViewModel需要在XML中进行DataBinding（此条暂时不实现，因为可以使用Compose进行绘制）。生命周期的管理也未实现，viewModel的生命周期应该由ViewModelStoreOwner实现。
 
+todo：设计模式文档存在问题，待优化。
+[Android设计模式.md](android/Android设计模式.md)
+
+
 ### Android View
 #### 项目问题：
 1. 聊天记录中的ScrollView中的RecyclerView下拉触摸焦点丢失。需要重构TouchEvent的事件分发机制。
