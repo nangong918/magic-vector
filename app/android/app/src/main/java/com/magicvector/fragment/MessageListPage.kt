@@ -111,14 +111,6 @@ fun MessageListContent(
         state = listState,
         modifier = Modifier.fillMaxSize()
     ) {
-        // 顶部"新消息"提示栏
-//        item {
-//            NewMessageHeader(
-//                unreadCount = state.messageCount,
-//                onClick = { /* 处理点击新消息提示 */ }
-//            )
-//        }
-
         // 消息列表
         items(
             items = state.messages,
