@@ -1,0 +1,30 @@
+{
+  "xfyun": {
+    "llm": {
+      "hostUrl": "wss://maas-api.cn-huabei-1.xf-yun.com/v1.1/chat",
+      "appId": "4aa58263",
+      "apiKey": "fd775746ce819ec90bc6ec2df697dbe5",
+      "apiSecret": "Y2U0OWUyYjcyOTRiYWEwMjk0YWNlMzdh",
+      "domain": "xop3qwen1b7",
+      "patchId": "",
+      "serviceId": "",
+      "resourceId": ""
+    },
+    "stt": {
+      "hostUrl": "https://iat.xf-yun.com/v1",
+      "appId": "4aa58263",
+      "apiKey": "fd775746ce819ec90bc6ec2df697dbe5",
+      "apiSecret": "Y2U0OWUyYjcyOTRiYWEwMjk0YWNlMzdh",
+      "serviceId": "",
+      "resourceId": ""
+    },
+    "offlineIvw": {
+      "appId": "4aa58263",
+      "apiKey": "fd775746ce819ec90bc6ec2df697dbe5",
+      "apiSecret": "Y2U0OWUyYjcyOTRiYWEwMjk0YWNlMzdh",
+      "abilityId": "e867a88f2",
+      "serviceId": "",
+      "resourceId": ""
+    }
+  }
+}

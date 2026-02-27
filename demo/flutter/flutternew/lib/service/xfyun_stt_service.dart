@@ -5,6 +5,7 @@ import 'package:crypto/crypto.dart';
 import 'package:record/record.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 
+import '../config/module_key_config.dart';
 import '../domain/dto/xfyun_stt_dto.dart';
 
 enum XfIatEventType {
@@ -37,11 +38,6 @@ class XfIatEvent {
 }
 
 class XfIatService {
-  static const String hostUrl = 'https://iat.xf-yun.com/v1';
-  static const String appId = '4aa58263';
-  static const String apiSecret = 'Y2U0OWUyYjcyOTRiYWEwMjk0YWNlMzdh';
-  static const String apiKey = 'fd775746ce819ec90bc6ec2df697dbe5';
-
   final AudioRecorder _record = AudioRecorder();
   final StreamController<XfIatEvent> _eventController =
       StreamController<XfIatEvent>.broadcast();
@@ -56,6 +52,7 @@ class XfIatService {
   bool _sentFirstFrame = false;
   int _seq = 0;
   final List<String> _totalWords = [];
+  XfSttKeyConfig? _sttConfig;
 
   Stream<XfIatEvent> get events => _eventController.stream;
 
@@ -69,13 +66,14 @@ class XfIatService {
       return;
     }
 
+    _sttConfig ??= (await ModuleKeyConfigStore.load()).stt;
     _resetSession();
     _sessionActive = true;
     _channelClosed = false;
     _isRecording = true;
     _safeEmit(XfIatEvent.started());
 
-    final wsUrl = _buildWebSocketUrl();
+    final wsUrl = _buildWebSocketUrl(_sttConfig!);
     _channel = WebSocketChannel.connect(Uri.parse(wsUrl));
     _channelSub = _channel!.stream.listen(
       _handleSocketMessage,
@@ -207,6 +205,10 @@ class XfIatService {
     required List<int> audio,
     required bool includeParams,
   }) {
+    final sttConfig = _sttConfig;
+    if (sttConfig == null) {
+      throw const ModuleKeyConfigException('STT配置未初始化，请先调用 start()');
+    }
     final payload = {
       'audio': {
         'encoding': 'raw',
@@ -221,7 +223,7 @@ class XfIatService {
 
     final frame = <String, dynamic>{
       'header': {
-        'app_id': appId,
+        'app_id': sttConfig.appId,
         'status': status,
       },
       'payload': payload,
@@ -307,19 +309,19 @@ class XfIatService {
     _eventController.add(event);
   }
 
-  String _buildWebSocketUrl() {
-    final uri = Uri.parse(hostUrl);
+  String _buildWebSocketUrl(XfSttKeyConfig sttConfig) {
+    final uri = Uri.parse(sttConfig.hostUrl);
     final date = HttpDate.format(DateTime.now().toUtc());
     final signatureOrigin =
         'host: ${uri.host}\n' 'date: $date\n' 'GET ${uri.path} HTTP/1.1';
 
-    final hmacSha256 = Hmac(sha256, utf8.encode(apiSecret));
+    final hmacSha256 = Hmac(sha256, utf8.encode(sttConfig.apiSecret));
     final signature = base64.encode(
       hmacSha256.convert(utf8.encode(signatureOrigin)).bytes,
     );
 
     final authorization =
-        'api_key="$apiKey", algorithm="hmac-sha256", headers="host date request-line", signature="$signature"';
+        'api_key="${sttConfig.apiKey}", algorithm="hmac-sha256", headers="host date request-line", signature="$signature"';
     final authorizationBase64 = base64.encode(utf8.encode(authorization));
 
     final authUri = Uri(

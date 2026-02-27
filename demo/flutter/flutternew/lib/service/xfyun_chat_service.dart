@@ -4,15 +4,9 @@ import 'dart:io';
 
 import 'package:crypto/crypto.dart';
 
-class XfYunChatService {
-  static const String hostUrl =
-      'wss://maas-api.cn-huabei-1.xf-yun.com/v1.1/chat';
-  static const String appId = '4aa58263';
-  static const String apiSecret = 'Y2U0OWUyYjcyOTRiYWEwMjk0YWNlMzdh';
-  static const String apiKey = 'fd775746ce819ec90bc6ec2df697dbe5';
-  static const String patchId = '';
-  static const String domain = 'xop3qwen1b7';
+import '../config/module_key_config.dart';
 
+class XfYunChatService {
   /// 发送聊天消息到讯飞云服务
   /// 主要功能：
   /// 1. 构建带认证信息的WebSocket URL
@@ -29,8 +23,10 @@ class XfYunChatService {
     required void Function(String deltaText) onDelta, // 处理AI回复的增量文本的回调
     required void Function() onDone, // 消息处理完成的回调
   }) async {
+    final moduleConfig = await ModuleKeyConfigStore.load();
+    final llmConfig = moduleConfig.llm;
     // 构建带认证信息的WebSocket URL
-    final wsUrl = _buildAuthenticatedWsUrl();
+    final wsUrl = _buildAuthenticatedWsUrl(llmConfig);
     // 建立WebSocket连接
     final socket = await WebSocket.connect(wsUrl);
     // 创建一个Completer，用于等待消息处理完成
@@ -72,6 +68,7 @@ class XfYunChatService {
 
     // 构建请求体
     final requestBody = _buildRequestBody(
+      llmConfig: llmConfig,
       systemPrompt: systemPrompt,
       history: history,
       userMessage: userMessage,
@@ -95,6 +92,7 @@ class XfYunChatService {
   /// 3. 构建请求参数，包括聊天域、温度和最大token数
   /// 4. 构建完整的请求体
   Map<String, dynamic> _buildRequestBody({
+    required XfLlmKeyConfig llmConfig,
     required String systemPrompt, // 系统提示词
     required List<Map<String, String>> history, // 聊天历史记录
     required String userMessage, // 用户消息
@@ -112,12 +110,12 @@ class XfYunChatService {
 
     // 构建请求头
     final Map<String, dynamic> header = <String, dynamic>{
-      'app_id': appId, // 应用ID
+      'app_id': llmConfig.appId, // 应用ID
       'uid': _buildUid(), // 用户ID，使用时间戳生成
     };
     // 如果patchId不为空，则添加到请求头
-    if (patchId.isNotEmpty) {
-      header['patch_id'] = <String>[patchId];
+    if (llmConfig.patchId.isNotEmpty) {
+      header['patch_id'] = <String>[llmConfig.patchId];
     }
 
     // 构建完整的请求体
@@ -125,7 +123,7 @@ class XfYunChatService {
       'header': header, // 请求头
       'parameter': <String, dynamic>{ // 请求参数
         'chat': <String, dynamic>{
-          'domain': domain, // 聊天域
+          'domain': llmConfig.domain, // 聊天域
           'temperature': 0.5, // 温度参数，控制生成文本的随机性
           'max_tokens': 4096, // 最大token数，控制生成文本的长度
         }
@@ -190,9 +188,9 @@ class XfYunChatService {
   /// 5. 构建授权字符串并进行Base64编码
   /// 6. 构建完整的认证URL
   /// 7. 将HTTP协议转换为WebSocket协议
-  String _buildAuthenticatedWsUrl() {
+  String _buildAuthenticatedWsUrl(XfLlmKeyConfig llmConfig) {
     // 解析基础URL
-    final uri = Uri.parse(hostUrl);
+    final uri = Uri.parse(llmConfig.hostUrl);
     // 生成当前UTC时间，用于签名
     final date = HttpDate.format(DateTime.now().toUtc());
     // 构建签名原始字符串
@@ -202,13 +200,13 @@ class XfYunChatService {
         'GET ${uri.path} HTTP/1.1';
 
     // 使用HMAC-SHA256算法生成签名
-    final hmacSha256 = Hmac(sha256, utf8.encode(apiSecret));
+    final hmacSha256 = Hmac(sha256, utf8.encode(llmConfig.apiSecret));
     final signature = base64.encode(
       hmacSha256.convert(utf8.encode(signatureOrigin)).bytes,
     );
     // 构建授权字符串
     final authorization =
-        'api_key="$apiKey", algorithm="hmac-sha256", headers="host date request-line", signature="$signature"';
+        'api_key="${llmConfig.apiKey}", algorithm="hmac-sha256", headers="host date request-line", signature="$signature"';
     // 对授权字符串进行Base64编码
     final authorizationBase64 = base64.encode(utf8.encode(authorization));
 

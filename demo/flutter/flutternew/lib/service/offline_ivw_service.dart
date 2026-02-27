@@ -3,6 +3,8 @@ import 'dart:io';
 
 import 'package:flutter/services.dart';
 
+import '../config/module_key_config.dart';
+
 enum OfflineIvwEventType {
   log,
   db,
@@ -50,7 +52,11 @@ class OfflineIvwService {
       return;
     }
     _bindEventsIfNeeded();
-    await _methodChannel.invokeMethod('initSdk');
+    final config = (await ModuleKeyConfigStore.load()).offlineIvw;
+    await _methodChannel.invokeMethod(
+      'initSdk',
+      <String, dynamic>{'config': config.toChannelArgs()},
+    );
   }
 
   Future<void> startRecordWake({

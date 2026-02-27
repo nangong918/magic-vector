@@ -14,12 +14,12 @@ import java.io.File
 class OfflineVoiceWakeUpManager(private val activity: FlutterActivity) {
     private val ivwChannel = "com.demo.flutternew/ivw"
     private val ivwEventChannel = "com.demo.flutternew/ivw_event"
-    private val abilityId = "e867a88f2"
     private val reqRecordAudio = 0x66
 
     private var eventSink: EventChannel.EventSink? = null
     private var pendingRecordPermissionResult: MethodChannel.Result? = null
     private var configReady = false
+    private var sdkConfig: IvwSdkConfig? = null
 
     private val eventListener = VoiceWakeUpEventListener { payload ->
         emitEvent(payload)
@@ -44,6 +44,14 @@ class OfflineVoiceWakeUpManager(private val activity: FlutterActivity) {
             result ->
             when (call.method) {
                 "initSdk" -> {
+                    val configMap = call.argument<Map<String, Any?>>("config")
+                    val parsed = parseConfig(configMap)
+                    if (parsed == null) {
+                        result.error("INVALID_CONFIG", "initSdk缺少有效配置: appId/apiKey/apiSecret", null)
+                        return@setMethodCallHandler
+                    }
+                    sdkConfig = parsed
+                    configReady = false
                     ensureBridgeConfig()
                     VoiceWakeUpBridge.initSdk(activity)
                     result.success(null)
@@ -132,17 +140,46 @@ class OfflineVoiceWakeUpManager(private val activity: FlutterActivity) {
         if (configReady) {
             return
         }
+        val cfg = sdkConfig
+        if (cfg == null) {
+            emitEvent(
+                mapOf(
+                    "type" to "error",
+                    "message" to "未提供离线唤醒SDK配置，请先通过initSdk传入config"
+                )
+            )
+            return
+        }
         val workDir = resolveWritableWorkDir()
         VoiceWakeUpBridge.setDefaultConfig(
             VoiceWakeUpBridge.Config(
-                activity.getString(com.demo.flutternew.R.string.appId),
-                activity.getString(com.demo.flutternew.R.string.apiKey),
-                activity.getString(com.demo.flutternew.R.string.apiSecret),
+                cfg.appId,
+                cfg.apiKey,
+                cfg.apiSecret,
                 workDir,
-                abilityId
+                cfg.abilityId
             )
         )
         configReady = true
+    }
+
+    private fun parseConfig(config: Map<String, Any?>?): IvwSdkConfig? {
+        if (config == null) {
+            return null
+        }
+        val appId = config["appId"]?.toString()?.trim().orEmpty()
+        val apiKey = config["apiKey"]?.toString()?.trim().orEmpty()
+        val apiSecret = config["apiSecret"]?.toString()?.trim().orEmpty()
+        val abilityId = config["abilityId"]?.toString()?.trim().orEmpty()
+        if (appId.isBlank() || apiKey.isBlank() || apiSecret.isBlank()) {
+            return null
+        }
+        return IvwSdkConfig(
+            appId = appId,
+            apiKey = apiKey,
+            apiSecret = apiSecret,
+            abilityId = if (abilityId.isBlank()) DEFAULT_ABILITY_ID else abilityId
+        )
     }
 
     private fun resolveWritableWorkDir(): String {
@@ -156,5 +193,16 @@ class OfflineVoiceWakeUpManager(private val activity: FlutterActivity) {
         activity.runOnUiThread {
             eventSink?.success(HashMap(payload))
         }
+    }
+
+    private data class IvwSdkConfig(
+        val appId: String,
+        val apiKey: String,
+        val apiSecret: String,
+        val abilityId: String
+    )
+
+    private companion object {
+        private const val DEFAULT_ABILITY_ID = "e867a88f2"
     }
 }

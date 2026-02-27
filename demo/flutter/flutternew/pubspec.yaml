@@ -62,4 +62,5 @@ flutter:
 
   # 资源文件
   assets:
+    - assets/module_key.json
     - assets/txt/
