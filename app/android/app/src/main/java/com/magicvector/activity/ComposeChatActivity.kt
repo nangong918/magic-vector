@@ -31,7 +31,7 @@ class ComposeChatActivity : ComponentActivity() {
 }
 
 @Composable
-fun Greeting(name: String, modifier: Modifier = Modifier) {
+private fun Greeting(name: String, modifier: Modifier = Modifier) {
     Text(
         text = "Hello $name!",
         modifier = modifier
@@ -40,7 +40,7 @@ fun Greeting(name: String, modifier: Modifier = Modifier) {
 
 @Preview(showBackground = true, widthDp = 360, heightDp = 640)
 @Composable
-fun GreetingPreview2() {
+private fun GreetingPreview2() {
     MagicVectorTheme {
         Greeting("Android")
     }

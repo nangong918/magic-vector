@@ -126,7 +126,7 @@ class ComposeCreateAgentVm() : ViewModel() {
         }
     }
 
-    private fun submitCreate(context: Context) {
+    private fun submitCreate() {
         val state = _uiState.value
 
         // 表单验证
@@ -139,18 +139,10 @@ class ComposeCreateAgentVm() : ViewModel() {
             return
         }
 
-        viewModelScope.launch {
-            _uiState.update { it.copy(isSubmitting = true) }
-
-            try {
-                createAgent(context)
-            } catch (e : Exception) {
-
-            }
-        }
+        sendEffect(CreateAgentEffect.CreateAgent)
     }
 
-    private fun createAgent() {
+    fun createAgent(context: Context) {
         val state = _uiState.value
 
         var filePart: MultipartBody.Part? = null
@@ -322,6 +314,9 @@ sealed class CreateAgentEffect {
     // 提示相关
     data class ShowToast(val message: String) : CreateAgentEffect()
     data class ShowError(val message: String) : CreateAgentEffect()
+
+    // 创建
+    data object CreateAgent : CreateAgentEffect()
 
     // 结果相关
     data class AgentCreated(val agentId: String) : CreateAgentEffect()

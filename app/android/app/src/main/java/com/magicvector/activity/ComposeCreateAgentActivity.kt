@@ -110,6 +110,9 @@ class ComposeCreateAgentActivity : ComponentActivity() {
                             }
                             setResult(RESULT_OK, resultIntent)
                         }
+                        is CreateAgentEffect.CreateAgent -> {
+                            vm.createAgent(context = this@ComposeCreateAgentActivity)
+                        }
                     }
                 }
             }
