@@ -1,4 +1,4 @@
-package com.magicvector.ui.view.activity
+package com.magicvector.ui.view
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -19,6 +19,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.view.appview.R
 
 
 @Composable
@@ -28,7 +29,7 @@ fun InfoBarView(
     height: Int = 50,
     showBackButton: Boolean = true,
     onBackClick: (() -> Unit)? = null,
-    backIconTint: Color = colorResource(id = com.view.appview.R.color.s1_800),
+    backIconTint: Color = colorResource(id = R.color.s1_800),
     title: String = "",
     titleColor: Color = Color.White,
     rightAction: @Composable (() -> Unit)? = null
@@ -46,7 +47,7 @@ fun InfoBarView(
                     .size(30.dp)
             ) {
                 Icon(
-                    painter = painterResource(id = com.view.appview.R.xml.chevron_left_24px),
+                    painter = painterResource(id = R.xml.chevron_left_24px),
                     contentDescription = "back",
                     tint = backIconTint
                 )
@@ -89,7 +90,7 @@ fun InfoBarViewPreview() {
         rightAction = {
             IconButton(onClick = { /* 打开搜索 */ }) {
                 Icon(
-                    painter = painterResource(id = com.view.appview.R.xml.settings_24px),
+                    painter = painterResource(id = R.xml.settings_24px),
                     contentDescription = "搜索"
                 )
             }

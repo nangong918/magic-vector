@@ -10,7 +10,9 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.*
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -23,7 +25,11 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import com.magicvector.ui.theme.MagicVectorTheme
-import com.magicvector.ui.view.activity.InfoBarView
+import com.magicvector.ui.view.AgentAvatar
+import com.magicvector.ui.view.InfoBarView
+import com.magicvector.ui.view.activity.AgentDescriptionInput
+import com.magicvector.ui.view.activity.AgentNameInput
+import com.magicvector.ui.view.activity.SubmitButton
 import com.magicvector.viewModel.activity.ComposeCreateAgentVm
 import com.magicvector.viewModel.activity.CreateAgentEffect
 import com.magicvector.viewModel.activity.CreateAgentIntent
@@ -153,6 +159,53 @@ private fun CreateAgentScreen(
             )
         }
     ) { innerPadding ->
+        Spacer(modifier = Modifier.height(20.dp))
+
+        // Agent Avatar
+        AgentAvatar(
+//            imageFile = state.avatarFile,
+            defaultResId = state.defaultAvatarResId,
+            onClick = onSelectAvatar
+        )
+
+        // Agent Name Input - 对应 GeneralEditText
+        AgentNameInput(
+            value = state.agentName,
+            onValueChange = onNameChange,
+            isValid = state.isNameValid,
+            errorMessage = state.nameError,
+            maxLength = 20
+        )
+
+        Spacer(modifier = Modifier.height(20.dp))
+
+//        Spacer(modifier = Modifier.weight(1f))
+
+        // Submit Button - 对应 AppCompatButton
+        SubmitButton(
+            enabled = state.isFormValid,
+            isLoading = state.isSubmitting,
+            onClick = onSubmit
+        )
+
+        Spacer(modifier = Modifier.height(20.dp))
+
+        // Agent Description Input - 对应 GeneralEditText (第二行)
+        AgentDescriptionInput(
+            value = state.agentDescription,
+            onValueChange = onDescriptionChange,
+            isValid = state.isDescriptionValid,
+            errorMessage = state.descriptionError
+        )
+
+        // Submit Button - 对应 AppCompatButton
+        SubmitButton(
+            enabled = state.isFormValid,
+            isLoading = state.isSubmitting,
+            onClick = onSubmit
+        )
+
+        Spacer(modifier = Modifier.height(20.dp))
     }
 }
 
