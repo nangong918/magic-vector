@@ -1,5 +1,6 @@
 package com.magicvector.ui.view.activity
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -25,6 +26,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.tooling.preview.Preview
 
 
 /**
@@ -189,6 +191,29 @@ fun SubmitButton(
 
 
 
+@Preview
+@Composable
+fun CreateAgentViewPreview() {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(Color.White)
+    ) {
+        AgentNameInput(
+            value = "Agent Name",
+            onValueChange = {},
+            isValid = true,
+            errorMessage = null,
+            maxLength = 20
+        )
+        AgentDescriptionInput(
+            value = "Agent Description",
+            onValueChange = {},
+            isValid = true,
+            errorMessage = null
+        )
+    }
+}
 
 
 
