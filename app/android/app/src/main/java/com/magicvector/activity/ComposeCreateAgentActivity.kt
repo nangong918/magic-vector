@@ -13,10 +13,13 @@ import androidx.activity.viewModels
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -149,6 +152,8 @@ private fun CreateAgentScreen(
 ) {
 
     val context = LocalContext.current
+    // 添加滚动状态
+    val scrollState = rememberScrollState()
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
@@ -162,53 +167,57 @@ private fun CreateAgentScreen(
             )
         }
     ) { innerPadding ->
-        Spacer(modifier = Modifier.height(20.dp))
 
-        // Agent Avatar
-        AgentAvatar(
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+                .verticalScroll(scrollState),
+            horizontalAlignment = Alignment.CenterHorizontally,  // 水平居中
+            verticalArrangement = Arrangement.Top
+        ) {
+            Spacer(modifier = Modifier.height(20.dp))
+
+            // Agent Avatar
+            AgentAvatar(
 //            imageFile = state.avatarFile,
-            defaultResId = state.defaultAvatarResId,
-            onClick = onSelectAvatar
-        )
+                defaultResId = state.defaultAvatarResId,
+                onClick = onSelectAvatar,
+                modifier = Modifier.align(Alignment.CenterHorizontally) // 剧中
+            )
 
-        // Agent Name Input - 对应 GeneralEditText
-        AgentNameInput(
-            value = state.agentName,
-            onValueChange = onNameChange,
-            isValid = state.isNameValid,
-            errorMessage = state.nameError,
-            maxLength = 20
-        )
+            Spacer(modifier = Modifier.height(20.dp))
 
-        Spacer(modifier = Modifier.height(20.dp))
+            // Agent Name Input - 对应 GeneralEditText
+            AgentNameInput(
+                value = state.agentName,
+                onValueChange = onNameChange,
+                isValid = state.isNameValid,
+                errorMessage = state.nameError,
+                maxLength = 20
+            )
 
-//        Spacer(modifier = Modifier.weight(1f))
+            Spacer(modifier = Modifier.height(20.dp))
 
-        // Submit Button - 对应 AppCompatButton
-        SubmitButton(
-            enabled = state.isFormValid,
-            isLoading = state.isSubmitting,
-            onClick = onSubmit
-        )
+            // Agent Description Input - 对应 GeneralEditText (第二行)
+            AgentDescriptionInput(
+                value = state.agentDescription,
+                onValueChange = onDescriptionChange,
+                isValid = state.isDescriptionValid,
+                errorMessage = state.descriptionError
+            )
 
-        Spacer(modifier = Modifier.height(20.dp))
+            Spacer(modifier = Modifier.height(20.dp))
 
-        // Agent Description Input - 对应 GeneralEditText (第二行)
-        AgentDescriptionInput(
-            value = state.agentDescription,
-            onValueChange = onDescriptionChange,
-            isValid = state.isDescriptionValid,
-            errorMessage = state.descriptionError
-        )
+            // Submit Button - 对应 AppCompatButton
+            SubmitButton(
+                enabled = state.isFormValid,
+                isLoading = state.isSubmitting,
+                onClick = onSubmit
+            )
 
-        // Submit Button - 对应 AppCompatButton
-        SubmitButton(
-            enabled = state.isFormValid,
-            isLoading = state.isSubmitting,
-            onClick = onSubmit
-        )
-
-        Spacer(modifier = Modifier.height(20.dp))
+            Spacer(modifier = Modifier.height(20.dp))
+        }
     }
 }
 
