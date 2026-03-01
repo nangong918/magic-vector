@@ -47,7 +47,7 @@ fun InfoBarView(
                     .size(30.dp)
             ) {
                 Icon(
-                    painter = painterResource(id = R.xml.chevron_left_24px),
+                    painter = painterResource(id = R.drawable.chevron_left_24px),
                     contentDescription = "back",
                     tint = backIconTint
                 )
