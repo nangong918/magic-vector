@@ -3,23 +3,43 @@ package com.magicvector.ui.view.activity
 
 
 
+import android.annotation.SuppressLint
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.constraintlayout.compose.ConstraintLayout
 import androidx.constraintlayout.compose.Dimension
+import com.magicvector.ui.theme.*
+import com.magicvector.ui.view.chat.ChatListState
+import com.magicvector.ui.view.chat.MessageItem
+import com.magicvector.ui.view.chat.MessageListView
+import com.magicvector.ui.view.chat.SendMessageView
+import kotlinx.coroutines.CoroutineScope
 
 @Composable
 fun ChatToolbar(
@@ -45,7 +65,7 @@ fun ChatToolbar(
                     bottom.linkTo(parent.bottom)
                 }
                 .padding(start = 20.dp)
-                .clickable( onClick = { onBackClick() }),
+                .clickable(onClick = { onBackClick() }),
             colorFilter = androidx.compose.ui.graphics.ColorFilter.tint(colorResource(id = com.view.appview.R.color.s1_800))
         )
 
@@ -70,9 +90,6 @@ fun ChatToolbar(
 
 
 
-
-
-
 @Preview
 @Composable
 private fun ChatToolbarPreview() {
@@ -80,6 +97,159 @@ private fun ChatToolbarPreview() {
 }
 
 
+// 返回一个Modifier添加的额外函数
+@SuppressLint("SuspiciousModifierThen")
+@Composable
+fun Modifier.bottomRoundedBackground(
+    color: Color = A1_10,
+    cornerRadius: Dp = 32.dp
+): Modifier = this.then (
+    clip(
+        RoundedCornerShape(
+            topStart = 0.dp,
+            topEnd = 0.dp,
+            bottomStart = cornerRadius,
+            bottomEnd = cornerRadius
+        )
+    ).background(color)
+)
+
+@Preview(showBackground = true)
+@Composable
+fun BottomRoundedShapePreview() {
+    MagicVectorTheme {
+        Box(
+            modifier = Modifier
+                .size(200.dp, 100.dp)
+                .bottomRoundedBackground(color = Green10)
+        ) {
+            Text("底部圆角")
+        }
+    }
+}
+
+
+// kotlin compose会执行 组合 和 重组，方法会被执行两次
+@Composable
+fun MessageList(chatState: ChatListState) {
+    println("🎯 MessageList 被调用，messages.size = ${chatState.messages.size}")
+    var isDataLoaded by remember { mutableStateOf(false) }
+
+    // 初始化示例数据
+    LaunchedEffect(Unit) {
+        println("🚀 LaunchedEffect 开始执行")
+        val initialMessages = List(20) { index ->
+            if (index % 2 == 0) {
+                MessageItem.Received(
+                    id = "received_$index",
+                    messageText = "这是收到的消息 $index",
+                    chatTime = "2025/10/9 ${10 + index % 10}:${index % 60}",
+                    isShowImage = index % 5 == 0
+                )
+            } else {
+                MessageItem.Sent(
+                    id = "sent_$index",
+                    messageText = "这是发送的消息 $index",
+                    timeText = "2025/10/9 ${10 + index % 10}:${index % 60}",
+                    isShowImage = index % 5 == 0
+                )
+            }
+        }
+        chatState.addNewMessages(initialMessages)
+        isDataLoaded = true  // 数据加载完成
+        println("✅ LaunchedEffect 执行完成，isDataLoaded = $isDataLoaded")
+    }
+
+    // 只有数据加载完成才显示列表
+    if (isDataLoaded) {
+        println("🎨 渲染 MessageListView 重组 (Recomposition)")
+        MessageListView(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 5.dp),
+            state = chatState,
+            onLoadMore = {
+                // 模拟加载更多数据
+                val moreMessages = List(10) { index ->
+                    val newIndex = chatState.messages.size + index
+                    if (newIndex % 2 == 0) {
+                        MessageItem.Received(
+                            id = "received_more_$newIndex",
+                            messageText = "加载的历史消息 $newIndex",
+                            chatTime = "2025/10/8 ${10 + newIndex % 10}:${newIndex % 60}",
+                            isShowImage = newIndex % 5 == 0
+                        )
+                    } else {
+                        MessageItem.Sent(
+                            id = "sent_more_$newIndex",
+                            messageText = "加载的历史消息 $newIndex",
+                            timeText = "2025/10/8 ${10 + newIndex % 10}:${newIndex % 60}",
+                            isShowImage = newIndex % 5 == 0
+                        )
+                    }
+                }
+                chatState.loadMoreMessages(moreMessages)
+            },
+            onMessageClick = { message ->
+                // 处理消息点击事件
+                println("点击了消息: ${when (message) {
+                    is MessageItem.Received -> "收到: ${message.messageText}"
+                    is MessageItem.Sent -> "发送: ${message.messageText}"
+                }}")
+            }
+        )
+    }
+    else {
+        println("⏳ 显示加载指示器 初始组合 (Initial Composition)")
+        // 数据加载中的占位符
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) {
+            Text("加载中...")
+        }
+    }
+}
+
+
+@SuppressLint("SimpleDateFormat")
+@Composable
+fun SendMessagePlaceholder(chatState: ChatListState, coroutineScope: CoroutineScope) {
+    SendMessageView(
+        onSendClick = { message ->
+            // 处理发送消息 - 插入到聊天列表
+            val newMessage = MessageItem.Sent(
+                id = System.currentTimeMillis().toString(),
+                messageText = message,
+                timeText = java.text.SimpleDateFormat("yyyy/MM/dd HH:mm").format(java.util.Date())
+            )
+            chatState.insertMessageAndScroll(
+                message = newMessage,
+                coroutineScope = coroutineScope
+            )
+        },
+        onImageClick = {
+            // 处理图片点击
+            println("图片按钮点击")
+        },
+        onCallClick = {
+            // 处理通话点击
+            println("通话按钮点击")
+        },
+        onVideoClick = {
+            // 处理视频点击
+            println("视频按钮点击")
+        },
+        onAudioTouch = { isStart ->
+            // 处理录音开始/结束
+            if (isStart) {
+                println("开始录音")
+            } else {
+                println("结束录音")
+            }
+        }
+    )
+}
 
 
 
