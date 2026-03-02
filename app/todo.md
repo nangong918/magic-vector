@@ -12,8 +12,8 @@ AndroidX 升级 Jetpack Compose + Flutter
 | MessageListPage | 待检查     |         |
 | MinePage        | 完成      |         |
 | CreateAgent     | 待检查     |         |
-| Chat页面          |         |         |
-| Call页面          |         |         |
+| Chat页面          | 待检查     |         |
+| Call页面          | 待检查     |         |
 | VL页面            |         |         |
 | Media页面         | 待开发     |         |
 
