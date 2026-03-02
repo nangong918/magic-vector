@@ -14,7 +14,7 @@ AndroidX 升级 Jetpack Compose + Flutter
 | CreateAgent     | 待检查     |         |
 | Chat页面          | 待检查     |         |
 | Call页面          | 待检查     |         |
-| VL页面            |         |         |
+| VL页面            | 待检查     |         |
 | Media页面         | 待开发     |         |
 
 

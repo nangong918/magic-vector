@@ -1,6 +1,7 @@
 package com.core.baseutil.permissions
 
 import android.content.pm.PackageManager
+import androidx.activity.ComponentActivity
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
@@ -21,7 +22,7 @@ class PermissionUtils {
      * @param callback              权限请求结果回调
      */
     fun registerPermissionLauncher(
-        activity: FragmentActivity,
+        activity: ComponentActivity,
         mustPermissions: Array<String>,
         optionalPermissions: Array<String>,
     ) {

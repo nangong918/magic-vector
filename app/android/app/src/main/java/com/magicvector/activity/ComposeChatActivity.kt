@@ -16,7 +16,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -24,9 +23,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.fragment.app.FragmentActivity
 import com.core.baseutil.permissions.GainPermissionCallback
-import com.core.baseutil.permissions.PermissionUtil
 import com.core.baseutil.ui.ToastUtils
-import com.data.domain.constant.VadChatState
 import com.magicvector.ui.theme.*
 import com.magicvector.ui.theme.MagicVectorTheme
 import com.magicvector.ui.view.activity.ChatToolbar
@@ -37,24 +34,38 @@ import com.magicvector.ui.view.chat.MessageItem
 import com.magicvector.ui.view.chat.SendMessageView
 import com.magicvector.ui.view.chat.rememberSendMessageState
 import com.magicvector.ui.view.chat.rememberChatListState
+import com.magicvector.utils.permissions.ComposePermissionUtils
 import com.magicvector.viewModel.activity.ChatEffect
 import com.magicvector.viewModel.activity.ChatIntent
-import com.magicvector.viewModel.activity.ChatState
 import com.magicvector.viewModel.activity.ComposeChatVm
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.emptyFlow
 import java.text.SimpleDateFormat
 import java.util.Date
 
 class ComposeChatActivity : FragmentActivity() {
     private val vm: ComposeChatVm by viewModels()
+    private val callPermissionUtils = ComposePermissionUtils()
+    private val videoPermissionUtils = ComposePermissionUtils()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        callPermissionUtils.registerPermissionLauncher(
+            activity = this,
+            mustPermissions = arrayOf(Manifest.permission.RECORD_AUDIO)
+        )
+        videoPermissionUtils.registerPermissionLauncher(
+            activity = this,
+            mustPermissions = arrayOf(Manifest.permission.RECORD_AUDIO, Manifest.permission.CAMERA),
+            optionalPermissions = arrayOf(Manifest.permission.WRITE_EXTERNAL_STORAGE)
+        )
         enableEdgeToEdge()
         setContent {
             MagicVectorTheme {
-                ChatScreen(vm = vm, onBackClick = { finish() })
+                ChatScreen(
+                    vm = vm,
+                    onBackClick = { finish() },
+                    callPermissionUtils = callPermissionUtils,
+                    videoPermissionUtils = videoPermissionUtils
+                )
             }
         }
         vm.processIntent(ChatIntent.Initialize(intent, this))
@@ -70,6 +81,8 @@ class ComposeChatActivity : FragmentActivity() {
 private fun ChatScreen(
     vm: ComposeChatVm,
     onBackClick: () -> Unit,
+    callPermissionUtils: ComposePermissionUtils,
+    videoPermissionUtils: ComposePermissionUtils,
 ) {
     val context = LocalContext.current
     val uiState by vm.uiState.collectAsState()
@@ -89,43 +102,33 @@ private fun ChatScreen(
                 }
                 ChatEffect.RequestCallPermission -> {
                     val activity = context as? FragmentActivity ?: return@collect
-                    PermissionUtil.requestPermissionSelectX(
-                        activity,
-                        arrayOf(Manifest.permission.RECORD_AUDIO),
-                        arrayOf(),
-                        object : GainPermissionCallback {
-                            override fun allGranted() {
-                                vm.processIntent(ChatIntent.CallPermissionGranted(activity))
-                            }
-
-                            override fun notGranted(notGrantedPermissions: Array<String?>?) {
-                                vm.processIntent(ChatIntent.CallPermissionDenied)
-                            }
-
-                            override fun always() {
-                            }
+                    callPermissionUtils.requestPermissions(activity, object : GainPermissionCallback {
+                        override fun allGranted() {
+                            vm.processIntent(ChatIntent.CallPermissionGranted(activity))
                         }
-                    )
+
+                        override fun notGranted(notGrantedPermissions: Array<String?>?) {
+                            vm.processIntent(ChatIntent.CallPermissionDenied)
+                        }
+
+                        override fun always() {
+                        }
+                    })
                 }
                 ChatEffect.RequestVideoPermission -> {
                     val activity = context as? FragmentActivity ?: return@collect
-                    PermissionUtil.requestPermissionSelectX(
-                        activity,
-                        arrayOf(Manifest.permission.RECORD_AUDIO, Manifest.permission.CAMERA),
-                        arrayOf(Manifest.permission.WRITE_EXTERNAL_STORAGE),
-                        object : GainPermissionCallback {
-                            override fun allGranted() {
-                                vm.processIntent(ChatIntent.VideoPermissionGranted)
-                            }
-
-                            override fun notGranted(notGrantedPermissions: Array<String?>?) {
-                                vm.processIntent(ChatIntent.VideoPermissionDenied)
-                            }
-
-                            override fun always() {
-                            }
+                    videoPermissionUtils.requestPermissions(activity, object : GainPermissionCallback {
+                        override fun allGranted() {
+                            vm.processIntent(ChatIntent.VideoPermissionGranted)
                         }
-                    )
+
+                        override fun notGranted(notGrantedPermissions: Array<String?>?) {
+                            vm.processIntent(ChatIntent.VideoPermissionDenied)
+                        }
+
+                        override fun always() {
+                        }
+                    })
                 }
                 is ChatEffect.NavigateToVideoCall -> {
                     val activity = context as? FragmentActivity ?: return@collect
@@ -213,32 +216,55 @@ private fun ChatScreen(
 @Composable
 private fun ChatScreenPreview() {
     MagicVectorTheme {
-        // 创建模拟的ViewModel
-        val mockVm = remember {
-            object : ComposeChatVm() {
-                override val uiState = MutableStateFlow(
-                    ChatState(
-                        title = "AI助手",
-                        avatarUrl = "",
-                        isEnableSend = true,
-                        isCallDialogVisible = false,
-                        callVadState = VadChatState.Muted,
-                        callMessage = "",
-                        isMicClosed = false
+        ChatPreviewContent()
+    }
+}
+
+@Composable
+private fun ChatPreviewContent() {
+    val chatState = rememberChatListState()
+    val sendMessageState = rememberSendMessageState()
+    val coroutineScope = rememberCoroutineScope()
+
+    Scaffold(
+        modifier = Modifier.fillMaxSize(),
+        topBar = {
+            ChatToolbar(
+                title = "预览Agent",
+                onBackClick = {}
+            )
+        },
+        bottomBar = {
+            SendMessageView(
+                state = sendMessageState,
+                onSendClick = { message ->
+                    val sentMessage = MessageItem.Sent(
+                        id = System.currentTimeMillis().toString(),
+                        messageText = message,
+                        timeText = SimpleDateFormat("yyyy/MM/dd HH:mm").format(Date())
                     )
-                )
-
-                override val effect = emptyFlow<ChatEffect>()
-
-                override fun processIntent(intent: ChatIntent) {
-                    // 预览中不处理实际逻辑
-                }
+                    chatState.insertMessageAndScroll(sentMessage, coroutineScope)
+                },
+                onImageClick = {},
+                onCallClick = {},
+                onVideoClick = {},
+                onAudioTouch = {}
+            )
+        }
+    ) { innerPadding ->
+        Column(
+            modifier = Modifier
+                .padding(innerPadding)
+                .fillMaxSize()
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f)
+                    .bottomRoundedBackground(color = Green10, cornerRadius = 32.dp)
+            ) {
+                MessageList(chatState = chatState)
             }
         }
-
-        ChatScreen(
-            vm = mockVm,
-            onBackClick = {}
-        )
     }
 }

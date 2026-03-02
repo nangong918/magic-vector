@@ -230,6 +230,34 @@ ChatVm就是ComposeChatVm。
 
 
 
+### AgentEmojiActivity
+
+现在重构整个项目中最重要的部分，AgentEmojiActivity。
+还是跟刚刚一样，补充个源代码而是创建ComposeAgentEmojiActivity和
+ComposeAgentEmojiVm，然后把原先的逻辑复制过来，然后改为MVI。
+特别要注意的是：AgentEmojiActivity中原先的眼睛是可以动的，
+我并不知道Compose怎么实现，你好好想一想然后实现。
+现在你的任务：
+创建ComposeAgentEmojiActivity和ComposeAgentEmojiVm，
+思考并设计ui的State，思考用户的intent以及副作用流effect。
+绘制最新的composeUI
+使用原先的业务逻辑，并设计mvi架构逻辑。
+最后写preview预览函数，你可以参考我刚刚补充在chat页面的预览函数。
+但是我的chatPage的预览函数好像编译不出来，你如果有空可以顺便帮我看看为什么
+编译不出来预览view（不是编译不通过）正好有利于你写新的预览函数。
+
+#### 代码审核
+
+我刚刚审核了一版本你写的代码，我要指出几点问题：
+1. 关于state，effect和intent以及核心函数要写注释。
+2. 关于权限获取，我忘了告诉吗requestPermissionSelectX是我原先封装的方法，
+ 即便是PermissionUtils也是针对于AndroidX的，我不知道现在你能不能用。反正PermissionUtil
+ 不要使用了，因为入参是FragmentActivity。如果可以你参考PermissionUtils封装一个Compose下的申请权限的Utils
+ 然后使用他。
+3.  bindRealtimeCallbacksOnce()这个函数有编译错误，检查一下
+
+
+
 
 
 

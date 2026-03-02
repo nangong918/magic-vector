@@ -45,9 +45,11 @@ open class ComposeChatVm : AndroidViewModel(application = MainApplication.getApp
         val TAG: String = ComposeChatVm::class.java.name
     }
 
+    // MVI State: Compose UI 渲染状态
     private val _uiState = MutableStateFlow(ChatState())
     open val uiState: StateFlow<ChatState> = _uiState.asStateFlow()
 
+    // MVI Effect: 一次性事件（权限/跳转/Toast）
     private val _effect = Channel<ChatEffect>(Channel.BUFFERED)
     open val effect: Flow<ChatEffect> = _effect.receiveAsFlow()
 
@@ -299,11 +301,14 @@ open class ComposeChatVm : AndroidViewModel(application = MainApplication.getApp
 
 @Stable
 data class ChatState(
+    // 加载与连接状态
     val isLoading: Boolean = false,
     val isChatServiceBound: Boolean = false,
     val isEnableSend: Boolean = false,
+    // 头部信息
     val title: String = "",
     val avatarUrl: String? = null,
+    // 通话弹窗状态
     val isCallDialogVisible: Boolean = false,
     val isMicClosed: Boolean = true,
     val callVadState: VadChatState = VadChatState.Muted,
@@ -311,28 +316,35 @@ data class ChatState(
 )
 
 sealed class ChatIntent {
+    // 初始化 / 生命周期
     data class Initialize(val intent: Intent, val activity: FragmentActivity) : ChatIntent()
     data object Resume : ChatIntent()
 
+    // 消息与语音
     data class SendTextMessage(val message: String) : ChatIntent()
     data class StartSendVoice(val scope: CoroutineScope) : ChatIntent()
     data object StopSendVoice : ChatIntent()
 
+    // 语音通话
     data object RequestCall : ChatIntent()
     data class CallPermissionGranted(val context: Context) : ChatIntent()
     data object CallPermissionDenied : ChatIntent()
     data object ToggleCallMute : ChatIntent()
     data object EndCall : ChatIntent()
 
+    // 视频通话
     data object RequestVideoCall : ChatIntent()
     data object VideoPermissionGranted : ChatIntent()
     data object VideoPermissionDenied : ChatIntent()
 }
 
 sealed class ChatEffect {
+    // 页面动作
     data object Finish : ChatEffect()
+    // 权限请求
     data object RequestCallPermission : ChatEffect()
     data object RequestVideoPermission : ChatEffect()
+    // 跳转与提示
     data class NavigateToVideoCall(val agentId: String, val agentName: String) : ChatEffect()
     data class ShowToast(val message: String) : ChatEffect()
     data class ShowToastRes(val messageRes: Int) : ChatEffect()
