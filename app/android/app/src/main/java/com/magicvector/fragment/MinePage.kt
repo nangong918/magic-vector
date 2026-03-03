@@ -16,7 +16,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.magicvector.activity.test.TestActivity
+import com.magicvector.activity.test.ComposeTestActivity
 import com.magicvector.viewModel.fragment.MineIntent
 import com.view.appview.R
 
@@ -34,7 +34,7 @@ fun MineScreen(
             // 发送 Intent 到 ViewModel
             viewModel.processIntent(MineIntent.TestButtonClick)
             // 实际跳转
-            context.startActivity(Intent(context, TestActivity::class.java))
+            context.startActivity(Intent(context, ComposeTestActivity::class.java))
         }
     )
 }

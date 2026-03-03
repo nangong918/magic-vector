@@ -132,7 +132,7 @@ private fun ChatScreen(
                 }
                 is ChatEffect.NavigateToVideoCall -> {
                     val activity = context as? FragmentActivity ?: return@collect
-                    val goIntent = Intent(activity, AgentEmojiActivity::class.java).apply {
+                    val goIntent = Intent(activity, ComposeAgentEmojiActivity::class.java).apply {
                         putExtra("agentId", effect.agentId)
                         putExtra("agentName", effect.agentName)
                     }

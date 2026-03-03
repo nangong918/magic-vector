@@ -5,7 +5,6 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.ServiceConnection
-import android.os.Build
 import android.os.Bundle
 import android.os.IBinder
 import android.util.Log
@@ -155,7 +154,7 @@ class MainActivity : ComponentActivity() {
             val backIntent: Intent? = result.data
             if (backIntent != null) {
                 val createResult: Boolean = backIntent.getBooleanExtra(
-                    CreateAgentActivity::class.simpleName,
+                    ComposeCreateAgentActivity::class.simpleName,
                     false
                 )
                 createAgentCallback?.onCreateAgent(createResult)
@@ -212,7 +211,7 @@ class MainActivity : ComponentActivity() {
                 vm.effect.collect { effect ->
                     when (effect) {
                         MainEffect.LaunchCreateAgent -> {
-                            val intent = Intent(this@MainActivity, CreateAgentActivity::class.java)
+                            val intent = Intent(this@MainActivity, ComposeCreateAgentActivity::class.java)
                             createAgentLauncher.launch(intent)
                         }
                     }
