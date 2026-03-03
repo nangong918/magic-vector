@@ -261,3 +261,24 @@ ComposeAgentEmojiVm，然后把原先的逻辑复制过来，然后改为MVI。
 我审核了一下代码，我把你遗留的FragmentActivity改为了Compose中的ComponentActivity，
 但是我没改完，因为我发现你的ComposeTestVm竟然还敢用TestVm引用？
 我不是跟你说了吗，让你业务复制，而不是让你直接用TestVm，我现在没让你删除TestVm是因为我要审核代码，而不是给你用的。
+
+
+### 网络请求失败持续转圈Bug
+
+现在有个Bug，就是网络请求超时之后，持续转圈。
+我发现主要原因就是因为MessageListScreen页面的viewModel的uiState的isLoading只是设置了但是并未使用。
+我并不想引入livedata和观察者，因为在compose开发中，ui本来就支持状态流自动更新到UI，
+没必要写effect然后去取消NetworkLoadUtils.dismissDialogSafety(context);
+我现在的想法是这样的，NetworkLoadUtils是我之前写的AndroidX的网络加载view，
+现在你帮我改为Compose的，然后最好在page中绘制在顶层，关于是否显示和旋转也就是加载中状态由uiState的isLoading来控制。
+取消使用Compose中的全部的NetworkLoadUtils，注意是Compose，AndroidX的代码就别改了。
+
+
+看下我现在的NetworkLoadingOverlay，好像不太对，我之前是使用的NetworkLoadUtils
+这是我写的一个未AndroidX提供的全局请求的旋转UI，
+但是我发现我写的NetworkLoadingOverlay只会在在当前的view上旋转，不会全屏旋转，你看看怎么用Compose实现跟我写的NetworkLoadUtils
+在业务上相似的逻辑。修改代码。
+
+
+
+

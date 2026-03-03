@@ -18,7 +18,68 @@ AndroidX 升级 Jetpack Compose + Flutter
 | Chat页面          | 待检查     |         |
 | Call页面          | 待检查     |         |
 | VL页面            | 待检查     |         |
+| AgentInfo页面     | 待检查     |         |
 | Media页面         | 待开发     |         |
+
+
+
+### 项目功能
+
+* Agent
+  * 创建Agent
+  * 查看，修改，删除Agent
+
+* AgentList
+  * 选择Agent
+  * 接收Agent消息
+
+* Chat
+  * Agent 部署RK to Chat
+  * App 通过文本Chat
+  * App 通过唤醒CallChat
+    * VL Chat
+
+* Option
+  * 云操控平台(Live)
+  * 离线蓝牙、Wifi操控
+  * 云上录播记录播放
+  * 另一台设备Camera直播
+
+* Mine
+  * Setting
+  * （Test）
+
+
+### 项目设计
+
+* 数据缓存、持久化：
+  * MMKV
+  * SQLite
+
+* 长连接：
+  * WebSocket
+  * MQTT
+
+* 消息推送：
+  * Firebase
+
+* 音视频流媒体：
+  * FFmpeg、x264
+  * RTMP
+
+
+### 详细设计
+
+* Start页面
+  * 从SQLite中获取User数据检查是否已经登录，已经登录跳转`Main页面`，没有登录跳转`Login页面`
+
+* Login/Register页面
+  * `Login页面`账号密码登录，登录成功获取`userId`，`accessToken`存储在SQLite
+  * 没有账号密跳转`Register页面`
+
+* Agent
+  * 创建Agent
+  * 查看，修改，删除Agent
 
 
 ### todo任务
