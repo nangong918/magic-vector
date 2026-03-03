@@ -258,7 +258,6 @@ ComposeAgentEmojiVm，然后把原先的逻辑复制过来，然后改为MVI。
 
 
 
-
-
-
-
+我审核了一下代码，我把你遗留的FragmentActivity改为了Compose中的ComponentActivity，
+但是我没改完，因为我发现你的ComposeTestVm竟然还敢用TestVm引用？
+我不是跟你说了吗，让你业务复制，而不是让你直接用TestVm，我现在没让你删除TestVm是因为我要审核代码，而不是给你用的。

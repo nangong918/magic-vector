@@ -32,19 +32,18 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.MagicVector"
         tools:targetApi="31">
-        <activity
-            android:name=".activity.ComposeChatActivity"
-            android:exported="false"
-            android:label="@string/title_activity_compose_chat"
-            android:theme="@style/Theme.MagicVector" />
 
         <service
             android:name=".service.ChatService"
             android:enabled="true"
             android:exported="true" />
 
+<!--        <activity-->
+<!--            android:name=".activity.AgentEmojiActivity"-->
+<!--            android:exported="false"-->
+<!--            android:screenOrientation="landscape" /> &lt;!&ndash; 设置为不可旋转的横屏 &ndash;&gt;-->
         <activity
-            android:name=".activity.AgentEmojiActivity"
+            android:name=".activity.ComposeAgentEmojiActivity"
             android:exported="false"
             android:screenOrientation="landscape" /> <!-- 设置为不可旋转的横屏 -->
         <activity
@@ -54,26 +53,43 @@
         <activity
             android:name=".activity.test.YOLOv8Activity"
             android:exported="false" />
+<!--        <activity-->
+<!--            android:name=".activity.AgentInfoActivity"-->
+<!--            android:exported="false" />-->
         <activity
-            android:name=".activity.AgentInfoActivity"
+            android:name=".activity.ComposeAgentInfoActivity"
             android:exported="false" />
         <activity
-            android:name=".activity.CreateAgentActivity"
+            android:name=".activity.ComposeCreateAgentActivity"
             android:exported="false"
             android:theme="@style/Theme.MagicVector"
             android:windowSoftInputMode="stateVisible|adjustPan" />
+<!--        <activity-->
+<!--            android:name=".activity.CreateAgentActivity"-->
+<!--            android:exported="false"-->
+<!--            android:theme="@style/Theme.MagicVector"-->
+<!--            android:windowSoftInputMode="stateVisible|adjustPan" />-->
         <activity
-            android:name=".activity.test.TestActivity"
+            android:name=".activity.test.ComposeTestActivity"
             android:exported="false"
             android:windowSoftInputMode="stateVisible|adjustPan" />
+<!--        <activity-->
+<!--            android:name=".activity.test.TestActivity"-->
+<!--            android:exported="false"-->
+<!--            android:windowSoftInputMode="stateVisible|adjustPan" />-->
         <activity
             android:name=".activity.test.VADMainActivity"
             android:exported="false" />
         <activity
-            android:name=".activity.ChatActivity"
+            android:name=".activity.ComposeChatActivity"
             android:exported="false"
             android:theme="@style/Theme.MagicVector"
             android:windowSoftInputMode="stateVisible|adjustPan" />
+<!--        <activity-->
+<!--            android:name=".activity.ChatActivity"-->
+<!--            android:exported="false"-->
+<!--            android:theme="@style/Theme.MagicVector"-->
+<!--            android:windowSoftInputMode="stateVisible|adjustPan" />-->
         <activity
             android:name=".activity.MainActivity"
             android:exported="false"
