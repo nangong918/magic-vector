@@ -74,8 +74,6 @@ class MessageListMviVm : ViewModel() {
 
         // 检查是否第一次打开 + 网络请求
         initNetworkRequest()
-
-        _uiState.update { it.copy(isLoading = false) }
     }
 
     private fun loadCachedMessages() {
@@ -116,15 +114,14 @@ class MessageListMviVm : ViewModel() {
         if (HttpRequestManager.getIsFirstOpen(TAG)){
             // 第一次打开，初始化
             Log.i(TAG, "initNetworkRequest: 第一次打开")
-            sendEffect(MessageListEffect.ShowLoadingDialog)
             doGetLastAgentChatList()
         }
         else {
             Log.i(TAG, "initNetworkRequest: 不是第一次打开")
-            sendEffect(MessageListEffect.DismissLoadingDialog)
             val messageContactItemAos = MainApplication.getMessageListManager().messageContactItemAos
             _uiState.update {
                 it.copy(
+                    isLoading = false,
                     messages = messageContactItemAos.toList(),
                     messageCount = messageContactItemAos.size
                 )
@@ -225,11 +222,8 @@ data class MessageListState(
 sealed class MessageListEffect {
     data object OpenCreateAgent : MessageListEffect()
     data class NavigateToChat(val ao: MessageContactItemAo) : MessageListEffect()
-    data object ShowLoadingDialog : MessageListEffect()
-    data object DismissLoadingDialog : MessageListEffect()
     data object NavigateToChatActivity : MessageListEffect()
     data class ShowToast(val message: String) : MessageListEffect()
-    data object LoadNetworkData : MessageListEffect()  // 加载网络数据
     data object RefreshNetworkData : MessageListEffect()  // 刷新网络数据
     data object RequestAudioPermission : MessageListEffect()  // 请求录音权限
 }

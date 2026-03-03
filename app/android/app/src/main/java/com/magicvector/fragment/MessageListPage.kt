@@ -24,13 +24,13 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.sp
-import com.core.baseutil.network.networkLoad.NetworkLoadUtils
 import com.data.domain.ao.message.MessageContactItemAo
 import com.data.domain.vo.message.MessageContactItemVo
 import com.magicvector.viewModel.fragment.MessageListIntent
 import com.magicvector.viewModel.fragment.MessageListMviVm
 import com.magicvector.viewModel.fragment.MessageListState
 import com.magicvector.ui.view.messageList.MessageListItem
+import com.magicvector.ui.view.NetworkLoadingOverlay
 import com.magicvector.viewModel.fragment.MessageListEffect
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -56,15 +56,6 @@ fun MessageListScreen(
             when (effect) {
                 is MessageListEffect.ShowToast -> {
                     Toast.makeText(context, effect.message, Toast.LENGTH_SHORT).show()
-                }
-                is MessageListEffect.ShowLoadingDialog -> {
-                    NetworkLoadUtils.showDialog(context)
-                }
-                is MessageListEffect.DismissLoadingDialog -> {
-                    NetworkLoadUtils.dismissDialogSafety(context)
-                }
-                is MessageListEffect.LoadNetworkData -> {
-
                 }
                 // 其他 effect 由父页面处理
                 else -> {}
@@ -97,6 +88,9 @@ fun MessageListScreen(
             CreateAgentFloatingButton(
                 onClick = onCreateAgentClick
             )
+
+            // 顶层加载遮罩，完全由 uiState.isLoading 控制
+            NetworkLoadingOverlay(isLoading = state.isLoading)
         }
     }
 }
