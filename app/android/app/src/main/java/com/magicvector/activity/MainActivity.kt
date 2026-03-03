@@ -110,33 +110,22 @@ class MainActivity : ComponentActivity() {
     private fun bindChatService() {
         val intent = Intent(this, ChatService::class.java)
 
-        // 第一步：检查 ChatService 是否已经启动
+        // 检查服务是否已在运行
         if (!isServiceRunning(ChatService::class.java)) {
-            // 未启动 → 先启动 Service
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                // Android 8.0+ 必须使用 startForegroundService（Service 内部需调用 startForeground）
-                startForegroundService(intent)
-            } else {
-                startService(intent)
-            }
+            // 服务未运行，使用 startService（不是 startForegroundService）
+            startService(intent)  // 普通后台服务
         }
 
-        // 第二步：绑定 Service（无论是否已启动，绑定操作都可执行）
-        bindService(intent, serviceConnection, BIND_AUTO_CREATE)
+        // 绑定服务
+        val flags = BIND_AUTO_CREATE or BIND_NOT_FOREGROUND
+        bindService(intent, serviceConnection, flags)
     }
 
-    // 核心工具方法：检查指定 Service 是否正在运行
+    // 辅助方法
     private fun <T> isServiceRunning(serviceClass: Class<T>): Boolean {
-        val activityManager = getSystemService(ACTIVITY_SERVICE) as ActivityManager
-        val serviceClassName = serviceClass.name
-        // 遍历正在运行的服务列表
-        for (service in activityManager.getRunningServices(Int.MAX_VALUE)) {
-            if (serviceClassName == service.service.className) {
-                // 找到匹配的 Service → 已启动
-                return true
-            }
-        }
-        return false
+        val manager = getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
+        return manager.getRunningServices(Integer.MAX_VALUE)
+            .any { it.service.className == serviceClass.name }
     }
 
     private fun unbindAndStopChatService() {
