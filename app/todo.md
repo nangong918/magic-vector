@@ -22,32 +22,60 @@ AndroidX 升级 Jetpack Compose + Flutter
 | Media页面         | 待开发     |         |
 
 
+Control
+
+检测到的RK列表
+Get请求获取到的Agent列表
+
+
+选择使用RK
+RK设备状态：
+
+
+
+
 
 ### 项目功能
 
-* Agent
-  * 创建Agent
-  * 查看，修改，删除Agent
 
-* AgentList
-  * 选择Agent
-  * 接收Agent消息
+#### Agent
+Agent
+* 创建Agent
+* 查看，修改，删除Agent
+AgentList
+* 选择Agent
+* 接收Agent消息
 
-* Chat
-  * Agent 部署RK to Chat
-  * App 通过文本Chat
-  * App 通过唤醒CallChat
-    * VL Chat
+#### Chat
+* 视图：
+  * Call唤醒视图
+  * 文本Chat视图
+  * emoji表情视图
+* 当前的前置摄像头状况
 
-* Option
-  * 云操控平台(Live)
-  * 离线蓝牙、Wifi操控
+#### Control
+* 设备状态操作监控
+  * RK与App连接状态（蓝牙，Wifi）
+  * RK与SpringBoot连接状态
+  * RK的Agent选用状态
+  * App与SpringBoot连接状态
+* 云操控平台(Live)
+  * 向SpringBoot发送请求指令
+  * 接收Nginx的Live推流
+    * 另一台设备的Camera信道（Nginx）测试
+    * 视频录制保存本地
+* 离线蓝牙、Wifi操控
+  * BLE蓝牙连接并发送指令
+  * 连接RK创建的WIFI发送指令
+  * Agent指令控制台输出
+
+#### Mine
+* Setting
+* 视频
   * 云上录播记录播放
-  * 另一台设备Camera直播
-
-* Mine
-  * Setting
-  * （Test）
+  * 本地视频播放
+  * 本地视频上传云端
+* （Test）
 
 
 ### 项目设计
@@ -70,16 +98,8 @@ AndroidX 升级 Jetpack Compose + Flutter
 
 ### 详细设计
 
-* Start页面
-  * 从SQLite中获取User数据检查是否已经登录，已经登录跳转`Main页面`，没有登录跳转`Login页面`
+[Android详细设计.md](android/详细设计.md)
 
-* Login/Register页面
-  * `Login页面`账号密码登录，登录成功获取`userId`，`accessToken`存储在SQLite
-  * 没有账号密跳转`Register页面`
-
-* Agent
-  * 创建Agent
-  * 查看，修改，删除Agent
 
 
 ### todo任务
