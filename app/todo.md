@@ -31,9 +31,19 @@ Get请求获取到的Agent列表
 选择使用RK
 RK设备状态：
 
+### 结构任务
 
+接入 MMKV
+接入 Room
+接入 RTMP
+接入 FFmpeg
+接入 Firebase
+接入 BLE
 
-
+接入 MinIO
+接入 Docker
+接入 Nginx
+接入 m3u8
 
 ### 项目功能
 

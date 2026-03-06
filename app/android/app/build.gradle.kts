@@ -26,6 +26,14 @@ android {
         }
     }
 
+    // ========== 新增：Room Schema 配置（Kotlin + kapt 场景） ==========
+    kapt {
+        arguments {
+            // 指定 Room 架构文件（Schema）的导出目录
+            arg("room.schemaLocation", "$projectDir/schemas")
+        }
+    }
+
     buildTypes {
         release {
             // 混淆
@@ -80,7 +88,7 @@ dependencies {
     // constraintlayout
     implementation(libs.androidx.constraintlayout.compose)
     // Compose:Coil
-    implementation("io.coil-kt:coil-compose:2.6.0")
+    implementation(libs.coil.compose)
 
     // 测试
     testImplementation(libs.junit)
@@ -140,6 +148,17 @@ dependencies {
     implementation("androidx.camera:camera-camera2:${cameraxVersion}")
     implementation("androidx.camera:camera-lifecycle:${cameraxVersion}")
     implementation("androidx.camera:camera-view:${cameraxVersion}")
+
+    // ========== 新增：MMKV ==========
+    implementation(libs.mmkv)
+
+    // ========== 新增：Room ==========
+    implementation(libs.androidx.room.runtime)
+    implementation(libs.androidx.room.ktx)
+    // todo 切换为ksp
+    kapt(libs.androidx.room.compiler)
+    // 可选：Room测试依赖
+    androidTestImplementation(libs.androidx.room.testing)
 
     /**
      * 自定义Module
