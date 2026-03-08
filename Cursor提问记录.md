@@ -122,6 +122,34 @@ SpringBoot的[developAndRules.md](springboot/docs/developAndRules.md)和Android�
 
 
 
+# AI自动化开发流水线设计
+
+介绍：
+
+## 规则集
+* 自动读取规则集：总规则集，模块规则集
+* 根据我的需求自动修改补全规则集
+主要规则集在[ProjectAndMainRule.md](ProjectAndMainRule.md)
+内部包含了整个项目cursor开发的时候需要注意的规则集。
 
 
+## 设计图与开发日志
+* 自动读取设计图设计文档
+* 自动续写设计图设计文档
+现在新增一个`MainDesignDocument.md`，内部包含了整个项目的各个模块的设计文档，
+我的初步构思是这样的，我只维护整个设计文档和代码审核，不参与任何的代码开发。
+
+然后你现在需要把cursorDevelopLog的以实现的功能迁移到对应的设计文档中。相当于就是已经开发实现的功能了。
+
+## 知识库
+* 相关知识自动记录到Knowledge知识库
+
+我现在不仅在设计整个项目，我还在积攒我的计算机知识相关的知识库，
+如果有什么重要的知识我希望后续的cursor能记录到[学习笔记.md](学习笔记.md)
+不是现在让你记录而是让你写一条规则在[ProjectAndMainRule.md](ProjectAndMainRule.md)
+能让后续的cursor把我说的重要知识记录到[学习笔记.md](学习笔记.md)，规则要写我让记录再记录，不让记录的时候不要记录。
+
+
+所以你现在要做的事情是：1.整理我上述说的到规则集，2.把你之前写的cursorDevelopLog日志迁移到[MainDesignDocument.md](MainDesignDocument.md)
+内部对应的模块。3.在规则集中取消使用cursorDevelopLog，替换的是读取，设计，写入[MainDesignDocument.md](MainDesignDocument.md)
 
