@@ -1,5 +1,6 @@
 package com.openapi.service;
 
+import com.openapi.domain.module.user.UserModule;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.springframework.web.multipart.MultipartFile;
@@ -20,4 +21,8 @@ public interface UserService {
     boolean checkUserExistByAccount(String account);
 
     boolean checkPassword(@NotNull String account, @NotNull String password);
+
+    @Nullable UserModule getUserModuleById(@NotNull String id);
+
+    @Nullable UserModule getUserModuleByAccount(@NotNull String account);
 }

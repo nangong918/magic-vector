@@ -96,6 +96,16 @@
             android:theme="@style/Theme.MagicVector"
             android:windowSoftInputMode="stateVisible|adjustPan" />
         <activity
+            android:name=".activity.ComposeLoginActivity"
+            android:exported="false"
+            android:theme="@style/Theme.MagicVector"
+            android:windowSoftInputMode="stateVisible|adjustPan" />
+        <activity
+            android:name=".activity.ComposeRegisterActivity"
+            android:exported="false"
+            android:theme="@style/Theme.MagicVector"
+            android:windowSoftInputMode="stateVisible|adjustPan" />
+        <activity
             android:name=".activity.StartActivity"
             android:exported="true"
             android:theme="@style/Theme.MagicVector">

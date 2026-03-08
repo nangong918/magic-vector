@@ -10,6 +10,7 @@ import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import com.magicvector.manager.ChatMapController
 import com.magicvector.manager.MessageListController
+import com.magicvector.manager.user.UserManager
 import com.magicvector.manager.yolo.VisionManager
 
 class MainApplication : Application() {
@@ -79,6 +80,14 @@ class MainApplication : Application() {
         fun getUserId(): String{
             // todo 测试用的userId，正式的时候需要修改
             return "test_user"
+        }
+
+        private var userManager: UserManager? = null
+        fun getUserManager(): UserManager {
+            if (userManager == null) {
+                userManager = UserManager.getInstance(getApp())
+            }
+            return userManager!!
         }
 
         private val messageListController = MessageListController()

@@ -4,6 +4,7 @@ import com.minio.domain.ao.SuccessFile;
 import com.minio.service.OssService;
 import com.openapi.config.UserConfig;
 import com.openapi.domain.Do.UserDo;
+import com.openapi.domain.module.user.UserModule;
 import com.openapi.mapper.UserMapper;
 import com.openapi.service.UserService;
 import lombok.RequiredArgsConstructor;
@@ -63,7 +64,6 @@ public class UserServiceImpl implements UserService {
                     .map(SuccessFile::getFileId)
                     .orElse(null);
             userDo.setOssId(ossId);
-            userMapper.insert(userDo);
         }
         if (userMapper.insert(userDo) > 0){
             return userDo.getId();
@@ -96,5 +96,30 @@ public class UserServiceImpl implements UserService {
             return false;
         }
         return password.equals(userDo.getPassword());
+    }
+
+    @Nullable
+    @Override
+    public UserModule getUserModuleById(@NotNull String id) {
+        return toUserModule(userMapper.selectById(id));
+    }
+
+    @Nullable
+    @Override
+    public UserModule getUserModuleByAccount(@NotNull String account) {
+        return toUserModule(userMapper.selectByAccount(account));
+    }
+
+    @Nullable
+    private UserModule toUserModule(@Nullable UserDo userDo) {
+        if (userDo == null || userDo.getId() == null) {
+            return null;
+        }
+        UserModule module = new UserModule();
+        module.setUserId(userDo.getId());
+        module.setAccount(userDo.getAccount());
+        module.setName(userDo.getName());
+        module.setAvatarOssId(userDo.getOssId());
+        return module;
     }
 }

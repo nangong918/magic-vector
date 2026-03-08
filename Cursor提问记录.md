@@ -14,6 +14,7 @@ SpringBoot的minio我还没配置好，但是你可以先设计文件传输，Sp
 所以你返回一个错的url也没关系，记得写个todo。
 还有根据`项目介绍及开发规范`，你需要写cursor开发日志，Android和springboot的都要写，其实不用写多复杂，就写一下自己设计了哪些类，
 哪些功能，记录一下就好了，最好是uml的，我比较注重类图，对象图，活动图，状态机图，时序图，通讯图。
+关于Android，如果已有功能并且是Compose+MVI直接在上面添加就好了，如果是XML+MVVM就需要新创建文件前缀Compose*xxx，不要删除源文件。因为我在重构还需要审核原先的逻辑。
 
 
 ## Start 页面设计
@@ -78,17 +79,37 @@ SpringBoot的minio我还没配置好，但是你可以先设计文件传输，Sp
 
 
 
+## 问题补充 + Bug修复
+我现在要提一些修改需求，你现在要按照我的需求进行修改，并把我的需求归纳整理到我刚刚跟你说的：
+SpringBoot的[设计要求规范.md](springboot/docs/设计要求规范.md)和Android中[设计要求规范.md](app/android/docs/设计要求规范.md)
 
+* Android的Formdata之外的数据Post请求需要使用单一请求体类型，请求体内部可以用Entity或者Module进行聚合。
+  所以你的/user/login和/user/token/verify接口都要定义请求体以及响应体。响应体不能单独一个Boolean，不可扩展，要封装成xxxResponse内部聚合可拓展。
+  User的下面两个接口都要重新设计包括SpringBoot
+* 数据结构参考Android详细设计中说的数据结构定义：
+    ## Domain
+    * 基本的数据结构要放在domain中, dto中存放request和response, entity中存放数据库实体, module中存放业务实体
+  其中，几乎每个请求都要定义request和response，他们属于dto，dto可以由module和entity进行聚合，module可以由entity进行聚合。entity不能聚合必须跟表一一对应。
+* 我说了mvi的uistate，datastate，intent，effect，event的字段定义都要写注释的，不然后续不好维护。
+* 你把cursor开发结束之后需要绘制uml图的事情记录到[项目介绍及开发规范.md](项目介绍及开发规范.md)中，
+  `uml的，我比较注重类图，对象图，活动图，状态机图，时序图，通讯图。`现在并且除了这些之外还需要`线程状态图`，你看看`mermaid`有没有实现的办法，线程任务执行时序和各个状态管理这个最重要了。
+  所以需要你绘制到cursor开发日志中，并把以后开发完成之后要绘制uml图的任务记录到[项目介绍及开发规范.md](项目介绍及开发规范.md)
+* SpringBoot的问题，这次我没看到[magic_vector.sql](springboot/db/magic_vector.sql)数据库的改动，我审核了一下代码确实没有需要改的，这次就这样，下次如果涉及到之后你需要修改这个数据库的sql设计。
+  并且在cursor开发日志中记录修改内容，记录为什么这么设计，以及你现在要把我说的这条记录到SpringBoot的[设计要求规范.md](springboot/docs/设计要求规范.md)中
+* cursor开发日志在涉及到数据库的调整时，需要在cursor开发日志中记录数据库表设计以及改动，最好有设计图，我不知道`mermaid`能否实现，你看下能否实现。Android的Room和Spring的MySql都需要。
+  并且把我这条开发任务记录到SpringBoot的[设计要求规范.md](springboot/docs/设计要求规范.md)和Android中[设计要求规范.md](app/android/docs/设计要求规范.md)
+* SpringBoot的问题：我看你UserService竟然写获取UserDo的代码，这是不允许的，Service只能进行业务操作和获取业务实体，比如获取Module。或者执行void，boolean等无实际返回函数。
+  Do的这种Entity数据库类型应该交给Mapper层处理。Service应该写业务代码所以把这些下沉到Mapper层。
+* Android的问题：我记得我跟你说过Activity的逻辑要简明，要把Screen的UI放在`com/magicvector/ui/view/activity`，不然Activity的代码逻辑太大了不好处理。就比如ComposeLoginActivity的LoginScreen拆分出去。
+  你写的其他Activity也要，并且这条规则你看看Android中[设计要求规范.md](app/android/docs/设计要求规范.md)有没有，没有就记录。
+* 还有为了方便维护请求和响应体，你可以直接把SpringBoot的dto直接复制到Android项目中做一些微调，比如spring的代码有@data，Android没有，所以Android就都用public。方便维护。
+* Android问题，严重！！！：不要创建UserDatabase，Android中只能有一个数据库：Vector数据库，User只是其中一个表，不要专门去设计一个UserDataBase
+* ComposeRegisterActivity的获取权限报错，是我说错了，不是使用PermissionUtils，那个是提供给AndroidX的，我现在新封装了ComposePermissionUtils用这个，修复Bug。
 
-
-
-
-
-
-
-
-
-
+### 本次的修改也要更新到Cursor开发日志，新增规则也要更新到SpringBoot的[设计要求规范.md](springboot/docs/设计要求规范.md)和Android中[设计要求规范.md](app/android/docs/设计要求规范.md)
+* 注意我新增要求的两个绘图：数据库的和线程的，并且如果你觉得其他比较重要的UML图我没有涉及到你可以绘制出来。并写将其写在：[项目介绍及开发规范.md](项目介绍及开发规范.md)这个规则写在这里是因为我觉得这是整个项目公用的而不是属于SpringBoot或者Android的。
+* 你用到了哪些设计模式以及为什么用这些设计模式也可以写道cursor开发日志中，并把这条规则记录到[项目介绍及开发规范.md](项目介绍及开发规范.md)
+* 我希望学习一些计算机理论, 如果涉及到核心的`操作系统(线程, IO)`, `计算机网络`, `数据结构`, `算法`, `计算机组成原理`, `数据库`的知识你要标注出来. 并把这条规则记录到[项目介绍及开发规范.md](项目介绍及开发规范.md)
 
 
 

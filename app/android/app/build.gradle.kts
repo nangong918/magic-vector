@@ -24,6 +24,13 @@ android {
                 cppFlags += "-std=c++11"
             }
         }
+
+        // 新增：确保Java版本兼容（Room 2.8+ 需要Java 11+）
+        javaCompileOptions {
+            annotationProcessorOptions {
+                arguments["room.schemaLocation"] = "$projectDir/schemas"
+            }
+        }
     }
 
     // ========== 新增：Room Schema 配置（Kotlin + kapt 场景） ==========

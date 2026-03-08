@@ -1,12 +1,17 @@
 package com.core.appcore.api
 
 import com.core.baseutil.network.BaseResponse
+import com.data.domain.dto.request.UserLoginRequest
+import com.data.domain.dto.request.UserTokenVerifyRequest
 import com.data.domain.dto.response.AgentLastChatListResponse
 import com.data.domain.dto.response.AgentListResponse
 import com.data.domain.dto.response.AgentResponse
 import com.data.domain.dto.response.ChatMessageResponse
+import com.data.domain.dto.response.UserAuthResponse
+import com.data.domain.dto.response.UserTokenVerifyResponse
 import okhttp3.MultipartBody
 import okhttp3.RequestBody
+import retrofit2.http.Body
 import retrofit2.http.GET
 import retrofit2.http.Multipart
 import retrofit2.http.POST
@@ -106,4 +111,25 @@ interface ApiRequest {
         @Part("userId") userId: RequestBody,
         @Part("messageId") messageId: RequestBody,
     ): BaseResponse<String>
+
+    //==========User
+
+    @Multipart
+    @POST("/user/register")
+    suspend fun register(
+        @Part avatar: MultipartBody.Part?,
+        @Part("account") account: RequestBody,
+        @Part("password") password: RequestBody,
+        @Part("name") name: RequestBody
+    ): BaseResponse<UserAuthResponse>
+
+    @POST("/user/login")
+    suspend fun login(
+        @Body request: UserLoginRequest
+    ): BaseResponse<UserAuthResponse>
+
+    @POST("/user/token/verify")
+    suspend fun verifyAccessToken(
+        @Body request: UserTokenVerifyRequest
+    ): BaseResponse<UserTokenVerifyResponse>
 }

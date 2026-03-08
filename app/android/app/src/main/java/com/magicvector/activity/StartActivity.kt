@@ -65,6 +65,9 @@ class StartActivity : ComponentActivity() {
                         StartEffect.NavigateToMain -> {
                             navigateToMain()
                         }
+                        StartEffect.NavigateToLogin -> {
+                            navigateToLogin()
+                        }
                     }
                 }
             }
@@ -80,6 +83,16 @@ class StartActivity : ComponentActivity() {
             null
         )
 
+        finish()
+    }
+
+    private fun navigateToLogin() {
+        val intent = Intent(this@StartActivity, ComposeLoginActivity::class.java)
+        ActivityLaunchUtils.launchNewTask(
+            this@StartActivity,
+            intent,
+            null
+        )
         finish()
     }
 

@@ -5,10 +5,14 @@ import com.core.baseutil.network.BaseApiRequestImpl
 import com.core.baseutil.network.BaseResponse
 import com.core.baseutil.network.OnSuccessCallback
 import com.core.baseutil.network.OnThrowableCallback
+import com.data.domain.dto.request.UserLoginRequest
+import com.data.domain.dto.request.UserTokenVerifyRequest
 import com.data.domain.dto.response.AgentLastChatListResponse
 import com.data.domain.dto.response.AgentListResponse
 import com.data.domain.dto.response.AgentResponse
 import com.data.domain.dto.response.ChatMessageResponse
+import com.data.domain.dto.response.UserAuthResponse
+import com.data.domain.dto.response.UserTokenVerifyResponse
 import okhttp3.MultipartBody
 import okhttp3.RequestBody
 
@@ -171,6 +175,56 @@ open class ApiRequestImpl(apiRequest: ApiRequest) : BaseApiRequestImpl() {
                     userId,
                     messageId
                 )
+            },
+            successCallback = onSuccessCallback,
+            throwableCallback = throwableCallback
+        )
+    }
+
+    fun register(
+        avatar: MultipartBody.Part?,
+        account: RequestBody,
+        password: RequestBody,
+        name: RequestBody,
+        onSuccessCallback: OnSuccessCallback<BaseResponse<UserAuthResponse>>?,
+        throwableCallback: OnThrowableCallback?
+    ) {
+        sendRequestCallback(
+            apiCall = {
+                mApi.register(
+                    avatar = avatar,
+                    account = account,
+                    password = password,
+                    name = name
+                )
+            },
+            successCallback = onSuccessCallback,
+            throwableCallback = throwableCallback
+        )
+    }
+
+    fun login(
+        request: UserLoginRequest,
+        onSuccessCallback: OnSuccessCallback<BaseResponse<UserAuthResponse>>?,
+        throwableCallback: OnThrowableCallback?
+    ) {
+        sendRequestCallback(
+            apiCall = {
+                mApi.login(request)
+            },
+            successCallback = onSuccessCallback,
+            throwableCallback = throwableCallback
+        )
+    }
+
+    fun verifyAccessToken(
+        request: UserTokenVerifyRequest,
+        onSuccessCallback: OnSuccessCallback<BaseResponse<UserTokenVerifyResponse>>?,
+        throwableCallback: OnThrowableCallback?
+    ) {
+        sendRequestCallback(
+            apiCall = {
+                mApi.verifyAccessToken(request)
             },
             successCallback = onSuccessCallback,
             throwableCallback = throwableCallback
