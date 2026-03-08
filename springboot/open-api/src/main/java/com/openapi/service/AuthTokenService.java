@@ -3,7 +3,7 @@ package com.openapi.service;
 import org.jetbrains.annotations.NotNull;
 
 public interface AuthTokenService {
-    @NotNull String issueAccessToken(@NotNull String userId);
+    @NotNull String issueAccessToken(@NotNull Long userId);
 
-    boolean verifyAccessToken(String accessToken);
+    boolean verifyAccessToken(Long userId, String accessToken);
 }

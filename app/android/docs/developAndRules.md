@@ -1,4 +1,4 @@
-# 设计要求规范
+# Android developAndRules
 
 ## 架构设计
 * 注意应用的生命周期, 长生命周期不应该持有短生命周期避免内存泄漏, 比如viewModel/service/application持有activity的context
@@ -66,6 +66,6 @@
 * 我希望学习一些计算机理论, 如果涉及到核心的`操作系统(线程, IO)`, `计算机网络`, `数据结构`, `算法`, `计算机组成原理`, `数据库`的知识你要标注出来.
 
 ## 文档
-* 你写的功能和模块，需要在docs[cursor开发日志.md](cursor开发日志.md)中记录自己大概开发了什么功能。
-* 若涉及数据库（Room/MySQL）调整，cursor开发日志必须记录：表设计、字段变更、变更原因，并尽量附上数据库设计图（Mermaid可用ER/类图表达）。
+* 你写的功能和模块，需要在docs[cursorDevelopLog.md](cursorDevelopLog.md)中记录自己大概开发了什么功能。
+* 若涉及数据库（Room/MySQL）调整，cursorDevelopLog必须记录：表设计、字段变更、变更原因，并尽量附上数据库设计图（Mermaid可用ER/类图表达）。
 

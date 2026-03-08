@@ -8,7 +8,7 @@ import lombok.Data;
  */
 @Data
 public class UserModule {
-    private String userId;
+    private Long userId;
     private String account;
     private String name;
     private String avatarOssId;

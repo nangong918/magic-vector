@@ -1,4 +1,4 @@
-**项目介绍及开发规范**
+**ProjectAndMainRule**
 ====
 
 
@@ -6,24 +6,27 @@
 包含
 App操控平台：
 * Android Compose版本[android](app/android)
-  * Android Compose开发规范：[设计要求规范.md](app/android/docs/设计要求规范.md)
+  * Android Compose开发规范：[developAndRules.md](app/android/docs/developAndRules.md)
 * Flutter 版本[flutter](app/flutter)
   * Flutter 版本本身是对Android Compose的同步，如果我没有让你同步你不需要进行同步
 
 后端服务支持：
 * 主要代码：[open-api](springboot/open-api)
-  * SpringBoot开发规范：[设计要求规范.md](springboot/docs/设计要求规范.md)
+  * SpringBoot开发规范：[developAndRules.md](springboot/docs/developAndRules.md)
 * mysql的sql代码：[db](springboot/db)
 
 RK及系统Android程序：
 （暂未开发）
 
 开发交付公共要求：
-* 每次 cursor 完成开发后，需要在对应模块的 `cursor开发日志.md` 绘制 UML 图，至少包含：
-  * 类图、对象图、活动图、状态机图、时序图、通讯图、线程状态图（线程任务执行时序与状态管理）。
+* 每次 cursor 完成开发后，需要在对应模块的 `cursorDevelopLog.md` 绘制 UML 图，至少包含：
+  * 类图、对象图、活动图、状态机图、时序图、通讯图、线程甘特图（线程任务执行时序、线程状态与锁管理）。
+  * 多线程设计要画出线程的甘特图，表示在不同时间各个线程的执行顺序、线程状态以及线程锁。
 * 如果涉及数据库设计或调整（Android Room / Spring MySQL），开发日志中要补充数据库设计说明与图（可用 Mermaid 的 ER 图或类图表示）。
 * 开发日志建议记录本次使用到的设计模式（例如工厂、状态、观察者等）及选择原因，便于后续维护与复盘。
 * 如果改动涉及核心理论知识（`操作系统(线程, IO)`、`计算机网络`、`数据结构`、`算法`、`计算机组成原理`、`数据库`），需要在注释或日志中明确标注。
+* 数据库主键统一规范：每个表的主键字段名必须为 `id`，并优先使用 `Long/BIGINT` 类型（Android Room 用 `Long`，MySQL 用 `BIGINT`）。
+  * 原因（数据库理论）：整型主键在 B+Tree 索引中的比较与排序成本低于字符串，页内存占用更小，能够减少索引层级与页分裂概率，提升范围查询和排序性能。
 
 
 

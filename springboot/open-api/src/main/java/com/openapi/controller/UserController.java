@@ -50,13 +50,13 @@ public class UserController {
         if (avatar != null) {
             log.info("[register] avatar upload is skipped temporarily. account: {}", account);
         }
-        String userId = userService.createUser(
+        Long userId = userService.createUser(
                 null,
                 registerName,
                 account,
                 password
         );
-        if (!StringUtils.hasText(userId)) {
+        if (userId == null) {
             return BaseResponse.LogBackError(CommonExceptions.SYSTEM_ERROR);
         }
 
@@ -82,7 +82,7 @@ public class UserController {
         }
 
         UserModule userModule = userService.getUserModuleByAccount(account);
-        if (userModule == null || !StringUtils.hasText(userModule.getUserId())) {
+        if (userModule == null || userModule.getUserId() == null) {
             return BaseResponse.LogBackError(UserExceptions.USER_NOT_EXIST);
         }
         String accessToken = authTokenService.issueAccessToken(userModule.getUserId());
@@ -94,8 +94,15 @@ public class UserController {
             @RequestBody UserTokenVerifyRequest request
     ) {
         String accessToken = request == null ? null : request.getAccessToken();
+        Long userId = request == null ? null : request.getUserId();
         UserTokenVerifyResponse response = new UserTokenVerifyResponse();
-        if (!authTokenService.verifyAccessToken(accessToken)) {
+        response.setUserId(userId);
+        if (userId == null || userId <= 0L || !StringUtils.hasText(accessToken)) {
+            response.setValid(false);
+            response.setMessage(CommonExceptions.PARAM_ERROR.getMessage());
+            return BaseResponse.getResponseEntitySuccess(response);
+        }
+        if (!authTokenService.verifyAccessToken(userId, accessToken)) {
             response.setValid(false);
             response.setMessage(UserExceptions.ACCESS_TOKEN_INVALID.getMessage());
             return BaseResponse.getResponseEntitySuccess(response);

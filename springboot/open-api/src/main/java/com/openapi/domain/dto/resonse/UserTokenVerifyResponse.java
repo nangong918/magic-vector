@@ -4,6 +4,7 @@ import lombok.Data;
 
 @Data
 public class UserTokenVerifyResponse {
+    private Long userId;
     private Boolean valid;
     private String message;
 }

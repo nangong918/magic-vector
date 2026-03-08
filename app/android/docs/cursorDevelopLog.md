@@ -1,4 +1,4 @@
-# Cursor开发日志
+# cursorDevelopLog
 
 ## 2026-03-07 启动页 + 登录注册（Compose + MVI）
 
@@ -160,3 +160,40 @@ stateDiagram-v2
 - **操作系统（线程/IO）**：网络请求在 IO 线程执行，回调切回主线程更新 UI 状态。
 - **数据库**：Room 单库设计与表聚合，降低 schema 演进复杂度。
 - **计算机网络**：登录与鉴权接口采用明确请求/响应 DTO，有助于协议扩展与向后兼容。
+
+## 2026-03-08 继续调整（主键Long + Token强绑定 + 甘特图）
+
+### 本次调整
+- `UserEntity` 主键改为 `id: Long`，并固定使用 `id=1` 保存当前会话记录。
+- `UserSession.userId`、`UserAuthResponse.userId` 改为 `Long`，对齐后端主键类型。
+- 启动鉴权改为携带 `userId + accessToken` 联合验证，保证 token 与用户强绑定。
+
+### 数据库图（ER）
+```mermaid
+erDiagram
+    VECTOR_DATABASE ||--o{ USER_SESSION : contains
+    USER_SESSION {
+      long id PK
+      long user_id
+      string account
+      string name
+      string avatar_url
+      string access_token
+    }
+```
+
+### 多线程甘特图（Gantt）
+```mermaid
+gantt
+    title Android 启动鉴权线程甘特图
+    dateFormat  X
+    axisFormat %L ms
+    section Main线程
+    StartIntent.Initialize        :m1, 0, 5
+    收到结果并发导航Effect         :m2, 70, 10
+    section IO线程
+    读取Room用户会话              :i1, 5, 15
+    发起HTTP verify请求           :i2, 20, 30
+    section 协程状态
+    suspend等待网络返回           :s1, 20, 40
+```

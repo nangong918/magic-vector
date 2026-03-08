@@ -1,4 +1,4 @@
-# 设计要求规范
+# SpringBoot developAndRules
 
 ## 数据库
 * 对数据库表的修改需要写在[db](../db)
@@ -23,6 +23,6 @@
 * token 校验等可扩展接口需要独立 request/response DTO，便于后续字段扩展。
 
 ## 文档
-* 你写的功能和模块，需要在docs[cursor开发日志.md](cursor开发日志.md)中记录自己大概开发了什么功能。
-* 若涉及数据库变更，cursor开发日志必须补充数据库表设计图（Mermaid）与变更原因说明。
+* 你写的功能和模块，需要在docs[cursorDevelopLog.md](cursorDevelopLog.md)中记录自己大概开发了什么功能。
+* 若涉及数据库变更，cursorDevelopLog必须补充数据库表设计图（Mermaid）与变更原因说明。
 

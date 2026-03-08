@@ -21,7 +21,7 @@ public class AuthTokenServiceImpl implements AuthTokenService {
 
     @NotNull
     @Override
-    public String issueAccessToken(@NotNull String userId) {
+    public String issueAccessToken(@NotNull Long userId) {
         long now = System.currentTimeMillis();
         String token = "at_" + UUID.randomUUID().toString().replace("-", "");
         tokenSessionMap.put(token, new TokenSession(userId, now + ACCESS_TOKEN_TTL_MS));
@@ -29,12 +29,15 @@ public class AuthTokenServiceImpl implements AuthTokenService {
     }
 
     @Override
-    public boolean verifyAccessToken(String accessToken) {
-        if (!StringUtils.hasText(accessToken)) {
+    public boolean verifyAccessToken(Long userId, String accessToken) {
+        if (userId == null || !StringUtils.hasText(accessToken)) {
             return false;
         }
         TokenSession session = tokenSessionMap.get(accessToken);
         if (session == null) {
+            return false;
+        }
+        if (!userId.equals(session.userId())) {
             return false;
         }
         if (session.expireAt() < System.currentTimeMillis()) {
@@ -44,6 +47,6 @@ public class AuthTokenServiceImpl implements AuthTokenService {
         return true;
     }
 
-    private record TokenSession(String userId, long expireAt) {
+    private record TokenSession(Long userId, long expireAt) {
     }
 }

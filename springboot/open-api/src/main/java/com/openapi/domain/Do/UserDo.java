@@ -14,7 +14,7 @@ import org.springframework.data.annotation.Id;
 public class UserDo {
     @Id
     // 后端搜索的id
-    private String id = String.valueOf(IdUtil.getSnowflake().nextId());
+    private Long id = IdUtil.getSnowflake().nextId();
     // user自己可以随便改变的name
     private String name;
     // user之间搜索的account

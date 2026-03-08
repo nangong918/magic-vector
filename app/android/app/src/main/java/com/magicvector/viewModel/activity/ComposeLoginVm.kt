@@ -89,7 +89,7 @@ class ComposeLoginVm : ViewModel() {
     private fun handleLoginResponse(response: BaseResponse<UserAuthResponse>?) {
         val isSuccess = response?.code == BaseConstant.NetworkCode.SUCCESS_CODE
         val auth = response?.data
-        if (!isSuccess || auth == null) {
+        if (!isSuccess || auth == null || auth.userId == null || auth.userId <= 0L) {
             _uiState.update { it.copy(isLoading = false) }
             sendEffect(LoginEffect.ShowToast(response?.message ?: "登录失败"))
             return
@@ -97,7 +97,7 @@ class ComposeLoginVm : ViewModel() {
 
         _dataState.update {
             it.copy(
-                userId = auth.userId.orEmpty(),
+                userId = auth.userId ?: 0L,
                 accessToken = auth.accessToken.orEmpty()
             )
         }
@@ -105,7 +105,7 @@ class ComposeLoginVm : ViewModel() {
         viewModelScope.launch {
             userManager.saveCurrentUser(
                 UserSession(
-                    userId = auth.userId.orEmpty(),
+                    userId = auth.userId ?: 0L,
                     account = auth.account.orEmpty(),
                     name = auth.name.orEmpty(),
                     avatarUrl = auth.avatarUrl.orEmpty(),
@@ -150,7 +150,7 @@ data class LoginState(
 
 data class LoginDataState(
     // 登录后的用户ID
-    val userId: String = "",
+    val userId: Long = 0L,
     // 登录后的访问令牌
     val accessToken: String = ""
 )

@@ -42,7 +42,7 @@ public class UserServiceImpl implements UserService {
      */
     @Nullable
     @Override
-    public String createUser(
+    public Long createUser(
             @Nullable MultipartFile avatar,
             @NotNull String name,
             @NotNull String account,
@@ -55,7 +55,7 @@ public class UserServiceImpl implements UserService {
             val files = List.of(avatar);
             val result = ossService.uploadFiles(
                     files,
-                    userDo.getId(),
+                    String.valueOf(userDo.getId()),
                     userConfig.getBucketName()
             );
             String ossId = Optional.ofNullable(result.getSuccessFiles())
@@ -74,7 +74,7 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public boolean checkUserExistById(String id){
+    public boolean checkUserExistById(Long id){
         return userMapper.selectById(id) != null;
     }
 
@@ -100,7 +100,7 @@ public class UserServiceImpl implements UserService {
 
     @Nullable
     @Override
-    public UserModule getUserModuleById(@NotNull String id) {
+    public UserModule getUserModuleById(@NotNull Long id) {
         return toUserModule(userMapper.selectById(id));
     }
 

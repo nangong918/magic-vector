@@ -10,19 +10,19 @@ import org.springframework.web.multipart.MultipartFile;
  * @date 2025/10/14 15:44
  */
 public interface UserService {
-    @Nullable String createUser(
+    @Nullable Long createUser(
             @Nullable MultipartFile avatar,
             @NotNull String name,
             @NotNull String account,
             @NotNull String password);
 
-    boolean checkUserExistById(String id);
+    boolean checkUserExistById(Long id);
 
     boolean checkUserExistByAccount(String account);
 
     boolean checkPassword(@NotNull String account, @NotNull String password);
 
-    @Nullable UserModule getUserModuleById(@NotNull String id);
+    @Nullable UserModule getUserModuleById(@NotNull Long id);
 
     @Nullable UserModule getUserModuleByAccount(@NotNull String account);
 }

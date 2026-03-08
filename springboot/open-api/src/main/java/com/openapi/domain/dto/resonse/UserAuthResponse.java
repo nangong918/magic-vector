@@ -7,7 +7,7 @@ import lombok.Data;
  */
 @Data
 public class UserAuthResponse {
-    private String userId;
+    private Long userId;
     private String account;
     private String name;
     private String avatarUrl;

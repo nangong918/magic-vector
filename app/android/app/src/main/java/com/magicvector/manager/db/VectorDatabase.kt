@@ -13,7 +13,7 @@ import com.magicvector.manager.user.UserEntity
  */
 @Database(
     entities = [UserEntity::class],
-    version = 1,
+    version = 2,
     exportSchema = true
 )
 abstract class VectorDatabase : RoomDatabase() {
@@ -31,7 +31,10 @@ abstract class VectorDatabase : RoomDatabase() {
                     context.applicationContext, // 必须用applicationContext避免内存泄漏
                     VectorDatabase::class.java,
                     DB_NAME
-                ).build().also { INSTANCE = it }
+                )
+                    .fallbackToDestructiveMigration()
+                    .build()
+                    .also { INSTANCE = it }
             }
         }
     }

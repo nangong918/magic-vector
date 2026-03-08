@@ -7,10 +7,10 @@ import androidx.room.PrimaryKey
 @Entity(tableName = "user_session")
 data class UserEntity(
     @PrimaryKey
-    @ColumnInfo(name = "session_key")
-    val sessionKey: String = CURRENT_SESSION_KEY,
+    @ColumnInfo(name = "id")
+    val id: Long = CURRENT_ROW_ID,
     @ColumnInfo(name = "user_id")
-    val userId: String,
+    val userId: Long,
     @ColumnInfo(name = "account")
     val account: String,
     @ColumnInfo(name = "name")
@@ -21,6 +21,6 @@ data class UserEntity(
     val accessToken: String
 ) {
     companion object {
-        const val CURRENT_SESSION_KEY = "current"
+        const val CURRENT_ROW_ID = 1L
     }
 }

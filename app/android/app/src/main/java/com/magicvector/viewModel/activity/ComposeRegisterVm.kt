@@ -105,7 +105,7 @@ class ComposeRegisterVm : ViewModel() {
     private fun handleRegisterResponse(response: BaseResponse<UserAuthResponse>?) {
         val isSuccess = response?.code == BaseConstant.NetworkCode.SUCCESS_CODE
         val auth = response?.data
-        if (!isSuccess || auth == null) {
+        if (!isSuccess || auth == null || auth.userId == null || auth.userId <= 0L) {
             _uiState.update { it.copy(isLoading = false) }
             sendEffect(RegisterEffect.ShowToast(response?.message ?: "注册失败"))
             return
@@ -113,7 +113,7 @@ class ComposeRegisterVm : ViewModel() {
 
         _dataState.update {
             it.copy(
-                userId = auth.userId.orEmpty(),
+                userId = auth.userId ?: 0L,
                 accessToken = auth.accessToken.orEmpty()
             )
         }
@@ -121,7 +121,7 @@ class ComposeRegisterVm : ViewModel() {
         viewModelScope.launch {
             userManager.saveCurrentUser(
                 UserSession(
-                    userId = auth.userId.orEmpty(),
+                    userId = auth.userId ?: 0L,
                     account = auth.account.orEmpty(),
                     name = auth.name.orEmpty(),
                     avatarUrl = auth.avatarUrl.orEmpty(),
@@ -194,7 +194,7 @@ data class RegisterState(
 
 data class RegisterDataState(
     // 注册后用户ID
-    val userId: String = "",
+    val userId: Long = 0L,
     // 注册后access_token
     val accessToken: String = ""
 )

@@ -15,6 +15,7 @@ class UserManager private constructor(
     suspend fun saveCurrentUser(session: UserSession) {
         userDao.upsert(
             UserEntity(
+                id = UserEntity.CURRENT_ROW_ID,
                 userId = session.userId,
                 account = session.account,
                 name = session.name,
@@ -25,11 +26,11 @@ class UserManager private constructor(
     }
 
     suspend fun getCurrentUser(): UserSession? {
-        return userDao.getBySessionKey()?.toSession()
+        return userDao.getById()?.toSession()
     }
 
     suspend fun clearCurrentUser() {
-        userDao.deleteBySessionKey()
+        userDao.deleteById()
     }
 
     private fun UserEntity.toSession(): UserSession {

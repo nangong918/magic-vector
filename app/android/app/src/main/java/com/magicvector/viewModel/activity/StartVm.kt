@@ -80,30 +80,42 @@ class StartVm : ViewModel() {
     private suspend fun resolveStartTargetEffect(): StartEffect {
         val localUser = userManager.getCurrentUser()
         if (localUser == null || localUser.accessToken.isBlank()) {
-            _dataState.update { it.copy(isLoggedIn = false) }
+            _dataState.update { it.copy(isLoggedIn = false, userId = 0L) }
             return StartEffect.NavigateToLogin
         }
 
         return try {
             val isValid = verifyAccessToken(localUser.accessToken)
             if (isValid) {
-                _dataState.update { it.copy(isLoggedIn = true, accessToken = localUser.accessToken) }
+                _dataState.update {
+                    it.copy(
+                        isLoggedIn = true,
+                        userId = localUser.userId,
+                        accessToken = localUser.accessToken
+                    )
+                }
                 StartEffect.NavigateToMain
             } else {
                 userManager.clearCurrentUser()
-                _dataState.update { it.copy(isLoggedIn = false) }
+                _dataState.update { it.copy(isLoggedIn = false, userId = 0L) }
                 StartEffect.NavigateToLogin
             }
         } catch (_: Throwable) {
             userManager.clearCurrentUser()
-            _dataState.update { it.copy(isLoggedIn = false) }
+            _dataState.update { it.copy(isLoggedIn = false, userId = 0L) }
             StartEffect.NavigateToLogin
         }
     }
 
     private suspend fun verifyAccessToken(accessToken: String): Boolean {
         return kotlinx.coroutines.suspendCancellableCoroutine { continuation ->
+            val localUser = userManager.getCurrentUser()
+            if (localUser == null || localUser.userId <= 0L) {
+                continuation.resume(false) {}
+                return@suspendCancellableCoroutine
+            }
             val request = UserTokenVerifyRequest().apply {
+                this.userId = localUser.userId
                 this.accessToken = accessToken
             }
             api.verifyAccessToken(
@@ -144,6 +156,8 @@ data class StartState(
 data class StartDataState(
     // 登录态
     val isLoggedIn: Boolean = false,
+    // 登录用户ID
+    val userId: Long = 0L,
     // 当前 access_token
     val accessToken: String = ""
 )

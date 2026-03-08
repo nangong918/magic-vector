@@ -1,4 +1,4 @@
-# Cursor开发日志
+# cursorDevelopLog
 
 ## 2026-03-07 用户认证接口（登录/注册/token校验）
 
@@ -143,3 +143,56 @@ stateDiagram-v2
 - **数据库**：Entity（Do）与 Module 分离，避免数据库结构耦合业务接口。
 - **计算机网络**：统一请求体/响应体契约，减少协议演进成本。
 - **操作系统（线程/IO）**：请求处理是计算 + IO 组合流程，Mapper 查询属于典型 IO 边界。
+
+## 2026-03-08 继续调整（主键Long + Token强绑定）
+
+### 本次调整
+- `user.id` 从 `varchar` 调整为 `BIGINT`，并同步 `UserDo/Mapper/Service/Module/DTO` 的 `userId` 类型为 `Long`。
+- `UserTokenVerifyRequest` 增加 `userId` 字段，`verifyAccessToken` 改为 `userId + accessToken` 联合校验。
+- `AuthTokenService` 校验逻辑增强：token 映射会话中的 userId 必须与请求 userId 一致。
+
+### AccessToken内部原理 - 通讯图（Communication Diagram）
+```mermaid
+flowchart LR
+    AndroidClient -->|userId + accessToken| UserController
+    UserController --> AuthTokenService
+    AuthTokenService --> TokenSessionMap
+    TokenSessionMap --> AuthTokenService
+    AuthTokenService --> UserController
+    UserController -->|valid/message| AndroidClient
+```
+
+### AccessToken内部原理 - 活动图（Activity Diagram）
+```mermaid
+flowchart TD
+    A[接收 verify 请求] --> B{userId/token 参数合法?}
+    B -- 否 --> C[返回 valid=false + 参数错误]
+    B -- 是 --> D[根据 token 读取会话]
+    D --> E{会话存在?}
+    E -- 否 --> F[返回 valid=false + token无效]
+    E -- 是 --> G{session.userId == request.userId?}
+    G -- 否 --> F
+    G -- 是 --> H{token过期?}
+    H -- 是 --> I[删除token会话并返回无效]
+    H -- 否 --> J[返回 valid=true]
+```
+
+### 多线程甘特图（Gantt）
+```mermaid
+gantt
+    title SpringBoot 鉴权请求线程甘特图
+    dateFormat  X
+    axisFormat %L ms
+    section HTTP-NIO线程
+    接收请求/参数反序列化 :a1, 0, 10
+    写回响应              :a2, 60, 10
+    section 业务线程
+    调用AuthTokenService校验 :b1, 10, 20
+    会话匹配与过期检查       :b2, 30, 20
+    section 锁与状态
+    ConcurrentHashMap无阻塞读 :c1, 10, 40
+```
+
+### 数据库改动记录
+- 已同步修改 `springboot/db/magic_vector.sql`：`user.id` 类型改为 `BIGINT`。
+- 设计原因（数据库理论）：`BIGINT` 主键在 B+Tree 索引中比较开销更低、索引体积更小、排序与范围查询更高效。
