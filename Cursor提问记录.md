@@ -158,4 +158,22 @@ SpringBoot的[developAndRules.md](springboot/docs/developAndRules.md)和Android�
 
 ### 修改设计
 
+SpringBootDesignDocument存在问题：
 
+首先一般的SpringBoot项目只有大的四层：1.Controller 2.Service 3.Mapper 4.Domain
+一般**鉴权子系统**是放在SpringCloudGateway中的，但是我这个项目在那时不希望加上。
+你就写一个拦截器吧，然后写一个配置类，可以配置哪些路由需要鉴权，而且这个项目暂时不用Redis，
+JWT无状态校验又不能踢人，所以设计就按照现在简单的Map。
+
+第二，你现在要在规则中写入，包括主规则、Android、SpringBoot。Domain之间的转换需要使用Converter，
+如果是Android就用接口实现，如果是SpringBoot就用MapStruct。
+参考C:\CodeLearning\magic-vector\springboot\open-api\src\main\java\com\openapi\converter
+现在需要你修改你之前做的功能的类型转换，不是你做的先不用改。
+
+第三是参数校验校验, 我以前用过Spring 基于 `jakarta.validation-api`（原 `javax.validation-api`）
+你现在加上，并把注解校验这个规则写道spring开发规则。
+异常处理会在全局异常拦截处理。这条也写在开发规则，并说明异常类型写在com/openapi/domain/constant/error
+
+
+第一，formdata的不能这样校验，写入规则集，然后回滚/user/register
+第二，修改SpringBoot还得同步Android的请求对不对你可以读AndroidDesignDocument并修改这个文档和代码。

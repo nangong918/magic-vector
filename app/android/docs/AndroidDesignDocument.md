@@ -651,11 +651,12 @@ erDiagram
 
 ### 接口清单
 * `POST /user/login`：请求体 DTO，返回 `UserAuthResponse`。
-* `POST /user/register`：请求体 DTO，返回 `UserAuthResponse`。
+* `POST /user/register`：Multipart/FormData（`avatar/account/password/name`），返回 `UserAuthResponse`。
 * `POST /user/token/verify`：请求体 `userId + accessToken`，返回 `UserTokenVerifyResponse`。
 
 ### 契约原则
 * 非文件上传场景统一使用 `@RequestBody` DTO。
+* 文件上传场景（如注册头像）统一使用 Multipart/FormData；字段由 `@Part/@RequestParam` 传递。
 * 不使用裸 `Boolean` 响应，统一结构化响应模型。
 * 前后端 `userId` 类型统一为 `Long`。
 

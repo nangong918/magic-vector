@@ -114,6 +114,7 @@ interface ApiRequest {
 
     //==========User
 
+    // register 与后端约定为 Multipart/FormData（不能改成 JSON Body）
     @Multipart
     @POST("/user/register")
     suspend fun register(

@@ -64,3 +64,13 @@ RK 及系统 Android 程序：
 * 每个表的主键字段名必须为 `id`。
 * 主键类型优先使用 `Long/BIGINT`（Android Room 用 `Long`，MySQL 用 `BIGINT`）。
 * 原因：整型主键在 B+Tree 索引中的比较和排序成本更低、页占用更小，可减少索引层级与页分裂概率，提升范围查询和排序性能。
+
+## 6. Domain 转换与校验统一规范
+
+* Domain 各层之间（`dto/entity/module/ao/vo`）转换必须使用 `Converter`，禁止在 Controller/Service 大量手写字段拷贝。
+* Android 侧 `Converter` 使用接口 + 实现类方式维护。
+* SpringBoot 侧 `Converter` 使用 `MapStruct` 实现，放在 `springboot/open-api/src/main/java/com/openapi/converter`。
+* SpringBoot 参数校验统一使用 `jakarta.validation` 注解；参数错误统一交给全局异常拦截处理。
+* SpringBoot 异常类型统一定义在 `com/openapi/domain/constant/error`。
+* FormData/Multipart 接口不使用 `@Valid @RequestBody` 注解校验，统一使用 `@RequestParam/@Part` + 手动参数校验。
+* SpringBoot 接口契约变更（路径、参数结构、请求体形态）必须同步 Android 请求代码与 `AndroidDesignDocument.md`。

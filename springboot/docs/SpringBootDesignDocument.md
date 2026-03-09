@@ -8,10 +8,11 @@
 ## 1. 整体架构分层
 
 * **Controller 层**：接收请求、参数校验、响应封装。
-* **Service 层**：认证流程编排、用户业务处理、对象转换。
-* **鉴权子系统**：token 签发、会话映射、过期与一致性校验。
-* **持久化层**：`UserMapper` 访问 MySQL，`UserDo` 作为数据库实体。
-* **领域模型层**：`UserModule` 作为业务实体，隔离数据库对象外泄。
+* **Service 层**：业务流程编排、鉴权判断、转换调用。
+* **Mapper 层**：`UserMapper` 访问 MySQL，执行增删改查。
+* **Domain 层**：`dto/entity(module)` 数据模型与错误定义。
+
+鉴权不引入 SpringCloudGateway；当前项目在应用内使用拦截器实现路由鉴权。
 
 ### 架构类图
 ```mermaid
@@ -23,6 +24,8 @@ classDiagram
     }
     class UserService
     class UserServiceImpl
+    class AuthTokenInterceptor
+    class AuthInterceptorConfig
     class AuthTokenService
     class AuthTokenServiceImpl
     class UserMapper
@@ -33,6 +36,8 @@ classDiagram
 
     UserController --> UserService
     UserController --> AuthTokenService
+    AuthInterceptorConfig --> AuthTokenInterceptor
+    AuthTokenInterceptor --> AuthTokenService
     UserServiceImpl ..|> UserService
     AuthTokenServiceImpl ..|> AuthTokenService
     UserServiceImpl --> UserMapper
@@ -75,28 +80,60 @@ sequenceDiagram
     UserController-->>Client: UserAuthResponse
 ```
 
-## 3. Token 鉴权模块
+## 3. 鉴权模块（拦截器 + 配置）
 
 ### 功能职责
-* token 签发时绑定 `userId`。
-* token 校验必须同时校验 `userId + accessToken`。
-* 对过期 token 进行清理，保障会话一致性。
+* 在 `AuthTokenInterceptor` 中统一拦截需要鉴权的路由。
+* 在 `AuthInterceptorConfig` 中可配置“需要鉴权路由”和“白名单路由”。
+* token 校验采用内存 `Map<String, TokenSession>`，绑定 `userId + accessToken` 并处理过期清理。
+* 当前不引入 Redis；当前不使用 JWT 无状态方案（避免无法主动踢人）。
 
-### Token 校验通讯图
+### 路由拦截通信图
 ```mermaid
 flowchart LR
-    AndroidClient -->|userId + accessToken| UserController
-    UserController --> AuthTokenService
+    Client -->|HTTP Request| AuthTokenInterceptor
+    AuthTokenInterceptor --> AuthInterceptorConfig
+    AuthInterceptorConfig -->|匹配include/exclude路由| AuthTokenInterceptor
+    AuthTokenInterceptor -->|userId + accessToken| AuthTokenService
     AuthTokenService --> TokenSessionMap
     TokenSessionMap --> AuthTokenService
-    AuthTokenService --> UserController
-    UserController -->|valid/message| AndroidClient
+    AuthTokenService --> AuthTokenInterceptor
+    AuthTokenInterceptor -->|通过| Controller
+    AuthTokenInterceptor -->|拦截并返回错误| Client
 ```
 
-### Token 校验活动图
+### 拦截校验活动图
 ```mermaid
 flowchart TD
-    A[接收 verify 请求] --> B{userId/token 参数合法?}
+    A[接收请求] --> B{是否命中鉴权路由?}
+    B -- 否 --> C[直接放行]
+    B -- 是 --> D{userId/token 请求头合法?}
+    D -- 否 --> E[返回参数错误]
+    D -- 是 --> F[Map中读取TokenSession]
+    F --> G{会话存在且userId匹配且未过期?}
+    G -- 否 --> H[返回access_token无效]
+    G -- 是 --> I[放行到Controller]
+```
+
+### 路由配置示例
+```yaml
+openapi:
+  auth:
+    include-paths:
+      - /agent/**
+      - /chat/**
+    exclude-paths:
+      - /user/login
+      - /user/register
+      - /user/token/verify
+    user-id-header: user_id
+    access-token-header: access_token
+```
+
+### Token 校验活动图（接口级）
+```mermaid
+flowchart TD
+    A[接收 token verify 请求] --> B{userId/token 参数合法?}
     B -- 否 --> C[返回 valid=false + 参数错误]
     B -- 是 --> D[根据 token 读取会话]
     D --> E{会话存在?}
@@ -114,6 +151,7 @@ flowchart TD
 * `UserDo` 仅用于 Mapper/数据库层，不直接暴露到 Controller。
 * Service 层输出 `UserModule`，Controller 再映射到 Response DTO。
 * DTO 协议统一使用请求体对象，保障接口演进兼容性。
+* Domain 之间转换统一使用 `Converter`；SpringBoot 使用 `MapStruct`（例如 `UserConverter`）。
 
 ### 设计模式
 * **分层架构（Layered Architecture）**：Controller/Service/Mapper 职责隔离。
@@ -144,12 +182,13 @@ erDiagram
 ## 6. 接口契约模块
 
 ### 接口清单
-* `POST /user/register`：`UserRegisterRequest -> UserAuthResponse`
+* `POST /user/register`：Multipart/FormData（`account/password/name/avatar`）-> `UserAuthResponse`
 * `POST /user/login`：`UserLoginRequest -> UserAuthResponse`
 * `POST /user/token/verify`：`UserTokenVerifyRequest -> UserTokenVerifyResponse`
 
 ### 契约原则
 * 非文件上传场景使用 `@RequestBody`。
+* 文件上传接口使用 Multipart/FormData，不使用 `@Valid @RequestBody`；改用 `@RequestParam/@Part` + 手动参数校验。
 * 响应使用结构化 DTO，不返回裸布尔值。
 * 校验接口要求 `userId + accessToken` 联合入参。
 

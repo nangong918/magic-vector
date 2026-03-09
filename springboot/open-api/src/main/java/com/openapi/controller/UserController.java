@@ -1,5 +1,6 @@
 package com.openapi.controller;
 
+import com.openapi.converter.UserConverter;
 import com.openapi.domain.constant.error.CommonExceptions;
 import com.openapi.domain.constant.error.UserExceptions;
 import com.openapi.domain.dto.BaseResponse;
@@ -8,6 +9,7 @@ import com.openapi.domain.dto.request.UserTokenVerifyRequest;
 import com.openapi.domain.dto.resonse.UserAuthResponse;
 import com.openapi.domain.dto.resonse.UserTokenVerifyResponse;
 import com.openapi.domain.module.user.UserModule;
+import jakarta.validation.Valid;
 import com.openapi.service.AuthTokenService;
 import com.openapi.service.UserService;
 import lombok.RequiredArgsConstructor;
@@ -29,6 +31,7 @@ import org.springframework.web.multipart.MultipartFile;
 public class UserController {
     private final UserService userService;
     private final AuthTokenService authTokenService;
+    private final UserConverter userConverter;
 
     @PostMapping("/register")
     public BaseResponse<UserAuthResponse> register(
@@ -37,6 +40,7 @@ public class UserController {
             @RequestParam(value = "name", required = false) String name,
             @RequestParam(value = "avatar", required = false) MultipartFile avatar
     ) {
+        // FormData 场景不使用 @Valid/@RequestBody，统一手动校验
         if (!StringUtils.hasText(account) || !StringUtils.hasText(password)) {
             return BaseResponse.LogBackError(CommonExceptions.PARAM_ERROR);
         }
@@ -45,13 +49,11 @@ public class UserController {
         }
 
         String registerName = StringUtils.hasText(name) ? name : account;
-
-        // TODO minio 尚未稳定配置时，注册先不处理头像文件，避免影响主流程。
         if (avatar != null) {
             log.info("[register] avatar upload is skipped temporarily. account: {}", account);
         }
         Long userId = userService.createUser(
-                null,
+                avatar,
                 registerName,
                 account,
                 password
@@ -65,18 +67,15 @@ public class UserController {
             return BaseResponse.LogBackError(UserExceptions.USER_NOT_EXIST);
         }
         String accessToken = authTokenService.issueAccessToken(userModule.getUserId());
-        return BaseResponse.getResponseEntitySuccess(toAuthResponse(userModule, accessToken, ""));
+        return BaseResponse.getResponseEntitySuccess(userConverter.moduleToAuthResponse(userModule, accessToken, ""));
     }
 
     @PostMapping("/login")
     public BaseResponse<UserAuthResponse> login(
-            @RequestBody UserLoginRequest request
+            @Valid @RequestBody UserLoginRequest request
     ) {
-        String account = request == null ? null : request.getAccount();
-        String password = request == null ? null : request.getPassword();
-        if (!StringUtils.hasText(account) || !StringUtils.hasText(password)) {
-            return BaseResponse.LogBackError(CommonExceptions.PARAM_ERROR);
-        }
+        String account = request.getAccount();
+        String password = request.getPassword();
         if (!userService.checkPassword(account, password)) {
             return BaseResponse.LogBackError(UserExceptions.ACCOUNT_OR_PASSWORD_ERROR);
         }
@@ -86,22 +85,17 @@ public class UserController {
             return BaseResponse.LogBackError(UserExceptions.USER_NOT_EXIST);
         }
         String accessToken = authTokenService.issueAccessToken(userModule.getUserId());
-        return BaseResponse.getResponseEntitySuccess(toAuthResponse(userModule, accessToken, ""));
+        return BaseResponse.getResponseEntitySuccess(userConverter.moduleToAuthResponse(userModule, accessToken, ""));
     }
 
     @PostMapping("/token/verify")
     public BaseResponse<UserTokenVerifyResponse> verifyAccessToken(
-            @RequestBody UserTokenVerifyRequest request
+            @Valid @RequestBody UserTokenVerifyRequest request
     ) {
-        String accessToken = request == null ? null : request.getAccessToken();
-        Long userId = request == null ? null : request.getUserId();
+        String accessToken = request.getAccessToken();
+        Long userId = request.getUserId();
         UserTokenVerifyResponse response = new UserTokenVerifyResponse();
         response.setUserId(userId);
-        if (userId == null || userId <= 0L || !StringUtils.hasText(accessToken)) {
-            response.setValid(false);
-            response.setMessage(CommonExceptions.PARAM_ERROR.getMessage());
-            return BaseResponse.getResponseEntitySuccess(response);
-        }
         if (!authTokenService.verifyAccessToken(userId, accessToken)) {
             response.setValid(false);
             response.setMessage(UserExceptions.ACCESS_TOKEN_INVALID.getMessage());
@@ -110,15 +104,5 @@ public class UserController {
         response.setValid(true);
         response.setMessage("ok");
         return BaseResponse.getResponseEntitySuccess(response);
-    }
-
-    private UserAuthResponse toAuthResponse(UserModule userModule, String accessToken, String avatarUrl) {
-        UserAuthResponse response = new UserAuthResponse();
-        response.setUserId(userModule.getUserId());
-        response.setAccount(userModule.getAccount());
-        response.setName(userModule.getName());
-        response.setAvatarUrl(avatarUrl);
-        response.setAccessToken(accessToken);
-        return response;
     }
 }

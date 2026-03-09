@@ -3,6 +3,7 @@ package com.openapi.service.impl;
 import com.minio.domain.ao.SuccessFile;
 import com.minio.service.OssService;
 import com.openapi.config.UserConfig;
+import com.openapi.converter.UserConverter;
 import com.openapi.domain.Do.UserDo;
 import com.openapi.domain.module.user.UserModule;
 import com.openapi.mapper.UserMapper;
@@ -31,6 +32,7 @@ public class UserServiceImpl implements UserService {
     private final OssService ossService;
     private final UserMapper userMapper;
     private final UserConfig userConfig;
+    private final UserConverter userConverter;
 
     /**
      * 创建用户
@@ -101,25 +103,14 @@ public class UserServiceImpl implements UserService {
     @Nullable
     @Override
     public UserModule getUserModuleById(@NotNull Long id) {
-        return toUserModule(userMapper.selectById(id));
+        UserDo userDo = userMapper.selectById(id);
+        return userDo == null ? null : userConverter.doToModule(userDo);
     }
 
     @Nullable
     @Override
     public UserModule getUserModuleByAccount(@NotNull String account) {
-        return toUserModule(userMapper.selectByAccount(account));
-    }
-
-    @Nullable
-    private UserModule toUserModule(@Nullable UserDo userDo) {
-        if (userDo == null || userDo.getId() == null) {
-            return null;
-        }
-        UserModule module = new UserModule();
-        module.setUserId(userDo.getId());
-        module.setAccount(userDo.getAccount());
-        module.setName(userDo.getName());
-        module.setAvatarOssId(userDo.getOssId());
-        return module;
+        UserDo userDo = userMapper.selectByAccount(account);
+        return userDo == null ? null : userConverter.doToModule(userDo);
     }
 }

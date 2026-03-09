@@ -9,8 +9,10 @@
 ## Domain
 * 基本的数据结构要放在domain中, dto中存放request和response, entity中存放数据库实体, module中存放业务实体
 * 网络请求中，除了 `FormData/Multipart` 之外，`POST` 请求必须使用单一请求体（`dto/request`）；响应统一使用 `dto/response`，不要直接返回裸类型（如 `Boolean`）。
+* 对应 SpringBoot 的 Multipart/FormData 接口，Android 必须使用 Multipart 请求（`@Multipart + @Part`），不得私自改为 JSON 请求体。
 * Android 侧请求/响应 DTO 可以直接参考 SpringBoot 同名 DTO 复制并做 Android 语法微调，保证前后端结构一致、便于维护。
 * MVI设计模式中, uiState, dataState, intent, effect等应该直接在viewModel中定义, 不要在domain中定义, 但是这些内部可以使用domain中的数据结构来聚合.
+* Domain 间转换必须使用 `Converter`，Android 使用“接口 + 实现类”方式，不在 ViewModel/Activity 中手写大段字段拷贝。
 
 ## Dao
 * 操作数据库的接口应该放在Dao中
@@ -66,6 +68,6 @@
 * 我希望学习一些计算机理论, 如果涉及到核心的`操作系统(线程, IO)`, `计算机网络`, `数据结构`, `算法`, `计算机组成原理`, `数据库`的知识你要标注出来.
 
 ## 文档
-* 你写的功能和模块，需要在docs[cursorDevelopLog.md](cursorDevelopLog.md)中记录自己大概开发了什么功能。
-* 若涉及数据库（Room/MySQL）调整，cursorDevelopLog必须记录：表设计、字段变更、变更原因，并尽量附上数据库设计图（Mermaid可用ER/类图表达）。
+* 你写的功能和模块，统一写入 [AndroidDesignDocument.md](AndroidDesignDocument.md) 的对应模块章节。
+* 若涉及数据库（Room/MySQL）调整，设计文档必须记录：表设计、字段变更、变更原因，并附数据库设计图（Mermaid ER/类图）。
 

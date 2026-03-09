@@ -2,15 +2,14 @@ package com.openapi.component.handler;
 
 
 import com.openapi.domain.constant.error.CommonExceptions;
+import com.openapi.domain.dto.BaseResponse;
 import com.openapi.domain.exception.AppException;
+import jakarta.validation.ConstraintViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
-
-import java.util.HashMap;
-import java.util.Map;
 
 /**
  * 全局异常处理器
@@ -23,23 +22,27 @@ public class GlobalExceptionHandler {
 
     // Service层的AppException异常抛给前端
     @ExceptionHandler(AppException.class)
-    public ResponseEntity<Map<String, String>> handleAppException(AppException ex) {
-        Map<String, String> errorResponse = new HashMap<>();
-        errorResponse.put("code", ex.getErrCode());
-        errorResponse.put("message", ex.getMessage());
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
+    public ResponseEntity<BaseResponse<Object>> handleAppException(AppException ex) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(BaseResponse.LogBackError(ex.getErrCode(), ex.getMessage()));
     }
 
-    // 入参校验：前端不需要展示给用户，直接传递
+    // @RequestBody 参数校验异常
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<Map<String, String>> handleValidationExceptions(MethodArgumentNotValidException ex) {
-        Map<String, String> errorResponse = new HashMap<>();
-        ex.getBindingResult().getFieldErrors().forEach(error -> {
-                    errorResponse.put("code", CommonExceptions.PARAM_ERROR.getCode());
-                    errorResponse.put("message", error.getDefaultMessage());
-                }
-        );
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
+    public ResponseEntity<BaseResponse<Object>> handleValidationExceptions(MethodArgumentNotValidException ex) {
+        String message = ex.getBindingResult().getFieldErrors().stream()
+                .findFirst()
+                .map(it -> it.getDefaultMessage())
+                .orElse(CommonExceptions.PARAM_ERROR.getMessage());
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(BaseResponse.LogBackError(CommonExceptions.PARAM_ERROR.getCode(), message));
+    }
+
+    // @RequestParam/@PathVariable 参数校验异常
+    @ExceptionHandler(ConstraintViolationException.class)
+    public ResponseEntity<BaseResponse<Object>> handleConstraintViolationException(ConstraintViolationException ex) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(BaseResponse.LogBackError(CommonExceptions.PARAM_ERROR.getCode(), ex.getMessage()));
     }
 
 }

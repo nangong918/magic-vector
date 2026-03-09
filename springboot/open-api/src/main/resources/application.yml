@@ -109,3 +109,17 @@ mybatis-plus:
       id-type: auto # 数据库主键策略配置
   configuration:
     log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+
+openapi:
+  auth:
+    include-paths:
+      - /agent/**
+      - /chat/**
+    exclude-paths:
+      - /user/login
+      - /user/register
+      - /user/token/verify
+      - /test/**
+      - /error
+    user-id-header: user_id
+    access-token-header: access_token
