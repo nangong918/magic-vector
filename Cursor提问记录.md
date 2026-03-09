@@ -153,3 +153,9 @@ SpringBoot的[developAndRules.md](springboot/docs/developAndRules.md)和Android�
 所以你现在要做的事情是：1.整理我上述说的到规则集，2.把你之前写的cursorDevelopLog日志迁移到[MainDesignDocument.md](MainDesignDocument.md)
 内部对应的模块。3.在规则集中取消使用cursorDevelopLog，替换的是读取，设计，写入[MainDesignDocument.md](MainDesignDocument.md)
 
+
+
+
+### 修改设计
+
+

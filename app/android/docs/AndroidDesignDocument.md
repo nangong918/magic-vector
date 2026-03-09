@@ -7,25 +7,18 @@
 
 ## 1. 整体架构分层
 
-* **UI 层**：负责页面展示和事件分发。
+* **UI 层**：负责页面渲染、用户输入采集、导航执行。
   * Activity：`ComposeStartActivity`、`ComposeLoginActivity`、`ComposeRegisterActivity`
-  * Fragment：
-* **状态管理层（MVI）**：负责 Intent 处理、状态流转与 Effect 输出。
-  * `StartVm`、`ComposeLoginVm`、`ComposeRegisterVm`，
-* **业务与会话层**：`*Controller`负责复用业务逻辑，类似SpringBoot的Service；`*Manager`负责复杂状态管理与业务逻辑。类似SpringBoot的Manager。
-  * `UserManager`，负责用户会话存取与清理。
-* **数据访问层**：负责本地持久化。
-  * 数据库库层：`VectorDatabase`
-  * 持久化层：
-    * `UserDao`，
-* **网络访问层**：`ApiRequestImpl`，负责鉴权相关接口通信。
-* **实体Domain层**：负责数据结构
-  * Entity：数据库实体，与表名一一对应：`'tableName'Entity`。
-    * `UserEntity`
-  * Module：业务逻辑实体，内部可以私用Entity进行聚合。
-    * `UserModule`
-  * Dto：数据传输层；定义RequestBody，ResponseBody，WsBody等
-    * 
+* **状态管理层（MVI）**：负责处理 Intent、维护状态、发出 Effect。
+  * `StartVm`、`ComposeLoginVm`、`ComposeRegisterVm`
+* **业务与会话层**：封装会话与用户相关业务能力。
+  * `UserManager`：负责用户会话读取、保存、清理。
+* **数据访问层（Room）**：负责本地持久化。
+  * `VectorDatabase`、`UserDao`、`UserEntity`
+* **网络访问层**：`ApiRequestImpl`，负责认证相关接口访问。
+* **领域与协议层**：定义业务与传输数据结构。
+  * Module：`UserModule`
+  * DTO：`UserAuthResponse`、`UserTokenVerifyResponse` 等
 
 ### 架构类图
 ```mermaid
@@ -58,12 +51,116 @@ classDiagram
     UserDao --> UserEntity
 ```
 
+### MVI 建模约束（UML）
+
+禁止在正文中用纯文本定义 MVI 的字段结构（如 `uiState/dataState/intent/effect` 具体值）；MVI 值模型必须通过 UML 类图表达。
+
+```mermaid
+classDiagram
+    class ComposeXxxActivity {
+        +collectUiState()
+        +collectEffect()
+        +sendIntent(intent)
+    }
+    class XxxVm {
+        -_uiState: MutableState~UiState~
+        -_dataState: DataState
+        -_intent: MutableSharedFlow~Intent~
+        -_effect: MutableSharedFlow~Effect~
+        -_event: MutableSharedFlow~Event~
+        +processIntent(intent)
+    }
+    class UiState
+    class DataState
+    class Intent
+    class Effect
+    class Event
+
+    ComposeXxxActivity --> XxxVm
+    XxxVm --> UiState
+    XxxVm --> DataState
+    XxxVm --> Intent
+    XxxVm --> Effect
+    XxxVm --> Event
+```
+
 ## 2. 启动模块（Start）
 
 ### 功能职责
 * 启动阶段统一判断登录态，决定进入主页面或登录页面。
 * 保证启动页最短停留时间，避免闪屏。
 * 当本地会话存在时，执行远端 token 有效性验证。
+
+### UI 详细设计
+
+#### 启动页面（Start）
+**布局结构**：
+- 居中显示应用 Logo
+
+**交互设计**：
+- 启动时检查本地会话
+- 有会话时调用 token/verify 接口验证
+- 验证通过：跳转到主页
+- 验证失败或无会话：跳转到登录页
+- 最短停留 1200ms，避免启动页一闪而过
+
+#### 启动页面 MVI 类图
+```mermaid
+classDiagram
+    class ComposeStartActivity {
+        +onCreate()
+        +onStart()
+        +onResume()
+        +onDestroy()
+        -collectUiState()
+        -sendIntent(Intent)
+    }
+    
+    class StartVm {
+        -_uiState: MutableState~UiState~
+        -_dataState: DataState
+        -_intent: MutableSharedFlow~Intent~
+        -_effect: MutableSharedFlow~Effect~
+        +handleIntent(Intent)
+        +processIntent(Intent)
+    }
+    
+    class UiState
+    class DataState {
+        +currentUser: UserSession?
+    }
+    class Intent {
+        +Initialize
+    }
+    class Effect {
+        +NavigateToMain
+        +NavigateToLogin
+    }
+    
+    ComposeStartActivity --> StartVm
+    StartVm --> UiState
+    StartVm --> DataState
+    StartVm --> Intent
+    StartVm --> Effect
+```
+
+#### 启动页面通信图
+```mermaid
+flowchart LR
+    Activity[ComposeStartActivity]
+    VM[StartVm]
+    UM[UserManager]
+    Api[ApiRequestImpl]
+    Nav[Navigator]
+
+    Activity -->|Initialize Intent| VM
+    VM -->|读取本地会话| UM
+    UM -->|UserSession?| VM
+    VM -->|POST /user/token/verify| Api
+    Api -->|UserTokenVerifyResponse| VM
+    VM -->|Effect: NavigateToMain / NavigateToLogin| Activity
+    Activity -->|执行导航| Nav
+```
 
 ### 启动活动图
 ```mermaid
@@ -102,6 +199,185 @@ sequenceDiagram
 * 登录：账号密码提交、按钮可用态控制、成功后写入本地会话。
 * 注册：账号/密码/确认密码校验、头像选择与权限申请、成功后自动登录态落库。
 * 页面仅负责编排，业务状态由 VM 的 MVI 流统一管理。
+
+### UI 详细设计
+
+#### 登录页面（Login）
+**布局结构**：
+- 顶部：Logo 区域
+- 中间：账号输入框、密码输入框（隐藏输入内容）
+- 底部：登录按钮（账号密码未完整时置灰）、"没有账号？去注册" 链接
+
+**交互设计**：
+- 账号输入框：实时校验输入格式，失焦时验证
+- 密码输入框：隐藏输入内容，支持显示/隐藏切换
+- 登录按钮：账号和密码均非空时激活，点击后显示加载状态
+- 注册链接：点击跳转到注册页面
+
+#### 登录页面 MVI 类图
+```mermaid
+classDiagram
+    class ComposeLoginActivity {
+        +onCreate()
+        +onStart()
+        +onResume()
+        +onDestroy()
+        -collectUiState()
+        -sendIntent(Intent)
+    }
+    
+    class ComposeLoginVm {
+        -_uiState: MutableState~UiState~
+        -_dataState: DataState
+        -_intent: MutableSharedFlow~Intent~
+        -_effect: MutableSharedFlow~Effect~
+        +handleIntent(Intent)
+        +processIntent(Intent)
+    }
+    
+    class UiState {
+        +account: String
+        +password: String
+        +canLogin: Boolean
+        +isLoading: Boolean
+        +error: String?
+    }
+    class DataState {
+        +user: UserModule?
+    }
+    class Intent {
+        +UpdateAccount(account: String)
+        +UpdatePassword(password: String)
+        +Login
+        +GoToRegister
+    }
+    class Effect {
+        +NavigateToMain(user: UserModule)
+        +NavigateToRegister
+        +ShowError(message: String)
+    }
+    
+    ComposeLoginActivity --> ComposeLoginVm
+    ComposeLoginVm --> UiState
+    ComposeLoginVm --> DataState
+    ComposeLoginVm --> Intent
+    ComposeLoginVm --> Effect
+```
+
+#### 登录页面通信图
+```mermaid
+flowchart LR
+    Activity[ComposeLoginActivity]
+    VM[ComposeLoginVm]
+    Api[ApiRequestImpl]
+    UM[UserManager]
+    Nav[Navigator]
+
+    Activity -->|UpdateAccount / UpdatePassword| VM
+    VM -->|UiState 更新| Activity
+    Activity -->|Login Intent| VM
+    VM -->|POST /user/login| Api
+    Api -->|UserAuthResponse| VM
+    VM -->|saveCurrentUser| UM
+    VM -->|Effect: NavigateToMain / ShowError| Activity
+    Activity -->|执行导航| Nav
+```
+
+#### 注册页面（Register）
+**布局结构**：
+- 顶部：Logo 区域
+- 中间：账号输入框、密码输入框、确认密码输入框、圆形头像预览区域
+- 底部：注册按钮（信息未完整时置灰）、"已有账号？去登录" 链接
+
+**交互设计**：
+- 头像选择：点击圆形预览区域，申请存储权限后打开相册
+- 密码校验：实时对比密码和确认密码，不一致时显示错误提示
+- 注册按钮：账号、密码、确认密码均非空且密码一致时激活
+- 注册成功：自动保存会话并跳转到主页
+
+#### 注册页面 MVI 类图
+```mermaid
+classDiagram
+    class ComposeRegisterActivity {
+        +onCreate()
+        +onStart()
+        +onResume()
+        +onDestroy()
+        -collectUiState()
+        -sendIntent(Intent)
+        -onActivityResult()
+    }
+    
+    class ComposeRegisterVm {
+        -_uiState: MutableState~UiState~
+        -_dataState: DataState
+        -_intent: MutableSharedFlow~Intent~
+        -_effect: MutableSharedFlow~Effect~
+        +handleIntent(Intent)
+        +processIntent(Intent)
+    }
+    
+    class UiState {
+        +account: String
+        +password: String
+        +confirmPassword: String
+        +avatarUri: String?
+        +canRegister: Boolean
+        +isLoading: Boolean
+        +error: String?
+    }
+    class DataState {
+        +user: UserModule?
+    }
+    class Intent {
+        +UpdateAccount(account: String)
+        +UpdatePassword(password: String)
+        +UpdateConfirmPassword(confirmPassword: String)
+        +SelectAvatar
+        +Register
+        +GoToLogin
+    }
+    class Effect {
+        +NavigateToMain(user: UserModule)
+        +NavigateToLogin
+        +RequestStoragePermission
+        +ShowError(message: String)
+        +ShowToast(message: String)
+    }
+    
+    ComposeRegisterActivity --> ComposeRegisterVm
+    ComposeRegisterVm --> UiState
+    ComposeRegisterVm --> DataState
+    ComposeRegisterVm --> Intent
+    ComposeRegisterVm --> Effect
+```
+
+#### 注册页面通信图
+```mermaid
+flowchart LR
+    Activity[ComposeRegisterActivity]
+    VM[ComposeRegisterVm]
+    Permission[ComposePermissionUtils]
+    Gallery[GalleryPicker]
+    Api[ApiRequestImpl]
+    UM[UserManager]
+    Nav[Navigator]
+
+    Activity -->|UpdateAccount/Password/ConfirmPassword| VM
+    VM -->|UiState 更新| Activity
+    Activity -->|SelectAvatar Intent| VM
+    VM -->|检查权限| Permission
+    Permission -->|授权结果| Activity
+    Activity -->|openGallery| Gallery
+    Gallery -->|avatarUri| Activity
+    Activity -->|AvatarSelected Intent| VM
+    Activity -->|Register Intent| VM
+    VM -->|POST /user/register| Api
+    Api -->|UserAuthResponse| VM
+    VM -->|saveCurrentUser| UM
+    VM -->|Effect: NavigateToMain / ShowError| Activity
+    Activity -->|执行导航| Nav
+```
 
 ### 认证模块状态机图
 ```mermaid
