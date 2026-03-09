@@ -310,10 +310,58 @@ flowchart LR
 #### UML动态图
 
 ##### 登录活动图
+```mermaid
+flowchart TD
+    A[用户输入账号密码] --> B{表单合法?}
+    B -- 否 --> C[更新UiState: canLogin=false]
+    B -- 是 --> D[更新UiState: canLogin=true]
+    D --> E[点击登录]
+    E --> F[Vm发起 /user/login]
+    F --> G{请求成功?}
+    G -- 否 --> H[更新UiState.error + 触发ShowError]
+    G -- 是 --> I[保存会话到UserManager]
+    I --> J[触发NavigateToMain]
+```
 
 ##### 登录时序图
+```mermaid
+sequenceDiagram
+    participant Activity as ComposeLoginActivity
+    participant VM as ComposeLoginVm
+    participant Api as ApiRequestImpl
+    participant UM as UserManager
+    participant Nav as Navigator
+
+    Activity->>VM: UpdateAccount / UpdatePassword
+    VM-->>Activity: UiState(canLogin)
+    Activity->>VM: Login Intent
+    VM->>Api: POST /user/login
+    alt 登录成功
+        Api-->>VM: UserAuthResponse
+        VM->>UM: saveCurrentUser(user)
+        VM-->>Activity: Effect.NavigateToMain
+        Activity->>Nav: navigate(Main)
+    else 登录失败
+        Api-->>VM: error
+        VM-->>Activity: Effect.ShowError
+    end
+```
 
 ##### 登录鉴权甘特图
+```mermaid
+gantt
+    title Android 登录请求线程甘特图
+    dateFormat  X
+    axisFormat %L ms
+    section Main线程
+    输入与点击事件分发            :m1, 0, 8
+    渲染加载状态与错误提示         :m2, 65, 12
+    section IO线程
+    发送 /user/login 请求         :i1, 8, 35
+    接收响应并解析 DTO            :i2, 43, 12
+    section 本地持久化
+    保存会话到 Room               :d1, 55, 10
+```
 
 #### 注册 UI 设计
 ##### 注册页面（Register）
@@ -430,10 +478,71 @@ stateDiagram-v2
 #### UML动态图
 
 ##### 注册活动图
+```mermaid
+flowchart TD
+    A[用户输入注册信息] --> B{账号/密码/确认密码合法?}
+    B -- 否 --> C[更新UiState: canRegister=false]
+    B -- 是 --> D[更新UiState: canRegister=true]
+    D --> E[选择头像]
+    E --> F{有存储权限?}
+    F -- 否 --> G[请求权限并等待回调]
+    F -- 是 --> H[打开相册并回填avatarUri]
+    G --> H
+    H --> I[点击注册]
+    I --> J[Vm发起 /user/register]
+    J --> K{请求成功?}
+    K -- 否 --> L[ShowError]
+    K -- 是 --> M[保存会话 + NavigateToMain]
+```
 
 ##### 注册时序图
+```mermaid
+sequenceDiagram
+    participant Activity as ComposeRegisterActivity
+    participant VM as ComposeRegisterVm
+    participant Permission as ComposePermissionUtils
+    participant Gallery as GalleryPicker
+    participant Api as ApiRequestImpl
+    participant UM as UserManager
+    participant Nav as Navigator
+
+    Activity->>VM: UpdateAccount/Password/ConfirmPassword
+    VM-->>Activity: UiState(canRegister)
+    Activity->>VM: SelectAvatar Intent
+    VM->>Permission: check/request permission
+    Permission-->>Activity: granted
+    Activity->>Gallery: openGallery()
+    Gallery-->>Activity: avatarUri
+    Activity->>VM: AvatarSelected(uri)
+    Activity->>VM: Register Intent
+    VM->>Api: POST /user/register
+    alt 注册成功
+        Api-->>VM: UserAuthResponse
+        VM->>UM: saveCurrentUser
+        VM-->>Activity: Effect.NavigateToMain
+        Activity->>Nav: navigate(Main)
+    else 注册失败
+        Api-->>VM: error
+        VM-->>Activity: Effect.ShowError
+    end
+```
 
 ##### 注册鉴权甘特图
+```mermaid
+gantt
+    title Android 注册请求线程甘特图
+    dateFormat  X
+    axisFormat %L ms
+    section Main线程
+    表单输入与校验                 :m1, 0, 20
+    权限回调与相册结果处理          :m2, 20, 25
+    页面状态更新与导航              :m3, 90, 15
+    section IO线程
+    发送 /user/register 请求       :i1, 45, 35
+    响应解析与错误映射              :i2, 80, 10
+    section 本地持久化
+    保存会话到 Room               :d1, 85, 8
+```
 
 
 ## Manager管理雷设计
@@ -453,9 +562,70 @@ stateDiagram-v2
 #### UML静态图
 
 ##### 会话管理模块 类图 （展示功能）
+```mermaid
+classDiagram
+    class UserManager {
+        +saveCurrentUser(user: UserModule)
+        +getCurrentUser(): UserSession?
+        +clearCurrentUser()
+    }
+    class VectorDatabase {
+        +userDao(): UserDao
+    }
+    class UserDao {
+        +insertOrUpdate(entity: UserEntity)
+        +queryCurrentUser(): UserEntity?
+        +deleteCurrentUser()
+    }
+    class UserEntity {
+        +id: Long
+        +userId: Long
+        +account: String
+        +name: String
+        +avatarUrl: String
+        +accessToken: String
+    }
+    class UserSession {
+        +userId: Long
+        +account: String
+        +name: String
+        +avatarUrl: String
+        +accessToken: String
+    }
+
+    UserManager --> VectorDatabase
+    VectorDatabase --> UserDao
+    UserDao --> UserEntity
+    UserManager --> UserSession
+```
 
 #### UML动态图
-暂无
+
+##### 会话管理通信图
+```mermaid
+flowchart LR
+    VM[Start/Login/Register Vm]
+    UM[UserManager]
+    DAO[UserDao]
+    DB[(VectorDatabase)]
+
+    VM -->|saveCurrentUser/getCurrentUser/clearCurrentUser| UM
+    UM -->|读写会话| DAO
+    DAO --> DB
+    DAO -->|UserEntity| UM
+    UM -->|UserSession| VM
+```
+
+##### 会话生命周期状态图
+```mermaid
+stateDiagram-v2
+    [*] --> Empty
+    Empty --> Persisted : saveCurrentUser
+    Persisted --> Persisted : update accessToken/profile
+    Persisted --> Invalidated : token verify failed
+    Invalidated --> Empty : clearCurrentUser
+    Persisted --> Empty : logout/clearCurrentUser
+```
 
 ## 本地数据库设计（Room）
 
