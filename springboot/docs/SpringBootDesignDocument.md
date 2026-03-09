@@ -5,7 +5,7 @@
 
 本文件用于描述 SpringBoot 服务端的模块化架构设计，不使用时间线日志体例。
 
-## 1. 整体架构分层
+## 整体架构分层
 
 * **Controller 层**：接收请求、参数校验、响应封装。
 * **Service 层**：业务流程编排、鉴权判断、转换调用。
@@ -14,37 +14,6 @@
 
 鉴权不引入 SpringCloudGateway；当前项目在应用内使用拦截器实现路由鉴权。
 
-### 架构类图
-```mermaid
-classDiagram
-    class UserController {
-        +register()
-        +login()
-        +verifyAccessToken()
-    }
-    class UserService
-    class UserServiceImpl
-    class AuthTokenInterceptor
-    class AuthInterceptorConfig
-    class AuthTokenService
-    class AuthTokenServiceImpl
-    class UserMapper
-    class UserDo
-    class UserModule
-    class UserAuthResponse
-    class UserTokenVerifyResponse
-
-    UserController --> UserService
-    UserController --> AuthTokenService
-    AuthInterceptorConfig --> AuthTokenInterceptor
-    AuthTokenInterceptor --> AuthTokenService
-    UserServiceImpl ..|> UserService
-    AuthTokenServiceImpl ..|> AuthTokenService
-    UserServiceImpl --> UserMapper
-    UserServiceImpl --> UserModule
-    UserMapper --> UserDo
-```
-
 ## 2. 用户认证模块（登录 / 注册）
 
 ### 功能职责
@@ -52,7 +21,56 @@ classDiagram
 * 注册成功后可直接形成可用登录态响应。
 * Service 层处理业务规则，Controller 层不感知 DB 对象。
 
-### 认证活动图
+### 静态图
+#### 类图
+```mermaid
+classDiagram
+    class UserController {
+        +register(account,password,name,avatar)
+        +login(request)
+        +verifyAccessToken(request)
+    }
+    class UserService
+    class UserServiceImpl
+    class AuthTokenService
+    class AuthTokenServiceImpl
+    class UserMapper
+    class UserConverter
+    class UserDo
+    class UserModule
+    class UserAuthResponse
+    class UserLoginRequest
+    class UserTokenVerifyRequest
+    class UserTokenVerifyResponse
+
+    UserController --> UserService
+    UserController --> AuthTokenService
+    UserController --> UserConverter
+    UserServiceImpl ..|> UserService
+    AuthTokenServiceImpl ..|> AuthTokenService
+    UserServiceImpl --> UserMapper
+    UserServiceImpl --> UserConverter
+    UserMapper --> UserDo
+    UserConverter --> UserModule
+    UserConverter --> UserAuthResponse
+```
+
+### 动态图
+#### 通讯图
+```mermaid
+flowchart LR
+    Client -->|"POST /user/register (multipart)"| UserController
+    Client -->|"POST /user/login (json)"| UserController
+    Client -->|"POST /user/token/verify (json)"| UserController
+    UserController --> UserService
+    UserController --> AuthTokenService
+    UserController --> UserConverter
+    UserService --> UserMapper
+    UserMapper --> MySQL[(MySQL)]
+    UserService --> UserConverter
+```
+
+#### 认证活动图
 ```mermaid
 flowchart TD
     A[登录/注册请求] --> B{参数合法?}
@@ -64,7 +82,7 @@ flowchart TD
     G --> H[返回 UserAuthResponse]
 ```
 
-### 登录时序图
+#### 登录时序图
 ```mermaid
 sequenceDiagram
     participant Client
@@ -80,7 +98,23 @@ sequenceDiagram
     UserController-->>Client: UserAuthResponse
 ```
 
-## 3. 鉴权模块（拦截器 + 配置）
+#### 线程甘特图
+```mermaid
+gantt
+    title SpringBoot 登录/注册线程甘特图
+    dateFormat  X
+    axisFormat %L ms
+    section HTTP-NIO线程
+    接收请求与参数绑定          :a1, 0, 8
+    写回响应                    :a2, 55, 10
+    section 业务线程
+    用户校验与查询              :b1, 8, 20
+    token签发                   :b2, 28, 12
+    section 数据访问
+    UserMapper 查询/写入        :c1, 15, 20
+```
+
+### 鉴权模块（拦截器 + 配置）
 
 ### 功能职责
 * 在 `AuthTokenInterceptor` 中统一拦截需要鉴权的路由。
@@ -88,7 +122,7 @@ sequenceDiagram
 * token 校验采用内存 `Map<String, TokenSession>`，绑定 `userId + accessToken` 并处理过期清理。
 * 当前不引入 Redis；当前不使用 JWT 无状态方案（避免无法主动踢人）。
 
-### 路由拦截通信图
+#### 路由拦截通信图
 ```mermaid
 flowchart LR
     Client -->|HTTP Request| AuthTokenInterceptor
@@ -102,7 +136,7 @@ flowchart LR
     AuthTokenInterceptor -->|拦截并返回错误| Client
 ```
 
-### 拦截校验活动图
+#### 拦截校验活动图
 ```mermaid
 flowchart TD
     A[接收请求] --> B{是否命中鉴权路由?}
@@ -115,7 +149,7 @@ flowchart TD
     G -- 是 --> I[放行到Controller]
 ```
 
-### 路由配置示例
+#### 路由配置示例
 ```yaml
 openapi:
   auth:
@@ -130,7 +164,22 @@ openapi:
     access-token-header: access_token
 ```
 
-### Token 校验活动图（接口级）
+#### 校验状态机图
+```mermaid
+stateDiagram-v2
+    [*] --> RouteMatched
+    RouteMatched --> Bypass : 命中excludePaths
+    RouteMatched --> HeaderCheck : 命中includePaths
+    HeaderCheck --> Reject : 请求头缺失/非法
+    HeaderCheck --> SessionCheck : user_id + access_token 合法
+    SessionCheck --> Reject : 无会话/过期/不匹配
+    SessionCheck --> Passed : 校验通过
+    Bypass --> [*]
+    Passed --> [*]
+    Reject --> [*]
+```
+
+#### Token 校验活动图（接口级）
 ```mermaid
 flowchart TD
     A[接收 token verify 请求] --> B{userId/token 参数合法?}
@@ -145,19 +194,25 @@ flowchart TD
     H -- 否 --> J[返回 valid=true]
 ```
 
-## 4. 用户领域与对象转换模块
+#### 鉴权甘特图
+```mermaid
+gantt
+    title SpringBoot 鉴权请求线程甘特图
+    dateFormat  X
+    axisFormat %L ms
+    section HTTP-NIO线程
+    接收请求/参数反序列化 :a1, 0, 10
+    写回响应              :a2, 60, 10
+    section 业务线程
+    调用AuthTokenService校验 :b1, 10, 20
+    会话匹配与过期检查       :b2, 30, 20
+    section 锁与状态
+    ConcurrentHashMap无阻塞读 :c1, 10, 40
+```
 
-### 分层原则
-* `UserDo` 仅用于 Mapper/数据库层，不直接暴露到 Controller。
-* Service 层输出 `UserModule`，Controller 再映射到 Response DTO。
-* DTO 协议统一使用请求体对象，保障接口演进兼容性。
-* Domain 之间转换统一使用 `Converter`；SpringBoot 使用 `MapStruct`（例如 `UserConverter`）。
 
-### 设计模式
-* **分层架构（Layered Architecture）**：Controller/Service/Mapper 职责隔离。
-* **DTO 门面（DTO Facade）**：通过 Request/Response DTO 稳定对外协议。
 
-## 5. 数据库设计（MySQL）
+## 数据库设计（MySQL）
 
 ### 设计说明
 * 用户表主键统一采用 `id BIGINT`。
@@ -179,7 +234,7 @@ erDiagram
 * 使用整型主键可降低 B+Tree 比较和排序成本。
 * 索引体积更小，有利于范围查询与排序性能。
 
-## 6. 接口契约模块
+## 接口契约模块
 
 ### 接口清单
 * `POST /user/register`：Multipart/FormData（`account/password/name/avatar`）-> `UserAuthResponse`
@@ -187,47 +242,47 @@ erDiagram
 * `POST /user/token/verify`：`UserTokenVerifyRequest -> UserTokenVerifyResponse`
 
 ### 契约原则
-* 非文件上传场景使用 `@RequestBody`。
-* 文件上传接口使用 Multipart/FormData，不使用 `@Valid @RequestBody`；改用 `@RequestParam/@Part` + 手动参数校验。
-* 响应使用结构化 DTO，不返回裸布尔值。
-* 校验接口要求 `userId + accessToken` 联合入参。
+* 非文件上传接口使用 `@RequestBody` + `jakarta.validation` 注解校验。
+* 文件上传接口使用 Multipart/FormData，不使用 `@Valid @RequestBody`，改为 `@RequestParam/@Part` + 手动校验。
+* 参数校验异常统一由全局异常处理器处理，业务错误类型统一维护在 `com/openapi/domain/constant/error`。
 
-## 7. 并发与线程模型
+## Domain 转换模块（Converter）
 
-### 请求线程状态图
+### 设计说明
+* Domain 层对象转换统一通过 `Converter` 完成，避免 Controller/Service 手写大段字段拷贝。
+* SpringBoot 侧统一使用 `MapStruct`，当前用户链路使用 `UserConverter`。
+
+### 转换类图
 ```mermaid
-stateDiagram-v2
-    [*] --> RequestReceived
-    RequestReceived --> ServiceCompute
-    ServiceCompute --> MapperIO : query/insert
-    MapperIO --> ServiceCompute
-    ServiceCompute --> TokenIssue : login/register success
-    TokenIssue --> ResponseWrite
-    ServiceCompute --> ResponseWrite : validation fail
-    ResponseWrite --> [*]
+classDiagram
+    class UserDo {
+        +id: Long
+        +account: String
+        +name: String
+        +ossId: String
+    }
+    class UserModule {
+        +userId: Long
+        +account: String
+        +name: String
+        +avatarOssId: String
+    }
+    class UserAuthResponse {
+        +userId: Long
+        +account: String
+        +name: String
+        +avatarUrl: String
+        +accessToken: String
+    }
+    class UserConverter {
+        +doToModule(UserDo) UserModule
+        +moduleToAuthResponse(UserModule,accessToken,avatarUrl) UserAuthResponse
+    }
+
+    UserConverter --> UserDo
+    UserConverter --> UserModule
+    UserConverter --> UserAuthResponse
 ```
-
-### 鉴权甘特图
-```mermaid
-gantt
-    title SpringBoot 鉴权请求线程甘特图
-    dateFormat  X
-    axisFormat %L ms
-    section HTTP-NIO线程
-    接收请求/参数反序列化 :a1, 0, 10
-    写回响应              :a2, 60, 10
-    section 业务线程
-    调用AuthTokenService校验 :b1, 10, 20
-    会话匹配与过期检查       :b2, 30, 20
-    section 锁与状态
-    ConcurrentHashMap无阻塞读 :c1, 10, 40
-```
-
-## 8. 已知边界与后续演进
-
-* 当前 `AuthTokenService` 为内存实现，后续建议迁移 Redis 以支持重启与扩容场景。
-* 注册头像上传链路受文件网关可用性影响，后续再恢复完整上传回写流程。
-
 
 
 

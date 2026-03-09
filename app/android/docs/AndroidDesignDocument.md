@@ -545,7 +545,7 @@ gantt
 ```
 
 
-## Manager管理雷设计
+## Manager管理类设计
 
 ### 会话管理模块（UserManager）
 
