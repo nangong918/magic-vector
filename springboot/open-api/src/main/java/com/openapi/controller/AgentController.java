@@ -54,7 +54,7 @@ public class AgentController {
         if (!StringUtils.hasText(description)){
             return BaseResponse.LogBackError(CommonExceptions.PARAM_ERROR);
         }
-        if (!userService.checkUserExistById(userId)){
+        if (!userService.checkUserExistById(Long.parseLong(userId))){
             log.warn("用户:{} 不存在", userId);
             return BaseResponse.LogBackError(UserExceptions.USER_NOT_EXIST);
         }
@@ -88,7 +88,7 @@ public class AgentController {
             @RequestParam("userId") String userId
     ){
         // 参数校验
-        if (!userService.checkUserExistById(userId)){
+        if (!userService.checkUserExistById(Long.parseLong(userId))){
             return BaseResponse.LogBackError(UserExceptions.USER_NOT_EXIST);
         }
 
@@ -104,7 +104,7 @@ public class AgentController {
             @RequestParam("userId") String userId
     ){
         // 参数校验
-        if (!userService.checkUserExistById(userId)){
+        if (!userService.checkUserExistById(Long.parseLong(userId))){
             return BaseResponse.LogBackError(UserExceptions.USER_NOT_EXIST);
         }
 

@@ -94,7 +94,7 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
     @NotNull
     @Override
     public ChatClient initChatClient(@NotNull RealtimeChatContextManager chatContextManager, @NotNull DashScopeChatModel chatModel) throws AppException {
-        if (!userService.checkUserExistById(chatContextManager.userId)){
+        if (!userService.checkUserExistById(Long.parseLong(chatContextManager.userId))){
             throw new AppException(UserExceptions.USER_NOT_EXIST);
         }
         AgentAo agentAo = agentService.getAgentById(chatContextManager.agentId);

@@ -65,7 +65,21 @@ RK 及系统 Android 程序：
 * 主键类型优先使用 `Long/BIGINT`（Android Room 用 `Long`，MySQL 用 `BIGINT`）。
 * 原因：整型主键在 B+Tree 索引中的比较和排序成本更低、页占用更小，可减少索引层级与页分裂概率，提升范围查询和排序性能。
 
-## 6. Domain 转换与校验统一规范
+## 6. 数据库 ID 传输规范
+
+* **数据库存储**：主键和外键统一使用 `Long/BIGINT` 类型存储。
+* **网络传输**：ID 在 DTO、Response、Request 等网络传输对象中必须使用 `String` 类型。
+* **原因**：
+  * JavaScript 的 `Number` 类型最大安全整数为 `2^53 - 1`（约 9007 万亿），而雪花算法生成的 Long ID 可能超过此范围。
+  * 前端（Android/Flutter/Web）接收到超过安全范围的 Long 会丢失精度，导致 ID 不准确。
+  * 使用 `String` 可以保证 ID 在所有平台和语言间传输的精度一致性。
+* **转换规则**：
+  * 数据库实体（Entity/Do）使用 `Long` 类型。
+  * 网络传输对象（DTO/Response/Request）使用 `String` 类型。
+  * 在 Converter 层进行 `Long <-> String` 转换。
+  * Controller 层接收前端 String 类型 ID 时，需用 `Long.parseLong()` 转换为 Long 后再调用 Service/DAO。
+
+## 7. Domain 转换与校验统一规范
 
 * Domain 各层之间（`dto/entity/module/ao/vo`）转换必须使用 `Converter`，禁止在 Controller/Service 大量手写字段拷贝。
 * Android 侧 `Converter` 使用接口 + 实现类方式维护。
