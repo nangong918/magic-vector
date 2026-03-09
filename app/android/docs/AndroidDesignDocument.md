@@ -7,11 +7,25 @@
 
 ## 1. 整体架构分层
 
-* **UI 层**：`ComposeStartActivity`、`ComposeLoginActivity`、`ComposeRegisterActivity`，负责页面展示和事件分发。
-* **状态管理层（MVI）**：`StartVm`、`ComposeLoginVm`、`ComposeRegisterVm`，负责 Intent 处理、状态流转与 Effect 输出。
-* **业务与会话层**：`UserManager`，负责用户会话存取与清理。
-* **数据访问层**：`VectorDatabase` + `UserDao` + `UserEntity`，负责本地持久化。
+* **UI 层**：负责页面展示和事件分发。
+  * Activity：`ComposeStartActivity`、`ComposeLoginActivity`、`ComposeRegisterActivity`
+  * Fragment：
+* **状态管理层（MVI）**：负责 Intent 处理、状态流转与 Effect 输出。
+  * `StartVm`、`ComposeLoginVm`、`ComposeRegisterVm`，
+* **业务与会话层**：`*Controller`负责复用业务逻辑，类似SpringBoot的Service；`*Manager`负责复杂状态管理与业务逻辑。类似SpringBoot的Manager。
+  * `UserManager`，负责用户会话存取与清理。
+* **数据访问层**：负责本地持久化。
+  * 数据库库层：`VectorDatabase`
+  * 持久化层：
+    * `UserDao`，
 * **网络访问层**：`ApiRequestImpl`，负责鉴权相关接口通信。
+* **实体Domain层**：负责数据结构
+  * Entity：数据库实体，与表名一一对应：`'tableName'Entity`。
+    * `UserEntity`
+  * Module：业务逻辑实体，内部可以私用Entity进行聚合。
+    * `UserModule`
+  * Dto：数据传输层；定义RequestBody，ResponseBody，WsBody等
+    * 
 
 ### 架构类图
 ```mermaid
