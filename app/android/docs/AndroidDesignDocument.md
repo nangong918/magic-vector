@@ -5,7 +5,7 @@
 
 本文件用于描述 Android 端的模块化架构设计，不使用时间线日志体例。
 
-## 1. 整体架构分层
+## 整体架构分层
 
 * **UI 层**：负责页面渲染、用户输入采集、导航执行。
   * Activity：`ComposeStartActivity`、`ComposeLoginActivity`、`ComposeRegisterActivity`
@@ -84,16 +84,18 @@ classDiagram
     XxxVm --> Event
 ```
 
-## 2. 启动模块（Start）
+## 页面模块设计
 
-### 功能职责
+### 启动模块（Start）
+
+#### 功能职责
 * 启动阶段统一判断登录态，决定进入主页面或登录页面。
 * 保证启动页最短停留时间，避免闪屏。
 * 当本地会话存在时，执行远端 token 有效性验证。
 
-### UI 详细设计
+#### 启动 UI 设计
 
-#### 启动页面（Start）
+##### 启动页面（Start）
 **布局结构**：
 - 居中显示应用 Logo
 
@@ -104,7 +106,10 @@ classDiagram
 - 验证失败或无会话：跳转到登录页
 - 最短停留 1200ms，避免启动页一闪而过
 
-#### 启动页面 MVI 类图
+
+#### UML静态图
+
+##### 启动页面 MVI 类图
 ```mermaid
 classDiagram
     class ComposeStartActivity {
@@ -144,7 +149,7 @@ classDiagram
     StartVm --> Effect
 ```
 
-#### 启动页面通信图
+##### 启动页面 MVI 通信图
 ```mermaid
 flowchart LR
     Activity[ComposeStartActivity]
@@ -162,7 +167,9 @@ flowchart LR
     Activity -->|执行导航| Nav
 ```
 
-### 启动活动图
+#### UML动态图
+
+##### 启动活动图
 ```mermaid
 flowchart TD
     A[应用启动 Initialize] --> B{本地会话存在?}
@@ -176,7 +183,7 @@ flowchart TD
     I --> C
 ```
 
-### 启动时序图
+##### 启动时序图
 ```mermaid
 sequenceDiagram
     participant StartActivity
@@ -193,16 +200,32 @@ sequenceDiagram
     StartVm-->>Navigator: NavigateToMain / NavigateToLogin
 ```
 
-## 3. 登录与注册模块（Auth UI）
+##### 启动鉴权甘特图
+```mermaid
+gantt
+    title Android 启动鉴权线程甘特图
+    dateFormat  X
+    axisFormat %L ms
+    section Main线程
+    StartIntent.Initialize        :m1, 0, 5
+    收到结果并分发导航Effect        :m2, 70, 10
+    section IO线程
+    读取Room用户会话              :i1, 5, 15
+    发起HTTP verify请求           :i2, 20, 30
+    section 协程状态
+    suspend等待网络返回           :s1, 20, 40
+```
 
-### 功能职责
+### 登录与注册模块
+
+#### 功能职责
 * 登录：账号密码提交、按钮可用态控制、成功后写入本地会话。
 * 注册：账号/密码/确认密码校验、头像选择与权限申请、成功后自动登录态落库。
 * 页面仅负责编排，业务状态由 VM 的 MVI 流统一管理。
 
-### UI 详细设计
+#### 登录 UI 设计
 
-#### 登录页面（Login）
+##### 登录页面（Login）
 **布局结构**：
 - 顶部：Logo 区域
 - 中间：账号输入框、密码输入框（隐藏输入内容）
@@ -214,7 +237,8 @@ sequenceDiagram
 - 登录按钮：账号和密码均非空时激活，点击后显示加载状态
 - 注册链接：点击跳转到注册页面
 
-#### 登录页面 MVI 类图
+#### UML静态图
+##### 登录页面 MVI 类图
 ```mermaid
 classDiagram
     class ComposeLoginActivity {
@@ -264,7 +288,7 @@ classDiagram
     ComposeLoginVm --> Effect
 ```
 
-#### 登录页面通信图
+##### 登录页面通信图
 ```mermaid
 flowchart LR
     Activity[ComposeLoginActivity]
@@ -283,7 +307,17 @@ flowchart LR
     Activity -->|执行导航| Nav
 ```
 
-#### 注册页面（Register）
+#### UML动态图
+
+##### 登录活动图
+
+##### 登录时序图
+
+##### 登录鉴权甘特图
+
+#### 注册 UI 设计
+##### 注册页面（Register）
+
 **布局结构**：
 - 顶部：Logo 区域
 - 中间：账号输入框、密码输入框、确认密码输入框、圆形头像预览区域
@@ -295,7 +329,8 @@ flowchart LR
 - 注册按钮：账号、密码、确认密码均非空且密码一致时激活
 - 注册成功：自动保存会话并跳转到主页
 
-#### 注册页面 MVI 类图
+#### UML静态图
+##### 注册页面 MVI 类图
 ```mermaid
 classDiagram
     class ComposeRegisterActivity {
@@ -352,7 +387,7 @@ classDiagram
     ComposeRegisterVm --> Effect
 ```
 
-#### 注册页面通信图
+##### 注册页面通信图
 ```mermaid
 flowchart LR
     Activity[ComposeRegisterActivity]
@@ -379,7 +414,7 @@ flowchart LR
     Activity -->|执行导航| Nav
 ```
 
-### 认证模块状态机图
+##### 认证模块状态机图
 ```mermaid
 stateDiagram-v2
     [*] --> Idle
@@ -392,19 +427,37 @@ stateDiagram-v2
     Error --> Idle : 用户继续编辑
 ```
 
-## 4. 会话管理模块（UserManager）
+#### UML动态图
 
-### 功能职责
+##### 注册活动图
+
+##### 注册时序图
+
+##### 注册鉴权甘特图
+
+
+## Manager管理雷设计
+
+### 会话管理模块（UserManager）
+
+#### 功能职责
 * 统一提供 `saveCurrentUser/getCurrentUser/clearCurrentUser`。
 * 对上层隐藏 Room 细节，保持 VM 与数据库解耦。
 * 启动与登录/注册流程共享同一会话入口。
 
-### 设计约束
+#### 设计约束
 * 当前会话以单记录方式存储，主键采用 `id: Long`。
 * `userId` 与后端主键一致，统一为 `Long`。
 * 启动鉴权采用 `userId + accessToken` 强绑定校验，防止 token 串用。
 
-## 5. 本地数据库设计（Room）
+#### UML静态图
+
+##### 会话管理模块 类图 （展示功能）
+
+#### UML动态图
+暂无
+
+## 本地数据库设计（Room）
 
 ### 设计说明
 * 采用单库模式：`VectorDatabase` 统一管理应用表结构。
@@ -424,7 +477,7 @@ erDiagram
     }
 ```
 
-## 6. 网络接口契约（Auth API）
+## 网络接口契约（Auth API）
 
 ### 接口清单
 * `POST /user/login`：请求体 DTO，返回 `UserAuthResponse`。
@@ -435,45 +488,6 @@ erDiagram
 * 非文件上传场景统一使用 `@RequestBody` DTO。
 * 不使用裸 `Boolean` 响应，统一结构化响应模型。
 * 前后端 `userId` 类型统一为 `Long`。
-
-## 7. 并发与线程模型
-
-### 线程状态图
-```mermaid
-stateDiagram-v2
-    [*] --> MainThreadIdle
-    MainThreadIdle --> IORequesting : 登录/注册/鉴权请求
-    IORequesting --> MainThreadDispatch : 网络回调
-    MainThreadDispatch --> Persisting : 保存本地会话
-    Persisting --> MainThreadIdle : 发出导航Effect
-    IORequesting --> MainThreadIdle : 请求失败
-```
-
-### 启动鉴权甘特图
-```mermaid
-gantt
-    title Android 启动鉴权线程甘特图
-    dateFormat  X
-    axisFormat %L ms
-    section Main线程
-    StartIntent.Initialize        :m1, 0, 5
-    收到结果并分发导航Effect        :m2, 70, 10
-    section IO线程
-    读取Room用户会话              :i1, 5, 15
-    发起HTTP verify请求           :i2, 20, 30
-    section 协程状态
-    suspend等待网络返回           :s1, 20, 40
-```
-
-## 8. 已知边界与后续演进
-
-* 注册头像上传链路在 Android 端已预留，后端文件网关稳定后再打通。
-* 会话校验当前依赖后端鉴权接口，后续可按安全策略引入 token 刷新与失效策略。
-
-
-
-
-
 
 
 

@@ -10,7 +10,7 @@
 
 项目功能设计大纲，仅供参考；详情需要参考各个模块的`DesignDocument.md`
 
-#### Login/Register
+#### Start/Login/Register
 * 闪屏
   * 跳转登录或者主页面
 * 登录
