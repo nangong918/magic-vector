@@ -6,6 +6,7 @@ import com.core.baseutil.network.BaseResponse
 import com.core.baseutil.network.OnSuccessCallback
 import com.core.baseutil.network.OnThrowableCallback
 import com.data.domain.dto.request.AgentDeleteRequest
+import com.data.domain.dto.request.ChatByAnchorRequest
 import com.data.domain.dto.request.UserLoginRequest
 import com.data.domain.dto.request.UserTokenVerifyRequest
 import com.data.domain.dto.response.AgentLastChatListResponse
@@ -185,14 +186,20 @@ open class ApiRequestImpl(apiRequest: ApiRequest) : BaseApiRequestImpl() {
     fun getChatByAnchor(
         agentId: String,
         anchorTimestamp: Long,
-        direction: String,
+        before: Boolean,
         limit: Int,
         onSuccessCallback: OnSuccessCallback<BaseResponse<ChatMessageResponse>>?,
         throwableCallback: OnThrowableCallback?
     ) {
+        val request = ChatByAnchorRequest().apply {
+            this.agentId = agentId
+            this.anchorTimestamp = anchorTimestamp
+            this.before = before
+            this.limit = limit
+        }
         sendRequestCallback(
             apiCall = {
-                mApi.getChatByAnchor(agentId, anchorTimestamp, direction, limit)
+                mApi.getChatByAnchor(request)
             },
             successCallback = onSuccessCallback,
             throwableCallback = throwableCallback

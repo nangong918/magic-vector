@@ -2,6 +2,7 @@ package com.core.appcore.api
 
 import com.core.baseutil.network.BaseResponse
 import com.data.domain.dto.request.AgentDeleteRequest
+import com.data.domain.dto.request.ChatByAnchorRequest
 import com.data.domain.dto.request.UserLoginRequest
 import com.data.domain.dto.request.UserTokenVerifyRequest
 import com.data.domain.dto.response.AgentLastChatListResponse
@@ -112,12 +113,9 @@ interface ApiRequest {
         @Query("limit") limit: Int,
     ): BaseResponse<ChatMessageResponse>
 
-    @GET("/chat/getByAnchor")
+    @POST("/chat/getByAnchor")
     suspend fun getChatByAnchor(
-        @Query("agentId") agentId: String,
-        @Query("anchorTimestamp") anchorTimestamp: Long,
-        @Query("direction") direction: String,
-        @Query("limit") limit: Int,
+        @Body request: ChatByAnchorRequest
     ): BaseResponse<ChatMessageResponse>
 
     /**

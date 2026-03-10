@@ -11,6 +11,7 @@ import com.google.gson.GsonBuilder
 import com.magicvector.manager.ChatMapController
 import com.magicvector.manager.MessageListController
 import com.magicvector.manager.chat.ChatCacheManager
+import com.magicvector.manager.network.NetworkManager
 import com.magicvector.manager.user.UserManager
 import com.magicvector.manager.yolo.VisionManager
 
@@ -30,6 +31,7 @@ class MainApplication : Application() {
 
     private fun initGlobal() {
         apiRequestInstance = getApiRequestInstance()
+        getNetworkManager().register()
     }
 
     companion object {
@@ -113,6 +115,14 @@ class MainApplication : Application() {
             return chatCacheManager!!
         }
 
+        private var networkManager: NetworkManager? = null
+        fun getNetworkManager(): NetworkManager {
+            if (networkManager == null) {
+                networkManager = NetworkManager(getApp())
+            }
+            return networkManager!!
+        }
+
         /**
          * VisionManager
          * 本地CameraX管理，无ws传输，无需放入realtimeChatController；
@@ -148,6 +158,7 @@ class MainApplication : Application() {
     //----------------------------APP终止的时候调用----------------------------
 
     override fun onTerminate() {
+        getNetworkManager().unregister()
         super.onTerminate()
     }
 }

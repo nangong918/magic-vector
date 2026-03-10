@@ -257,9 +257,9 @@ classDiagram
 ### Chat 分页活动图（锚点分页）
 ```mermaid
 flowchart TD
-    A[接收 getByAnchor 请求] --> B{agentId/anchor/direction/limit 合法?}
+    A[接收 getByAnchor 请求] --> B{agentId/anchorTimestamp/before/limit 合法?}
     B -- 否 --> C[返回参数错误]
-    B -- 是 --> D{direction = before ?}
+    B -- 是 --> D{before == true ?}
     D -- 是 --> E[查询 chat_timestamp < anchor order by desc limit N]
     D -- 否 --> F[查询 chat_timestamp > anchor order by asc limit N]
     E --> G[结果集封装 ChatMessageResponse]
@@ -337,13 +337,13 @@ erDiagram
 * `GET /agent/getLastAgentChatList`：查询 Agent 最近聊天摘要 -> `AgentLastChatListResponse`
 * `GET /chat/getLastChat`：查询最近消息 -> `ChatMessageResponse`
 * `GET /chat/getTimeLimitChat`：按截止时间查询历史消息 -> `ChatMessageResponse`
-* `GET /chat/getByAnchor`：按锚点向前/向后分页 -> `ChatMessageResponse`
+* `POST /chat/getByAnchor`：请求体 `ChatByAnchorRequest(agentId,anchorTimestamp,before,limit)`，按锚点向前/向后分页 -> `ChatMessageResponse`
 
 ### 契约原则
 * 非文件上传接口使用 `@RequestBody` + `jakarta.validation` 注解校验。
 * 文件上传接口使用 Multipart/FormData，不使用 `@Valid @RequestBody`，改为 `@RequestParam/@Part` + 手动校验。
 * 参数校验异常统一由全局异常处理器处理，业务错误类型统一维护在 `com/openapi/domain/constant/error`。
-* `getByAnchor` 的 `direction` 统一约束为 `before/after`，并限制最大分页条数。
+* `getByAnchor` 使用 `before:Boolean` 表示方向（true历史/false补偿），并限制最大分页条数。
 
 ## Domain 转换模块（Converter）
 

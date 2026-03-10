@@ -148,6 +148,7 @@ class RealtimeChatController : IsAudioRecording{
                     ) {
                         super.onClosed(webSocket, code, reason)
                         realtimeChatState.postValue(RealtimeChatState.Disconnected)
+                        MainApplication.getNetworkManager().onWebSocketDisconnected()
                         Log.i(TAG, "realtimeChatWsClient::onClosed")
                     }
 
@@ -168,6 +169,7 @@ class RealtimeChatController : IsAudioRecording{
                         super.onFailure(webSocket, t, response)
                         Log.e(TAG, "realtimeChatWsClient::onFailure: ${t.message}")
                         realtimeChatState.postValue(RealtimeChatState.Error(t.message ?: "-"))
+                        MainApplication.getNetworkManager().onWebSocketDisconnected()
                     }
 
                     override fun onMessage(webSocket: WebSocket, text: String) {
@@ -188,6 +190,7 @@ class RealtimeChatController : IsAudioRecording{
                         super.onOpen(webSocket, response)
                         // 到了此处说明: 授权 && 连接成功
                         realtimeChatState.postValue(RealtimeChatState.InitializedConnected)
+                        MainApplication.getNetworkManager().onWebSocketConnected()
                         Log.i(TAG, "realtimeChatWsClient::onOpen; response: $response")
 
                         val agentId = messageContactItemAo?.contactId
@@ -682,6 +685,7 @@ class RealtimeChatController : IsAudioRecording{
             try {
                 it.close()
                 realtimeChatWsClient = null
+                MainApplication.getNetworkManager().onWebSocketDisconnected()
             } catch (e: Exception){
                 Log.e(TAG, "releaseAllResource::realtimeChatWsClient error", e)
             }

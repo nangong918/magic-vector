@@ -13,7 +13,7 @@
 * **状态管理层（MVI）**：负责处理 Intent、维护状态、发出 Effect。
   * `StartVm`、`ComposeLoginVm`、`ComposeRegisterVm`、`MainVm`、`MessageListMviVm`、`ComposeChatVm`
 * **业务与会话层**：封装会话与用户相关业务能力。
-  * `UserManager`、`ChatMapController`、`ChatController`、`ChatCacheManager`、`NetworkManager`
+* `UserManager`、`ChatMapController`、`ChatController`、`ChatCacheManager`、`NetworkManager(全局/Application级)`
 * **数据访问层（Room）**：负责本地持久化。
   * `VectorDatabase`、`UserDao`、`AgentCacheDao`、`ChatMessageDao`
   * `UserEntity`、`AgentCacheEntity`、`ChatMessageEntity`
@@ -791,8 +791,10 @@ stateDiagram-v2
 #### 功能职责
 * `ChatMapController` 管理 `<agentId, ChatController>` 映射，支持按 Agent 隔离会话数据。
 * `ChatController` 维护单 Agent 有序消息列表，支持 HTTP 批量插入与 WS 单条/流式插入。
+* `ChatController` 使用 `messageId` 索引加速去重（O(1)），并限制内存消息上限，历史依赖 Room + 锚点分页回放。
 * `ChatCacheManager` 负责 Room 持久化与锚点查询，提供离线回放和重连补偿数据基础。
-* `NetworkManager` 负责在线/离线状态监听，触发首次/重连 HTTP 拉取策略。
+* `NetworkManager` 负责在线/离线 + WebSocket 连接状态监听，触发首次/重连 HTTP 拉取策略。
+* `ChatMapController` 使用线程安全容器并设置 Controller 数量上限，降低长时运行内存泄漏风险。
 
 #### UML静态图（类图）
 ##### Chat 管理类图
@@ -868,7 +870,7 @@ classDiagram
   }
 
   class NetworkManager {
-    网络状态监听
+    网络 + WS状态监听
   }
 
   class ApiRequestImpl {
@@ -876,7 +878,7 @@ classDiagram
   }
 
   class RealtimeChatController {
-    WebSocket连接
+    WebSocket连接状态
   }
 
   class ViewModel {
@@ -982,14 +984,14 @@ erDiagram
 * `GET /agent/getLastAgentChatList`：获取 Agent 最近聊天摘要列表。
 * `GET /chat/getLastChat`：获取某 Agent 最近消息。
 * `GET /chat/getTimeLimitChat`：按截止时间拉取历史消息。
-* `GET /chat/getByAnchor`：按锚点向前/向后分页拉取消息。
+* `POST /chat/getByAnchor`：请求体 `ChatByAnchorRequest(agentId,anchorTimestamp,before,limit)`，按锚点向前/向后分页拉取消息。
 * `POST /chat/vision/upload/img`：视觉图片上传任务。
 
 ### 契约原则
 * 非文件上传接口统一使用请求体 DTO；上传接口使用 Multipart。
 * 响应统一结构化 DTO，不返回裸类型。
 * 与 SpringBoot 契约字段保持一致，ID 传输按项目规范执行。
-* `getByAnchor` 的 `direction` 只允许 `before/after`，并统一 limit 上限。
+* `getByAnchor` 使用 `before:Boolean` 表示方向（true历史/false补偿），并统一 limit 上限。
 
 
 

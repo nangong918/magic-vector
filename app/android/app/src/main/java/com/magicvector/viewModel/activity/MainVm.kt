@@ -1,7 +1,6 @@
 package com.magicvector.viewModel.activity
 
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
 import com.core.baseutil.network.BaseResponse
 import com.core.baseutil.network.OnSuccessCallback
 import com.core.baseutil.network.OnThrowableCallback
@@ -10,17 +9,13 @@ import com.data.domain.dto.response.AgentResponse
 import com.magicvector.MainApplication
 import com.magicvector.manager.RealtimeChatController
 import com.view.appview.MainSelectItemEnum
-import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.asSharedFlow
-import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
-import kotlinx.coroutines.launch
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.RequestBody.Companion.toRequestBody
 
@@ -38,9 +33,6 @@ class MainVm : ViewModel() {
     private val _uiState = MutableStateFlow(MainState())
     val uiState: StateFlow<MainState> = _uiState.asStateFlow()
 
-    // Channel/Flow (Effect) 发送一次性事件 （类似EventBus、广播）
-    private val _effect = Channel<MainEffect>(Channel.BUFFERED)
-    val effect: Flow<MainEffect> = _effect.receiveAsFlow()
     private val api = MainApplication.getApiRequestImplInstance()
     private val _agentListEvent = MutableSharedFlow<AgentListEvent>(extraBufferCapacity = 16)
     val agentListEvent: SharedFlow<AgentListEvent> = _agentListEvent.asSharedFlow()
@@ -96,12 +88,6 @@ class MainVm : ViewModel() {
                 realtimeChatController = null
                 _uiState.update { it.copy(isChatServiceBound = false) }
             }
-        }
-    }
-
-    private fun sendEffect(effect: MainEffect) {
-        viewModelScope.launch {
-            _effect.send(effect)
         }
     }
 
@@ -258,11 +244,6 @@ data class MainState(
     val isChatServiceBound: Boolean = false,
     val agentEditor: AgentEditorState = AgentEditorState()
 )
-
-sealed class MainEffect {
-    // 跳转创建 Agent 页面
-    data object LaunchCreateAgent : MainEffect()
-}
 
 enum class AgentEditorMode {
     CREATE,

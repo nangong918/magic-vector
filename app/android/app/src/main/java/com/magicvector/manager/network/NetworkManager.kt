@@ -7,6 +7,7 @@ import android.content.IntentFilter
 import android.os.Build
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
+import java.util.concurrent.atomic.AtomicBoolean
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -16,16 +17,25 @@ class NetworkManager(private val context: Context) {
     private val connectivityManager =
         appContext.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
 
-    private val _state = MutableStateFlow(if (isOnline()) NetworkState.Online else NetworkState.Offline)
+    private val hasRegistered = AtomicBoolean(false)
+    private val _state = MutableStateFlow(
+        NetworkState(
+            isNetworkOnline = isOnline(),
+            isWsConnected = false
+        )
+    )
     val state: StateFlow<NetworkState> = _state.asStateFlow()
 
     private val receiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
-            _state.value = if (isOnline()) NetworkState.Online else NetworkState.Offline
+            _state.value = _state.value.copy(isNetworkOnline = isOnline())
         }
     }
 
     fun register() {
+        if (!hasRegistered.compareAndSet(false, true)) {
+            return
+        }
         val filter = IntentFilter(ConnectivityManager.CONNECTIVITY_ACTION)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             appContext.registerReceiver(receiver, filter, Context.RECEIVER_NOT_EXPORTED)
@@ -35,7 +45,17 @@ class NetworkManager(private val context: Context) {
     }
 
     fun unregister() {
-        runCatching { appContext.unregisterReceiver(receiver) }
+        if (hasRegistered.compareAndSet(true, false)) {
+            runCatching { appContext.unregisterReceiver(receiver) }
+        }
+    }
+
+    fun onWebSocketConnected() {
+        _state.value = _state.value.copy(isWsConnected = true)
+    }
+
+    fun onWebSocketDisconnected() {
+        _state.value = _state.value.copy(isWsConnected = false)
     }
 
     private fun isOnline(): Boolean {
@@ -45,7 +65,10 @@ class NetworkManager(private val context: Context) {
     }
 }
 
-sealed class NetworkState {
-    data object Online : NetworkState()
-    data object Offline : NetworkState()
+data class NetworkState(
+    val isNetworkOnline: Boolean,
+    val isWsConnected: Boolean
+) {
+    val isOnlineAndWsReady: Boolean
+        get() = isNetworkOnline && isWsConnected
 }

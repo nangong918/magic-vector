@@ -6,11 +6,13 @@ import com.openapi.domain.constant.ModelConstant;
 import com.openapi.domain.constant.error.AgentExceptions;
 import com.openapi.domain.constant.error.CommonExceptions;
 import com.openapi.domain.dto.BaseResponse;
+import com.openapi.domain.dto.request.ChatByAnchorRequest;
 import com.openapi.domain.dto.resonse.ChatMessageResponse;
 import com.openapi.service.ChatMessageService;
 import com.openapi.service.RealtimeChatService;
 import com.openapi.utils.FileUtils;
 import com.openapi.config.SessionConfig;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
@@ -88,27 +90,31 @@ public class ChatController {
         return BaseResponse.getResponseEntitySuccess(response);
     }
 
-    @GetMapping("/getByAnchor")
+    @PostMapping("/getByAnchor")
     public BaseResponse<ChatMessageResponse> getByAnchor(
-            @RequestParam("agentId") String agentId,
-            @RequestParam("anchorTimestamp") Long anchorTimestamp,
-            @RequestParam("direction") String direction,
-            @RequestParam("limit") Integer limit
+            @Valid @RequestBody ChatByAnchorRequest request
     ) {
-        if (!StringUtils.hasText(agentId) || anchorTimestamp == null
-                || !StringUtils.hasText(direction) || limit == null || limit <= 0) {
+        Integer limit = request.getLimit();
+        if (!StringUtils.hasText(request.getAgentId()) || request.getAnchorTimestamp() == null
+                || request.getBefore() == null || limit == null || limit <= 0) {
             return BaseResponse.LogBackError(CommonExceptions.PARAM_ERROR);
         }
         if (limit > ModelConstant.LIMIT_FETCH_CHAT_HISTORY_LENGTH) {
             limit = ModelConstant.LIMIT_FETCH_CHAT_HISTORY_LENGTH;
         }
         List<com.openapi.domain.Do.ChatMessageDo> chatMessageDos;
-        if ("before".equalsIgnoreCase(direction)) {
-            chatMessageDos = chatMessageService.getMessagesBeforeAnchorLimit(agentId, anchorTimestamp, limit);
-        } else if ("after".equalsIgnoreCase(direction)) {
-            chatMessageDos = chatMessageService.getMessagesAfterAnchorLimit(agentId, anchorTimestamp, limit);
+        if (Boolean.TRUE.equals(request.getBefore())) {
+            chatMessageDos = chatMessageService.getMessagesBeforeAnchorLimit(
+                    request.getAgentId(),
+                    request.getAnchorTimestamp(),
+                    limit
+            );
         } else {
-            return BaseResponse.LogBackError(CommonExceptions.PARAM_ERROR);
+            chatMessageDos = chatMessageService.getMessagesAfterAnchorLimit(
+                    request.getAgentId(),
+                    request.getAnchorTimestamp(),
+                    limit
+            );
         }
         ChatMessageResponse response = new ChatMessageResponse();
         response.setChatMessages(chatMessageDos);
