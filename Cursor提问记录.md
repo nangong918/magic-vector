@@ -279,3 +279,24 @@ SpringBootDesignDocument也要跟上述的一样合并, 缺少的就补上.
 
 我说的这些你需要总结到对应的developAndRules中,让你下次开发完写文档的时候能记住怎么写
 总之本次的意图就是让你的设计文档要目录化,结构化,戒掉日志化的习惯
+
+
+### 代码审核
+
+#### SpringBoot
+* `/chat/getByAnchor`这个方法需要修改
+设计的接口不传递文件就不使用FormData类型数据，应该传递xxxRequest。内部使用校验。你难道没看`SpringBoot developAndRules`[developAndRules.md](springboot/docs/developAndRules.md)吗？
+而且不要使用比对字符串`direction`，要使用布尔值。
+#### Android
+* NetworkManager我认为是全局需要，不仅仅是MainActivity，所以应该放在Application中。
+* 如果你认为你MainEffect.LaunchCreateAgent完成的很好了，就是不用再使用新的创建Activity之后应该删除这个`effect`
+* 根据Android的设计规则[developAndRules.md](app/android/docs/developAndRules.md)
+  Activity页面不做复杂的UI设计，UI要拆分到 `com/magicvector/ui/view/activity`，Activity仅保留编排逻辑（导航、effect监听、权限触发等）。
+  所以很明显你忘记拆分Activity的UI了，不要把UI耦合在Activity，太重了。
+* 我看你的NetWorkManager中只监听了网络变化，但是我忘了告诉你了Ws的变化也要属于网络变化，你就写Websocket变化吧。是我没说完整，现在Websocket变化跟网络变化的逻辑基本一致，
+  需要写到Android设计文档以及在代码中实现。
+* （超级重点）我写的ChatMapController，ChatController，ChatManager可能不完善存在问题，你根据设计文档看看是否完善，逻辑是否周密严密，设计是否合理符合Mvi？
+  是否高效高性能是否存在内存泄漏的风险。这些都需要你审核和优化。这个可能是本项目最难的地方。毕竟那么多数据源。包括二分插入方法是否可靠？都要好好思考，
+  不可以的化就优化。
+
+
