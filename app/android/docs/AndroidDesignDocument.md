@@ -854,14 +854,53 @@ flowchart TD
 ##### Chat 对象图（运行期）
 ```mermaid
 classDiagram
-    class ChatMapController#1
-    class ChatController#1001
-    class ChatController#1002
-    class ChatCacheManager#1
-    ChatMapController#1 --> ChatController#1001 : key=1001
-    ChatMapController#1 --> ChatController#1002 : key=1002
-    ChatController#1001 --> ChatCacheManager#1
-    ChatController#1002 --> ChatCacheManager#1
+  class ChatMapController {
+    Map~String, ChatController~
+  }
+
+  class ChatController {
+    agentId
+    List~ChatItemAo~
+  }
+
+  class ChatCacheManager {
+    Room数据库操作
+  }
+
+  class NetworkManager {
+    网络状态监听
+  }
+
+  class ApiRequestImpl {
+    HTTP请求
+  }
+
+  class RealtimeChatController {
+    WebSocket连接
+  }
+
+  class ViewModel {
+    MessageListMviVm
+    ComposeChatVm
+  }
+
+  ChatMapController *-- ChatController : 包含
+
+  ChatController --> ChatCacheManager : 读写
+
+  NetworkManager --> ChatCacheManager : 状态通知
+  NetworkManager --> ViewModel : 状态通知
+
+  ApiRequestImpl --> ChatCacheManager : 写入历史
+  ApiRequestImpl --> ChatController : 批量插入
+
+  RealtimeChatController --> ChatController : 单条插入
+  RealtimeChatController --> ChatCacheManager : 持久化
+
+  ViewModel --> ChatMapController : 获取
+  ViewModel --> ApiRequestImpl : 调用
+  ViewModel --> RealtimeChatController : 管理
+  ViewModel --> NetworkManager : 监听
 ```
 
 ##### Chat 状态图（连接与数据源切换）
