@@ -260,3 +260,22 @@ chatManager是管理单个Agent的消息，内部有一个顺序排列的List，
 [AndroidDesignDocument.md](app/android/docs/AndroidDesignDocument.md)（这是Android的设计文档）
 
 写完方案之后开发SpringBoot和Android。
+
+
+### 重新审核
+
+看看AndroidDesignDocument和SpringBootDesignDocument
+你不应该在最底下加入本次开发的新的内容，而是把本次开的涉及到的内容插入到对应模块中，就比如说：
+AndroidDesignDocument中：
+1. `### 架构类图`需要更新。
+2. 两个E-R图是不是应该合并？就算不合并是不是应该放在`本地数据库设计（Room）`中？
+3. ChatController + ChatManager的设计是不是应该放在`Manager管理类设计`中？是不是要分别像之前的设计一样设计静态UML图(类图)和动态UML图？本次稍微复杂, 还需要对象图, 对象图是ChatController对ChatManager的管理.
+顺便一提, 之前的`通信图`应该属于的是动态UML图, 调整一下.
+4. 本次修改新增这么多UI, 你应该在`## 页面模块设计`中新增啊, 包括activity级别的和组合函数级别的(姑且称为fragment, 自定义view不是fragment. 能聚合别的自定义组合函数并且拥有自己的vm甚至包含业务逻辑的view我称之为fragment)各种图(MVI 类图,MVI 通信图,活动图,时序图,功能甘特图)是不是也需要跟之前一样?大概UI设计和交互逻辑是不是要写?
+5. 网络接口是不是要合并? `## 网络接口契约（Auth API）`的每个接口最好写上大致功能
+6. 其他的DAO和Domain是不是也要合并? 不要以本次开发单独领出来, 而是要你根据之前的设计文档在其应该的位置插入新功能.
+
+SpringBootDesignDocument也要跟上述的一样合并, 缺少的就补上.
+
+我说的这些你需要总结到对应的developAndRules中,让你下次开发完写文档的时候能记住怎么写
+总之本次的意图就是让你的设计文档要目录化,结构化,戒掉日志化的习惯
