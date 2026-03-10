@@ -45,6 +45,9 @@ class MessageListMviVm : ViewModel() {
             is MessageListIntent.SelectMessage -> {
                 onMessageItemClick(intent.position)
             }
+            is MessageListIntent.EditAgent -> {
+                onEditAgent(intent.position)
+            }
             MessageListIntent.CreateAgent -> {
                 sendEffect(MessageListEffect.OpenCreateAgent)
             }
@@ -89,6 +92,7 @@ class MessageListMviVm : ViewModel() {
     private fun refreshMessages() {
         viewModelScope.launch {
             _uiState.update { it.copy(isRefreshing = true) }
+            initNetworkRequest()
             _uiState.update { it.copy(isRefreshing = false) }
         }
     }
@@ -98,6 +102,17 @@ class MessageListMviVm : ViewModel() {
         if (messages.size > position) {
             val ao = messages[position]
             sendEffect(MessageListEffect.NavigateToChat(ao))
+        }
+    }
+
+    private fun onEditAgent(position: Int) {
+        val messages = _uiState.value.messages
+        if (messages.size > position) {
+            val ao = messages[position]
+            val agentId = ao.contactId
+            if (!agentId.isNullOrBlank()) {
+                sendEffect(MessageListEffect.OpenAgentEditor(agentId))
+            }
         }
     }
 
@@ -202,6 +217,7 @@ class MessageListMviVm : ViewModel() {
 sealed class MessageListIntent {
     data object Initialize : MessageListIntent()
     data class SelectMessage(val position: Int) : MessageListIntent()
+    data class EditAgent(val position: Int) : MessageListIntent()
     data object CreateAgent : MessageListIntent()
     data object Refresh : MessageListIntent()
     data class AgentCreated(val created: Boolean) : MessageListIntent()
@@ -221,6 +237,7 @@ data class MessageListState(
 
 sealed class MessageListEffect {
     data object OpenCreateAgent : MessageListEffect()
+    data class OpenAgentEditor(val agentId: String) : MessageListEffect()
     data class NavigateToChat(val ao: MessageContactItemAo) : MessageListEffect()
     data object NavigateToChatActivity : MessageListEffect()
     data class ShowToast(val message: String) : MessageListEffect()

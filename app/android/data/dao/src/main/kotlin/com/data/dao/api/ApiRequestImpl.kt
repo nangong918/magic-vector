@@ -5,6 +5,7 @@ import com.core.baseutil.network.BaseApiRequestImpl
 import com.core.baseutil.network.BaseResponse
 import com.core.baseutil.network.OnSuccessCallback
 import com.core.baseutil.network.OnThrowableCallback
+import com.data.domain.dto.request.AgentDeleteRequest
 import com.data.domain.dto.request.UserLoginRequest
 import com.data.domain.dto.request.UserTokenVerifyRequest
 import com.data.domain.dto.response.AgentLastChatListResponse
@@ -87,6 +88,36 @@ open class ApiRequestImpl(apiRequest: ApiRequest) : BaseApiRequestImpl() {
         )
     }
 
+    fun updateAgent(
+        avatar: MultipartBody.Part?,
+        agentId: RequestBody,
+        userId: RequestBody,
+        name: RequestBody,
+        description: RequestBody,
+        onSuccessCallback: OnSuccessCallback<BaseResponse<AgentResponse>>?,
+        throwableCallback: OnThrowableCallback?
+    ) {
+        sendRequestCallback(
+            apiCall = {
+                mApi.updateAgent(avatar, agentId, userId, name, description)
+            },
+            successCallback = onSuccessCallback,
+            throwableCallback = throwableCallback
+        )
+    }
+
+    fun deleteAgent(
+        request: AgentDeleteRequest,
+        onSuccessCallback: OnSuccessCallback<BaseResponse<AgentResponse>>?,
+        throwableCallback: OnThrowableCallback?
+    ) {
+        sendRequestCallback(
+            apiCall = { mApi.deleteAgent(request) },
+            successCallback = onSuccessCallback,
+            throwableCallback = throwableCallback
+        )
+    }
+
     //    @GET("/agent/getLastAgentChatList")
     //    suspend fun getLastAgentChatList(
     //        @Query("userId") userId: String
@@ -145,6 +176,23 @@ open class ApiRequestImpl(apiRequest: ApiRequest) : BaseApiRequestImpl() {
                     deadline = deadline,
                     limit = limit
                 )
+            },
+            successCallback = onSuccessCallback,
+            throwableCallback = throwableCallback
+        )
+    }
+
+    fun getChatByAnchor(
+        agentId: String,
+        anchorTimestamp: Long,
+        direction: String,
+        limit: Int,
+        onSuccessCallback: OnSuccessCallback<BaseResponse<ChatMessageResponse>>?,
+        throwableCallback: OnThrowableCallback?
+    ) {
+        sendRequestCallback(
+            apiCall = {
+                mApi.getChatByAnchor(agentId, anchorTimestamp, direction, limit)
             },
             successCallback = onSuccessCallback,
             throwableCallback = throwableCallback

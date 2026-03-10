@@ -15,6 +15,16 @@ import java.util.List;
 public interface AgentService {
     AgentAo createAgent(@Nullable MultipartFile avatar, @NotNull String userId, @NotNull String name, @NotNull String description);
 
+    AgentAo updateAgent(
+            @Nullable MultipartFile avatar,
+            @NotNull String agentId,
+            @NotNull String userId,
+            @NotNull String name,
+            @NotNull String description
+    );
+
+    boolean deleteAgent(@NotNull String agentId, @NotNull String userId);
+
     AgentAo getAgentById(String id);
 
     @NotNull List<AgentAo> getAgentsByIds(List<String> ids);

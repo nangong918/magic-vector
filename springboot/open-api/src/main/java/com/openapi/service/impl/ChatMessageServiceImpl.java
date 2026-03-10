@@ -66,6 +66,24 @@ public class ChatMessageServiceImpl implements ChatMessageService {
         return chatMessageMapper.getMessagesByAgentIdDeadlineLimit(agentId, deadline, limit);
     }
 
+    @Override
+    public List<ChatMessageDo> getMessagesBeforeAnchorLimit(
+            @NotNull String agentId,
+            @NotNull Long anchorTimestamp,
+            @NotNull Integer limit
+    ) {
+        return chatMessageMapper.getMessagesBeforeAnchorLimit(agentId, anchorTimestamp, limit);
+    }
+
+    @Override
+    public List<ChatMessageDo> getMessagesAfterAnchorLimit(
+            @NotNull String agentId,
+            @NotNull Long anchorTimestamp,
+            @NotNull Integer limit
+    ) {
+        return chatMessageMapper.getMessagesAfterAnchorLimit(agentId, anchorTimestamp, limit);
+    }
+
     /**
      * 查询最新聊天记录10条; 会AOP先走Redis
      * @param agentId   智能助手Id

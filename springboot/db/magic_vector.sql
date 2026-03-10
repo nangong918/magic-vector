@@ -44,7 +44,8 @@ CREATE TABLE `chat_message`  (
   `user_id` bigint NOT NULL,
   `chat_timestamp` bigint NOT NULL,
   PRIMARY KEY (`id`) USING BTREE,
-  INDEX `user_agent_index`(`user_id` ASC, `agent_id` ASC) USING BTREE
+  INDEX `user_agent_index`(`user_id` ASC, `agent_id` ASC) USING BTREE,
+  INDEX `agent_timestamp_index`(`agent_id` ASC, `chat_timestamp` ASC, `id` ASC) USING BTREE
 ) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------

@@ -11,8 +11,6 @@ import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.activity.result.ActivityResultLauncher
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
@@ -29,9 +27,13 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
@@ -39,9 +41,13 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
-import com.magicvector.callback.OnCreateAgentCallback
+import com.data.domain.ao.message.MessageContactItemAo
+import com.data.domain.fragmentActivity.intentAo.ChatIntentAo
+import com.magicvector.fragment.AgentEditorOverlay
 import com.magicvector.fragment.MessageListScreen
 import com.magicvector.fragment.MineScreen
+import com.magicvector.manager.network.NetworkManager
+import com.magicvector.manager.network.NetworkState
 import com.magicvector.service.ChatService
 import com.magicvector.ui.theme.MagicVectorTheme
 import com.magicvector.viewModel.activity.MainEffect
@@ -58,11 +64,13 @@ import kotlinx.coroutines.launch
 class MainActivity : ComponentActivity() {
 
     private val vm: MainVm by viewModels { ApiViewModelFactory() }
+    private lateinit var networkManager: NetworkManager
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        initCreateAgentLauncher()
+        networkManager = NetworkManager(this)
+        networkManager.register()
 
         vm.processIntent(MainIntent.Initialize(parseInitialSelection()))
         bindChatService()
@@ -74,7 +82,16 @@ class MainActivity : ComponentActivity() {
                 MainActivityScreen(
                     state = state,
                     onSelectTab = { vm.processIntent(MainIntent.SelectTab(it)) },
-                    onCreateAgent = { vm.processIntent(MainIntent.OpenCreateAgent) }
+                    onCreateAgent = { vm.processIntent(MainIntent.OpenCreateAgent) },
+                    onOpenAgentEditor = { vm.processIntent(MainIntent.OpenEditAgent(it)) },
+                    onOpenChat = { openChatPage(it) },
+                    onEditorClose = { vm.processIntent(MainIntent.CloseAgentEditor) },
+                    onEditorNameChange = { vm.processIntent(MainIntent.UpdateEditorName(it)) },
+                    onEditorDescriptionChange = { vm.processIntent(MainIntent.UpdateEditorDescription(it)) },
+                    onEditorSubmit = { vm.processIntent(MainIntent.SubmitAgentEditor) },
+                    onEditorDelete = { vm.processIntent(MainIntent.DeleteAgent) },
+                    agentListEventFlow = vm.agentListEvent,
+                    networkStateFlow = networkManager.state
                 )
             }
         }
@@ -138,28 +155,12 @@ class MainActivity : ComponentActivity() {
         vm.processIntent(MainIntent.ChatServiceUnbound)
     }
 
-    //------------------------Create Agent------------------------
-
-    private var createAgentCallback: OnCreateAgentCallback? = null
-    private lateinit var createAgentLauncher: ActivityResultLauncher<Intent>
-
-    fun turnToCreateAgent() {
-        vm.processIntent(MainIntent.OpenCreateAgent)
-    }
-
-    private fun initCreateAgentLauncher() {
-        createAgentLauncher = registerForActivityResult(
-            ActivityResultContracts.StartActivityForResult()
-        ) { result ->
-            val backIntent: Intent? = result.data
-            if (backIntent != null) {
-                val createResult: Boolean = backIntent.getBooleanExtra(
-                    ComposeCreateAgentActivity::class.simpleName,
-                    false
-                )
-                createAgentCallback?.onCreateAgent(createResult)
-            }
+    private fun openChatPage(ao: MessageContactItemAo) {
+        val intentAo = ChatIntentAo().apply { this.ao = ao }
+        val intent = Intent(this, ComposeChatActivity::class.java).apply {
+            putExtra(ChatIntentAo::class.simpleName, intentAo)
         }
+        startActivity(intent)
     }
 
     /**
@@ -190,6 +191,7 @@ class MainActivity : ComponentActivity() {
     //------------------------lifecycle------------------------
 
     override fun onDestroy() {
+        networkManager.unregister()
         super.onDestroy()
         unbindAndStopChatService()
     }
@@ -210,10 +212,7 @@ class MainActivity : ComponentActivity() {
             repeatOnLifecycle(androidx.lifecycle.Lifecycle.State.STARTED) {
                 vm.effect.collect { effect ->
                     when (effect) {
-                        MainEffect.LaunchCreateAgent -> {
-                            val intent = Intent(this@MainActivity, ComposeCreateAgentActivity::class.java)
-                            createAgentLauncher.launch(intent)
-                        }
+                        MainEffect.LaunchCreateAgent -> Unit
                     }
                 }
             }
@@ -226,10 +225,34 @@ class MainActivity : ComponentActivity() {
 private fun MainActivityScreen(
     state: MainState,
     onSelectTab: (MainSelectItemEnum) -> Unit,
-    onCreateAgent: () -> Unit
+    onCreateAgent: () -> Unit,
+    onOpenAgentEditor: (String) -> Unit,
+    onOpenChat: (MessageContactItemAo) -> Unit,
+    onEditorClose: () -> Unit,
+    onEditorNameChange: (String) -> Unit,
+    onEditorDescriptionChange: (String) -> Unit,
+    onEditorSubmit: () -> Unit,
+    onEditorDelete: () -> Unit,
+    agentListEventFlow: kotlinx.coroutines.flow.SharedFlow<com.magicvector.viewModel.activity.AgentListEvent>,
+    networkStateFlow: kotlinx.coroutines.flow.StateFlow<NetworkState>,
 ) {
     val backgroundColor = remember {
         Color(0xFFF6F7F8)
+    }
+    var refreshToken by remember { mutableLongStateOf(0L) }
+    val latestCreate = rememberUpdatedState(onCreateAgent)
+    val latestEditor = rememberUpdatedState(onOpenAgentEditor)
+    val networkState by networkStateFlow.collectAsState()
+
+    LaunchedEffect(agentListEventFlow) {
+        agentListEventFlow.collect {
+            refreshToken = System.currentTimeMillis()
+        }
+    }
+    LaunchedEffect(networkState) {
+        if (networkState is NetworkState.Online) {
+            refreshToken = System.currentTimeMillis()
+        }
     }
 
     Scaffold(
@@ -289,29 +312,50 @@ private fun MainActivityScreen(
             when (state.currentSelected) {
                 MainSelectItemEnum.HOME -> MessageListScreen(
                     isServiceBound = state.isChatServiceBound,
-                    onCreateAgentClick = onCreateAgent
+                    onCreateAgentClick = { latestCreate.value.invoke() },
+                    refreshToken = refreshToken,
+                    onOpenChat = onOpenChat,
+                    onOpenAgentEditor = { latestEditor.value.invoke(it) }
                 )
 
                 // 暂时未实现Media页面
                 MainSelectItemEnum.MEDIA -> MediaScreen(
                     isServiceBound = state.isChatServiceBound,
-                    onCreateAgent = onCreateAgent
+                    onCreateAgent = { latestCreate.value.invoke() },
+                    refreshToken = refreshToken,
+                    onOpenChat = onOpenChat,
+                    onOpenAgentEditor = { latestEditor.value.invoke(it) }
                 )
 
                 MainSelectItemEnum.MINE -> MineScreen()
             }
         }
+
+        AgentEditorOverlay(
+            state = state.agentEditor,
+            onNameChange = onEditorNameChange,
+            onDescriptionChange = onEditorDescriptionChange,
+            onSubmit = onEditorSubmit,
+            onDelete = onEditorDelete,
+            onClose = onEditorClose
+        )
     }
 }
 
 @Composable
 private fun MediaScreen(
     isServiceBound: Boolean,
-    onCreateAgent: () -> Unit
+    onCreateAgent: () -> Unit,
+    refreshToken: Long,
+    onOpenChat: (MessageContactItemAo) -> Unit,
+    onOpenAgentEditor: (String) -> Unit
 ) {
     MessageListScreen(
         isServiceBound = isServiceBound,
-        onCreateAgentClick = onCreateAgent
+        onCreateAgentClick = onCreateAgent,
+        refreshToken = refreshToken,
+        onOpenChat = onOpenChat,
+        onOpenAgentEditor = onOpenAgentEditor
     )
 }
 
@@ -330,7 +374,16 @@ private fun GreetingPreview() {
         MainActivityScreen(
             state = mockState,
             onSelectTab = { },
-            onCreateAgent = { }
+            onCreateAgent = { },
+            onOpenAgentEditor = { },
+            onOpenChat = { },
+            onEditorClose = { },
+            onEditorNameChange = { },
+            onEditorDescriptionChange = { },
+            onEditorSubmit = { },
+            onEditorDelete = { },
+            agentListEventFlow = kotlinx.coroutines.flow.MutableSharedFlow(),
+            networkStateFlow = kotlinx.coroutines.flow.MutableStateFlow(NetworkState.Online)
         )
     }
 }

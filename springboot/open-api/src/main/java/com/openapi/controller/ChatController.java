@@ -88,6 +88,33 @@ public class ChatController {
         return BaseResponse.getResponseEntitySuccess(response);
     }
 
+    @GetMapping("/getByAnchor")
+    public BaseResponse<ChatMessageResponse> getByAnchor(
+            @RequestParam("agentId") String agentId,
+            @RequestParam("anchorTimestamp") Long anchorTimestamp,
+            @RequestParam("direction") String direction,
+            @RequestParam("limit") Integer limit
+    ) {
+        if (!StringUtils.hasText(agentId) || anchorTimestamp == null
+                || !StringUtils.hasText(direction) || limit == null || limit <= 0) {
+            return BaseResponse.LogBackError(CommonExceptions.PARAM_ERROR);
+        }
+        if (limit > ModelConstant.LIMIT_FETCH_CHAT_HISTORY_LENGTH) {
+            limit = ModelConstant.LIMIT_FETCH_CHAT_HISTORY_LENGTH;
+        }
+        List<com.openapi.domain.Do.ChatMessageDo> chatMessageDos;
+        if ("before".equalsIgnoreCase(direction)) {
+            chatMessageDos = chatMessageService.getMessagesBeforeAnchorLimit(agentId, anchorTimestamp, limit);
+        } else if ("after".equalsIgnoreCase(direction)) {
+            chatMessageDos = chatMessageService.getMessagesAfterAnchorLimit(agentId, anchorTimestamp, limit);
+        } else {
+            return BaseResponse.LogBackError(CommonExceptions.PARAM_ERROR);
+        }
+        ChatMessageResponse response = new ChatMessageResponse();
+        response.setChatMessages(chatMessageDos);
+        return BaseResponse.getResponseEntitySuccess(response);
+    }
+
     /**
      * 提供给前端上传视觉图片的接口 （1.实现Http上传img然后调用）
      * 弃用使用SpringEvent传递Base64 since 2025/11/3;

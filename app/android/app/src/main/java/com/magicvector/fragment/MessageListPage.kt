@@ -39,7 +39,10 @@ fun MessageListScreen(
     modifier: Modifier = Modifier,
     isServiceBound: Boolean,
     viewModel: MessageListMviVm = MessageListMviVm(),
-    onCreateAgentClick: () -> Unit = {}
+    onCreateAgentClick: () -> Unit = {},
+    refreshToken: Long = 0L,
+    onOpenChat: (MessageContactItemAo) -> Unit = {},
+    onOpenAgentEditor: (String) -> Unit = {}
 ) {
     val context = LocalContext.current
     val state by viewModel.uiState.collectAsState()
@@ -50,12 +53,25 @@ fun MessageListScreen(
         viewModel.processIntent(MessageListIntent.Initialize)
     }
 
+    LaunchedEffect(refreshToken) {
+        if (refreshToken > 0L) {
+            viewModel.processIntent(MessageListIntent.Refresh)
+            viewModel.initNetworkRequest()
+        }
+    }
+
     // 观察 Effect
     LaunchedEffect(Unit) {
         viewModel.effect.collect { effect ->
             when (effect) {
                 is MessageListEffect.ShowToast -> {
                     Toast.makeText(context, effect.message, Toast.LENGTH_SHORT).show()
+                }
+                is MessageListEffect.NavigateToChat -> {
+                    onOpenChat(effect.ao)
+                }
+                is MessageListEffect.OpenAgentEditor -> {
+                    onOpenAgentEditor(effect.agentId)
                 }
                 // 其他 effect 由父页面处理
                 else -> {}
@@ -80,6 +96,9 @@ fun MessageListScreen(
                     listState = listState,
                     onItemClick = { position ->
                         viewModel.processIntent(MessageListIntent.SelectMessage(position))
+                    },
+                    onItemLongClick = { position ->
+                        viewModel.processIntent(MessageListIntent.EditAgent(position))
                     }
                 )
             }
@@ -99,7 +118,8 @@ fun MessageListScreen(
 fun MessageListContent(
     state: MessageListState,
     listState: LazyListState,
-    onItemClick: (Int) -> Unit
+    onItemClick: (Int) -> Unit,
+    onItemLongClick: (Int) -> Unit
 ) {
     LazyColumn(
         state = listState,
@@ -120,6 +140,12 @@ fun MessageListContent(
                     val position = state.messages.indexOf(message)
                     if (position >= 0) {
                         onItemClick(position)
+                    }
+                },
+                onLongClick = {
+                    val position = state.messages.indexOf(message)
+                    if (position >= 0) {
+                        onItemLongClick(position)
                     }
                 }
             )
@@ -210,7 +236,8 @@ private fun MessageListWith10ItemsPreview() {
                 listState = listState,
                 onItemClick = { position ->
                     println("点击了第 $position 条消息")
-                }
+                },
+                onItemLongClick = {}
             )
         }
     }
@@ -240,7 +267,8 @@ private fun MessageListWithMixedStatesPreview() {
                 listState = listState,
                 onItemClick = { position ->
                     println("点击了第 $position 条消息")
-                }
+                },
+                onItemLongClick = {}
             )
         }
     }

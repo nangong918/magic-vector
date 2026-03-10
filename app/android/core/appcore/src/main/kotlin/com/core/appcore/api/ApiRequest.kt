@@ -1,6 +1,7 @@
 package com.core.appcore.api
 
 import com.core.baseutil.network.BaseResponse
+import com.data.domain.dto.request.AgentDeleteRequest
 import com.data.domain.dto.request.UserLoginRequest
 import com.data.domain.dto.request.UserTokenVerifyRequest
 import com.data.domain.dto.response.AgentLastChatListResponse
@@ -58,6 +59,21 @@ interface ApiRequest {
         @Query("userId") userId: String
     ): BaseResponse<AgentListResponse>
 
+    @Multipart
+    @POST("/agent/update")
+    suspend fun updateAgent(
+        @Part avatar: MultipartBody.Part?,
+        @Part("agentId") agentId: RequestBody,
+        @Part("userId") userId: RequestBody,
+        @Part("name") name: RequestBody,
+        @Part("description") description: RequestBody
+    ): BaseResponse<AgentResponse>
+
+    @POST("/agent/delete")
+    suspend fun deleteAgent(
+        @Body request: AgentDeleteRequest
+    ): BaseResponse<AgentResponse>
+
     /**
      * 获取LastAgentChat列表
      * @param userId   用户Id
@@ -93,6 +109,14 @@ interface ApiRequest {
         // yyyy-MM-dd HH:mm:ss
         @Query("deadline") deadline: String,
         // max 50
+        @Query("limit") limit: Int,
+    ): BaseResponse<ChatMessageResponse>
+
+    @GET("/chat/getByAnchor")
+    suspend fun getChatByAnchor(
+        @Query("agentId") agentId: String,
+        @Query("anchorTimestamp") anchorTimestamp: Long,
+        @Query("direction") direction: String,
         @Query("limit") limit: Int,
     ): BaseResponse<ChatMessageResponse>
 

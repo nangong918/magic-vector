@@ -65,3 +65,11 @@ Agent
 ## SpringBoot 设计文档
 
 [SpringBootDesignDocument.md](springboot/docs/SpringBootDesignDocument.md)
+
+## Agent 主流程约束（本次新增）
+
+* Main 首页导航语义统一为：`Agent`（聊天 Agent 相关）、`Control`（设备状态操作监控）、`Mine`（我的）。
+* `Agent` 页在无数据时显示中心大按钮创建 Agent；存在数据时显示 Agent 列表。
+* 创建/查看/编辑/删除 Agent 统一采用 Main 页面内全屏 Compose 组合函数弹层，不再依赖独立 Activity 返回值。
+* Agent 列表刷新与页面间事件同步优先使用 `StateFlow/SharedFlow`，`eventBus` 仅作为兜底方案，不作为主方案。
+* 聊天消息数据源统一抽象为：`HTTP(首次/重连补偿)` + `WebSocket(实时)` + `Room(离线缓存)`，由 Android 与 SpringBoot 模块设计文档分别落地细节。

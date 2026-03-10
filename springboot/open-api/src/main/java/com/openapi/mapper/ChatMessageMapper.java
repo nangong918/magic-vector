@@ -46,6 +46,18 @@ public interface ChatMessageMapper {
                 @Param("limit") Integer limit
     );
 
+    List<ChatMessageDo> getMessagesBeforeAnchorLimit(
+            @Param("agentId") String agentId,
+            @Param("anchorTimestamp") Long anchorTimestamp,
+            @Param("limit") Integer limit
+    );
+
+    List<ChatMessageDo> getMessagesAfterAnchorLimit(
+            @Param("agentId") String agentId,
+            @Param("anchorTimestamp") Long anchorTimestamp,
+            @Param("limit") Integer limit
+    );
+
     List<ChatMessageDo> getMessageByAgentIds(
             @Param("agentIds") List<String> agentIds,
             @Param("deadline")LocalDateTime deadline,

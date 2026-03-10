@@ -660,6 +660,199 @@ erDiagram
 * 不使用裸 `Boolean` 响应，统一结构化响应模型。
 * 前后端 `userId` 类型统一为 `Long`。
 
+## 4. Agent 页与聊天缓存架构（本次新增）
+
+### 功能职责
+* Main 的 Agent 页无数据时显示中心创建按钮；有数据时显示 Agent 列表。
+* 创建/查看/编辑/删除 Agent 统一采用 Main 内全屏 Compose 弹层（动态放大/缩小）。
+* Agent 列表与弹层间状态同步通过 `StateFlow/SharedFlow`，避免 Activity 返回值和 eventBus 强耦合。
+* Chat 数据源聚合：`HTTP(首次/重连)` + `WS(实时)` + `Room(离线)`。
+
+### 设计结论（eventBus vs Flow）
+* 在 Compose + MVI 场景中，`SharedFlow` 更适合作为一次性事件通道（如创建成功、删除成功）。
+* `StateFlow` 负责页面渲染态（弹层显示、当前编辑 Agent、列表刷新 token）。
+* `eventBus` 作为兜底兼容方案，默认不作为主链路。
+
+### Main + Agent 弹层类图
+```mermaid
+classDiagram
+    class MainActivity
+    class MainVm {
+        -uiState: StateFlow~MainState~
+        -agentEvents: SharedFlow~AgentListEvent~
+        +processIntent(intent)
+    }
+    class MessageListMviVm
+    class AgentEditorVm
+    class AgentEditorSheet
+
+    MainActivity --> MainVm
+    MainActivity --> MessageListMviVm
+    MainActivity --> AgentEditorSheet
+    AgentEditorSheet --> AgentEditorVm
+    AgentEditorVm --> MainVm : emit AgentListEvent
+```
+
+### ChatController + ChatManager 类图
+```mermaid
+classDiagram
+    class ChatMapController {
+        +getChatManager(agentId): ChatController
+    }
+    class ChatController {
+        +setResponsesToViews(list)
+        +setWsToViews(item)
+        +getNeedUpdateList()
+    }
+    class ChatControllerHub {
+        -map: ConcurrentHashMap~String,ChatController~
+        +getOrCreate(agentId)
+        +mergeHttp(...)
+        +mergeWs(...)
+    }
+    ChatMapController --> ChatController
+    ChatControllerHub --> ChatController
+```
+
+### Room 设计（Agent + ChatMessage）
+* `agent_cache`：缓存 Agent 基础信息，支撑离线列表。
+* `chat_message`：按 `agentId + chatTimestamp + id` 支持快速锚点分页。
+* 头像缓存交由 Glide/Coil 磁盘缓存处理，Room 仅存 URL。
+
+```mermaid
+erDiagram
+    AGENT_CACHE ||--o{ CHAT_MESSAGE : owns
+    AGENT_CACHE {
+      long id PK
+      long agent_id
+      long user_id
+      string name
+      string description
+      string avatar_url
+      long updated_at
+    }
+    CHAT_MESSAGE {
+      long id PK
+      long agent_id
+      long user_id
+      string content
+      long chat_timestamp
+      string chat_time
+      int role
+      long created_at
+    }
+```
+
+### ChatMessage DAO 语义
+* `queryLastByAgent(agentId, limit)`
+* `queryByAnchorBefore(agentId, anchorTimestamp, limit)`（历史）
+* `queryByAnchorAfter(agentId, anchorTimestamp, limit)`（补偿）
+* `upsertOne(message)` / `upsertBatch(messages)`
+
+### ChatController 活动图（多数据源合并）
+```mermaid
+flowchart TD
+    A[MessageList 初始化] --> B{是否首次打开或重连?}
+    B -- 是 --> C[HTTP 拉取最近数据]
+    B -- 否 --> D[跳过 HTTP]
+    C --> E[写入 Room]
+    D --> F[读取 Room]
+    E --> F
+    F --> G[渲染列表]
+    G --> H[WS 持续推送]
+    H --> I["合并到有序列表(二分插入)"]
+    I --> J[写回 Room + UI 增量更新]
+```
+
+### NetworkManager 状态图
+```mermaid
+stateDiagram-v2
+    [*] --> Unknown
+    Unknown --> Online : 系统网络可用
+    Unknown --> Offline : 无网络
+    Online --> Offline : 断网广播
+    Offline --> Reconnecting : 网络恢复
+    Reconnecting --> Online : WS重连成功
+    Reconnecting --> Offline : 重连失败
+```
+
+### Main 页面线程甘特图
+```mermaid
+gantt
+    title Main Agent页线程甘特图
+    dateFormat  X
+    axisFormat %L ms
+    section UI线程
+    首屏渲染 + 订阅StateFlow           :u1, 0, 20
+    Agent弹层动画开关                 :u2, 20, 25
+    列表增量重绘                      :u3, 80, 20
+    section 网络IO线程
+    首次HTTP拉取                      :n1, 20, 60
+    断线重连补偿拉取                  :n2, 220, 50
+    section WS线程
+    连接建立/心跳                     :w1, 40, 200
+    消息推送                          :w2, 90, 150
+    section DB-IO线程
+    Room批量写入                      :d1, 55, 25
+    Room离线读取                      :d2, 120, 20
+```
+
+### 通信图（首次 / 断线重连 / 离线 / 在线）
+```mermaid
+flowchart LR
+    UI[MessageListPage] --> VM[MessageListMviVm]
+    VM --> Net[NetworkManager]
+    VM --> Http[ApiRequestImpl]
+    VM --> Ws[RealtimeChatController]
+    VM --> Room[VectorDatabase.ChatMessageDao]
+    Http --> VM
+    Ws --> VM
+    Room --> VM
+    VM --> UI
+```
+
+### 对象图（运行期）
+```mermaid
+classDiagram
+  class MainVm1 {
+    +String id
+    +start()
+  }
+  class MessageListMviVm1 {
+    +List~Message~ messages
+    +loadMessages()
+  }
+  class ChatControllerHub1 {
+  }
+  class ChatControllerA {
+    +agentId=1001
+  }
+  class ChatControllerB {
+    +agentId=1002
+  }
+  MainVm1 --> MessageListMviVm1
+  MessageListMviVm1 --> ChatControllerHub1
+  ChatControllerHub1 --> ChatControllerA
+  ChatControllerHub1 --> ChatControllerB
+```
+
+### 甘特图（全流程）
+```mermaid
+gantt
+    title Agent页全流程（首次/重连/离线/在线）
+    dateFormat  X
+    axisFormat %L ms
+    section 首次
+    首次HTTP拉取并落库 :a1, 0, 80
+    section 在线
+    WS实时增量更新 :a2, 80, 180
+    section 断开重连
+    网络恢复触发重连 :a3, 180, 40
+    重连后HTTP补偿 :a4, 220, 60
+    section 离线
+    Room离线回放 :a5, 140, 120
+```
+
 
 
 

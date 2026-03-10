@@ -31,7 +31,7 @@
             values
             <foreach item="item" index="index" collection="list" separator="," open="(" close=")">
                 (
-                #{item.id}, #{item.agentId}, #{item.content}, #{item.chatTime}, #{item.role}, #{item.userId}, #{{item.chatTimestamp}
+                #{item.id}, #{item.agentId}, #{item.content}, #{item.chatTime}, #{item.role}, #{item.userId}, #{item.chatTimestamp}
                 )
             </foreach>
         </if>
@@ -123,6 +123,30 @@
         AND chat_time &lt;= #{deadline}
         ORDER BY chat_timestamp DESC -- 根据 chat_timestamp 从大到小排序
         LIMIT #{limit}
+    </select>
+
+    <select id="getMessagesBeforeAnchorLimit" resultType="com.openapi.domain.Do.ChatMessageDo">
+        select
+        <include refid="columns"/>
+        from
+        <include refid="table"/>
+        where
+            agent_id = #{agentId}
+            and chat_timestamp &lt; #{anchorTimestamp}
+        order by chat_timestamp desc, id desc
+        limit #{limit}
+    </select>
+
+    <select id="getMessagesAfterAnchorLimit" resultType="com.openapi.domain.Do.ChatMessageDo">
+        select
+        <include refid="columns"/>
+        from
+        <include refid="table"/>
+        where
+            agent_id = #{agentId}
+            and chat_timestamp &gt; #{anchorTimestamp}
+        order by chat_timestamp asc, id asc
+        limit #{limit}
     </select>
 
 </mapper>

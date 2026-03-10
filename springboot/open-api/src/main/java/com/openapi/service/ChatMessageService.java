@@ -23,6 +23,18 @@ public interface ChatMessageService {
             @NotNull Integer limit
     );
 
+    List<ChatMessageDo> getMessagesBeforeAnchorLimit(
+            @NotNull String agentId,
+            @NotNull Long anchorTimestamp,
+            @NotNull Integer limit
+    );
+
+    List<ChatMessageDo> getMessagesAfterAnchorLimit(
+            @NotNull String agentId,
+            @NotNull Long anchorTimestamp,
+            @NotNull Integer limit
+    );
+
     @NotNull
     @Cacheable(value = "agentMessages", key = "#agentId")
     List<ChatMessageDo> getLast10Messages(@NotNull String agentId);

@@ -10,6 +10,7 @@ import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import com.magicvector.manager.ChatMapController
 import com.magicvector.manager.MessageListController
+import com.magicvector.manager.chat.ChatCacheManager
 import com.magicvector.manager.user.UserManager
 import com.magicvector.manager.yolo.VisionManager
 
@@ -102,6 +103,14 @@ class MainApplication : Application() {
                 chatMapController = ChatMapController()
             }
             return chatMapController!!
+        }
+
+        private var chatCacheManager: ChatCacheManager? = null
+        fun getChatCacheManager(): ChatCacheManager {
+            if (chatCacheManager == null) {
+                chatCacheManager = ChatCacheManager.getInstance(getApp())
+            }
+            return chatCacheManager!!
         }
 
         /**

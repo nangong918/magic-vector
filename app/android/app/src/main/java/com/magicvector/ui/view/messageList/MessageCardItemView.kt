@@ -3,6 +3,7 @@ package com.magicvector.ui.view.messageList
 
 import android.annotation.SuppressLint
 import androidx.compose.foundation.background
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -34,13 +35,17 @@ fun MessageListItem(
     time: String,
     unreadCount: Int = 0,
     onClick: () -> Unit = {},
+    onLongClick: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     ConstraintLayout(
         modifier = modifier
             .fillMaxWidth()
             .wrapContentHeight()
-            .clickable { onClick() }
+            .combinedClickable(
+                onClick = onClick,
+                onLongClick = onLongClick
+            )
             .padding(vertical = 8.dp)
     ) {
         val (avatar, nameText, messageText, timeText, divider, messagePrompt) = createRefs()

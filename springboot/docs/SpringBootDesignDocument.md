@@ -284,6 +284,108 @@ classDiagram
     UserConverter --> UserAuthResponse
 ```
 
+## 3. Agent 管理与消息分页模块（本次新增）
+
+### 功能职责
+* Agent 能力补全为：创建、查看、修改、删除、列表查询。
+* 聊天记录能力补全为：按时间锚点分页查询（向前/向后）、首屏最近消息查询。
+* SpringBoot `Mapper` 与 Android `Dao` 在“查询语义”上保持一致，便于前后端统一回放逻辑。
+* 文件头像上传继续走 Multipart；MinIO 未就绪时允许不传头像并保留 TODO。
+
+### 接口契约（新增）
+* `POST /agent/update`：Multipart/FormData（`agentId/userId/name/description/avatar?`）-> `AgentResponse`
+* `POST /agent/delete`：JSON 请求体（`agentId/userId`）-> `AgentResponse`
+* `GET /chat/getByAnchor`：`agentId + anchorTimestamp + direction(before|after) + limit` -> `ChatMessageResponse`
+
+### Agent 模块类图
+```mermaid
+classDiagram
+    class AgentController {
+        +createAgent(...)
+        +getAgentInfo(agentId)
+        +getAgentList(userId)
+        +updateAgent(...)
+        +deleteAgent(request)
+    }
+    class AgentService {
+        +createAgent(...)
+        +getAgentById(id)
+        +updateAgent(...)
+        +deleteAgent(agentId, userId)
+    }
+    class AgentServiceImpl
+    class AgentMapper {
+        +insert(agentDo)
+        +update(agentDo)
+        +deleteById(id)
+        +selectById(id)
+        +selectAllByUserId(userId)
+    }
+    class AgentDo
+    class AgentAo
+    class AgentVo
+
+    AgentController --> AgentService
+    AgentServiceImpl ..|> AgentService
+    AgentServiceImpl --> AgentMapper
+    AgentMapper --> AgentDo
+    AgentServiceImpl --> AgentAo
+    AgentAo --> AgentVo
+```
+
+### Chat 分页活动图（锚点分页）
+```mermaid
+flowchart TD
+    A[接收 getByAnchor 请求] --> B{agentId/anchor/direction/limit 合法?}
+    B -- 否 --> C[返回参数错误]
+    B -- 是 --> D{direction = before ?}
+    D -- 是 --> E[查询 chat_timestamp < anchor order by desc limit N]
+    D -- 否 --> F[查询 chat_timestamp > anchor order by asc limit N]
+    E --> G[结果集封装 ChatMessageResponse]
+    F --> G
+    G --> H[返回成功]
+```
+
+### Chat Mapper 与索引设计（数据库）
+* 建议新增复合索引：`(agent_id, chat_timestamp, id)`，覆盖按 Agent + 时间锚点分页的核心查询。
+* 保留已有 `(user_id, agent_id)` 索引用于用户维度过滤。
+* `chat_timestamp` 作为排序主键，`id` 作为同秒内稳定 tie-breaker。
+
+### ER 图（补充）
+```mermaid
+erDiagram
+    USER ||--o{ AGENT : owns
+    AGENT ||--o{ CHAT_MESSAGE : has
+    USER ||--o{ CHAT_MESSAGE : sends
+    USER {
+      long id PK
+      string account
+    }
+    AGENT {
+      long id PK
+      long user_id FK
+      string name
+      string description
+      string oss_id
+    }
+    CHAT_MESSAGE {
+      long id PK
+      long agent_id FK
+      long user_id FK
+      string content
+      datetime chat_time
+      long chat_timestamp
+      int role
+    }
+```
+
+### Mapper/DAO 语义对齐说明
+* SpringBoot `ChatMessageMapper.getByAnchor(...)` 与 Android `ChatMessageDao.queryByAnchor(...)` 保持同参数语义。
+* 统一支持：
+  * 向前分页（历史消息）：`before + desc`
+  * 向后分页（新消息/补偿）：`after + asc`
+* 该对齐可减少端侧二次排序和边界 bug 风险。
+
 
 
 

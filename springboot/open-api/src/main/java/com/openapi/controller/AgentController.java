@@ -5,17 +5,20 @@ import com.openapi.domain.ao.AgentChatAo;
 import com.openapi.domain.constant.error.CommonExceptions;
 import com.openapi.domain.constant.error.UserExceptions;
 import com.openapi.domain.dto.BaseResponse;
+import com.openapi.domain.dto.request.AgentDeleteRequest;
 import com.openapi.domain.dto.resonse.AgentLastChatListResponse;
 import com.openapi.domain.dto.resonse.AgentListResponse;
 import com.openapi.domain.dto.resonse.AgentResponse;
 import com.openapi.service.AgentService;
 import com.openapi.service.UserService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -64,6 +67,39 @@ public class AgentController {
         AgentResponse response = new AgentResponse();
         response.setAgentAo(agentAo);
 
+        return BaseResponse.getResponseEntitySuccess(response);
+    }
+
+    @PostMapping("/update")
+    public BaseResponse<AgentResponse> updateAgent(
+            @RequestParam(value = "avatar", required = false) MultipartFile avatar,
+            @RequestParam("agentId") String agentId,
+            @RequestParam("userId") String userId,
+            @RequestParam("name") String name,
+            @RequestParam("description") String description
+    ) {
+        if (!StringUtils.hasText(agentId) || !StringUtils.hasText(userId)
+                || !StringUtils.hasText(name) || !StringUtils.hasText(description)) {
+            return BaseResponse.LogBackError(CommonExceptions.PARAM_ERROR);
+        }
+        AgentAo agentAo = agentService.updateAgent(avatar, agentId, userId, name, description);
+        if (agentAo == null) {
+            return BaseResponse.LogBackError(CommonExceptions.PARAM_ERROR);
+        }
+        AgentResponse response = new AgentResponse();
+        response.setAgentAo(agentAo);
+        return BaseResponse.getResponseEntitySuccess(response);
+    }
+
+    @PostMapping("/delete")
+    public BaseResponse<AgentResponse> deleteAgent(
+            @Valid @RequestBody AgentDeleteRequest request
+    ) {
+        boolean deleted = agentService.deleteAgent(request.getAgentId(), request.getUserId());
+        if (!deleted) {
+            return BaseResponse.LogBackError(CommonExceptions.PARAM_ERROR);
+        }
+        AgentResponse response = new AgentResponse();
         return BaseResponse.getResponseEntitySuccess(response);
     }
 

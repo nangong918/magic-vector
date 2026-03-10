@@ -80,21 +80,60 @@ public class AgentServiceImpl implements AgentService {
     }
 
     @Override
-    public AgentAo getAgentById(String id) {
-        AgentDo agentDo = agentMapper.selectById(id);
-        if (agentDo == null || agentDo.getId() == null){
+    public AgentAo updateAgent(
+            @Nullable MultipartFile avatar,
+            @NotNull String agentId,
+            @NotNull String userId,
+            @NotNull String name,
+            @NotNull String description
+    ) {
+        AgentDo exist = agentMapper.selectById(agentId);
+        if (exist == null || exist.getId() == null) {
             return null;
         }
-        if (agentDo.getOssId() == null){
-            return agentConverter.do2Ao(agentDo);
+        if (!userId.equals(exist.getUserId())) {
+            return null;
         }
-        val fileIds = List.of(agentDo.getOssId());
-        val avatarUrls = ossService.getFileUrlsByFileIds(fileIds);
-        String avatarUrl = Optional.of(avatarUrls)
-                        .filter(list -> !list.isEmpty())
-                        .map(List::getFirst)
-                        .orElse(null);
-        return agentConverter.do2Ao(agentDo, avatarUrl);
+
+        exist.setName(name);
+        exist.setDescription(description);
+
+        if (avatar != null) {
+            // TODO MinIO 配置未完成时允许 avatar 为空；完成后可补充上传失败重试策略。
+            val files = List.of(avatar);
+            val result = ossService.uploadFiles(
+                    files,
+                    exist.getId(),
+                    agentConfig.getBucketName()
+            );
+            String newOssId = Optional.ofNullable(result.getSuccessFiles())
+                    .filter(list -> !list.isEmpty())
+                    .map(List::getFirst)
+                    .map(SuccessFile::getFileId)
+                    .orElse(exist.getOssId());
+            exist.setOssId(newOssId);
+        }
+
+        agentMapper.update(exist);
+        return buildAgentAoWithAvatar(exist);
+    }
+
+    @Override
+    public boolean deleteAgent(@NotNull String agentId, @NotNull String userId) {
+        AgentDo exist = agentMapper.selectById(agentId);
+        if (exist == null || exist.getId() == null) {
+            return false;
+        }
+        if (!userId.equals(exist.getUserId())) {
+            return false;
+        }
+        return agentMapper.deleteById(agentId) > 0;
+    }
+
+    @Override
+    public AgentAo getAgentById(String id) {
+        AgentDo agentDo = agentMapper.selectById(id);
+        return buildAgentAoWithAvatar(agentDo);
     }
 
     @NotNull
@@ -137,6 +176,22 @@ public class AgentServiceImpl implements AgentService {
             return new ArrayList<>();
         }
         return getAgentsByIds(agentIds);
+    }
+
+    private AgentAo buildAgentAoWithAvatar(AgentDo agentDo) {
+        if (agentDo == null || agentDo.getId() == null) {
+            return null;
+        }
+        if (agentDo.getOssId() == null) {
+            return agentConverter.do2Ao(agentDo);
+        }
+        val fileIds = List.of(agentDo.getOssId());
+        val avatarUrls = ossService.getFileUrlsByFileIds(fileIds);
+        String avatarUrl = Optional.of(avatarUrls)
+                .filter(list -> !list.isEmpty())
+                .map(List::getFirst)
+                .orElse(null);
+        return agentConverter.do2Ao(agentDo, avatarUrl);
     }
 
     /**

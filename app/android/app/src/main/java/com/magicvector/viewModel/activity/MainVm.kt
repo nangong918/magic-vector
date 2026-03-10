@@ -2,16 +2,27 @@ package com.magicvector.viewModel.activity
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.core.baseutil.network.BaseResponse
+import com.core.baseutil.network.OnSuccessCallback
+import com.core.baseutil.network.OnThrowableCallback
+import com.data.domain.dto.request.AgentDeleteRequest
+import com.data.domain.dto.response.AgentResponse
+import com.magicvector.MainApplication
 import com.magicvector.manager.RealtimeChatController
 import com.view.appview.MainSelectItemEnum
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
+import okhttp3.RequestBody.Companion.toRequestBody
 
 // todo 1.界定effect和intent 2.确认intent再去调用effect是否多余行为
 class MainVm : ViewModel() {
@@ -30,6 +41,9 @@ class MainVm : ViewModel() {
     // Channel/Flow (Effect) 发送一次性事件 （类似EventBus、广播）
     private val _effect = Channel<MainEffect>(Channel.BUFFERED)
     val effect: Flow<MainEffect> = _effect.receiveAsFlow()
+    private val api = MainApplication.getApiRequestImplInstance()
+    private val _agentListEvent = MutableSharedFlow<AgentListEvent>(extraBufferCapacity = 16)
+    val agentListEvent: SharedFlow<AgentListEvent> = _agentListEvent.asSharedFlow()
 
     fun processIntent(intent: MainIntent) {
         when (intent) {
@@ -50,8 +64,28 @@ class MainVm : ViewModel() {
             }
 
             MainIntent.OpenCreateAgent -> {
-                sendEffect(MainEffect.LaunchCreateAgent)
+                _uiState.update { it.copy(agentEditor = AgentEditorState(isVisible = true, mode = AgentEditorMode.CREATE)) }
             }
+
+            MainIntent.CloseAgentEditor -> {
+                _uiState.update { it.copy(agentEditor = AgentEditorState()) }
+            }
+
+            is MainIntent.OpenEditAgent -> {
+                openEditAgent(intent.agentId)
+            }
+
+            is MainIntent.UpdateEditorName -> {
+                _uiState.update { it.copy(agentEditor = it.agentEditor.copy(name = intent.name)) }
+            }
+
+            is MainIntent.UpdateEditorDescription -> {
+                _uiState.update { it.copy(agentEditor = it.agentEditor.copy(description = intent.description)) }
+            }
+
+            MainIntent.SubmitAgentEditor -> submitAgentEditor()
+
+            MainIntent.DeleteAgent -> deleteCurrentAgent()
 
             is MainIntent.ChatServiceBound -> {
                 realtimeChatController = intent.handler
@@ -69,6 +103,119 @@ class MainVm : ViewModel() {
         viewModelScope.launch {
             _effect.send(effect)
         }
+    }
+
+    private fun openEditAgent(agentId: String) {
+        _uiState.update {
+            it.copy(
+                agentEditor = AgentEditorState(
+                    isVisible = true,
+                    mode = AgentEditorMode.EDIT,
+                    agentId = agentId,
+                    isLoading = true
+                )
+            )
+        }
+        api.getAgentInfo(
+            agentId,
+            object : OnSuccessCallback<BaseResponse<AgentResponse>> {
+                override fun onResponse(response: BaseResponse<AgentResponse>?) {
+                    val vo = response?.data?.agentAo?.agentVo
+                    _uiState.update {
+                        it.copy(
+                            agentEditor = it.agentEditor.copy(
+                                isLoading = false,
+                                name = vo?.name ?: "",
+                                description = vo?.description ?: ""
+                            )
+                        )
+                    }
+                }
+            },
+            object : OnThrowableCallback {
+                override fun callback(throwable: Throwable?) {
+                    _uiState.update { it.copy(agentEditor = AgentEditorState()) }
+                }
+            }
+        )
+    }
+
+    private fun submitAgentEditor() {
+        val editor = _uiState.value.agentEditor
+        if (editor.name.isBlank() || editor.description.isBlank()) {
+            return
+        }
+        _uiState.update { it.copy(agentEditor = it.agentEditor.copy(isSubmitting = true)) }
+        val plain = "text/plain".toMediaTypeOrNull()
+        val userId = MainApplication.getUserId().toRequestBody(plain)
+        val name = editor.name.toRequestBody(plain)
+        val description = editor.description.toRequestBody(plain)
+        if (editor.mode == AgentEditorMode.CREATE) {
+            api.createAgent(
+                avatar = null,
+                userId = userId,
+                name = name,
+                description = description,
+                onSuccessCallback = object : OnSuccessCallback<BaseResponse<AgentResponse>> {
+                    override fun onResponse(response: BaseResponse<AgentResponse>?) {
+                        _uiState.update { it.copy(agentEditor = AgentEditorState()) }
+                        _agentListEvent.tryEmit(AgentListEvent.Created(response?.data?.agentAo?.agentId.orEmpty()))
+                    }
+                },
+                throwableCallback = object : OnThrowableCallback {
+                    override fun callback(throwable: Throwable?) {
+                        _uiState.update { it.copy(agentEditor = it.agentEditor.copy(isSubmitting = false)) }
+                    }
+                }
+            )
+            return
+        }
+        val agentId = editor.agentId?.toRequestBody(plain) ?: run {
+            _uiState.update { it.copy(agentEditor = it.agentEditor.copy(isSubmitting = false)) }
+            return
+        }
+        api.updateAgent(
+            avatar = null,
+            agentId = agentId,
+            userId = userId,
+            name = name,
+            description = description,
+            onSuccessCallback = object : OnSuccessCallback<BaseResponse<AgentResponse>> {
+                override fun onResponse(response: BaseResponse<AgentResponse>?) {
+                    _uiState.update { it.copy(agentEditor = AgentEditorState()) }
+                    _agentListEvent.tryEmit(AgentListEvent.Updated(response?.data?.agentAo?.agentId.orEmpty()))
+                }
+            },
+            throwableCallback = object : OnThrowableCallback {
+                override fun callback(throwable: Throwable?) {
+                    _uiState.update { it.copy(agentEditor = it.agentEditor.copy(isSubmitting = false)) }
+                }
+            }
+        )
+    }
+
+    private fun deleteCurrentAgent() {
+        val editor = _uiState.value.agentEditor
+        val agentId = editor.agentId ?: return
+        val request = AgentDeleteRequest().apply {
+            this.agentId = agentId
+            this.userId = MainApplication.getUserId()
+        }
+        _uiState.update { it.copy(agentEditor = it.agentEditor.copy(isSubmitting = true)) }
+        api.deleteAgent(
+            request = request,
+            onSuccessCallback = object : OnSuccessCallback<BaseResponse<AgentResponse>> {
+                override fun onResponse(response: BaseResponse<AgentResponse>?) {
+                    _uiState.update { it.copy(agentEditor = AgentEditorState()) }
+                    _agentListEvent.tryEmit(AgentListEvent.Deleted(agentId))
+                }
+            },
+            throwableCallback = object : OnThrowableCallback {
+                override fun callback(throwable: Throwable?) {
+                    _uiState.update { it.copy(agentEditor = it.agentEditor.copy(isSubmitting = false)) }
+                }
+            }
+        )
     }
 }
 
@@ -98,14 +245,42 @@ sealed class MainIntent {
     data object OpenCreateAgent : MainIntent()
     // 作用：用户想要跳转到创建 Agent 页面
     // 触发时机：点击"创建Agent"按钮
+    data class OpenEditAgent(val agentId: String) : MainIntent()
+    data object CloseAgentEditor : MainIntent()
+    data class UpdateEditorName(val name: String) : MainIntent()
+    data class UpdateEditorDescription(val description: String) : MainIntent()
+    data object SubmitAgentEditor : MainIntent()
+    data object DeleteAgent : MainIntent()
 }
 
 data class MainState(
     val currentSelected: MainSelectItemEnum = MainSelectItemEnum.HOME,
-    val isChatServiceBound: Boolean = false
+    val isChatServiceBound: Boolean = false,
+    val agentEditor: AgentEditorState = AgentEditorState()
 )
 
 sealed class MainEffect {
     // 跳转创建 Agent 页面
     data object LaunchCreateAgent : MainEffect()
+}
+
+enum class AgentEditorMode {
+    CREATE,
+    EDIT
+}
+
+data class AgentEditorState(
+    val isVisible: Boolean = false,
+    val mode: AgentEditorMode = AgentEditorMode.CREATE,
+    val agentId: String? = null,
+    val name: String = "",
+    val description: String = "",
+    val isLoading: Boolean = false,
+    val isSubmitting: Boolean = false
+)
+
+sealed class AgentListEvent {
+    data class Created(val agentId: String) : AgentListEvent()
+    data class Updated(val agentId: String) : AgentListEvent()
+    data class Deleted(val agentId: String) : AgentListEvent()
 }
