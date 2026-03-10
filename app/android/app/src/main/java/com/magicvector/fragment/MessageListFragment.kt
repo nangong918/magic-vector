@@ -95,19 +95,19 @@ class MessageListFragment : BaseAppCompatVmFragment<
     override fun setListener() {
         super.setListener()
 
-        binding.fbtnCreateAgent.setOnClickListener {
-            if (isAdded){
-                if (requireActivity() is MainActivity){
-                    (requireActivity() as MainActivity).turnToCreateAgent()
-                }
-                else {
-                    Log.w("MessageListFragment", "activity is not MainActivity")
-                }
-            }
-            else {
-                Log.w("MessageListFragment", "activity is not added")
-            }
-        }
+//        binding.fbtnCreateAgent.setOnClickListener {
+//            if (isAdded){
+//                if (requireActivity() is MainActivity){
+//                    (requireActivity() as MainActivity).turnToCreateAgent()
+//                }
+//                else {
+//                    Log.w("MessageListFragment", "activity is not MainActivity")
+//                }
+//            }
+//            else {
+//                Log.w("MessageListFragment", "activity is not added")
+//            }
+//        }
 
         binding.layoutMain.setOnRefreshListener{
             if (isAdded) {

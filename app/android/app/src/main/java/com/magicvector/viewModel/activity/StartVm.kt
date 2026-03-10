@@ -19,6 +19,7 @@ import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlin.coroutines.resume
+import kotlin.coroutines.suspendCoroutine
 
 
 class StartVm : ViewModel() {
@@ -108,11 +109,11 @@ class StartVm : ViewModel() {
     }
 
     private suspend fun verifyAccessToken(accessToken: String): Boolean {
-        return kotlinx.coroutines.suspendCancellableCoroutine { continuation ->
-            val localUser = userManager.getCurrentUser()
+        val localUser = userManager.getCurrentUser()
+        return suspendCoroutine { continuation ->
             if (localUser == null || localUser.userId <= 0L) {
-                continuation.resume(false) {}
-                return@suspendCancellableCoroutine
+                continuation.resume(false)
+                return@suspendCoroutine
             }
             val request = UserTokenVerifyRequest().apply {
                 this.userId = localUser.userId
@@ -124,16 +125,12 @@ class StartVm : ViewModel() {
                     override fun onResponse(response: BaseResponse<UserTokenVerifyResponse>?) {
                         val isSuccessCode = response?.code == BaseConstant.NetworkCode.SUCCESS_CODE
                         val isValid = response?.data?.valid == true
-                        if (!continuation.isCompleted) {
-                            continuation.resume(isSuccessCode && isValid) {}
-                        }
+                        continuation.resume(isSuccessCode && isValid)
                     }
                 },
                 throwableCallback = object : OnThrowableCallback {
                     override fun callback(throwable: Throwable?) {
-                        if (!continuation.isCompleted) {
-                            continuation.resume(false) {}
-                        }
+                        continuation.resume(false)
                     }
                 }
             )
