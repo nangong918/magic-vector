@@ -217,16 +217,37 @@ gantt
 ### 设计说明
 * 用户表主键统一采用 `id BIGINT`。
 * 主键和业务 `userId` 全链路统一为 `Long/BIGINT`。
+* 聊天消息表支持锚点分页，采用 `chat_timestamp` 作为排序主轴。
+* 新增复合索引 `(agent_id, chat_timestamp, id)`，用于历史/补偿消息高效分页。
 
-### ER 图
+### ER 图（合并）
 ```mermaid
 erDiagram
+    USER ||--o{ AGENT : owns
+    AGENT ||--o{ CHAT_MESSAGE : has
+    USER ||--o{ CHAT_MESSAGE : sends
     USER {
       long id PK
       string name
       string account
       string password
       string oss_id
+    }
+    AGENT {
+      long id PK
+      long user_id FK
+      string name
+      string description
+      string oss_id
+    }
+    CHAT_MESSAGE {
+      long id PK
+      long agent_id FK
+      long user_id FK
+      string content
+      datetime chat_time
+      long chat_timestamp
+      int role
     }
 ```
 
@@ -236,21 +257,32 @@ erDiagram
 
 ## 接口契约模块
 
-### 接口清单
+### 接口清单（含功能）
 * `POST /user/register`：Multipart/FormData（`account/password/name/avatar`）-> `UserAuthResponse`
 * `POST /user/login`：`UserLoginRequest -> UserAuthResponse`
 * `POST /user/token/verify`：`UserTokenVerifyRequest -> UserTokenVerifyResponse`
+* `POST /agent/create`：创建 Agent（头像可选）-> `AgentResponse`
+* `POST /agent/update`：更新 Agent（名称/设定/头像）-> `AgentResponse`
+* `POST /agent/delete`：删除 Agent -> `AgentResponse`
+* `GET /agent/getInfo`：查询单 Agent 信息 -> `AgentResponse`
+* `GET /agent/getList`：查询用户 Agent 列表 -> `AgentListResponse`
+* `GET /agent/getLastAgentChatList`：查询 Agent 最近聊天摘要 -> `AgentLastChatListResponse`
+* `GET /chat/getLastChat`：查询最近消息 -> `ChatMessageResponse`
+* `GET /chat/getTimeLimitChat`：按截止时间查询历史消息 -> `ChatMessageResponse`
+* `GET /chat/getByAnchor`：按锚点向前/向后分页 -> `ChatMessageResponse`
 
 ### 契约原则
 * 非文件上传接口使用 `@RequestBody` + `jakarta.validation` 注解校验。
 * 文件上传接口使用 Multipart/FormData，不使用 `@Valid @RequestBody`，改为 `@RequestParam/@Part` + 手动校验。
 * 参数校验异常统一由全局异常处理器处理，业务错误类型统一维护在 `com/openapi/domain/constant/error`。
+* `getByAnchor` 的 `direction` 统一约束为 `before/after`，并限制最大分页条数。
 
 ## Domain 转换模块（Converter）
 
 ### 设计说明
 * Domain 层对象转换统一通过 `Converter` 完成，避免 Controller/Service 手写大段字段拷贝。
 * SpringBoot 侧统一使用 `MapStruct`，当前用户链路使用 `UserConverter`。
+* Agent 与 ChatMessage 链路同样通过 `AgentConverter`、`ChatMessageConverter` 做对象转换。
 
 ### 转换类图
 ```mermaid
@@ -284,18 +316,13 @@ classDiagram
     UserConverter --> UserAuthResponse
 ```
 
-## 3. Agent 管理与消息分页模块（本次新增）
+## 3. Agent 管理与消息分页模块
 
 ### 功能职责
 * Agent 能力补全为：创建、查看、修改、删除、列表查询。
 * 聊天记录能力补全为：按时间锚点分页查询（向前/向后）、首屏最近消息查询。
 * SpringBoot `Mapper` 与 Android `Dao` 在“查询语义”上保持一致，便于前后端统一回放逻辑。
 * 文件头像上传继续走 Multipart；MinIO 未就绪时允许不传头像并保留 TODO。
-
-### 接口契约（新增）
-* `POST /agent/update`：Multipart/FormData（`agentId/userId/name/description/avatar?`）-> `AgentResponse`
-* `POST /agent/delete`：JSON 请求体（`agentId/userId`）-> `AgentResponse`
-* `GET /chat/getByAnchor`：`agentId + anchorTimestamp + direction(before|after) + limit` -> `ChatMessageResponse`
 
 ### Agent 模块类图
 ```mermaid
@@ -350,34 +377,6 @@ flowchart TD
 * 建议新增复合索引：`(agent_id, chat_timestamp, id)`，覆盖按 Agent + 时间锚点分页的核心查询。
 * 保留已有 `(user_id, agent_id)` 索引用于用户维度过滤。
 * `chat_timestamp` 作为排序主键，`id` 作为同秒内稳定 tie-breaker。
-
-### ER 图（补充）
-```mermaid
-erDiagram
-    USER ||--o{ AGENT : owns
-    AGENT ||--o{ CHAT_MESSAGE : has
-    USER ||--o{ CHAT_MESSAGE : sends
-    USER {
-      long id PK
-      string account
-    }
-    AGENT {
-      long id PK
-      long user_id FK
-      string name
-      string description
-      string oss_id
-    }
-    CHAT_MESSAGE {
-      long id PK
-      long agent_id FK
-      long user_id FK
-      string content
-      datetime chat_time
-      long chat_timestamp
-      int role
-    }
-```
 
 ### Mapper/DAO 语义对齐说明
 * SpringBoot `ChatMessageMapper.getByAnchor(...)` 与 Android `ChatMessageDao.queryByAnchor(...)` 保持同参数语义。

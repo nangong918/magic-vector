@@ -8,17 +8,19 @@
 ## 整体架构分层
 
 * **UI 层**：负责页面渲染、用户输入采集、导航执行。
-  * Activity：`ComposeStartActivity`、`ComposeLoginActivity`、`ComposeRegisterActivity`
+  * Activity：`ComposeStartActivity`、`ComposeLoginActivity`、`ComposeRegisterActivity`、`MainActivity`、`ComposeChatActivity`
+  * Fragment级组合函数：`MessageListScreen`、`AgentEditorOverlay`
 * **状态管理层（MVI）**：负责处理 Intent、维护状态、发出 Effect。
-  * `StartVm`、`ComposeLoginVm`、`ComposeRegisterVm`
+  * `StartVm`、`ComposeLoginVm`、`ComposeRegisterVm`、`MainVm`、`MessageListMviVm`、`ComposeChatVm`
 * **业务与会话层**：封装会话与用户相关业务能力。
-  * `UserManager`：负责用户会话读取、保存、清理。
+  * `UserManager`、`ChatMapController`、`ChatController`、`ChatCacheManager`、`NetworkManager`
 * **数据访问层（Room）**：负责本地持久化。
-  * `VectorDatabase`、`UserDao`、`UserEntity`
+  * `VectorDatabase`、`UserDao`、`AgentCacheDao`、`ChatMessageDao`
+  * `UserEntity`、`AgentCacheEntity`、`ChatMessageEntity`
 * **网络访问层**：`ApiRequestImpl`，负责认证相关接口访问。
 * **领域与协议层**：定义业务与传输数据结构。
   * Module：`UserModule`
-  * DTO：`UserAuthResponse`、`UserTokenVerifyResponse` 等
+  * DTO：`UserAuthResponse`、`UserTokenVerifyResponse`、`AgentResponse`、`AgentListResponse`、`ChatMessageResponse`
 
 ### 架构类图
 ```mermaid
@@ -26,18 +28,37 @@ classDiagram
     class ComposeStartActivity
     class ComposeLoginActivity
     class ComposeRegisterActivity
+    class MainActivity
+    class ComposeChatActivity
+    class MessageListScreen
+    class AgentEditorOverlay
     class StartVm
     class ComposeLoginVm
     class ComposeRegisterVm
+    class MainVm
+    class MessageListMviVm
+    class ComposeChatVm
     class UserManager
+    class ChatMapController
+    class ChatController
+    class ChatCacheManager
+    class NetworkManager
     class ApiRequestImpl
     class VectorDatabase
     class UserDao
+    class AgentCacheDao
+    class ChatMessageDao
     class UserEntity
+    class AgentCacheEntity
+    class ChatMessageEntity
 
     ComposeStartActivity --> StartVm
     ComposeLoginActivity --> ComposeLoginVm
     ComposeRegisterActivity --> ComposeRegisterVm
+    MainActivity --> MainVm
+    MainActivity --> MessageListScreen
+    MainActivity --> AgentEditorOverlay
+    ComposeChatActivity --> ComposeChatVm
 
     StartVm --> UserManager
     StartVm --> ApiRequestImpl
@@ -45,10 +66,22 @@ classDiagram
     ComposeLoginVm --> UserManager
     ComposeRegisterVm --> ApiRequestImpl
     ComposeRegisterVm --> UserManager
+    MainVm --> ApiRequestImpl
+    MainVm --> NetworkManager
+    MessageListMviVm --> ApiRequestImpl
+    ComposeChatVm --> ChatMapController
 
     UserManager --> UserDao
+    ChatMapController --> ChatController
+    ChatController --> ChatCacheManager
+    ChatCacheManager --> ChatMessageDao
+    ChatCacheManager --> AgentCacheDao
     VectorDatabase --> UserDao
+    VectorDatabase --> AgentCacheDao
+    VectorDatabase --> ChatMessageDao
     UserDao --> UserEntity
+    AgentCacheDao --> AgentCacheEntity
+    ChatMessageDao --> ChatMessageEntity
 ```
 
 ### MVI 建模约束（UML）
@@ -107,7 +140,7 @@ classDiagram
 - 最短停留 1200ms，避免启动页一闪而过
 
 
-#### UML静态图
+#### UML静态图（类图）
 
 ##### 启动页面 MVI 类图
 ```mermaid
@@ -149,7 +182,7 @@ classDiagram
     StartVm --> Effect
 ```
 
-##### 启动页面 MVI 通信图
+##### 启动页面 MVI 通信图（动态UML）
 ```mermaid
 flowchart LR
     Activity[ComposeStartActivity]
@@ -167,7 +200,7 @@ flowchart LR
     Activity -->|执行导航| Nav
 ```
 
-#### UML动态图
+#### UML动态图（通信图/活动图/时序图/甘特图）
 
 ##### 启动活动图
 ```mermaid
@@ -237,7 +270,7 @@ gantt
 - 登录按钮：账号和密码均非空时激活，点击后显示加载状态
 - 注册链接：点击跳转到注册页面
 
-#### UML静态图
+#### UML静态图（类图）
 ##### 登录页面 MVI 类图
 ```mermaid
 classDiagram
@@ -288,7 +321,7 @@ classDiagram
     ComposeLoginVm --> Effect
 ```
 
-##### 登录页面通信图
+##### 登录页面通信图（动态UML）
 ```mermaid
 flowchart LR
     Activity[ComposeLoginActivity]
@@ -307,7 +340,7 @@ flowchart LR
     Activity -->|执行导航| Nav
 ```
 
-#### UML动态图
+#### UML动态图（通信图/活动图/时序图/甘特图）
 
 ##### 登录活动图
 ```mermaid
@@ -377,7 +410,7 @@ gantt
 - 注册按钮：账号、密码、确认密码均非空且密码一致时激活
 - 注册成功：自动保存会话并跳转到主页
 
-#### UML静态图
+#### UML静态图（类图）
 ##### 注册页面 MVI 类图
 ```mermaid
 classDiagram
@@ -435,7 +468,7 @@ classDiagram
     ComposeRegisterVm --> Effect
 ```
 
-##### 注册页面通信图
+##### 注册页面通信图（动态UML）
 ```mermaid
 flowchart LR
     Activity[ComposeRegisterActivity]
@@ -475,7 +508,7 @@ stateDiagram-v2
     Error --> Idle : 用户继续编辑
 ```
 
-#### UML动态图
+#### UML动态图（通信图/活动图/时序图/甘特图）
 
 ##### 注册活动图
 ```mermaid
@@ -544,6 +577,132 @@ gantt
     保存会话到 Room               :d1, 85, 8
 ```
 
+### Agent 模块（Main 内联弹层）
+
+#### 功能职责
+* Agent 页无数据时显示中心创建按钮；有数据时显示 Agent 列表。
+* 创建/查看/修改/删除 Agent 统一采用 Main 页面内全屏组合函数弹层（放大进入、缩小退出）。
+* Agent 列表点击跳转 `ComposeChatActivity`；列表长按进入 Agent 编辑弹层。
+* 状态同步采用 `StateFlow + SharedFlow`，`eventBus` 仅作为兜底。
+
+#### Agent UI 设计
+
+##### Agent 列表页面（MessageListScreen）
+**布局结构**：
+- 空状态：中心提示 + 创建按钮
+- 非空状态：Agent 列表 + 创建 FAB
+
+**交互设计**：
+- 点击创建：打开 `AgentEditorOverlay`（创建模式）
+- 点击 Agent：跳转 `ComposeChatActivity`
+- 长按 Agent：打开 `AgentEditorOverlay`（编辑模式）
+
+##### Agent 弹层页面（AgentEditorOverlay）
+**布局结构**：
+- 顶部标题与关闭按钮
+- 名称输入、设定输入
+- 创建/保存按钮
+- 编辑模式下显示删除按钮
+
+**交互设计**：
+- 创建成功、更新成功、删除成功均通过 `SharedFlow<AgentListEvent>` 刷新列表
+- 关闭或提交后弹层退出，不依赖 Activity Result
+
+#### UML静态图（类图）
+##### Agent 页面 MVI 类图
+```mermaid
+classDiagram
+    class MainActivity {
+      +collect(MainState)
+      +collect(AgentListEvent)
+    }
+    class MainVm {
+      -uiState: StateFlow~MainState~
+      -agentListEvent: SharedFlow~AgentListEvent~
+      +processIntent(intent)
+    }
+    class MessageListMviVm {
+      +processIntent(intent)
+    }
+    class AgentEditorOverlay
+    class MainState
+    class AgentEditorState
+
+    MainActivity --> MainVm
+    MainActivity --> MessageListMviVm
+    MainActivity --> AgentEditorOverlay
+    MainVm --> MainState
+    MainState --> AgentEditorState
+```
+
+#### UML动态图（通信图/活动图/时序图/甘特图）
+##### Agent 页面 MVI 通信图
+```mermaid
+flowchart LR
+    UI[MainActivity]
+    List[MessageListScreen]
+    VM[MainVm]
+    ListVm[MessageListMviVm]
+    Api[ApiRequestImpl]
+    Chat[ComposeChatActivity]
+    UI --> VM
+    UI --> List
+    List --> ListVm
+    ListVm --> UI
+    UI -->|Create/Edit/Delete Intent| VM
+    VM --> Api
+    Api --> VM
+    VM -->|SharedFlow AgentListEvent| UI
+    List -->|Click item| Chat
+```
+
+##### Agent 页面活动图
+```mermaid
+flowchart TD
+    A[进入Agent页] --> B{列表是否为空}
+    B -- 是 --> C[显示中心创建按钮]
+    B -- 否 --> D[显示Agent列表]
+    C --> E[打开创建弹层]
+    D --> F{点击 or 长按}
+    F -- 点击 --> G[跳转ChatActivity]
+    F -- 长按 --> H[打开编辑弹层]
+    E --> I[提交创建]
+    H --> J[保存或删除]
+    I --> K[发出AgentListEvent]
+    J --> K
+    K --> L[刷新MessageList]
+```
+
+##### Agent 页面时序图
+```mermaid
+sequenceDiagram
+    participant Main as MainActivity
+    participant VM as MainVm
+    participant Api as ApiRequestImpl
+    participant ListVm as MessageListMviVm
+    Main->>VM: OpenCreateAgent/OpenEditAgent
+    VM->>Api: create/update/deleteAgent
+    Api-->>VM: AgentResponse
+    VM-->>Main: AgentListEvent
+    Main->>ListVm: Refresh
+    ListVm-->>Main: 新列表状态
+```
+
+##### Agent 页面线程甘特图
+```mermaid
+gantt
+    title Android Agent页面线程甘特图
+    dateFormat  X
+    axisFormat %L ms
+    section Main线程
+    点击事件分发与弹层动画      :m1, 0, 18
+    列表重绘                     :m2, 70, 18
+    section IO线程
+    create/update/delete 请求    :i1, 18, 42
+    section 协程状态
+    SharedFlow事件派发            :s1, 60, 10
+```
+
 
 ## Manager管理类设计
 
@@ -559,7 +718,7 @@ gantt
 * `userId` 与后端主键一致，统一为 `Long`。
 * 启动鉴权采用 `userId + accessToken` 强绑定校验，防止 token 串用。
 
-#### UML静态图
+#### UML静态图（类图）
 
 ##### 会话管理模块 类图 （展示功能）
 ```mermaid
@@ -599,7 +758,7 @@ classDiagram
     UserManager --> UserSession
 ```
 
-#### UML动态图
+#### UML动态图（通信图/活动图/时序图/甘特图）
 
 ##### 会话管理通信图
 ```mermaid
@@ -627,16 +786,110 @@ stateDiagram-v2
     Persisted --> Empty : logout/clearCurrentUser
 ```
 
+### 聊天管理模块（ChatController + ChatMapController + ChatCacheManager）
+
+#### 功能职责
+* `ChatMapController` 管理 `<agentId, ChatController>` 映射，支持按 Agent 隔离会话数据。
+* `ChatController` 维护单 Agent 有序消息列表，支持 HTTP 批量插入与 WS 单条/流式插入。
+* `ChatCacheManager` 负责 Room 持久化与锚点查询，提供离线回放和重连补偿数据基础。
+* `NetworkManager` 负责在线/离线状态监听，触发首次/重连 HTTP 拉取策略。
+
+#### UML静态图（类图）
+##### Chat 管理类图
+```mermaid
+classDiagram
+    class ChatMapController {
+      -chatManagers: Map~String,ChatController~
+      +getChatManager(agentId)
+      +removeChatManager(agentId)
+    }
+    class ChatController {
+      -viewChatMessageList: MutableList~ChatItemAo~
+      +setResponsesToViews(list)
+      +setWsToViews(item)
+      +getNeedUpdateList()
+    }
+    class ChatCacheManager {
+      +upsertMessages(list)
+      +queryBeforeAnchor(agentId, anchor, limit)
+      +queryAfterAnchor(agentId, anchor, limit)
+    }
+    class NetworkManager
+    ChatMapController --> ChatController
+    ChatController --> ChatCacheManager
+    NetworkManager --> ChatCacheManager
+```
+
+#### UML动态图（通信图/活动图/时序图/甘特图）
+##### Chat 通信图（多数据源）
+```mermaid
+flowchart LR
+    UI[MessageList/Chat UI] --> VM[MessageListMviVm/ComposeChatVm]
+    VM --> MapMgr[ChatMapController]
+    MapMgr --> Ctrl[ChatController]
+    VM --> Api[ApiRequestImpl]
+    VM --> Ws[RealtimeChatController]
+    Ctrl --> Cache[ChatCacheManager]
+    Cache --> Room[(VectorDatabase)]
+    Api --> VM
+    Ws --> VM
+```
+
+##### Chat 活动图（首次/重连/离线）
+```mermaid
+flowchart TD
+    A[页面初始化] --> B{网络在线?}
+    B -- 是 --> C{首次或重连?}
+    C -- 是 --> D[HTTP拉取]
+    C -- 否 --> E[读取Room]
+    D --> F[写入Room]
+    F --> G[更新ChatController有序列表]
+    E --> G
+    B -- 否 --> E
+    G --> H[渲染UI]
+    H --> I[接收WS消息]
+    I --> J[二分插入 + 增量刷新]
+```
+
+##### Chat 对象图（运行期）
+```mermaid
+classDiagram
+    class ChatMapController#1
+    class ChatController#1001
+    class ChatController#1002
+    class ChatCacheManager#1
+    ChatMapController#1 --> ChatController#1001 : key=1001
+    ChatMapController#1 --> ChatController#1002 : key=1002
+    ChatController#1001 --> ChatCacheManager#1
+    ChatController#1002 --> ChatCacheManager#1
+```
+
+##### Chat 状态图（连接与数据源切换）
+```mermaid
+stateDiagram-v2
+    [*] --> Init
+    Init --> OnlineSync : 网络可用
+    Init --> OfflineRead : 网络不可用
+    OnlineSync --> WsStreaming : HTTP同步完成
+    WsStreaming --> Reconnect : WS断开
+    Reconnect --> OnlineSync : 重连成功
+    Reconnect --> OfflineRead : 重连失败
+    OfflineRead --> OnlineSync : 网络恢复
+```
+
 ## 本地数据库设计（Room）
 
 ### 设计说明
 * 采用单库模式：`VectorDatabase` 统一管理应用表结构。
 * 会话表用于保存当前登录用户快照，便于冷启动恢复。
+* Agent 缓存表与聊天消息表用于离线展示、重连补偿和锚点分页。
+* 头像采用 Glide/Coil 磁盘缓存，Room 保存头像 URL 与业务字段。
 
-### ER 图
+### ER 图（合并）
 ```mermaid
 erDiagram
-    VECTOR_DATABASE ||--o{ USER_SESSION : contains
+    USER_SESSION ||--o{ AGENT_CACHE : has
+    AGENT_CACHE ||--o{ CHAT_MESSAGE : has
     USER_SESSION {
       long id PK
       long user_id
@@ -645,83 +898,6 @@ erDiagram
       string avatar_url
       string access_token
     }
-```
-
-## 网络接口契约（Auth API）
-
-### 接口清单
-* `POST /user/login`：请求体 DTO，返回 `UserAuthResponse`。
-* `POST /user/register`：Multipart/FormData（`avatar/account/password/name`），返回 `UserAuthResponse`。
-* `POST /user/token/verify`：请求体 `userId + accessToken`，返回 `UserTokenVerifyResponse`。
-
-### 契约原则
-* 非文件上传场景统一使用 `@RequestBody` DTO。
-* 文件上传场景（如注册头像）统一使用 Multipart/FormData；字段由 `@Part/@RequestParam` 传递。
-* 不使用裸 `Boolean` 响应，统一结构化响应模型。
-* 前后端 `userId` 类型统一为 `Long`。
-
-## 4. Agent 页与聊天缓存架构（本次新增）
-
-### 功能职责
-* Main 的 Agent 页无数据时显示中心创建按钮；有数据时显示 Agent 列表。
-* 创建/查看/编辑/删除 Agent 统一采用 Main 内全屏 Compose 弹层（动态放大/缩小）。
-* Agent 列表与弹层间状态同步通过 `StateFlow/SharedFlow`，避免 Activity 返回值和 eventBus 强耦合。
-* Chat 数据源聚合：`HTTP(首次/重连)` + `WS(实时)` + `Room(离线)`。
-
-### 设计结论（eventBus vs Flow）
-* 在 Compose + MVI 场景中，`SharedFlow` 更适合作为一次性事件通道（如创建成功、删除成功）。
-* `StateFlow` 负责页面渲染态（弹层显示、当前编辑 Agent、列表刷新 token）。
-* `eventBus` 作为兜底兼容方案，默认不作为主链路。
-
-### Main + Agent 弹层类图
-```mermaid
-classDiagram
-    class MainActivity
-    class MainVm {
-        -uiState: StateFlow~MainState~
-        -agentEvents: SharedFlow~AgentListEvent~
-        +processIntent(intent)
-    }
-    class MessageListMviVm
-    class AgentEditorVm
-    class AgentEditorSheet
-
-    MainActivity --> MainVm
-    MainActivity --> MessageListMviVm
-    MainActivity --> AgentEditorSheet
-    AgentEditorSheet --> AgentEditorVm
-    AgentEditorVm --> MainVm : emit AgentListEvent
-```
-
-### ChatController + ChatManager 类图
-```mermaid
-classDiagram
-    class ChatMapController {
-        +getChatManager(agentId): ChatController
-    }
-    class ChatController {
-        +setResponsesToViews(list)
-        +setWsToViews(item)
-        +getNeedUpdateList()
-    }
-    class ChatControllerHub {
-        -map: ConcurrentHashMap~String,ChatController~
-        +getOrCreate(agentId)
-        +mergeHttp(...)
-        +mergeWs(...)
-    }
-    ChatMapController --> ChatController
-    ChatControllerHub --> ChatController
-```
-
-### Room 设计（Agent + ChatMessage）
-* `agent_cache`：缓存 Agent 基础信息，支撑离线列表。
-* `chat_message`：按 `agentId + chatTimestamp + id` 支持快速锚点分页。
-* 头像缓存交由 Glide/Coil 磁盘缓存处理，Room 仅存 URL。
-
-```mermaid
-erDiagram
-    AGENT_CACHE ||--o{ CHAT_MESSAGE : owns
     AGENT_CACHE {
       long id PK
       long agent_id
@@ -743,115 +919,38 @@ erDiagram
     }
 ```
 
-### ChatMessage DAO 语义
-* `queryLastByAgent(agentId, limit)`
-* `queryByAnchorBefore(agentId, anchorTimestamp, limit)`（历史）
-* `queryByAnchorAfter(agentId, anchorTimestamp, limit)`（补偿）
-* `upsertOne(message)` / `upsertBatch(messages)`
+### DAO 设计
+* `UserDao`：会话读写（`upsert/getById/deleteById`）。
+* `AgentCacheDao`：Agent 缓存读写（`upsert/upsertBatch/queryByUser/deleteByAgentId`）。
+* `ChatMessageDao`：消息分页与批量写入（`queryLastByAgent/queryByAnchorBefore/queryByAnchorAfter/upsertBatch`）。
 
-### ChatController 活动图（多数据源合并）
-```mermaid
-flowchart TD
-    A[MessageList 初始化] --> B{是否首次打开或重连?}
-    B -- 是 --> C[HTTP 拉取最近数据]
-    B -- 否 --> D[跳过 HTTP]
-    C --> E[写入 Room]
-    D --> F[读取 Room]
-    E --> F
-    F --> G[渲染列表]
-    G --> H[WS 持续推送]
-    H --> I["合并到有序列表(二分插入)"]
-    I --> J[写回 Room + UI 增量更新]
-```
+### 数据结构与索引约束
+* `chat_message` 复合索引：`(agent_id, chat_timestamp, id)`。
+* `chat_message` 辅助索引：`(user_id, agent_id)`。
+* 主键统一 `id: Long`，遵循项目数据库规范。
 
-### NetworkManager 状态图
-```mermaid
-stateDiagram-v2
-    [*] --> Unknown
-    Unknown --> Online : 系统网络可用
-    Unknown --> Offline : 无网络
-    Online --> Offline : 断网广播
-    Offline --> Reconnecting : 网络恢复
-    Reconnecting --> Online : WS重连成功
-    Reconnecting --> Offline : 重连失败
-```
+## 网络接口契约（Auth / Agent / Chat）
 
-### Main 页面线程甘特图
-```mermaid
-gantt
-    title Main Agent页线程甘特图
-    dateFormat  X
-    axisFormat %L ms
-    section UI线程
-    首屏渲染 + 订阅StateFlow           :u1, 0, 20
-    Agent弹层动画开关                 :u2, 20, 25
-    列表增量重绘                      :u3, 80, 20
-    section 网络IO线程
-    首次HTTP拉取                      :n1, 20, 60
-    断线重连补偿拉取                  :n2, 220, 50
-    section WS线程
-    连接建立/心跳                     :w1, 40, 200
-    消息推送                          :w2, 90, 150
-    section DB-IO线程
-    Room批量写入                      :d1, 55, 25
-    Room离线读取                      :d2, 120, 20
-```
+### 接口清单（含功能）
+* `POST /user/register`：注册并返回登录态（Multipart，头像可选）。
+* `POST /user/login`：账号密码登录并返回登录态。
+* `POST /user/token/verify`：启动鉴权，验证本地会话有效性。
+* `GET /agent/getList`：获取当前用户 Agent 列表（MessageList 首屏基础数据）。
+* `GET /agent/getInfo`：获取单个 Agent 详情（编辑弹层回填）。
+* `POST /agent/create`：创建 Agent。
+* `POST /agent/update`：更新 Agent（名称/设定/头像）。
+* `POST /agent/delete`：删除 Agent。
+* `GET /agent/getLastAgentChatList`：获取 Agent 最近聊天摘要列表。
+* `GET /chat/getLastChat`：获取某 Agent 最近消息。
+* `GET /chat/getTimeLimitChat`：按截止时间拉取历史消息。
+* `GET /chat/getByAnchor`：按锚点向前/向后分页拉取消息。
+* `POST /chat/vision/upload/img`：视觉图片上传任务。
 
-### 通信图（首次 / 断线重连 / 离线 / 在线）
-```mermaid
-flowchart LR
-    UI[MessageListPage] --> VM[MessageListMviVm]
-    VM --> Net[NetworkManager]
-    VM --> Http[ApiRequestImpl]
-    VM --> Ws[RealtimeChatController]
-    VM --> Room[VectorDatabase.ChatMessageDao]
-    Http --> VM
-    Ws --> VM
-    Room --> VM
-    VM --> UI
-```
-
-### 对象图（运行期）
-```mermaid
-classDiagram
-  class MainVm1 {
-    +String id
-    +start()
-  }
-  class MessageListMviVm1 {
-    +List~Message~ messages
-    +loadMessages()
-  }
-  class ChatControllerHub1 {
-  }
-  class ChatControllerA {
-    +agentId=1001
-  }
-  class ChatControllerB {
-    +agentId=1002
-  }
-  MainVm1 --> MessageListMviVm1
-  MessageListMviVm1 --> ChatControllerHub1
-  ChatControllerHub1 --> ChatControllerA
-  ChatControllerHub1 --> ChatControllerB
-```
-
-### 甘特图（全流程）
-```mermaid
-gantt
-    title Agent页全流程（首次/重连/离线/在线）
-    dateFormat  X
-    axisFormat %L ms
-    section 首次
-    首次HTTP拉取并落库 :a1, 0, 80
-    section 在线
-    WS实时增量更新 :a2, 80, 180
-    section 断开重连
-    网络恢复触发重连 :a3, 180, 40
-    重连后HTTP补偿 :a4, 220, 60
-    section 离线
-    Room离线回放 :a5, 140, 120
-```
+### 契约原则
+* 非文件上传接口统一使用请求体 DTO；上传接口使用 Multipart。
+* 响应统一结构化 DTO，不返回裸类型。
+* 与 SpringBoot 契约字段保持一致，ID 传输按项目规范执行。
+* `getByAnchor` 的 `direction` 只允许 `before/after`，并统一 limit 上限。
 
 
 
