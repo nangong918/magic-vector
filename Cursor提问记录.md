@@ -177,3 +177,86 @@ JWT无状态校验又不能踢人，所以设计就按照现在简单的Map。
 
 第一，formdata的不能这样校验，写入规则集，然后回滚/user/register
 第二，修改SpringBoot还得同步Android的请求对不对你可以读AndroidDesignDocument并修改这个文档和代码。
+
+
+
+### 新功能开发、修改
+
+大纲是这样的：
+#### Agent
+Agent
+* 创建Agent
+* 查看，修改，删除Agent
+  AgentList
+* 选择Agent
+* 接收Agent消息
+
+
+其实大部分我的功能已经完成，
+你现在看如果已经完成是否分别符合[ProjectAndMainRule.md](ProjectAndMainRule.md)，
+[developAndRules.md](springboot/docs/developAndRules.md)
+和[developAndRules.md](app/android/docs/developAndRules.md)
+
+现在我详细说明要开发什么：
+用户交互的main界面会展示三个navigation，分别是Agent（聊天Agent相关），Control（设备状态操作监控），Mine（我的）
+详情你想了解可以看[MainDesignDocument.md](MainDesignDocument.md)可以只是了解，因为本次我不会让你全部开发。
+
+##### 创建 Agent
+- 如果一个 Agent 都没有，页面中间显示一个大大的创建按钮, 有Agent之后按钮不显示, 变为agent列表
+- 点进去要填：头像、名称、设定（提示词）
+- 填好后请求后端保存，头像文件用 MinIO 存（我没实现SpringBoot的minio配置，可以写todo，然后创建可以不传递头像也可以请求）
+- 保存成功后通过 AgentManager 更新本地缓存，列表里就能看到了
+其实我再想要不要不用创建Agent的Activity了因为现在是Jetpack Compose开发很方便，
+而是创建Agent的Compose组合函数，放在fragment碎片(不是真的fragment，现在我用Jetpack都使用组合函数了
+参考app/android/app/src/main/java/com/magicvector/fragment)下面有自己的vm
+我希望点击创建按钮还是在Main页面就不用跳转新的activity了，然后组合函数UI弹性放大占满屏幕。内容我已经写好了你可以参考
+[ComposeCreateAgentActivity.kt](app/android/app/src/main/java/com/magicvector/activity/ComposeCreateAgentActivity.kt)
+然后点击创建收到响应或者用户点击返回要弹性缩小。这样还能免除使用activity返回值，而是使用全局事件比如eventbus直接在agentList展示创建好的agent。
+当然我觉得eventbus在jetpack compose是兜底方案，你还是不要这么实现，写到设计文档吧，分析一下在compose的框架下用ViewModel 中用 SharedFlow/StateFlow是不是更合适，并实现。
+
+##### 查看，修改，删除Agent
+- 跟创建Agent的组合函数Page基本一致，只不过能编辑，底下能删除，要弹出确认是否删除等。
+- 其实创建就是增加，Agent详情页面就是查看，修改，删除。
+- 打开和关闭的逻辑和UI跳转方式跟创建 Agent一致，都是用组合函数动态弹性打开和动态弹性关闭。
+- 这里也要注意用jetpack compose的ViewModel，用SharedFlow/StateFlow去控制AgentList上的UI变化。
+
+##### 选择Agent与接收Agent消息
+其实我基本已经实现了，你参考一下跳转[ComposeChatActivity.kt](app/android/app/src/main/java/com/magicvector/activity/ComposeChatActivity.kt)的逻辑
+目前只要做一些小的修改。
+我觉得选择聊天的逻辑相对复杂，所以选择Agent就是点击AgentList上的item然后跳转到ChatActivity，此处需要创建Activity。
+跳转到ChatActivity之后不要忘记接收其他Agent的消息，在背后线程也要更新UI消息，特别注意线程管理避免直接new而是使用协程或者线程池。
+ChatManager需要设计一下，这个是用来管理跟所有Agent的绘话与聊天的。当你在ChatActivity收到其他的消息，虽然Main页面的AgentList不可见
+但是你要用SharedFlow/StateFlow或者最次使用eventBug去更新数据。然后展示出来。
+ChatActivity的本次不需要开发，直接用我的ComposeChatActivity
+
+对了还需要做缓存，就是在没有网络的情况下，能看到之前的消息，所以你需要把所有的Agent消息存储在Room，
+关于头像，我认为直接使用Glide缓存就好。
+所以你需要设计Room表存储AgentList中的全部消息。至少包括Agent表，ChatMessage表，映射每条消息是属于哪个Agent的。
+由于ChatActivity要有上拉加载聊天记录的功能（本次可以先不开发）所以你需要设计根据根据某个时间节点往前或者往后找n条跟某个agent的消息的功能。
+这个dao我觉得稍微难设计一点，关于设计sql我觉得你还是要写在设计文档。当然SpringBoot的Mapper也要完成跟Android的Dao一样的接口功能。
+要特别注意聊天消息的索引设计，能让我快速实现上述功能。设计文档中绘制ER图，然后看看SQL函数的UML图怎么绘制合适？
+
+然后要做网络请求缓存，我已经设计了一部分，就是首次打开[MessageListPage.kt](app/android/app/src/main/java/com/magicvector/fragment/MessageListPage.kt)
+这个页面的时候才去网络请求。由于我是使用了ws所以本次需要监控ws的状态，用Android的系统级别广播监听网络状态，
+设计一个`NetworkManger`把，专门监听和管理，绘制类图，状态图，活动图，通信图，甘特图。
+如果之前是连接现在断开，然后再次连接的话，就再次主动get请求，否则MessageListPage只在初始化请求一次，其他的数据都又ws更新，
+在没有数据的时候都由SQLite展示。
+制作`ChatController`吧，管理各种数据源和所有Agent消息的组合，数据源稍微有点多：
+首次和断开从连的数据来自于Http，
+离线的时候来自于SQLite（Room）
+在线时候来自于ws
+我的建议是安全线程Map管理<agentId, `ChatManager`>；
+chatManager是管理单个Agent的消息，内部有一个顺序排列的List，还有消息插入方法，
+消息插入要支持单个和批量的二分插入，因为在有序list的情况下二分插入是最快的，这一点你需要写道设计文档。
+`ChatController`和`ChatManager`要绘制类图，对象图，状态图，活动图，通信图，甘特图（首次、断开从连、离线、在线全流程）。
+还要绘制整个Main页面的线程甘特图，内部线程设计要合理，包括UI线程，数据库IO线程，网络请求IO线程以及其他管理的线程等。
+其他图要根据DesignDocument.md之前的图进行绘制，
+
+#### 任务
+
+你完成任务的顺序：先写设计文档，把新增的功能或者已经开发的功能（需要审核是否规范）写入设计文档：
+[MainDesignDocument.md](MainDesignDocument.md)（如果有，这里大部分是架构设计，应该没什么要写的）
+[SpringBootDesignDocument.md](springboot/docs/SpringBootDesignDocument.md)（这里是SpringBoot设计）
+[AndroidDesignDocument.md](app/android/docs/AndroidDesignDocument.md)（这是Android的设计文档）
+
+写完方案之后开发SpringBoot和Android。
