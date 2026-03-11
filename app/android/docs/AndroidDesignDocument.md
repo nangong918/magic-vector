@@ -8,10 +8,10 @@
 ## 整体架构分层
 
 * **UI 层**：负责页面渲染、用户输入采集、导航执行。
-  * Activity：`ComposeStartActivity`、`ComposeLoginActivity`、`ComposeRegisterActivity`、`MainActivity`、`ComposeChatActivity`
-  * Fragment级组合函数：`MessageListScreen`、`AgentEditorOverlay`
+  * Activity：`ComposeStartActivity`、`ComposeLoginActivity`、`ComposeRegisterActivity`、`MainActivity`、`ComposeChatActivity`、`ComposeAgentChatActivity`
+  * Fragment级组合函数：`MessageListScreen`、`AgentEditorOverlay`、`AgentEmojiFragment`、`AgentTextChatFragment`
 * **状态管理层（MVI）**：负责处理 Intent、维护状态、发出 Effect。
-  * `StartVm`、`ComposeLoginVm`、`ComposeRegisterVm`、`MainVm`、`MessageListMviVm`、`ComposeChatVm`
+  * `StartVm`、`ComposeLoginVm`、`ComposeRegisterVm`、`MainVm`、`MessageListMviVm`、`ComposeChatVm`、`ComposeAgentChatVm`、`AgentEmojiFragmentVm`、`AgentTextChatFragmentVm`
 * **业务与会话层**：封装会话与用户相关业务能力。
 * `UserManager`、`ChatMapController`、`ChatController`、`ChatCacheManager`、`NetworkManager(全局/Application级)`
 * **数据访问层（Room）**：负责本地持久化。
@@ -30,14 +30,20 @@ classDiagram
     class ComposeRegisterActivity
     class MainActivity
     class ComposeChatActivity
+    class ComposeAgentChatActivity
     class MessageListScreen
     class AgentEditorOverlay
+    class AgentEmojiFragment
+    class AgentTextChatFragment
     class StartVm
     class ComposeLoginVm
     class ComposeRegisterVm
     class MainVm
     class MessageListMviVm
     class ComposeChatVm
+    class ComposeAgentChatVm
+    class AgentEmojiFragmentVm
+    class AgentTextChatFragmentVm
     class UserManager
     class ChatMapController
     class ChatController
@@ -59,6 +65,11 @@ classDiagram
     MainActivity --> MessageListScreen
     MainActivity --> AgentEditorOverlay
     ComposeChatActivity --> ComposeChatVm
+    ComposeAgentChatActivity --> ComposeAgentChatVm
+    ComposeAgentChatActivity --> AgentEmojiFragment
+    ComposeAgentChatActivity --> AgentTextChatFragment
+    AgentEmojiFragment --> AgentEmojiFragmentVm
+    AgentTextChatFragment --> AgentTextChatFragmentVm
 
     StartVm --> UserManager
     StartVm --> ApiRequestImpl
@@ -70,6 +81,7 @@ classDiagram
     MainVm --> NetworkManager
     MessageListMviVm --> ApiRequestImpl
     ComposeChatVm --> ChatMapController
+    ComposeAgentChatVm --> RealtimeChatController
 
     UserManager --> UserDao
     ChatMapController --> ChatController
@@ -703,6 +715,191 @@ gantt
     SharedFlow事件派发            :s1, 60, 10
 ```
 
+### AgentChat 模块（ComposeAgentChatActivity 双 Fragment）
+
+#### 功能职责
+* 单 Activity 双页面：`ComposeAgentChatActivity` 内以横向滑动切换 `AgentEmojiFragment` 与 `AgentTextChatFragment`。
+* Emoji 页（左页）合并 `voice_agent_page.dart` 的状态球语义与 `ComposeAgentEmojiActivity` 的视觉风格（黑底双眼），状态球颜色与缩放由 VAD/WS 状态驱动。
+* Text 页（右页）复用 `ComposeChatActivity` 的文本输入/语音按压交互，继续走 `RealtimeChatController -> ChatController -> ChatCacheManager`。
+* 两个 Fragment 均采用 MVI：`AgentEmojiFragmentVm`、`AgentTextChatFragmentVm`，Activity 级编排采用 `ComposeAgentChatVm`。
+
+#### UI/交互设计
+* 顶部：两个圆点表示当前页；支持左右滑动切换。
+* 左页中心：黑底 + 双眼；底部状态球颜色规范：
+  * 未连接/断开：灰色
+  * 异常：红色
+  * 用户语音结束/可继续对话：绿色
+  * 用户正在说话：蓝色
+  * Agent 回复中：紫色
+* 状态球动画：唤醒成功或进入 Speaking/Replying 阶段时弹性放大；回复结束回落到默认尺寸。
+* 左页附加状态：显示当前摄像头方向（前置/后置），用于对齐“前置摄像头状况”要求。
+
+#### UML静态图（类图）
+```mermaid
+classDiagram
+    class ComposeAgentChatActivity {
+      +onCreate()
+      +observeEffects()
+      +mapPhaseText()
+    }
+    class ComposeAgentChatVm {
+      +processIntent(intent)
+      +initResource(activity)
+      +sendTextMessage(msg)
+      +startSendVoice(scope)
+      +toggleMicState()
+    }
+    class AgentEmojiFragment
+    class AgentTextChatFragment
+    class AgentEmojiFragmentVm
+    class AgentTextChatFragmentVm
+    class RealtimeChatController
+    class ChatController
+    class ChatCacheManager
+    class ChatService
+
+    ComposeAgentChatActivity --> ComposeAgentChatVm
+    ComposeAgentChatActivity --> AgentEmojiFragment
+    ComposeAgentChatActivity --> AgentTextChatFragment
+    AgentEmojiFragment --> AgentEmojiFragmentVm
+    AgentTextChatFragment --> AgentTextChatFragmentVm
+    ComposeAgentChatVm --> ChatService
+    ComposeAgentChatVm --> RealtimeChatController
+    RealtimeChatController --> ChatController
+    ChatController --> ChatCacheManager
+```
+
+#### UML静态图（对象图）
+```mermaid
+classDiagram
+    class activity_1 {
+      page = 0
+      title = "AgentName"
+    }
+    class vm_1 {
+      vadState = Speaking
+      orbPhase = USER_SPEAKING
+    }
+    class emojiVm_1 {
+      statusText = "用户正在说话 · 前置摄像头"
+    }
+    class textVm_1 {
+      isEnableSend = true
+    }
+    class rtc_1 {
+      userId = "u1001"
+      agentId = "a2001"
+    }
+    class chatCtrl_a2001 {
+      pendingUpdate = 3
+    }
+
+    activity_1 --> vm_1
+    activity_1 --> emojiVm_1
+    activity_1 --> textVm_1
+    vm_1 --> rtc_1
+    rtc_1 --> chatCtrl_a2001
+```
+
+#### UML动态图（状态图）
+```mermaid
+stateDiagram-v2
+    [*] --> Disconnected
+    Disconnected --> Ready : ws connected + vad silent
+    Ready --> UserSpeaking : vad startSpeech
+    UserSpeaking --> AgentReplying : start_tts
+    AgentReplying --> Ready : stop_tts
+    Ready --> Error : ws error / vad error
+    UserSpeaking --> Error : stt/transport error
+    AgentReplying --> Error : tts/transport error
+    Error --> Disconnected : reset / reconnect
+```
+
+#### UML动态图（活动图）
+```mermaid
+flowchart TD
+    A[进入 ComposeAgentChatActivity] --> B[绑定 ChatService]
+    B --> C[初始化 RealtimeChatController]
+    C --> D{当前页}
+    D -- Emoji页 --> E[展示黑底双眼 + 状态球]
+    D -- Text页 --> F[展示消息列表 + 输入栏]
+    E --> G{用户操作}
+    G -- 唤醒/开麦 --> H[请求录音权限并启动VAD]
+    H --> I[状态球弹性放大]
+    F --> J{输入类型}
+    J -- 文本 --> K[USER_TEXT_MESSAGE]
+    J -- 按压语音 --> L[START/STOP_AUDIO_RECORD + AUDIO_CHUNK]
+    K --> M[WS回包 TEXT_CHAT_RESPONSE]
+    L --> M
+    M --> N[ChatController 增量插入]
+    N --> O[ChatCacheManager 持久化]
+    O --> P[UI 增量刷新]
+```
+
+#### UML动态图（时序图）
+```mermaid
+sequenceDiagram
+    participant UI as ComposeAgentChatActivity
+    participant VM as ComposeAgentChatVm
+    participant FragVm as AgentTextChatFragmentVm
+    participant RTC as RealtimeChatController
+    participant CC as ChatController
+    participant Cache as ChatCacheManager
+    participant WS as SpringWS
+
+    UI->>VM: Initialize(intent, activity)
+    VM->>RTC: initResource(...)
+    UI->>FragVm: UserSendText("你好")
+    FragVm-->>VM: ForwardSendText
+    VM->>RTC: send USER_TEXT_MESSAGE
+    RTC->>WS: websocket send
+    WS-->>RTC: TEXT_CHAT_RESPONSE(fragment)
+    RTC->>CC: setWsToViews/insert message
+    CC->>Cache: upsertBatch
+    CC-->>UI: update list/effect
+```
+
+#### UML动态图（通信图）
+```mermaid
+flowchart LR
+    AC[ComposeAgentChatActivity] --> VM[ComposeAgentChatVm]
+    VM --> EFVM[AgentEmojiFragmentVm]
+    VM --> TFVM[AgentTextChatFragmentVm]
+    VM --> RTC[RealtimeChatController]
+    RTC --> WS[RealtimeChatWsClient]
+    RTC --> CC[ChatController]
+    CC --> Cache[ChatCacheManager]
+    Cache --> Room[(VectorDatabase)]
+```
+
+#### 功能线程甘特图
+```mermaid
+gantt
+    title ComposeAgentChat 功能线程甘特图
+    dateFormat  X
+    axisFormat %L ms
+    section Main线程
+    Pager切换与圆点动画             :m1, 0, 25
+    状态球渲染与弹性动画            :m2, 25, 120
+    文本列表重绘                    :m3, 40, 100
+    section WebSocket线程
+    发送文本/音频消息               :w1, 30, 110
+    接收TEXT_CHAT_RESPONSE/TTS事件  :w2, 45, 110
+    section 音频线程
+    AudioRecord/VAD检测             :a1, 35, 95
+    AudioTrack播放                  :a2, 70, 80
+    section 数据线程
+    ChatController去重插入          :d1, 50, 90
+    Room持久化                      :d2, 58, 80
+```
+
+#### 设计模式
+* **组合模式（Compose UI）**：页面拆分为 Activity 编排 + Fragment级组合函数，便于复用和替换单页逻辑。
+* **门面模式**：`ComposeAgentChatVm` 统一封装权限、WS、VAD、页面状态编排。
+* **观察者模式**：`StateFlow + Effect` 驱动页面增量更新。
+* **状态模式（轻量）**：`AgentVoiceOrbPhase` 将颜色/动画映射集中化，避免在 UI 层散落条件判断。
+* **计算机网络/并发说明**：`WebSocket` 实时流与 `AudioRecord` 采集属于并发流水线，需避免主线程阻塞并保证消息顺序一致性。
+
 
 ## Manager管理类设计
 
@@ -1196,6 +1393,542 @@ flowchart LR
 * `TODO-RTC-3`：`MutableLiveData + callback + flow` 并存，状态源分散，建议统一到 `StateFlow` 并收敛事件总线出口。
 * `TODO-RTC-4`：`initResource/releaseAllResource` 里包含大量可空字段切换，容易产生边界错误；建议引入显式会话状态机与资源拥有者模型。
 * `TODO-RTC-5`：WS消息解析与业务处理在同一类里，建议抽离 `RealtimeMessageRouter`（只做协议分发）和 `RealtimeCommandHandler`（只做业务执行）。
+
+### ChatService（WS资源容器）
+
+#### UML静态图（类图）
+```mermaid
+classDiagram
+    class ChatService {
+      -realtimeChatController: RealtimeChatController
+      +onCreate()
+      +onBind(intent)
+      +onDestroy()
+    }
+    class ChatServiceBinder {
+      +getChatMessageHandler()
+      +getService()
+    }
+    class RealtimeChatController
+
+    ChatService --> RealtimeChatController
+    ChatService --> ChatServiceBinder
+```
+
+#### UML静态图（对象图）
+```mermaid
+classDiagram
+    class chatService_1 {
+      state = started
+    }
+    class binder_1
+    class rtc_1 {
+      ws = connected
+    }
+    chatService_1 --> binder_1
+    chatService_1 --> rtc_1
+```
+
+#### UML动态图（状态图）
+```mermaid
+stateDiagram-v2
+    [*] --> Created
+    Created --> Bound : activity bindService
+    Bound --> Running : controller active
+    Running --> Released : onDestroy
+    Released --> [*]
+```
+
+#### UML动态图（活动图）
+```mermaid
+flowchart TD
+    A[Service onCreate] --> B[创建RealtimeChatController]
+    B --> C[Activity bindService]
+    C --> D[返回Binder]
+    D --> E[VM拿到Controller并初始化资源]
+    E --> F[Service onDestroy]
+    F --> G[controller.destroy]
+```
+
+#### UML动态图（时序图）
+```mermaid
+sequenceDiagram
+    participant A as ComposeAgentChatVm
+    participant S as ChatService
+    participant B as ChatServiceBinder
+    participant R as RealtimeChatController
+    A->>S: bindService()
+    S-->>A: onServiceConnected
+    A->>B: getChatMessageHandler()
+    B-->>A: R
+    A->>R: initResource(...)
+```
+
+#### UML动态图（通信图）
+```mermaid
+flowchart LR
+    Activity --> ChatService
+    ChatService --> Binder
+    Binder --> RealtimeChatController
+```
+
+#### 功能线程甘特图
+```mermaid
+gantt
+    title ChatService线程甘特图
+    dateFormat  X
+    axisFormat %L ms
+    section Main线程
+    Service创建与绑定回调     :m1, 0, 20
+    section 背景线程
+    RealtimeController运行     :b1, 20, 120
+```
+
+#### 设计模式
+* **门面 + 服务定位**：`ChatService` 作为长生命周期资源容器，对外仅暴露 Binder 能力。
+
+### AudioController（录音/播放/VAD）
+
+#### UML静态图（类图）
+```mermaid
+classDiagram
+    class AudioController {
+      -realtimeChatAudioRecord: AudioRecord
+      -realtimeChatAudioTrack: AudioTrack
+      -vadSileroController: VadSileroController
+      +initAudioRecorderAndPlayer()
+      +startRecordingAudio(...)
+      +startVAD(onStart)
+      +stopVAD(onStop)
+      +playBase64Audio(data)
+      +releaseAll()
+    }
+    class AudioHandleCallback
+    class VadDetectionCallback
+    class VadSileroController
+    AudioController --> AudioHandleCallback
+    AudioController --> VadDetectionCallback
+    AudioController --> VadSileroController
+```
+
+#### UML静态图（对象图）
+```mermaid
+classDiagram
+    class audioCtrl_1 {
+      recordState = recording
+      vadState = speaking
+    }
+    class audioRecord_1
+    class audioTrack_1
+    class vad_1
+    audioCtrl_1 --> audioRecord_1
+    audioCtrl_1 --> audioTrack_1
+    audioCtrl_1 --> vad_1
+```
+
+#### UML动态图（状态图）
+```mermaid
+stateDiagram-v2
+    [*] --> Idle
+    Idle --> Recording : startRecordingAudio
+    Recording --> VADSpeaking : onStartSpeech
+    VADSpeaking --> Recording : onStopSpeech
+    Recording --> Playing : START_TTS + AUDIO_CHUNK
+    Playing --> Recording : STOP_TTS
+    Recording --> Released : releaseAll
+    Playing --> Released : releaseAll
+```
+
+#### UML动态图（活动图）
+```mermaid
+flowchart TD
+    A[initAudioRecorderAndPlayer] --> B[startRecordingAudio]
+    B --> C[AudioRecord读取PCM]
+    C --> D[Base64编码并回调发送WS]
+    D --> E{收到TTS?}
+    E -- 是 --> F[AudioTrack播放]
+    E -- 否 --> C
+    F --> G[stopAudioTrackPlay]
+```
+
+#### UML动态图（时序图）
+```mermaid
+sequenceDiagram
+    participant RTC as RealtimeChatController
+    participant AC as AudioController
+    participant VAD as VadSileroController
+    participant WS as RealtimeChatWsClient
+    RTC->>AC: startRecordingAudio()
+    AC-->>WS: START_AUDIO_RECORD + AUDIO_CHUNK
+    AC->>VAD: startRecording()
+    VAD-->>RTC: onStartSpeech/onStopSpeech
+    WS-->>RTC: START_TTS/AUDIO_CHUNK
+    RTC->>AC: playBase64Audio()
+```
+
+#### UML动态图（通信图）
+```mermaid
+flowchart LR
+    RTC --> AC
+    AC --> AudioRecord
+    AC --> VadSilero
+    AC --> AudioTrack
+    AC --> WS
+```
+
+#### 功能线程甘特图
+```mermaid
+gantt
+    title AudioController线程甘特图
+    dateFormat  X
+    axisFormat %L
+    section AudioRecord线程
+    PCM采集与编码                  :r1, 0, 100
+    section VAD线程
+    语音活动检测                   :v1, 5, 95
+    section AudioTrack线程
+    TTS音频播放                    :p1, 40, 70
+```
+
+#### 设计模式
+* **适配器模式**：把底层 `AudioRecord/AudioTrack/VAD` 差异化接口统一到 `AudioHandleCallback/VadDetectionCallback`。
+* **并发模型说明（操作系统/IO）**：采集、VAD、播放是三条并行流水线，避免互斥阻塞可显著降低语音首包延迟。
+
+### UdpVisionManager（视频帧 UDP 分片）
+
+#### UML静态图（类图）
+```mermaid
+classDiagram
+    class UdpVisionManager {
+      -datagramSocket: DatagramSocket
+      -currentUserId: String
+      -currentAgentId: String
+      +initialize(userId,agentId)
+      +sendVideoFrame(bitmap)
+      +destroy()
+    }
+    class VideoUdpPacket
+    UdpVisionManager --> VideoUdpPacket
+```
+
+#### UML静态图（对象图）
+```mermaid
+classDiagram
+    class udp_1 {
+      initialized = true
+      fpsLimit = 10
+    }
+    class socket_1
+    class packet_1 {
+      totalChunks = N
+    }
+    udp_1 --> socket_1
+    udp_1 --> packet_1
+```
+
+#### UML动态图（状态图）
+```mermaid
+stateDiagram-v2
+    [*] --> Uninitialized
+    Uninitialized --> Initialized : initialize
+    Initialized --> Sending : sendVideoFrame
+    Sending --> Initialized : frame done
+    Initialized --> Destroyed : destroy
+```
+
+#### UML动态图（活动图）
+```mermaid
+flowchart TD
+    A[收到Bitmap] --> B[JPEG压缩]
+    B --> C[按chunkSize分片]
+    C --> D[构建CRC二进制包]
+    D --> E[DatagramSocket发送]
+```
+
+#### UML动态图（时序图）
+```mermaid
+sequenceDiagram
+    participant Emoji as AgentEmoji页
+    participant Udp as UdpVisionManager
+    participant Pkt as VideoUdpPacket
+    participant Server as UDP Server
+    Emoji->>Udp: sendVideoFrame(bitmap)
+    Udp->>Pkt: createVideoPacket()
+    Pkt-->>Udp: binaryWithCRC
+    Udp->>Server: DatagramPacket(chunk_i)
+```
+
+#### UML动态图（通信图）
+```mermaid
+flowchart LR
+    Emoji --> UdpVisionManager --> DatagramSocket --> UDPServer
+```
+
+#### 功能线程甘特图
+```mermaid
+gantt
+    title UdpVisionManager线程甘特图
+    dateFormat  X
+    axisFormat %L
+    section IO线程
+    JPEG压缩与分片             :i1, 0, 45
+    UDP分片发送               :i2, 45, 75
+```
+
+#### 设计模式
+* **单例模式**：会话期复用 `DatagramSocket`，减少频繁创建套接字开销。
+* **计算机网络说明**：UDP 无连接 + 分片 + CRC 校验，优先时延而非可靠性（后续可迁移 RTMP）。
+
+### VisionManager（CameraX + YOLO）
+
+#### UML静态图（类图）
+```mermaid
+classDiagram
+    class VisionManager {
+      -isFrontCamera: Boolean
+      +initStart(context,preview,listener,owner)
+      +switchCamera(preview,owner)
+      +isUsingFrontCamera()
+      +onPause()
+      +onDestroy(window)
+    }
+    class Detector
+    class VisionCallback
+    VisionManager --> Detector
+    VisionManager --> VisionCallback
+```
+
+#### UML静态图（对象图）
+```mermaid
+classDiagram
+    class vision_1 {
+      isFrontCamera = true
+    }
+    class preview_1
+    class detector_1
+    vision_1 --> preview_1
+    vision_1 --> detector_1
+```
+
+#### UML动态图（状态图）
+```mermaid
+stateDiagram-v2
+    [*] --> Idle
+    Idle --> CameraStarted : initStart
+    CameraStarted --> Detecting : analyzer on
+    Detecting --> CameraStarted : switchCamera
+    CameraStarted --> Paused : onPause
+    Paused --> CameraStarted : onResume
+    CameraStarted --> Destroyed : onDestroy
+```
+
+#### UML动态图（活动图）
+```mermaid
+flowchart TD
+    A[initStart] --> B[启动CameraX]
+    B --> C[Analyzer回调每帧]
+    C --> D[回传当前Bitmap]
+    C --> E[YOLO detect]
+    E --> F[输出BoundingBoxes]
+```
+
+#### UML动态图（时序图）
+```mermaid
+sequenceDiagram
+    participant UI as ComposeAgentEmoji
+    participant VM as VisionManager
+    participant CX as CameraX
+    participant YOLO as Detector
+    UI->>VM: initStart(...)
+    VM->>CX: bindCameraUseCases
+    CX-->>VM: frame bitmap
+    VM->>YOLO: detect(bitmap)
+    YOLO-->>UI: onDetect(result)
+```
+
+#### UML动态图（通信图）
+```mermaid
+flowchart LR
+    ComposeUI --> VisionManager --> CameraX
+    VisionManager --> Detector
+    VisionManager --> VisionCallback
+```
+
+#### 功能线程甘特图
+```mermaid
+gantt
+    title VisionManager线程甘特图
+    dateFormat  X
+    axisFormat %L
+    section Camera线程
+    帧采集                     :c1, 0, 120
+    section 识别线程
+    YOLO推理                   :d1, 10, 110
+```
+
+#### 设计模式
+* **策略模式（镜头选择）**：前/后摄像头切换视为不同采集策略。
+
+### EyesMoveManager（设计稿模块）
+
+> 该管理器用于把“目标点 -> 双眼偏移动画”从 UI 中解耦，当前实现已在 Compose 层完成，后续建议独立为 Manager。
+
+#### UML静态图（类图）
+```mermaid
+classDiagram
+    class EyesMoveManager {
+      +updateTarget(x,y)
+      +computePupilOffset() Pair~Float,Float~
+      +resetToCenter(delayMs)
+    }
+    class TargetPoint
+    EyesMoveManager --> TargetPoint
+```
+
+#### UML静态图（对象图）
+```mermaid
+classDiagram
+    class eyesMgr_1 {
+      target = (0.72,0.34)
+      pupil = (8,-5)
+    }
+```
+
+#### UML动态图（状态图）
+```mermaid
+stateDiagram-v2
+    [*] --> Center
+    Center --> Tracking : updateTarget
+    Tracking --> Resetting : delay timeout
+    Resetting --> Center
+```
+
+#### UML动态图（活动图）
+```mermaid
+flowchart TD
+    A[输入目标点] --> B[计算瞳孔偏移]
+    B --> C[弹簧动画过渡]
+    C --> D[延迟复位中心]
+```
+
+#### UML动态图（时序图）
+```mermaid
+sequenceDiagram
+    participant Detect as TargetDetector
+    participant Eyes as EyesMoveManager
+    participant UI as EmojiEyesComposable
+    Detect->>Eyes: updateTarget(x,y)
+    Eyes-->>UI: pupilOffset
+    Eyes-->>UI: resetCenter(after delay)
+```
+
+#### UML动态图（通信图）
+```mermaid
+flowchart LR
+    TargetActivityDetectionManager --> EyesMoveManager --> ComposeEyesUI
+```
+
+#### 功能线程甘特图
+```mermaid
+gantt
+    title EyesMoveManager线程甘特图
+    dateFormat  X
+    axisFormat %L
+    section Main线程
+    偏移计算与动画                 :m1, 0, 80
+```
+
+#### 设计模式
+* **观察者 + 状态模式**：目标点变化驱动眼睛状态迁移（Center/Tracking/Resetting）。
+
+### TargetActivityDetectionManager（目标活动检测）
+
+#### UML静态图（类图）
+```mermaid
+classDiagram
+    class TargetActivityDetectionManager {
+      +detect(boundingBoxes,targetPoint) TargetActivityDetectionResult
+      -calculateBoxCountDifference()
+      -calculateResult()
+    }
+    class BoundingBox
+    class TargetPoint
+    class TargetActivityDetectionResult
+    TargetActivityDetectionManager --> BoundingBox
+    TargetActivityDetectionManager --> TargetPoint
+    TargetActivityDetectionManager --> TargetActivityDetectionResult
+```
+
+#### UML静态图（对象图）
+```mermaid
+classDiagram
+    class detectMgr_1 {
+      lastMaxObjS = 0.16
+      lastMaxPersonS = 0.24
+    }
+    class frame_t {
+      personCount = 1
+      objCount = 3
+    }
+    class result_t {
+      score = 0.42
+      detectionType = 0
+    }
+    detectMgr_1 --> frame_t
+    detectMgr_1 --> result_t
+```
+
+#### UML动态图（状态图）
+```mermaid
+stateDiagram-v2
+    [*] --> Stable
+    Stable --> ActivePerson : score > PERSON_THRESHOLD
+    Stable --> ActiveObject : score > OBJECT_THRESHOLD
+    ActivePerson --> Stable : score回落
+    ActiveObject --> Stable : score回落
+```
+
+#### UML动态图（活动图）
+```mermaid
+flowchart TD
+    A[输入BoundingBoxes] --> B[统计person/object数量变化]
+    B --> C[计算面积差与位移差]
+    C --> D[合成score]
+    D --> E{score超阈值?}
+    E -- 是 --> F[输出检测类型]
+    E -- 否 --> G[输出稳定状态]
+```
+
+#### UML动态图（时序图）
+```mermaid
+sequenceDiagram
+    participant Vision as VisionManager
+    participant Detect as TargetActivityDetectionManager
+    participant VM as AgentEmojiVm
+    Vision->>Detect: detect(boxes,targetPoint)
+    Detect-->>VM: TargetActivityDetectionResult
+    VM-->>VM: 映射颜色/状态
+```
+
+#### UML动态图（通信图）
+```mermaid
+flowchart LR
+    VisionManager --> TargetActivityDetectionManager --> AgentEmojiVm --> EmojiUI
+```
+
+#### 功能线程甘特图
+```mermaid
+gantt
+    title TargetActivityDetection线程甘特图
+    dateFormat  X
+    axisFormat %L
+    section 识别线程
+    数量差与面积差计算             :d1, 0, 55
+    score融合与阈值判断            :d2, 55, 25
+```
+
+#### 设计模式
+* **规则引擎（轻量）**：使用可调阈值与权重组合实现行为判定，后续可平滑迁移为模型推理。
 
 ## 本地数据库设计（Room）
 

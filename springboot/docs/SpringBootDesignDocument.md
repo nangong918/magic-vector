@@ -430,6 +430,170 @@ stateDiagram-v2
     Closed --> WsConnected : 客户端重连
 ```
 
+### RealtimeChatServiceImpl 模块（文本/音频/多模态编排）
+
+#### 功能职责
+* 负责实时会话核心编排：`initChatClient`、`startTextChat`、`startAudioChat`、`STT->LLM->TTS` 链路、消息落库与回推。
+* 复用 `RealtimeChatContextManager` 管理单会话状态与任务生命周期（录音、LLM、TTS、错误重试计数）。
+* 通过 `PersistentConnectMessageManager` 统一异步下发 `TEXT_CHAT_RESPONSE/START_TTS/STOP_TTS/AUDIO_CHUNK/SYSTEM_MESSAGE`。
+
+#### UML静态图（类图）
+```mermaid
+classDiagram
+    class RealtimeChatServiceImpl {
+      +initChatClient(context,chatModel) ChatClient
+      +startTextChat(userQuestion,context)
+      +startAudioChat(context)
+      -getSTTCallback(context) STTCallback
+      -getOnSTTResultCallback(context) OnSTTResultCallback
+    }
+    class RealtimeChatContextManager
+    class ChatMessageService
+    class ChatMessageConverter
+    class LLMServiceService
+    class STTServiceService
+    class TTSServiceService
+    class VisionToolService
+    class PersistentConnectMessageManager
+    class MixLLMManager
+
+    RealtimeChatServiceImpl --> RealtimeChatContextManager
+    RealtimeChatServiceImpl --> ChatMessageService
+    RealtimeChatServiceImpl --> ChatMessageConverter
+    RealtimeChatServiceImpl --> LLMServiceService
+    RealtimeChatServiceImpl --> STTServiceService
+    RealtimeChatServiceImpl --> TTSServiceService
+    RealtimeChatServiceImpl --> VisionToolService
+    RealtimeChatServiceImpl --> PersistentConnectMessageManager
+    RealtimeChatContextManager --> MixLLMManager
+```
+
+#### UML静态图（对象图）
+```mermaid
+classDiagram
+    class rtService_1
+    class ctx_agent1 {
+      userId = "12"
+      agentId = "agent_1"
+      recording = true
+      llmErrorCount = 0
+    }
+    class stt_cb_1
+    class llm_svc_1
+    class tts_svc_1
+    class msg_queue_1 {
+      pending = 8
+    }
+    rtService_1 --> ctx_agent1
+    rtService_1 --> stt_cb_1
+    rtService_1 --> llm_svc_1
+    rtService_1 --> tts_svc_1
+    rtService_1 --> msg_queue_1
+```
+
+#### UML动态图（状态图）
+```mermaid
+stateDiagram-v2
+    [*] --> Idle
+    Idle --> Initializing : initChatClient
+    Initializing --> Ready : memory/prompt loaded
+    Ready --> TextProcessing : USER_TEXT_MESSAGE
+    Ready --> AudioRecording : START_AUDIO_RECORD
+    AudioRecording --> STTProcessing : STOP_AUDIO_RECORD / stream complete
+    STTProcessing --> LLMStreaming : 识别完成
+    TextProcessing --> LLMStreaming : 文本入模
+    LLMStreaming --> TTSStreaming : sentence chunk ready
+    TTSStreaming --> Ready : STOP_TTS + endConversation
+    AudioRecording --> Error : stt transport error
+    LLMStreaming --> Error : llm proxy error
+    TTSStreaming --> Error : tts error
+    Error --> Ready : retry within limit
+    Error --> [*] : over retry limit + reset
+```
+
+#### UML动态图（活动图）
+```mermaid
+flowchart TD
+    A[收到USER_TEXT_MESSAGE或音频流] --> B{输入类型}
+    B -- 文本 --> C[构建RealtimeChatTextResponse]
+    B -- 音频 --> D[持续pollAudioBuffer写入STT流]
+    D --> E[STT完成得到句子]
+    C --> F[保存用户消息到MySQL]
+    E --> F
+    F --> G[回推TEXT_CHAT_RESPONSE给客户端]
+    G --> H[LLMService mixLLMCallErrorProxy]
+    H --> I[TTSService合成音频流]
+    I --> J[回推AUDIO_CHUNK]
+    J --> K[会话完成发送STOP_TTS]
+```
+
+#### UML动态图（时序图）
+```mermaid
+sequenceDiagram
+    participant WS as RealtimeChatChannel
+    participant Svc as RealtimeChatServiceImpl
+    participant Ctx as RealtimeChatContextManager
+    participant STT as STTServiceService
+    participant LLM as LLMServiceService
+    participant TTS as TTSServiceService
+    participant DB as ChatMessageService
+    participant MQ as PersistentConnectMessageManager
+
+    WS->>Svc: startAudioChat(ctx)
+    Svc->>Ctx: startRecord()
+    Svc->>STT: sttStreamCallErrorProxy(audioStream, callback)
+    STT-->>Svc: onRecognitionComplete(text)
+    Svc->>DB: insertOne(user message)
+    Svc->>MQ: submit TEXT_CHAT_RESPONSE
+    Svc->>LLM: mixLLMCallErrorProxy(text,...)
+    LLM-->>Svc: llmResult
+    Svc->>TTS: start(llmResult,...)
+    TTS-->>MQ: AUDIO_CHUNK / START_TTS / STOP_TTS
+    Svc->>Ctx: endConversation()
+```
+
+#### UML动态图（通信图）
+```mermaid
+flowchart LR
+    Channel[RealtimeChatChannel] --> Service[RealtimeChatServiceImpl]
+    Service --> Context[RealtimeChatContextManager]
+    Service --> STT[STTServiceService]
+    Service --> LLM[LLMServiceService]
+    Service --> TTS[TTSServiceService]
+    Service --> Vision[VisionToolService]
+    Service --> DB[(ChatMessageService/Mapper)]
+    Service --> Msg[PersistentConnectMessageManager]
+    Msg --> Channel
+```
+
+#### 功能线程甘特图
+```mermaid
+gantt
+    title RealtimeChatServiceImpl 功能线程甘特图
+    dateFormat  X
+    axisFormat %L ms
+    section WebSocket线程
+    收包与任务提交                    :w1, 0, 20
+    section 业务线程池
+    startTextChat/startAudioChat编排   :b1, 20, 120
+    section STT流线程
+    音频帧消费与识别                   :s1, 25, 95
+    section LLM/TTS线程
+    LLM流式生成                        :l1, 55, 80
+    TTS分段合成与发送                  :t1, 75, 85
+    section 数据库线程
+    ChatMessage写入                    :d1, 45, 30
+    section 消息发送线程
+    队列消费与session发送              :m1, 50, 100
+```
+
+#### 设计模式
+* **门面模式**：`RealtimeChatServiceImpl` 对上层提供单一编排入口，屏蔽 STT/LLM/TTS 多子系统细节。
+* **策略模式**：输入来源（文本/音频）走不同前处理策略，最终统一汇聚到 LLM/TTS 管线。
+* **生产者-消费者模式**：`PersistentConnectMessageManager` 异步发送，解耦业务编排与网络回写。
+* **模板化回调模式**：`StreamCallErrorCallback/STTCallback/TTSCallback` 抽象错误重试、任务登记、会话终止行为。
+* **计算机网络/并发说明**：音频流轮询 + STT 流式消费是典型 IO 管线；若在主线程执行会导致 WebSocket 处理阻塞和背压扩散。
+
 
 ## 数据库设计（MySQL）
 

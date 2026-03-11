@@ -13,7 +13,7 @@ import com.core.baseutil.network.networkLoad.NetworkLoadUtils
 import com.data.domain.OnPositionItemClick
 import com.data.domain.fragmentActivity.intentAo.ChatIntentAo
 import com.magicvector.MainApplication
-import com.magicvector.activity.ComposeChatActivity
+import com.magicvector.activity.ComposeAgentChatActivity
 import com.magicvector.activity.MainActivity
 import com.magicvector.callback.OnCreateAgentCallback
 import com.magicvector.databinding.FragmentMessageListBinding
@@ -63,7 +63,7 @@ class MessageListFragment : BaseAppCompatVmFragment<
                         intentAo.ao = it[position]
 
                         vm.startChatActivity(requireActivity()) {
-                            val intent = Intent(activity, ComposeChatActivity::class.java)
+                            val intent = Intent(activity, ComposeAgentChatActivity::class.java)
                             intent.putExtra(ChatIntentAo::class.simpleName, intentAo)
                             startActivity(intent)
                         }

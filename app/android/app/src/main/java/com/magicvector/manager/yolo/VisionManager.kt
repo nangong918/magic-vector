@@ -174,6 +174,13 @@ class VisionManager {
         bindCameraUseCases(previewView, lifecycleOwner)
     }
 
+    /**
+     * 当前是否启用前置摄像头（用于 UI 状态展示）。
+     */
+    fun isUsingFrontCamera(): Boolean {
+        return isFrontCamera
+    }
+
     fun onResume(window: Window){
         // 保持屏幕常亮
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)

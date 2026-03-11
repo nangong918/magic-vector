@@ -81,6 +81,11 @@
             android:name=".activity.test.VADMainActivity"
             android:exported="false" />
         <activity
+            android:name=".activity.ComposeAgentChatActivity"
+            android:exported="false"
+            android:theme="@style/Theme.MagicVector"
+            android:windowSoftInputMode="stateVisible|adjustPan" />
+        <activity
             android:name=".activity.ComposeChatActivity"
             android:exported="false"
             android:theme="@style/Theme.MagicVector"
