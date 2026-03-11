@@ -359,6 +359,7 @@ AgentEmojiFragment放在[fragment](app/android/app/src/main/java/com/magicvector
 第二个fragment是原先的[ComposeChatActivity.kt](app/android/app/src/main/java/com/magicvector/activity/ComposeChatActivity.kt)
 这个逻辑，两个fragment都在同一个ComposeChatActivity，这样把，为了让你参考原先的ComposeChatActivity逻辑
 你新写的Activity要叫做`ComposeAgentChatActivity`
+要看设计文档，思考如何利用已有的ReatimeChatController，ChatController，ChatManager，ChatCacheController做好ws消息插入、持久化等。还要画好ChatActivity的各种UML图。
 
 我其实原先的逻辑基本设计的差不多了，你要合并并写在设计图中，
 SpringBoot的要写在[SpringBootDesignDocument.md](springboot/docs/SpringBootDesignDocument.md)
@@ -377,5 +378,60 @@ Android：
   * `VisionManager`，上述相同
   * `EyesMoveManager`, 上述相同
   * `TargetActivityDetectionManager`, 上述相同
+
+如果你觉得比较难，可以先画出设计图，然后再按照你的设计图设计代码。
+
+
+### 补充
+
+我怎么看你就写了一些Android的逻辑，你有检查SpringBoot[open-api](springboot/open-api)的逻辑吗？
+而且我让你要绘制Android和SpringBoot的设计图以及设计文档你怎么没绘制。
+继续完成我刚刚说的任务：完成的内容都要绘制UML图，而且按照我刚刚跟你说的进行绘制。
+SpringBoot的这块逻辑主要在[RealtimeChatServiceImpl.java](springboot/open-api/src/main/java/com/openapi/service/impl/RealtimeChatServiceImpl.java)
+你根据上下文设计类图，对象图，状态图，活动图，时序图，功能线程甘特图，通信图，设计模式。
+如果你忘了刚刚的任务我再说一遍：
+```text
+现在UI改成：
+一个Activity，顶部有两个小圆点，可以左滑右滑切换Fragment（Compose中的组合Fragment函数，放在[fragment](app/android/app/src/main/java/com/magicvector/fragment)）
+左边的组合函数fragment是一个纯黑的页面，中间两个白色的眼睛，逻辑几乎可以参考：[ComposeAgentEmojiActivity.kt](app/android/app/src/main/java/com/magicvector/activity/ComposeAgentEmojiActivity.kt)
+只不过现在横屏改为了竖屏，逻辑几乎不变。
+然后底部有一个小圆圈，在未连接和断开等状态是灰色的，异常是红色的，用户语音还清之后是绿色的，
+用户正在说话是蓝色的，Agent正在回复的紫色的。
+这个小圆圈要在唤醒的时候弹性变大，然后Agent回复完毕之后弹性还原。
+逻辑大概可以参考[voice_agent_page.dart](demo/flutter/flutternew/lib/page/voice_agent_page.dart)
+我在flutter中实现过demo。可以不用实现，但是你得把设计稿和设计图给我：[AndroidDesignDocument.md](app/android/docs/AndroidDesignDocument.md)
+反正就是flutter的这个也页面逻辑voice_agent_page和ComposeAgentEmojiActivity的基本逻辑组合一下作为第一个Fragment：
+这两个fragment都需要vm，都放在[fragment](app/android/app/src/main/java/com/magicvector/viewModel/fragment)
+都需要mvi设计模式的，你可以参考之前的设计。
+AgentEmojiFragment放在[fragment](app/android/app/src/main/java/com/magicvector/fragment)
+
+第二个fragment是原先的[ComposeChatActivity.kt](app/android/app/src/main/java/com/magicvector/activity/ComposeChatActivity.kt)
+这个逻辑，两个fragment都在同一个ComposeChatActivity，这样把，为了让你参考原先的ComposeChatActivity逻辑
+你新写的Activity要叫做`ComposeAgentChatActivity`
+要看设计文档，思考如何利用已有的ReatimeChatController，ChatController，ChatManager，ChatCacheController做好ws消息插入、持久化等。还要画好ChatActivity的各种UML图。
+
+我其实原先的逻辑基本设计的差不多了，你要合并并写在设计图中，
+SpringBoot的要写在[SpringBootDesignDocument.md](springboot/docs/SpringBootDesignDocument.md)
+Android的写在[AndroidDesignDocument.md](app/android/docs/AndroidDesignDocument.md)
+这里面的规则都要遵守
+都要按照规则[MainDesignDocument.md](MainDesignDocument.md)[developAndRules.md](springboot/docs/developAndRules.md)[developAndRules.md](app/android/docs/developAndRules.md)
+
+其实这里的逻辑是本项目最难的，你需要绘制很多设计图：
+Android：
+`ChatService`存放ws的，
+  * 类图，对象图，状态图，活动图，时序图，功能线程甘特图，通信图
+  * 设计模式
+* `AudioController`，上述相同
+* `UdpVisionManager`，像后端以UDP发送视频流的方法，上述相同。不必特别详细，因为我后续回改为RTMP
+* Agent表情Manager：
+  * `VisionManager`，上述相同
+  * `EyesMoveManager`, 上述相同
+  * `TargetActivityDetectionManager`, 上述相同
+```
+
+
+
+
+
 
 
