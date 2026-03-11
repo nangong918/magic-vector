@@ -85,14 +85,6 @@ object WsManager {
         wsClient.sendMessage(messageMap = dataMap, isShowAllLog = true)
     }
 
-    fun sendHeartbeat(wsClient: AbstractWsClient){
-        val dataMap = mapOf(
-            RealtimeRequestDataTypeEnum.TYPE to RealtimeRequestDataTypeEnum.HEARTBEAT.type,
-            RealtimeRequestDataTypeEnum.DATA to System.currentTimeMillis().toString()
-        )
-        wsClient.sendMessage(messageMap = dataMap)
-    }
-
     /**
      * 处理text文本信息
      * @param message                       text文本信息

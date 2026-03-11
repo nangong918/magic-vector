@@ -9,4 +9,5 @@ public interface IPersistentConnectionManager {
     void disconnect();
     void onThrowable(Throwable throwable);
     void onMessage(Message message);
+    void onPong();
 }

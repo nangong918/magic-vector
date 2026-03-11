@@ -58,7 +58,6 @@ class RealtimeChatController : IsAudioRecording{
         const val TAG = "RealtimeChatController"
         val GSON = MainApplication.GSON
         val mainHandler: Handler = Handler(Looper.getMainLooper())
-        private const val HEARTBEAT_INTERVAL_MS = 20_000L
     }
 
     //---------------------------Data---------------------------
@@ -91,7 +90,6 @@ class RealtimeChatController : IsAudioRecording{
     var realtimeChatWsClient: RealtimeChatWsClient? = null // 长连接，可为null，允许销毁
     private var currentUserId: String? = null
     private var currentAgentId: String? = null
-    private var heartbeatRunnable: Runnable? = null
 
     private fun initRealtimeChatWsClient(): RealtimeChatWsClient {
         return realtimeChatWsClient ?: synchronized(this) {
@@ -151,7 +149,6 @@ class RealtimeChatController : IsAudioRecording{
                         reason: String
                     ) {
                         super.onClosed(webSocket, code, reason)
-                        stopHeartbeat()
                         realtimeChatState.postValue(RealtimeChatState.Disconnected)
                         MainApplication.getNetworkManager().onWebSocketDisconnected()
                         Log.i(TAG, "realtimeChatWsClient::onClosed")
@@ -173,7 +170,6 @@ class RealtimeChatController : IsAudioRecording{
                     ) {
                         super.onFailure(webSocket, t, response)
                         Log.e(TAG, "realtimeChatWsClient::onFailure: ${t.message}")
-                        stopHeartbeat()
                         realtimeChatState.postValue(RealtimeChatState.Error(t.message ?: "-"))
                         MainApplication.getNetworkManager().onWebSocketDisconnected()
                     }
@@ -198,7 +194,6 @@ class RealtimeChatController : IsAudioRecording{
                         realtimeChatState.postValue(RealtimeChatState.InitializedConnected)
                         MainApplication.getNetworkManager().onWebSocketConnected()
                         Log.i(TAG, "realtimeChatWsClient::onOpen; response: $response")
-                        startHeartbeat(client)
                         currentUserId?.let { userId ->
                             WsManager.sendConnectInfo(userId = userId, wsClient = client)
                         }
@@ -212,23 +207,6 @@ class RealtimeChatController : IsAudioRecording{
         } ?: run {
             Log.e(TAG, "startRealtimeWs::realtimeChatWsClient is null")
         }
-    }
-
-    private fun startHeartbeat(client: RealtimeChatWsClient) {
-        stopHeartbeat()
-        heartbeatRunnable = object : Runnable {
-            override fun run() {
-                WsManager.sendHeartbeat(client)
-                mainHandler.postDelayed(this, HEARTBEAT_INTERVAL_MS)
-            }
-        }.also { runnable ->
-            mainHandler.postDelayed(runnable, HEARTBEAT_INTERVAL_MS)
-        }
-    }
-
-    private fun stopHeartbeat() {
-        heartbeatRunnable?.let { mainHandler.removeCallbacks(it) }
-        heartbeatRunnable = null
     }
 
     //===========realtime chat
@@ -701,7 +679,6 @@ class RealtimeChatController : IsAudioRecording{
         realtimeChatWsClient?.let {
             // 考虑到已经关闭的情况
             try {
-                stopHeartbeat()
                 it.close()
                 realtimeChatWsClient = null
                 MainApplication.getNetworkManager().onWebSocketDisconnected()

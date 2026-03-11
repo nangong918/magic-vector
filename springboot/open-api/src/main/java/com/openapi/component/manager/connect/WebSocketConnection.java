@@ -3,6 +3,7 @@ package com.openapi.component.manager.connect;
 import com.openapi.interfaces.connect.ConnectionSession;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.util.StringUtils;
+import org.springframework.web.socket.PingMessage;
 import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 
@@ -31,6 +32,15 @@ public class WebSocketConnection implements ConnectionSession {
         }
         else {
             log.error("[WebSocketConnection] payload is null");
+        }
+    }
+
+    @Override
+    public void sendPing() {
+        try {
+            webSocketSession.sendMessage(new PingMessage());
+        } catch (IOException e) {
+            log.error("[WebSocketConnection] send ping error", e);
         }
     }
 

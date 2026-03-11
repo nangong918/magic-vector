@@ -11,9 +11,13 @@ import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.web.socket.BinaryMessage;
 import org.springframework.web.socket.CloseStatus;
+import org.springframework.web.socket.PongMessage;
 import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
+
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 
 
 /**
@@ -24,7 +28,7 @@ import org.springframework.web.socket.handler.TextWebSocketHandler;
 @Slf4j
 public class WsChatHandler extends TextWebSocketHandler {
 
-    private PersistentConnectionManager connectionManager;
+    private final ConcurrentMap<String, PersistentConnectionManager> connectionManagerMap = new ConcurrentHashMap<>();
     private final SessionConfig sessionConfig;
     private final PersistentConnectionService persistentConnectionService;
 
@@ -40,17 +44,21 @@ public class WsChatHandler extends TextWebSocketHandler {
     public void afterConnectionEstablished(@NotNull WebSocketSession session) throws Exception {
         super.afterConnectionEstablished(session);
         ConnectionSession connection = new WebSocketConnection(session);
-        connectionManager = new PersistentConnectionManager(
-            sessionConfig,
-            persistentConnectionService
+        PersistentConnectionManager connectionManager = new PersistentConnectionManager(
+                sessionConfig,
+                persistentConnectionService
         );
+        connectionManagerMap.put(session.getId(), connectionManager);
         connectionManager.connect(connection);
     }
 
     @Override
     public void handleTransportError(@NotNull WebSocketSession session, @NotNull Throwable throwable) throws Exception {
         super.handleTransportError(session, throwable);
-        connectionManager.onThrowable(throwable);
+        var manager = connectionManagerMap.get(session.getId());
+        if (manager != null) {
+            manager.onThrowable(throwable);
+        }
     }
 
     @Override
@@ -59,14 +67,20 @@ public class WsChatHandler extends TextWebSocketHandler {
         String payload = message.getPayload();
         if (!payload.isEmpty()){
             Message websocketMessage = new WebSocketMessage(payload);
-            connectionManager.onMessage(websocketMessage);
+            var manager = connectionManagerMap.get(session.getId());
+            if (manager != null) {
+                manager.onMessage(websocketMessage);
+            }
         }
     }
 
     @Override
     public void afterConnectionClosed(@NotNull WebSocketSession session, @NotNull CloseStatus status) throws Exception {
         super.afterConnectionClosed(session, status);
-        connectionManager.disconnect();
+        var manager = connectionManagerMap.remove(session.getId());
+        if (manager != null) {
+            manager.disconnect();
+        }
     }
 
 
@@ -78,5 +92,14 @@ public class WsChatHandler extends TextWebSocketHandler {
             return;
         }
         log.info("[websocket] 收到二进制消息：id={}，message.length={}", session.getId(), bytes.length);
+    }
+
+    @Override
+    protected void handlePongMessage(@NotNull WebSocketSession session, @NotNull PongMessage message) throws Exception {
+        super.handlePongMessage(session, message);
+        var manager = connectionManagerMap.get(session.getId());
+        if (manager != null) {
+            manager.onPong();
+        }
     }
 }

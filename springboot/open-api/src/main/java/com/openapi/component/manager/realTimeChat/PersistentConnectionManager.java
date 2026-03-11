@@ -36,10 +36,11 @@ public class PersistentConnectionManager implements IPersistentConnectionManager
     private final SessionConfig sessionConfig;
     private final AtomicReference<String> agentId = new AtomicReference<>(null);
     private final AtomicReference<String> userId = new AtomicReference<>(null);
-    private final AtomicReference<Long> lastHeartbeatTs = new AtomicReference<>(0L);
+    private final AtomicReference<Long> lastPongTs = new AtomicReference<>(0L);
     private final ScheduledExecutorService heartbeatChecker = Executors.newSingleThreadScheduledExecutor();
     private final PersistentConnectionService persistentConnectionService;
     private static final long HEARTBEAT_TIMEOUT_MS = 60_000L;
+    private static final long HEARTBEAT_PING_INTERVAL_SECONDS = 20L;
 
     public PersistentConnectionManager(
             SessionConfig sessionConfig,
@@ -54,14 +55,15 @@ public class PersistentConnectionManager implements IPersistentConnectionManager
         // WebSocket 连接逻辑（通常由前端或客户端发起）
         log.info("[WebSocketConnection] connect, id={}", connectionSession.getSessionId());
         this.connectionSession = connectionSession;
-        lastHeartbeatTs.set(System.currentTimeMillis());
+        lastPongTs.set(System.currentTimeMillis());
         heartbeatChecker.scheduleWithFixedDelay(() -> {
             try {
                 if (!connectionSession.isConnected()) {
                     return;
                 }
+                connectionSession.sendPing();
                 long now = System.currentTimeMillis();
-                long last = lastHeartbeatTs.get();
+                long last = lastPongTs.get();
                 if (last > 0 && now - last > HEARTBEAT_TIMEOUT_MS) {
                     log.warn("[WebSocketConnection] heartbeat timeout, disconnect session={}", connectionSession.getSessionId());
                     disconnect();
@@ -69,7 +71,7 @@ public class PersistentConnectionManager implements IPersistentConnectionManager
             } catch (Exception e) {
                 log.error("[WebSocketConnection] heartbeat checker error", e);
             }
-        }, 10, 10, TimeUnit.SECONDS);
+        }, HEARTBEAT_PING_INTERVAL_SECONDS, HEARTBEAT_PING_INTERVAL_SECONDS, TimeUnit.SECONDS);
     }
 
     @Override
@@ -93,7 +95,7 @@ public class PersistentConnectionManager implements IPersistentConnectionManager
 
         agentId.set(null);
         userId.set(null);
-        lastHeartbeatTs.set(0L);
+        lastPongTs.set(0L);
     }
 
     @Override
@@ -118,7 +120,6 @@ public class PersistentConnectionManager implements IPersistentConnectionManager
         var requestMessage = messageMap.get(RealtimeRequestDataTypeEnum.DATA);
         if (dataTypeEnum != RealtimeRequestDataTypeEnum.CONNECT
                 && dataTypeEnum != RealtimeRequestDataTypeEnum.BIND_CHANNEL
-                && dataTypeEnum != RealtimeRequestDataTypeEnum.HEARTBEAT
                 && !StringUtils.hasText(agentId.get())) {
             log.warn("[WebSocketConnection] no bound channel, type={}", dataTypeEnum);
             return;
@@ -128,8 +129,7 @@ public class PersistentConnectionManager implements IPersistentConnectionManager
             case CONNECT -> persistentConnectionService.handleConnectMessage(
                 requestMessage,
                 userId,
-                connectionSession,
-                lastHeartbeatTs
+                connectionSession
             );
             case BIND_CHANNEL -> persistentConnectionService.handleBindChannelMessage(
                 requestMessage,
@@ -161,8 +161,12 @@ public class PersistentConnectionManager implements IPersistentConnectionManager
                     log.error("[WebSocketConnection] handleSystemMessage error, id={}", connectionSession.getSessionId(), e);
                 }
             }
-            case HEARTBEAT -> persistentConnectionService.handleHeartbeat(lastHeartbeatTs);
         }
+    }
+
+    @Override
+    public void onPong() {
+        lastPongTs.set(System.currentTimeMillis());
     }
 
 }

@@ -791,7 +791,7 @@ stateDiagram-v2
 #### 功能职责
 * `RealtimeChatController` 升级为 **用户级常驻连接**：登录成功后建立 `userId` 维度 WS，不再在打开 Chat 时按 `agentId` 新建连接。
 * 聊天路由改为 `agentId` 作为 `channelId`：进入不同 Agent Chat 页面时发送 `BIND_CHANNEL` 切换路由。
-* 增加应用层 `HEARTBEAT`（20s），并配合 `NetworkManager` 在 WS 断开时进行重连与状态广播。
+* Android 侧使用 OkHttp `pingInterval` 框架心跳（20s）维持连接，不再发送应用层 `HEARTBEAT` 文本包。
 * `ChatMapController` 管理 `<agentId, ChatController>` 映射，支持按 Agent 隔离会话数据。
 * `ChatController` 维护单 Agent 有序消息列表，支持 HTTP 批量插入与 WS 单条/流式插入。
 * `ChatController` 使用 `messageId` 索引加速去重（O(1)），并限制内存消息上限，历史依赖 Room + 锚点分页回放。
@@ -824,7 +824,6 @@ classDiagram
       -currentAgentId: String
       +ensureUserConnection(userId)
       +bindChannel(agentId)
-      +sendHeartbeat()
     }
     class NetworkManager
     ChatMapController --> ChatController
@@ -956,7 +955,7 @@ flowchart TD
     F -- 是 --> G["发送 BIND_CHANNEL(agentId)"]
     G --> H[收发该channel消息]
     F -- 否 --> I[维持空闲长连接]
-    H --> J[每20s HEARTBEAT]
+    H --> J[OkHttp pingInterval心跳]
     I --> J
     J --> K{WS断开?}
     K -- 是 --> L[NetworkManager触发重连]
@@ -982,7 +981,7 @@ sequenceDiagram
     WS-->>RTC: TEXT_CHAT_RESPONSE(agent1)
     RTC-->>Chat: 更新当前聊天UI
     RTC-->>List: SharedFlow刷新摘要/未读
-    RTC->>WS: HEARTBEAT(20s)
+    Note over RTC,WS: OkHttp自动发送Ping/Pong
 ```
 
 ##### WS 功能线程甘特图
@@ -997,7 +996,7 @@ gantt
     section WS线程
     建立user级连接               :b1, 5, 12
     持续接收消息                 :b2, 17, 120
-    心跳发送(20s周期)            :b3, 17, 120
+    OkHttp Ping/Pong心跳          :b3, 17, 120
     section 数据线程
     ChatController插入去重       :c1, 25, 100
     Room增量持久化               :c2, 30, 90
@@ -1010,6 +1009,193 @@ gantt
 * **门面模式**：`RealtimeChatController` 作为 WS + 音频 + 路由的统一门面，对 VM 层屏蔽复杂连接细节。
 * **策略/状态模式（轻量）**：`NetworkManager` 以网络/WS状态组合驱动“首次拉取/重连补偿”策略切换。
 * **工厂式创建（简化）**：`ChatMapController.getChatManager(agentId)` 按需创建 `ChatController` 并复用。
+
+##### WS 网络状态图（合并网络+连接）
+```mermaid
+stateDiagram-v2
+    [*] --> Offline
+    Offline --> NetOnline_WsConnecting : 网络恢复
+    NetOnline_WsConnecting --> NetOnline_WsReady : onOpen + CONNECT成功
+    NetOnline_WsReady --> NetOnline_WsReady : Ping/Pong正常
+    NetOnline_WsReady --> NetOnline_WsDisconnected : onClosed/onFailure
+    NetOnline_WsDisconnected --> NetOnline_WsConnecting : NetworkManager重连触发
+    NetOnline_WsDisconnected --> Offline : 网络断开
+    NetOnline_WsConnecting --> Offline : 网络断开
+```
+
+### 实时连接模块（RealtimeChatController）
+
+#### 功能职责
+* 统一管理用户级 WS 长连接、Agent channel 路由绑定、音频录制播放、VAD 会话控制。
+* 作为 `ComposeChatVm/MainVm` 与底层网络/音频能力的编排层，并向上提供状态回调。
+* 接收 WS 文本流并更新 `ChatController`，通过 `StateFlow/SharedFlow` 驱动 Main/Chat 双界面更新。
+
+#### UML静态图（类图）
+```mermaid
+classDiagram
+    class RealtimeChatController {
+      -realtimeChatWsClient: RealtimeChatWsClient
+      -audioController: AudioController
+      -udpVisionManager: UdpVisionManager
+      -chatControllerPointer: ChatController
+      -onReceiveAgentTextCallback: OnReceiveAgentTextCallback
+      -onVadChatStateChange: OnVadChatStateChange
+      -realtimeChatState: MutableLiveData~RealtimeChatState~
+      +ensureUserConnection(userId)
+      +bindChannel(agentId)
+      +initResource(...)
+      +startRecordRealtimeChatAudio(scope)
+      +initVadCall(context)
+      +releaseAllResource()
+    }
+    class RealtimeChatWsClient
+    class AudioController
+    class UdpVisionManager
+    class ChatController
+    class OnReceiveAgentTextCallback
+    class OnVadChatStateChange
+    class NetworkManager
+
+    RealtimeChatController --> RealtimeChatWsClient
+    RealtimeChatController --> AudioController
+    RealtimeChatController --> UdpVisionManager
+    RealtimeChatController --> ChatController
+    RealtimeChatController --> OnReceiveAgentTextCallback
+    RealtimeChatController --> OnVadChatStateChange
+    RealtimeChatController --> NetworkManager
+```
+
+#### UML静态图（对象图）
+```mermaid
+classDiagram
+    class rtc_user12 {
+      currentUserId = "12"
+      currentAgentId = "agent_1"
+      state = InitializedConnected
+    }
+    class wsClient_1 {
+      endpoint = /agent/realtime/chat
+    }
+    class audioCtrl_1 {
+      mode = VAD + AudioTrack
+    }
+    class chatCtrl_agent1 {
+      agentId = "agent_1"
+    }
+    class callbacks {
+      textCallback
+      vadStateCallback
+    }
+
+    rtc_user12 --> wsClient_1
+    rtc_user12 --> audioCtrl_1
+    rtc_user12 --> chatCtrl_agent1
+    rtc_user12 --> callbacks
+```
+
+#### UML动态图（通信图）
+```mermaid
+flowchart LR
+    VM[ComposeChatVm/MainVm] --> RTC[RealtimeChatController]
+    RTC --> WSMgr[WsManager]
+    RTC --> Audio[AudioController]
+    RTC --> Net[NetworkManager]
+    RTC --> ChatCtrl[ChatController]
+    ChatCtrl --> UIFlow[StateFlow/SharedFlow]
+    UIFlow --> MainUI[Main MessageList]
+    UIFlow --> ChatUI[ComposeChat]
+```
+
+#### UML动态图（状态图）
+```mermaid
+stateDiagram-v2
+    [*] --> NotInitialized
+    NotInitialized --> Initializing : initResource
+    Initializing --> InitializedConnected : ws onOpen
+    InitializedConnected --> RecordingAndSending : start record / VAD start
+    RecordingAndSending --> Receiving : server streaming
+    Receiving --> InitializedConnected : stop_tts / stream finish
+    InitializedConnected --> Disconnected : ws closed
+    InitializedConnected --> Error : ws failure
+    Error --> Initializing : NetworkManager reconnect
+```
+
+#### UML动态图（活动图）
+```mermaid
+flowchart TD
+    A[Main绑定ChatService] --> B["ensureUserConnection(userId)"]
+    B --> C[WS onOpen -> CONNECT]
+    C --> D[进入Chat页]
+    D --> E["bindChannel(agentId)"]
+    E --> F{发送类型}
+    F -- 文本 --> G[USER_TEXT_MESSAGE]
+    F -- 语音 --> H[AudioRecord/VAD -> AUDIO_CHUNK]
+    G --> I[接收TEXT_CHAT_RESPONSE]
+    H --> I
+    I --> J[ChatController二分插入/去重]
+    J --> K[UI增量刷新]
+```
+
+#### UML动态图（时序图）
+```mermaid
+sequenceDiagram
+    participant Main as MainVm
+    participant RTC as RealtimeChatController
+    participant Audio as AudioController
+    participant WS as SpringWS
+    participant ChatCtrl as ChatController
+    participant UI as ComposeChat/MainList
+
+    Main->>RTC: ensureUserConnection(userId)
+    RTC->>WS: CONNECT(userId)
+    UI->>RTC: bindChannel(agentId)
+    RTC->>WS: BIND_CHANNEL(agentId)
+    UI->>RTC: send text / start voice
+    RTC->>Audio: startRecord or VAD
+    RTC->>WS: USER_TEXT_MESSAGE / AUDIO_CHUNK
+    WS-->>RTC: TEXT_CHAT_RESPONSE
+    RTC->>ChatCtrl: setWsToViews(response)
+    ChatCtrl-->>UI: needUpdate + stateFlow
+```
+
+#### 功能线程甘特图
+```mermaid
+gantt
+    title RealtimeChatController内部线程甘特图
+    dateFormat  X
+    axisFormat %L
+    section UI线程
+    绑定服务与初始化                :a1, 0, 10
+    发送文本/触发语音               :a2, 25, 80
+    section WebSocket线程
+    CONNECT/BIND                    :b1, 5, 20
+    收消息回调                      :b2, 25, 100
+    OkHttp Ping/Pong                :b3, 20, 100
+    section 音频线程
+    AudioRecord采集                 :c1, 30, 70
+    VAD检测                         :c2, 30, 70
+    AudioTrack播放                  :c3, 40, 60
+    section 数据线程
+    ChatController插入去重          :d1, 35, 90
+```
+
+#### 通信图（内部协同）
+```mermaid
+flowchart LR
+    WS[RealtimeChatWsClient] --> RTC[RealtimeChatController]
+    RTC --> AC[AudioController]
+    RTC --> CC[ChatController]
+    RTC --> NM[NetworkManager]
+    RTC --> CB1[OnReceiveAgentTextCallback]
+    RTC --> CB2[OnVadChatStateChange]
+```
+
+#### 设计评估与重构 TODO
+* `TODO-RTC-1`：当前 `RealtimeChatController` 职责过重（WS路由、音频、VAD、UI回调、数据写入均集中），违反单一职责，后续维护成本高。
+* `TODO-RTC-2`：连接生命周期虽已从 `agentId` 升级到 `userId`，但音频与连接仍强耦合，建议拆分 `UserConnectionManager` 与 `AudioSessionManager`。
+* `TODO-RTC-3`：`MutableLiveData + callback + flow` 并存，状态源分散，建议统一到 `StateFlow` 并收敛事件总线出口。
+* `TODO-RTC-4`：`initResource/releaseAllResource` 里包含大量可空字段切换，容易产生边界错误；建议引入显式会话状态机与资源拥有者模型。
+* `TODO-RTC-5`：WS消息解析与业务处理在同一类里，建议抽离 `RealtimeMessageRouter`（只做协议分发）和 `RealtimeCommandHandler`（只做业务执行）。
 
 ## 本地数据库设计（Room）
 

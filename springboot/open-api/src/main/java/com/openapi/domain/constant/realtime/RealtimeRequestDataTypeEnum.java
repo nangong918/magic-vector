@@ -17,10 +17,6 @@ public enum RealtimeRequestDataTypeEnum {
      * bind_channel
      */
     BIND_CHANNEL("bind_channel"),
-    /**
-     * heartbeat
-     */
-    HEARTBEAT("heartbeat"),
 //    // disconnect
 //    DISCONNECT("disconnect"),
     /**

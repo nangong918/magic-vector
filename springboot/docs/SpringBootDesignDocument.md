@@ -285,7 +285,7 @@ flowchart TD
 * WS 连接从“按 agentId 建连”重构为“按 userId 建连”：`CONNECT(userId)` 在登录后由客户端发起。
 * `agentId` 改为聊天路由参数：通过 `BIND_CHANNEL(agentId)` 绑定当前聊天通道。
 * 服务端维护 `userId + currentAgentId` 会话态，后续 `USER_TEXT_MESSAGE/AUDIO_CHUNK/...` 走当前 channel。
-* 新增 `HEARTBEAT` 保活与 60 秒超时断连判定，超时后主动关闭连接并清理上下文。
+* 心跳改为框架级 WebSocket `Ping/Pong`：服务端定时发 `Ping`，超过 60 秒未收到 `Pong` 则断连并清理上下文。
 
 #### UML静态图（类图）
 ```mermaid
@@ -298,15 +298,15 @@ classDiagram
     class PersistentConnectionManager {
       -userId: AtomicReference~String~
       -agentId: AtomicReference~String~
-      -lastHeartbeatTs: AtomicReference~Long~
+      -lastPongTs: AtomicReference~Long~
       +connect(connectionSession)
       +onMessage(message)
+      +onPong()
       +disconnect()
     }
     class PersistentConnectionService {
-      +handleConnectMessage(connectMessage,userId,session,lastHeartbeat)
+      +handleConnectMessage(connectMessage,userId,session)
       +handleBindChannelMessage(bindMessage,userId,agentId,session)
-      +handleHeartbeat(lastHeartbeat)
       +handleUserTextMessage(message,agentId)
     }
     class RealtimeChatContextManager
@@ -324,7 +324,7 @@ classDiagram
     class wsSession_1001 {
       userId = "12"
       currentAgentId = "agent_1"
-      lastHeartbeatTs = 1737000000000
+      lastPongTs = 1737000000000
     }
     class pcm_1001 {
       type = PersistentConnectionManager
@@ -358,13 +358,13 @@ flowchart LR
 ```mermaid
 flowchart TD
     A[WS建立] --> B["CONNECT(userId)"]
-    B --> C[记录userId + heartbeat起始]
+    B --> C[记录userId + lastPongTs]
     C --> D{收到BIND_CHANNEL?}
     D -- 是 --> E["创建/切换RealtimeChatContextManager(agentId)"]
     D -- 否 --> F[保持空闲连接]
     E --> G[处理文本/音频/系统消息]
     F --> H[等待消息]
-    G --> I[检查heartbeat是否超时]
+    G --> I[发送Ping并检查Pong超时]
     H --> I
     I --> J{超时>60s?}
     J -- 是 --> K[disconnect+清理上下文]
@@ -389,8 +389,9 @@ sequenceDiagram
     Svc->>Ctx: initChatClient + session绑定
     App->>Ws: USER_TEXT_MESSAGE
     Pcm->>Svc: handleUserTextMessage(agentId)
-    App->>Ws: HEARTBEAT(20s)
-    Pcm->>Svc: handleHeartbeat
+    Ws->>App: Ping(20s)
+    App-->>Ws: Pong(auto)
+    Ws->>Pcm: onPong
 ```
 
 #### 功能线程甘特图
@@ -411,10 +412,23 @@ gantt
 ```
 
 #### 设计模式说明
-* **门面模式**：`PersistentConnectionService` 汇聚 CONNECT/BIND/HEARTBEAT/消息处理入口。
-* **状态模式（轻量）**：连接状态由 `userId/currentAgentId/lastHeartbeatTs` 驱动路由与超时行为。
+* **门面模式**：`PersistentConnectionService` 汇聚 CONNECT/BIND/文本音频消息处理入口。
+* **状态模式（轻量）**：连接状态由 `userId/currentAgentId/lastPongTs` 驱动路由与超时行为。
 * **工厂式创建（按需）**：`handleBindChannelMessage` 按 channel 创建 `RealtimeChatContextManager`。
 * **生产者-消费者模式**：`PersistentConnectMessageManager` 通过队列异步发送，解耦业务线程与网络发送。
+
+#### WS 网络状态图
+```mermaid
+stateDiagram-v2
+    [*] --> WsConnected
+    WsConnected --> UserBound : CONNECT(userId)
+    UserBound --> ChannelBound : BIND_CHANNEL(agentId)
+    ChannelBound --> ChannelBound : Ping/Pong正常 + 业务消息
+    ChannelBound --> TimeoutClosing : 超过60s未收到Pong
+    TimeoutClosing --> Closed : disconnect + 清理上下文
+    ChannelBound --> Closed : onTransportError/onClose
+    Closed --> WsConnected : 客户端重连
+```
 
 
 ## 数据库设计（MySQL）

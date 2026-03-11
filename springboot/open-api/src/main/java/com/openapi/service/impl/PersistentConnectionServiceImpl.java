@@ -49,8 +49,7 @@ public class PersistentConnectionServiceImpl implements PersistentConnectionServ
     public void handleConnectMessage(
             @NotNull String connectMessage,
             @NotNull AtomicReference<String> userIdR,
-            @NotNull ConnectionSession connectionSession,
-            @NotNull AtomicReference<Long> lastHeartbeatTs
+            @NotNull ConnectionSession connectionSession
     ) {
         try {
             RealtimeChatConnectRequest connectRequest = JSON.parseObject(connectMessage, RealtimeChatConnectRequest.class);
@@ -58,7 +57,6 @@ public class PersistentConnectionServiceImpl implements PersistentConnectionServ
                 throw new AppException(AgentExceptions.AGENT_NOT_EXIST);
             }
             userIdR.set(connectRequest.getUserId());
-            lastHeartbeatTs.set(System.currentTimeMillis());
             log.info("[PersistentConnection] user连接成功, userId: {}", userIdR.get());
         } catch (Exception e) {
             log.error("[PersistentConnection] 连接错误 断开连接", e);
@@ -237,8 +235,4 @@ public class PersistentConnectionServiceImpl implements PersistentConnectionServ
                 .ifPresent(it -> contextManager.mcpSwitch.setByThat(it));
     }
 
-    @Override
-    public void handleHeartbeat(@NotNull AtomicReference<Long> lastHeartbeatTs) {
-        lastHeartbeatTs.set(System.currentTimeMillis());
-    }
 }

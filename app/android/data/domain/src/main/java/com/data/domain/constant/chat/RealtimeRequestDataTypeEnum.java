@@ -19,11 +19,6 @@ public enum RealtimeRequestDataTypeEnum {
      * data: RealtimeChatBindChannelRequest
      */
     BIND_CHANNEL("bind_channel"),
-    /**
-     * heartbeat
-     * data: timestamp string
-     */
-    HEARTBEAT("heartbeat"),
 //    // disconnect
 //    DISCONNECT("disconnect"),
     /**

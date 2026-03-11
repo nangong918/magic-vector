@@ -7,6 +7,7 @@ package com.openapi.interfaces.connect;
  */
 public interface ConnectionSession {
     void send(String payload);
+    void sendPing();
     String getSessionId();
     boolean isConnected();
     void close();

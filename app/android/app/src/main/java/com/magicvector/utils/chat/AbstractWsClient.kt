@@ -7,6 +7,7 @@ import okhttp3.Request
 import okhttp3.WebSocket
 import okhttp3.WebSocketListener
 import okio.ByteString
+import java.util.concurrent.TimeUnit
 
 abstract class AbstractWsClient(
     private val gson : Gson,
@@ -41,7 +42,7 @@ abstract class AbstractWsClient(
 
     fun start(listener: WebSocketListener){
         val client = OkHttpClient.Builder()
-//            .pingInterval(30, TimeUnit.SECONDS) // 设置心跳间隔
+            .pingInterval(20, TimeUnit.SECONDS)
             .build()
 
         val request = Request.Builder()

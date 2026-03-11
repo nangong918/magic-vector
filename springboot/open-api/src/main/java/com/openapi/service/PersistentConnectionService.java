@@ -16,8 +16,7 @@ public interface PersistentConnectionService {
     void handleConnectMessage(
             @NotNull String connectMessage,
             @NotNull AtomicReference<String> userId,
-            @NotNull ConnectionSession connectionSession,
-            @NotNull AtomicReference<Long> lastHeartbeatTs
+            @NotNull ConnectionSession connectionSession
     );
 
     void handleBindChannelMessage(
@@ -49,8 +48,4 @@ public interface PersistentConnectionService {
             @NotNull String systemMessage,
             @NotNull String agentId
     ) throws JSONException;
-
-    void handleHeartbeat(
-            @NotNull AtomicReference<Long> lastHeartbeatTs
-    );
 }
