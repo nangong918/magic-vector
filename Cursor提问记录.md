@@ -318,7 +318,16 @@ SpringBootDesignDocument也要跟上述的一样合并, 缺少的就补上.
 5. ws要添加SpringBoot和Android的心跳连接以及60秒未心跳的断连判断以及NetworkManager中的ws断开重连机制。
 
 
-
+### 补充
+* 心跳请求是自己写吗？我记得SpringBoot和Android都有直接支持的啊？如果没有就算了，你去查一下资料，
+  我这里面Android和SpringBoot使用的ws对应的框架是否直接自己直接配置心跳而不用自己写。如果存在就改为框架的心跳，如果不存在就算了，就这样吧。
+* WS长连接的网络状态图也要绘制，当然你可以更新到已有的网络状态图中。在Android[AndroidDesignDocument.md](app/android/docs/AndroidDesignDocument.md)和
+  SpringBoot[SpringBootDesignDocument.md](springboot/docs/SpringBootDesignDocument.md)的文档中。
+* 另外Android的RealTimeChatController我当时设计的时候内部含管理其他的东西，比如AudioRecord，VadDetection，还有各种Controller和Callback要画在类图中。
+  我看你只补充了之前的打的类图，并没有绘制RealTimeChatController内部的类图，对象图，状态图，活动图，时序图，功能线程甘特图，通信图。
+  你需要补充一下。
+* 绘制完成之后你要分析RealTimeChatController内部设计是否合理和耦合，如果不合理直接写在设计文档的Manager下面的RealTimeChatController模块下写todo，
+  写为什么不合理，要怎么重构。因为我之前是面向agent，现在是面向user肯定会有改动的。
 
 
 
