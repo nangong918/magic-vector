@@ -300,3 +300,25 @@ SpringBootDesignDocument也要跟上述的一样合并, 缺少的就补上.
   不可以的化就优化。
 
 
+
+### 重构长连接逻辑
+
+梳理一下我的Android和SpringBoot的Agent聊天的长连接方式，
+好像是打开ChatActivity才调用RealTimeChatController。梳理逻辑，最好画出当前的`通信图`，我看看当前的通信状况是真没样子。
+我现在希望知道是什么时候创建长连接，好像现在是打开chat之后用agentId建立？这样建立我感觉不对，
+应该改成登陆成功就建立user和server的长连接，然后agentId作为channelId去聊天获取数据。
+现在需要你重构：
+1. 思考整体最优设计，你有权利可以考虑重写整个代码。
+2. 改为登录成功之后就尝试进行去ws长连接，连接建立是用userId而不是agentId。agentId作为路由入参，相当于channel，需要改Android和SpringBoot。
+3. 优化后的逻辑要能够跟整体业务兼容。就比如说在打开agent1的chatActivity的时候，RealTimeChatController更新了数据，SharedFlow/StateFlow去更新MainActivity中Fragment的UI。
+4. 讲你新设计的逻辑功能归类添加到Android[AndroidDesignDocument.md](app/android/docs/AndroidDesignDocument.md)和
+   SpringBoot[SpringBootDesignDocument.md](springboot/docs/SpringBootDesignDocument.md)的文档中。
+   要绘制出：静态UML：类图，对象图；动态UML：活动图，时序图，功能线程甘特图，通信图。
+   要写你用了哪些设计模式比如工厂模式等。
+5. ws要添加SpringBoot和Android的心跳连接以及60秒未心跳的断连判断以及NetworkManager中的ws断开重连机制。
+
+
+
+
+
+
