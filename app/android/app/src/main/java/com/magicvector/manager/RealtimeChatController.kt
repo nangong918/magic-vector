@@ -10,9 +10,6 @@ import androidx.annotation.RequiresPermission
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.MutableLiveData
 import com.core.appcore.api.ApiUrlConfig
-import com.core.baseutil.permissions.GainPermissionCallback
-import com.core.baseutil.permissions.PermissionUtil
-import com.core.baseutil.ui.ToastUtils
 import com.data.domain.ao.message.MessageContactItemAo
 import com.data.domain.ao.mixLLM.McpSwitch
 import com.data.domain.ao.mixLLM.MixLLMEvent
@@ -37,11 +34,11 @@ import com.magicvector.manager.ws.WsManager
 import com.magicvector.utils.chat.RealtimeChatWsClient
 import com.view.appview.recycler.RecyclerViewWhereNeedUpdate
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Runnable
 import okhttp3.Response
 import okhttp3.WebSocket
 import okhttp3.WebSocketListener
 import okio.ByteString
+import java.lang.Runnable
 import java.lang.ref.WeakReference
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.math.sqrt
@@ -61,6 +58,7 @@ class RealtimeChatController : IsAudioRecording{
         const val TAG = "RealtimeChatController"
         val GSON = MainApplication.GSON
         val mainHandler: Handler = Handler(Looper.getMainLooper())
+        private const val HEARTBEAT_INTERVAL_MS = 20_000L
     }
 
     //---------------------------Data---------------------------
@@ -91,6 +89,9 @@ class RealtimeChatController : IsAudioRecording{
 
     //==========WS长连接
     var realtimeChatWsClient: RealtimeChatWsClient? = null // 长连接，可为null，允许销毁
+    private var currentUserId: String? = null
+    private var currentAgentId: String? = null
+    private var heartbeatRunnable: Runnable? = null
 
     private fun initRealtimeChatWsClient(): RealtimeChatWsClient {
         return realtimeChatWsClient ?: synchronized(this) {
@@ -101,43 +102,46 @@ class RealtimeChatController : IsAudioRecording{
         }
     }
 
-    // ws
-    fun initRealtimeChatWsClient(activity: FragmentActivity) {
-        // 初始化
+    // user级别常驻连接：登录成功后/主页面绑定service后调用
+    fun ensureUserConnection(userId: String) {
+        if (userId.isBlank()) {
+            Log.w(TAG, "ensureUserConnection: userId is blank")
+            return
+        }
+        currentUserId = userId
         realtimeChatWsClient = initRealtimeChatWsClient()
+        initAudioController()
+        audioController?.initAudioRecorderAndPlayer()
+        startRealtimeWs()
+    }
 
-        PermissionUtil.requestPermissionSelectX(
-            activity,
-            arrayOf(Manifest.permission.RECORD_AUDIO),
-            arrayOf(Manifest.permission.WRITE_EXTERNAL_STORAGE),
-            object : GainPermissionCallback{
-                @RequiresPermission(Manifest.permission.RECORD_AUDIO)
-                override fun allGranted() {
-                    Log.i(TAG, "获取录音权限成功")
-
-                    // 初始化AudioController
-                    initAudioController()
-
-                    audioController?.initAudioRecorderAndPlayer() ?: run {
-                        Log.w(TAG, "初始化AudioRecorderAndPlayer失败")
-                    }
-
-                    startRealtimeWs()
-                }
-
-                override fun notGranted(notGrantedPermissions: Array<String?>?) {
-                    Log.w(TAG, "没有获取录音权限: ${notGrantedPermissions?.contentToString()}")
-                    ToastUtils.showToastActivity(activity, "没有获取录音权限")
-                    realtimeChatState.postValue(RealtimeChatState.Error("没有获取录音权限"))
-                }
-
-                override fun always() {
-                }
+    fun bindChannel(agentId: String) {
+        if (agentId.isBlank()) {
+            Log.w(TAG, "bindChannel: agentId is blank")
+            return
+        }
+        currentAgentId = agentId
+        realtimeChatWsClient?.let {
+            if (realtimeChatState.value == RealtimeChatState.InitializedConnected ||
+                realtimeChatState.value == RealtimeChatState.Receiving ||
+                realtimeChatState.value == RealtimeChatState.RecordingAndSending
+            ) {
+                WsManager.sendBindChannelInfo(agentId = agentId, wsClient = it)
             }
-        )
+        }
     }
 
     private fun startRealtimeWs() {
+        if (realtimeChatState.value == RealtimeChatState.InitializedConnected ||
+            realtimeChatState.value == RealtimeChatState.Receiving ||
+            realtimeChatState.value == RealtimeChatState.RecordingAndSending
+        ) {
+            realtimeChatWsClient?.let { client ->
+                currentUserId?.let { WsManager.sendConnectInfo(it, client) }
+                currentAgentId?.let { WsManager.sendBindChannelInfo(it, client) }
+            }
+            return
+        }
         realtimeChatWsClient?.let { client ->
             client.start(
                 object : WebSocketListener() {
@@ -147,6 +151,7 @@ class RealtimeChatController : IsAudioRecording{
                         reason: String
                     ) {
                         super.onClosed(webSocket, code, reason)
+                        stopHeartbeat()
                         realtimeChatState.postValue(RealtimeChatState.Disconnected)
                         MainApplication.getNetworkManager().onWebSocketDisconnected()
                         Log.i(TAG, "realtimeChatWsClient::onClosed")
@@ -168,6 +173,7 @@ class RealtimeChatController : IsAudioRecording{
                     ) {
                         super.onFailure(webSocket, t, response)
                         Log.e(TAG, "realtimeChatWsClient::onFailure: ${t.message}")
+                        stopHeartbeat()
                         realtimeChatState.postValue(RealtimeChatState.Error(t.message ?: "-"))
                         MainApplication.getNetworkManager().onWebSocketDisconnected()
                     }
@@ -192,26 +198,37 @@ class RealtimeChatController : IsAudioRecording{
                         realtimeChatState.postValue(RealtimeChatState.InitializedConnected)
                         MainApplication.getNetworkManager().onWebSocketConnected()
                         Log.i(TAG, "realtimeChatWsClient::onOpen; response: $response")
-
-                        val agentId = messageContactItemAo?.contactId
-
-                        if (agentId == null || agentId.isEmpty()){
-                            Log.e(TAG, "onOpen::agentId为空")
-                            return
+                        startHeartbeat(client)
+                        currentUserId?.let { userId ->
+                            WsManager.sendConnectInfo(userId = userId, wsClient = client)
                         }
 
-                        // 发送连接成功的消息
-                        WsManager.sendOnOpenInfo(
-                            agentId = agentId,
-                            userId = MainApplication.getUserId(),
-                            wsClient = client
-                        )
+                        currentAgentId?.let { agentId ->
+                            WsManager.sendBindChannelInfo(agentId = agentId, wsClient = client)
+                        }
                     }
                 }
             )
         } ?: run {
             Log.e(TAG, "startRealtimeWs::realtimeChatWsClient is null")
         }
+    }
+
+    private fun startHeartbeat(client: RealtimeChatWsClient) {
+        stopHeartbeat()
+        heartbeatRunnable = object : Runnable {
+            override fun run() {
+                WsManager.sendHeartbeat(client)
+                mainHandler.postDelayed(this, HEARTBEAT_INTERVAL_MS)
+            }
+        }.also { runnable ->
+            mainHandler.postDelayed(runnable, HEARTBEAT_INTERVAL_MS)
+        }
+    }
+
+    private fun stopHeartbeat() {
+        heartbeatRunnable?.let { mainHandler.removeCallbacks(it) }
+        heartbeatRunnable = null
     }
 
     //===========realtime chat
@@ -612,7 +629,8 @@ class RealtimeChatController : IsAudioRecording{
         messageContactItemAo = ao
         if (messageContactItemAo?.contactId != null){
             realtimeChatState.postValue(RealtimeChatState.Initializing)
-            initRealtimeChatWsClient(chatActivity)
+            ensureUserConnection(MainApplication.getUserId())
+            bindChannel(messageContactItemAo!!.contactId!!)
         }
         else {
             realtimeChatState.postValue(RealtimeChatState.Error("Agent Id is Null"))
@@ -683,6 +701,7 @@ class RealtimeChatController : IsAudioRecording{
         realtimeChatWsClient?.let {
             // 考虑到已经关闭的情况
             try {
+                stopHeartbeat()
                 it.close()
                 realtimeChatWsClient = null
                 MainApplication.getNetworkManager().onWebSocketDisconnected()

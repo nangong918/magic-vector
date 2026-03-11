@@ -177,7 +177,7 @@ class ComposeTestVm : ViewModel() {
             override fun onOpen(webSocket: WebSocket, response: Response) {
                 realtimeChat2State.postValue(RealtimeChatState.InitializedConnected)
                 val request = RealtimeChatConnectRequest().apply {
-                    agentId = "test"; userId = MainApplication.getUserId(); timestamp = System.currentTimeMillis()
+                    userId = MainApplication.getUserId(); timestamp = System.currentTimeMillis()
                 }
                 val map = mapOf(RealtimeDataTypeEnum.TYPE to RealtimeDataTypeEnum.CONNECT.type, RealtimeDataTypeEnum.DATA to GSON.toJson(request))
                 realtimeChat2WsClient?.sendMessage(map)

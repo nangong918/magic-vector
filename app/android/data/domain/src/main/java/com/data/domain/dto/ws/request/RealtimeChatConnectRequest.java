@@ -8,8 +8,6 @@ package com.data.domain.dto.ws.request;
 public class RealtimeChatConnectRequest {
     // 用户Id
     public String userId;
-    // agentId(会话id)
-    public String agentId;
     // 会话连接时间
     public long timestamp;
 }

@@ -6,6 +6,7 @@ import com.data.domain.constant.chat.RealtimeRequestDataTypeEnum
 import com.data.domain.constant.chat.RealtimeResponseDataTypeEnum
 import com.data.domain.constant.chat.RoleTypeEnum
 import com.data.domain.dto.ws.reponse.RealtimeChatTextResponse
+import com.data.domain.dto.ws.request.RealtimeChatBindChannelRequest
 import com.data.domain.dto.ws.request.RealtimeChatConnectRequest
 import com.google.gson.reflect.TypeToken
 import com.magicvector.MainApplication
@@ -58,15 +59,8 @@ object WsManager {
         return ChatWsTextMessageParseResult(responseType, map)
     }
 
-    /**
-     * 发送连接信息
-     * @param agentId   agentId
-     * @param userId    用户id
-     * @param wsClient  发送消息的wsClient
-     */
-    fun sendOnOpenInfo(agentId: String, userId: String, wsClient: AbstractWsClient){
+    fun sendConnectInfo(userId: String, wsClient: AbstractWsClient){
         val request = RealtimeChatConnectRequest()
-        request.agentId = agentId
         request.userId = userId
         request.timestamp = System.currentTimeMillis()
 
@@ -78,6 +72,25 @@ object WsManager {
         wsClient.sendMessage(
             messageMap = dataMap, isShowAllLog = true
         )
+    }
+
+    fun sendBindChannelInfo(agentId: String, wsClient: AbstractWsClient){
+        val request = RealtimeChatBindChannelRequest()
+        request.agentId = agentId
+        request.timestamp = System.currentTimeMillis()
+        val dataMap = mapOf(
+            RealtimeRequestDataTypeEnum.TYPE to RealtimeRequestDataTypeEnum.BIND_CHANNEL.type,
+            RealtimeRequestDataTypeEnum.DATA to GSON.toJson(request)
+        )
+        wsClient.sendMessage(messageMap = dataMap, isShowAllLog = true)
+    }
+
+    fun sendHeartbeat(wsClient: AbstractWsClient){
+        val dataMap = mapOf(
+            RealtimeRequestDataTypeEnum.TYPE to RealtimeRequestDataTypeEnum.HEARTBEAT.type,
+            RealtimeRequestDataTypeEnum.DATA to System.currentTimeMillis().toString()
+        )
+        wsClient.sendMessage(messageMap = dataMap)
     }
 
     /**

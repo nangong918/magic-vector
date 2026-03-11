@@ -789,6 +789,9 @@ stateDiagram-v2
 ### 聊天管理模块（ChatController + ChatMapController + ChatCacheManager）
 
 #### 功能职责
+* `RealtimeChatController` 升级为 **用户级常驻连接**：登录成功后建立 `userId` 维度 WS，不再在打开 Chat 时按 `agentId` 新建连接。
+* 聊天路由改为 `agentId` 作为 `channelId`：进入不同 Agent Chat 页面时发送 `BIND_CHANNEL` 切换路由。
+* 增加应用层 `HEARTBEAT`（20s），并配合 `NetworkManager` 在 WS 断开时进行重连与状态广播。
 * `ChatMapController` 管理 `<agentId, ChatController>` 映射，支持按 Agent 隔离会话数据。
 * `ChatController` 维护单 Agent 有序消息列表，支持 HTTP 批量插入与 WS 单条/流式插入。
 * `ChatController` 使用 `messageId` 索引加速去重（O(1)），并限制内存消息上限，历史依赖 Room + 锚点分页回放。
@@ -816,10 +819,19 @@ classDiagram
       +queryBeforeAnchor(agentId, anchor, limit)
       +queryAfterAnchor(agentId, anchor, limit)
     }
+    class RealtimeChatController {
+      -currentUserId: String
+      -currentAgentId: String
+      +ensureUserConnection(userId)
+      +bindChannel(agentId)
+      +sendHeartbeat()
+    }
     class NetworkManager
     ChatMapController --> ChatController
     ChatController --> ChatCacheManager
+    RealtimeChatController --> ChatMapController
     NetworkManager --> ChatCacheManager
+    NetworkManager --> RealtimeChatController
 ```
 
 #### UML动态图（通信图/活动图/时序图/甘特图）
@@ -835,6 +847,21 @@ flowchart LR
     Cache --> Room[(VectorDatabase)]
     Api --> VM
     Ws --> VM
+```
+
+##### WS 路由通信图（用户连接 + channel 路由）
+```mermaid
+flowchart LR
+    Login[Login/Register Success] --> Main[MainActivity]
+    Main --> RTC["RealtimeChatController.ensureUserConnection(userId)"]
+    RTC --> WS[(WebSocket /agent/realtime/chat)]
+    Chat["ComposeChatActivity(agent1)"] --> RTC2["bindChannel(agentId)"]
+    RTC2 --> WS
+    WS --> VM[ComposeChatVm/MainVm]
+    VM --> MapMgr[ChatMapController]
+    MapMgr --> Ctrl["ChatController(agent1)"]
+    Ctrl --> SF[StateFlow/SharedFlow]
+    SF --> UI[Main MessageList + Chat UI]
 ```
 
 ##### Chat 活动图（首次/重连/离线）
@@ -917,6 +944,72 @@ stateDiagram-v2
     Reconnect --> OfflineRead : 重连失败
     OfflineRead --> OnlineSync : 网络恢复
 ```
+
+##### WS 活动图（登录建连 + 路由切换 + 心跳）
+```mermaid
+flowchart TD
+    A[登录成功] --> B[ChatService绑定]
+    B --> C["ensureUserConnection(userId)"]
+    C --> D[WS onOpen]
+    D --> E["发送 CONNECT(userId)"]
+    E --> F{打开某个Agent Chat?}
+    F -- 是 --> G["发送 BIND_CHANNEL(agentId)"]
+    G --> H[收发该channel消息]
+    F -- 否 --> I[维持空闲长连接]
+    H --> J[每20s HEARTBEAT]
+    I --> J
+    J --> K{WS断开?}
+    K -- 是 --> L[NetworkManager触发重连]
+    L --> C
+```
+
+##### WS 时序图（Main + Chat + 后台更新）
+```mermaid
+sequenceDiagram
+    participant Login as LoginVm
+    participant Main as MainActivity/MainVm
+    participant RTC as RealtimeChatController
+    participant WS as SpringWS
+    participant Chat as ComposeChatVm
+    participant List as MessageListMviVm
+
+    Login->>Main: 登录成功导航
+    Main->>RTC: ensureUserConnection(userId)
+    RTC->>WS: CONNECT(userId)
+    Chat->>RTC: bindChannel(agentId=agent1)
+    RTC->>WS: BIND_CHANNEL(agent1)
+    Chat->>WS: USER_TEXT_MESSAGE
+    WS-->>RTC: TEXT_CHAT_RESPONSE(agent1)
+    RTC-->>Chat: 更新当前聊天UI
+    RTC-->>List: SharedFlow刷新摘要/未读
+    RTC->>WS: HEARTBEAT(20s)
+```
+
+##### WS 功能线程甘特图
+```mermaid
+gantt
+    title Android WS常驻连接线程甘特图
+    dateFormat  X
+    axisFormat %L
+    section UI线程
+    登录成功跳转Main              :a1, 0, 5
+    打开Chat并bind channel       :a2, 20, 8
+    section WS线程
+    建立user级连接               :b1, 5, 12
+    持续接收消息                 :b2, 17, 120
+    心跳发送(20s周期)            :b3, 17, 120
+    section 数据线程
+    ChatController插入去重       :c1, 25, 100
+    Room增量持久化               :c2, 30, 90
+    section 状态分发
+    StateFlow/SharedFlow分发     :d1, 26, 95
+```
+
+#### 设计模式说明
+* **单例模式**：`MainApplication` 持有 `NetworkManager/ChatMapController/ChatCacheManager`，保证全局唯一入口。
+* **门面模式**：`RealtimeChatController` 作为 WS + 音频 + 路由的统一门面，对 VM 层屏蔽复杂连接细节。
+* **策略/状态模式（轻量）**：`NetworkManager` 以网络/WS状态组合驱动“首次拉取/重连补偿”策略切换。
+* **工厂式创建（简化）**：`ChatMapController.getChatManager(agentId)` 按需创建 `ChatController` 并复用。
 
 ## 本地数据库设计（Room）
 

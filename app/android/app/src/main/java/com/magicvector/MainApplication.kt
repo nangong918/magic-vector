@@ -70,6 +70,8 @@ class MainApplication : Application() {
 
         // 请求接口实现
         private var apiRequestImplInstance: ApiRequestImpl? = null
+        @Volatile
+        private var cachedUserId: String = ""
 
         @Synchronized
         fun getApiRequestImplInstance(): ApiRequestImpl {
@@ -81,8 +83,15 @@ class MainApplication : Application() {
         }
 
         fun getUserId(): String{
-            // todo 测试用的userId，正式的时候需要修改
-            return "test_user"
+            return cachedUserId
+        }
+
+        fun updateUserId(userId: Long) {
+            cachedUserId = if (userId > 0) userId.toString() else ""
+        }
+
+        fun clearUserId() {
+            cachedUserId = ""
         }
 
         private var userManager: UserManager? = null

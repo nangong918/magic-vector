@@ -279,6 +279,143 @@ flowchart TD
   * 向后分页（新消息/补偿）：`after + asc`
 * 该对齐可减少端侧二次排序和边界 bug 风险。
 
+### 持久连接模块（用户级WS + Channel路由）
+
+#### 功能职责
+* WS 连接从“按 agentId 建连”重构为“按 userId 建连”：`CONNECT(userId)` 在登录后由客户端发起。
+* `agentId` 改为聊天路由参数：通过 `BIND_CHANNEL(agentId)` 绑定当前聊天通道。
+* 服务端维护 `userId + currentAgentId` 会话态，后续 `USER_TEXT_MESSAGE/AUDIO_CHUNK/...` 走当前 channel。
+* 新增 `HEARTBEAT` 保活与 60 秒超时断连判定，超时后主动关闭连接并清理上下文。
+
+#### UML静态图（类图）
+```mermaid
+classDiagram
+    class WsChatHandler {
+      +afterConnectionEstablished(session)
+      +handleTextMessage(session,message)
+      +afterConnectionClosed(session,status)
+    }
+    class PersistentConnectionManager {
+      -userId: AtomicReference~String~
+      -agentId: AtomicReference~String~
+      -lastHeartbeatTs: AtomicReference~Long~
+      +connect(connectionSession)
+      +onMessage(message)
+      +disconnect()
+    }
+    class PersistentConnectionService {
+      +handleConnectMessage(connectMessage,userId,session,lastHeartbeat)
+      +handleBindChannelMessage(bindMessage,userId,agentId,session)
+      +handleHeartbeat(lastHeartbeat)
+      +handleUserTextMessage(message,agentId)
+    }
+    class RealtimeChatContextManager
+    class PersistentConnectMessageManager
+
+    WsChatHandler --> PersistentConnectionManager
+    PersistentConnectionManager --> PersistentConnectionService
+    PersistentConnectionService --> RealtimeChatContextManager
+    PersistentConnectionService --> PersistentConnectMessageManager
+```
+
+#### UML静态图（对象图）
+```mermaid
+classDiagram
+    class wsSession_1001 {
+      userId = "12"
+      currentAgentId = "agent_1"
+      lastHeartbeatTs = 1737000000000
+    }
+    class pcm_1001 {
+      type = PersistentConnectionManager
+    }
+    class ctx_agent_1 {
+      type = RealtimeChatContextManager
+      userId = "12"
+      agentId = "agent_1"
+    }
+    class queue_mgr {
+      type = PersistentConnectMessageManager
+    }
+
+    pcm_1001 --> wsSession_1001
+    pcm_1001 --> ctx_agent_1
+    ctx_agent_1 --> queue_mgr
+```
+
+#### UML动态图（通信图）
+```mermaid
+flowchart LR
+    AndroidRTC[Android RealtimeChatController] --> WSHandler[WsChatHandler]
+    WSHandler --> PCM[PersistentConnectionManager]
+    PCM --> PCS[PersistentConnectionService]
+    PCS --> Ctx[RealtimeChatContextManager]
+    PCS --> MsgMgr[PersistentConnectMessageManager]
+    MsgMgr --> AndroidRTC
+```
+
+#### UML动态图（活动图）
+```mermaid
+flowchart TD
+    A[WS建立] --> B["CONNECT(userId)"]
+    B --> C[记录userId + heartbeat起始]
+    C --> D{收到BIND_CHANNEL?}
+    D -- 是 --> E["创建/切换RealtimeChatContextManager(agentId)"]
+    D -- 否 --> F[保持空闲连接]
+    E --> G[处理文本/音频/系统消息]
+    F --> H[等待消息]
+    G --> I[检查heartbeat是否超时]
+    H --> I
+    I --> J{超时>60s?}
+    J -- 是 --> K[disconnect+清理上下文]
+    J -- 否 --> G
+```
+
+#### UML动态图（时序图）
+```mermaid
+sequenceDiagram
+    participant App as Android
+    participant Ws as WsChatHandler
+    participant Pcm as PersistentConnectionManager
+    participant Svc as PersistentConnectionService
+    participant Ctx as RealtimeChatContextManager
+
+    App->>Ws: WS握手
+    App->>Ws: CONNECT(userId)
+    Ws->>Pcm: onMessage(CONNECT)
+    Pcm->>Svc: handleConnectMessage
+    App->>Ws: BIND_CHANNEL(agentId)
+    Pcm->>Svc: handleBindChannelMessage
+    Svc->>Ctx: initChatClient + session绑定
+    App->>Ws: USER_TEXT_MESSAGE
+    Pcm->>Svc: handleUserTextMessage(agentId)
+    App->>Ws: HEARTBEAT(20s)
+    Pcm->>Svc: handleHeartbeat
+```
+
+#### 功能线程甘特图
+```mermaid
+gantt
+    title SpringBoot WS持久连接线程甘特图
+    dateFormat  X
+    axisFormat %L
+    section WebSocket线程
+    握手与CONNECT处理            :a1, 0, 10
+    BIND_CHANNEL处理             :a2, 15, 10
+    收发消息                     :a3, 25, 120
+    section 业务线程池
+    startTextChat/startAudioChat :b1, 30, 90
+    section 心跳检测线程
+    10s周期检测                   :c1, 10, 120
+    超时断连与清理                :c2, 131, 8
+```
+
+#### 设计模式说明
+* **门面模式**：`PersistentConnectionService` 汇聚 CONNECT/BIND/HEARTBEAT/消息处理入口。
+* **状态模式（轻量）**：连接状态由 `userId/currentAgentId/lastHeartbeatTs` 驱动路由与超时行为。
+* **工厂式创建（按需）**：`handleBindChannelMessage` 按 channel 创建 `RealtimeChatContextManager`。
+* **生产者-消费者模式**：`PersistentConnectMessageManager` 通过队列异步发送，解耦业务线程与网络发送。
+
 
 ## 数据库设计（MySQL）
 

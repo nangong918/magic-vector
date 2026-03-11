@@ -9,6 +9,7 @@ import com.openapi.config.SessionConfig;
 import com.openapi.connect.websocket.manager.PersistentConnectMessageManager;
 import com.openapi.domain.constant.error.AgentExceptions;
 import com.openapi.domain.constant.realtime.RealtimeSystemRequestEventEnum;
+import com.openapi.domain.dto.ws.request.RealtimeChatBindChannelRequest;
 import com.openapi.domain.dto.ws.request.McpSwitchRequest;
 import com.openapi.domain.dto.ws.request.RealtimeChatConnectRequest;
 import com.openapi.domain.dto.ws.request.UploadPhotoRequest;
@@ -47,33 +48,54 @@ public class PersistentConnectionServiceImpl implements PersistentConnectionServ
     @Override
     public void handleConnectMessage(
             @NotNull String connectMessage,
+            @NotNull AtomicReference<String> userIdR,
+            @NotNull ConnectionSession connectionSession,
+            @NotNull AtomicReference<Long> lastHeartbeatTs
+    ) {
+        try {
+            RealtimeChatConnectRequest connectRequest = JSON.parseObject(connectMessage, RealtimeChatConnectRequest.class);
+            if (!StringUtils.hasText(connectRequest.getUserId())){
+                throw new AppException(AgentExceptions.AGENT_NOT_EXIST);
+            }
+            userIdR.set(connectRequest.getUserId());
+            lastHeartbeatTs.set(System.currentTimeMillis());
+            log.info("[PersistentConnection] user连接成功, userId: {}", userIdR.get());
+        } catch (Exception e) {
+            log.error("[PersistentConnection] 连接错误 断开连接", e);
+            connectionSession.close();
+        }
+    }
+
+    @Override
+    public void handleBindChannelMessage(
+            @NotNull String bindChannelMessage,
+            @NotNull AtomicReference<String> userIdR,
             @NotNull AtomicReference<String> agentIdR,
             @NotNull ConnectionSession connectionSession
     ) {
         try {
-            RealtimeChatConnectRequest connectRequest = JSON.parseObject(connectMessage, RealtimeChatConnectRequest.class);
-
-            if (!StringUtils.hasText(connectRequest.getAgentId())){
+            RealtimeChatBindChannelRequest bindRequest = JSON.parseObject(bindChannelMessage, RealtimeChatBindChannelRequest.class);
+            if (!StringUtils.hasText(userIdR.get()) || !StringUtils.hasText(bindRequest.getAgentId())) {
                 throw new AppException(AgentExceptions.AGENT_NOT_EXIST);
             }
-            agentIdR.set(connectRequest.getAgentId());
-            log.info("[PersistentConnection] 连接，收集用户会话信息, agentId: {}", agentIdR.get());
-
-            // 重新连接就是新的会话信息
+            var oldAgentId = agentIdR.get();
+            if (StringUtils.hasText(oldAgentId)) {
+                var oldContext = sessionConfig.realtimeChatContextManagerMap().remove(oldAgentId);
+                if (oldContext != null) {
+                    oldContext.reset();
+                }
+            }
+            agentIdR.set(bindRequest.getAgentId());
             var contextManager = new RealtimeChatContextManager(connectMessageManager);
-            contextManager.userId = connectRequest.getUserId();
-            contextManager.agentId = connectRequest.getAgentId();
+            contextManager.userId = userIdR.get();
+            contextManager.agentId = bindRequest.getAgentId();
             contextManager.session = connectionSession;
-            contextManager.connectTimestamp = connectRequest.getTimestamp();
-
-            // 初始化chatClient
-            // 将获取到的chatClient存储到RealtimeChatContextManager
+            contextManager.connectTimestamp = bindRequest.getTimestamp();
             contextManager.chatClient = realtimeChatService.initChatClient(contextManager, dashScopeChatModel);
-
-            // 将session存储到map
             sessionConfig.realtimeChatContextManagerMap().put(agentIdR.get(), contextManager);
+            log.info("[PersistentConnection] bind channel success, userId={}, agentId={}", userIdR.get(), agentIdR.get());
         } catch (Exception e) {
-            log.error("[PersistentConnection] 连接错误 断开连接", e);
+            log.error("[PersistentConnection] bind channel error", e);
             connectionSession.close();
         }
     }
@@ -213,5 +235,10 @@ public class PersistentConnectionServiceImpl implements PersistentConnectionServ
         Optional.ofNullable(systemRequest)
                 .map(it -> it.mcpSwitch)
                 .ifPresent(it -> contextManager.mcpSwitch.setByThat(it));
+    }
+
+    @Override
+    public void handleHeartbeat(@NotNull AtomicReference<Long> lastHeartbeatTs) {
+        lastHeartbeatTs.set(System.currentTimeMillis());
     }
 }

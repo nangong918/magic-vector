@@ -81,10 +81,15 @@ class MainVm : ViewModel() {
 
             is MainIntent.ChatServiceBound -> {
                 realtimeChatController = intent.handler
+                realtimeChatController?.ensureUserConnection(MainApplication.getUserId())
+                MainApplication.getNetworkManager().bindWsReconnectAction {
+                    realtimeChatController?.ensureUserConnection(MainApplication.getUserId())
+                }
                 _uiState.update { it.copy(isChatServiceBound = true) }
             }
 
             MainIntent.ChatServiceUnbound -> {
+                MainApplication.getNetworkManager().unbindWsReconnectAction()
                 realtimeChatController = null
                 _uiState.update { it.copy(isChatServiceBound = false) }
             }

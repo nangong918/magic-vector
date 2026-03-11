@@ -220,7 +220,6 @@ class TestVm(
 
                     // 发送连接成功的消息
                     val request = RealtimeChatConnectRequest()
-                    request.agentId = "test"
                     request.userId = MainApplication.getUserId()
                     request.timestamp = System.currentTimeMillis()
 

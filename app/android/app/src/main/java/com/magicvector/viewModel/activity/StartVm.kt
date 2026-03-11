@@ -81,6 +81,7 @@ class StartVm : ViewModel() {
     private suspend fun resolveStartTargetEffect(): StartEffect {
         val localUser = userManager.getCurrentUser()
         if (localUser == null || localUser.accessToken.isBlank()) {
+            MainApplication.clearUserId()
             _dataState.update { it.copy(isLoggedIn = false, userId = 0L) }
             return StartEffect.NavigateToLogin
         }
@@ -88,6 +89,7 @@ class StartVm : ViewModel() {
         return try {
             val isValid = verifyAccessToken(localUser.accessToken)
             if (isValid) {
+                MainApplication.updateUserId(localUser.userId)
                 _dataState.update {
                     it.copy(
                         isLoggedIn = true,
@@ -98,11 +100,13 @@ class StartVm : ViewModel() {
                 StartEffect.NavigateToMain
             } else {
                 userManager.clearCurrentUser()
+                MainApplication.clearUserId()
                 _dataState.update { it.copy(isLoggedIn = false, userId = 0L) }
                 StartEffect.NavigateToLogin
             }
         } catch (_: Throwable) {
             userManager.clearCurrentUser()
+            MainApplication.clearUserId()
             _dataState.update { it.copy(isLoggedIn = false, userId = 0L) }
             StartEffect.NavigateToLogin
         }

@@ -128,6 +128,7 @@ class ComposeRegisterVm : ViewModel() {
                     accessToken = auth.accessToken.orEmpty()
                 )
             )
+            MainApplication.updateUserId(auth.userId ?: 0L)
             _uiState.update { it.copy(isLoading = false) }
             sendEffect(RegisterEffect.NavigateToMain)
         }

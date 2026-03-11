@@ -13,6 +13,14 @@ public enum RealtimeRequestDataTypeEnum {
      * @see RealtimeChatConnectRequest
      */
     CONNECT("connect"),
+    /**
+     * bind_channel
+     */
+    BIND_CHANNEL("bind_channel"),
+    /**
+     * heartbeat
+     */
+    HEARTBEAT("heartbeat"),
 //    // disconnect
 //    DISCONNECT("disconnect"),
     /**

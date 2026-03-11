@@ -14,6 +14,16 @@ public enum RealtimeRequestDataTypeEnum {
      * @see RealtimeChatConnectRequest
      */
     CONNECT("connect"),
+    /**
+     * bind_channel
+     * data: RealtimeChatBindChannelRequest
+     */
+    BIND_CHANNEL("bind_channel"),
+    /**
+     * heartbeat
+     * data: timestamp string
+     */
+    HEARTBEAT("heartbeat"),
 //    // disconnect
 //    DISCONNECT("disconnect"),
     /**

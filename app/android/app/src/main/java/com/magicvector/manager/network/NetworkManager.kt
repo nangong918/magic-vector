@@ -18,6 +18,9 @@ class NetworkManager(private val context: Context) {
         appContext.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
 
     private val hasRegistered = AtomicBoolean(false)
+    private val reconnecting = AtomicBoolean(false)
+    @Volatile
+    private var wsReconnectAction: (() -> Unit)? = null
     private val _state = MutableStateFlow(
         NetworkState(
             isNetworkOnline = isOnline(),
@@ -28,7 +31,11 @@ class NetworkManager(private val context: Context) {
 
     private val receiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
-            _state.value = _state.value.copy(isNetworkOnline = isOnline())
+            val online = isOnline()
+            _state.value = _state.value.copy(isNetworkOnline = online)
+            if (online && !_state.value.isWsConnected) {
+                triggerWsReconnect()
+            }
         }
     }
 
@@ -51,11 +58,39 @@ class NetworkManager(private val context: Context) {
     }
 
     fun onWebSocketConnected() {
+        reconnecting.set(false)
         _state.value = _state.value.copy(isWsConnected = true)
     }
 
     fun onWebSocketDisconnected() {
         _state.value = _state.value.copy(isWsConnected = false)
+        if (_state.value.isNetworkOnline) {
+            triggerWsReconnect()
+        }
+    }
+
+    fun bindWsReconnectAction(action: () -> Unit) {
+        wsReconnectAction = action
+    }
+
+    fun unbindWsReconnectAction() {
+        wsReconnectAction = null
+    }
+
+    private fun triggerWsReconnect() {
+        if (!reconnecting.compareAndSet(false, true)) {
+            return
+        }
+        val action = wsReconnectAction
+        if (action == null) {
+            reconnecting.set(false)
+            return
+        }
+        runCatching {
+            action.invoke()
+        }.onFailure {
+            reconnecting.set(false)
+        }
     }
 
     private fun isOnline(): Boolean {
