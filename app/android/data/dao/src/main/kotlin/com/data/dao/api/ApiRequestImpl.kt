@@ -7,12 +7,15 @@ import com.core.baseutil.network.OnSuccessCallback
 import com.core.baseutil.network.OnThrowableCallback
 import com.data.domain.dto.request.AgentDeleteRequest
 import com.data.domain.dto.request.ChatByAnchorRequest
+import com.data.domain.dto.request.ControlCommandRequest
 import com.data.domain.dto.request.UserLoginRequest
 import com.data.domain.dto.request.UserTokenVerifyRequest
 import com.data.domain.dto.response.AgentLastChatListResponse
 import com.data.domain.dto.response.AgentListResponse
 import com.data.domain.dto.response.AgentResponse
 import com.data.domain.dto.response.ChatMessageResponse
+import com.data.domain.dto.response.ControlCommandResponse
+import com.data.domain.dto.response.ControlStatusResponse
 import com.data.domain.dto.response.UserAuthResponse
 import com.data.domain.dto.response.UserTokenVerifyResponse
 import okhttp3.MultipartBody
@@ -231,6 +234,30 @@ open class ApiRequestImpl(apiRequest: ApiRequest) : BaseApiRequestImpl() {
                     messageId
                 )
             },
+            successCallback = onSuccessCallback,
+            throwableCallback = throwableCallback
+        )
+    }
+
+    fun getControlStatus(
+        deviceId: String,
+        onSuccessCallback: OnSuccessCallback<BaseResponse<ControlStatusResponse>>?,
+        throwableCallback: OnThrowableCallback?
+    ) {
+        sendRequestCallback(
+            apiCall = { mApi.getControlStatus(deviceId) },
+            successCallback = onSuccessCallback,
+            throwableCallback = throwableCallback
+        )
+    }
+
+    fun sendControlCommand(
+        request: ControlCommandRequest,
+        onSuccessCallback: OnSuccessCallback<BaseResponse<ControlCommandResponse>>?,
+        throwableCallback: OnThrowableCallback?
+    ) {
+        sendRequestCallback(
+            apiCall = { mApi.sendControlCommand(request) },
             successCallback = onSuccessCallback,
             throwableCallback = throwableCallback
         )

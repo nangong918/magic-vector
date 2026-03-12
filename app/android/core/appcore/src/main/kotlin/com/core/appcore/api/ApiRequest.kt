@@ -3,12 +3,15 @@ package com.core.appcore.api
 import com.core.baseutil.network.BaseResponse
 import com.data.domain.dto.request.AgentDeleteRequest
 import com.data.domain.dto.request.ChatByAnchorRequest
+import com.data.domain.dto.request.ControlCommandRequest
 import com.data.domain.dto.request.UserLoginRequest
 import com.data.domain.dto.request.UserTokenVerifyRequest
 import com.data.domain.dto.response.AgentLastChatListResponse
 import com.data.domain.dto.response.AgentListResponse
 import com.data.domain.dto.response.AgentResponse
 import com.data.domain.dto.response.ChatMessageResponse
+import com.data.domain.dto.response.ControlCommandResponse
+import com.data.domain.dto.response.ControlStatusResponse
 import com.data.domain.dto.response.UserAuthResponse
 import com.data.domain.dto.response.UserTokenVerifyResponse
 import okhttp3.MultipartBody
@@ -133,6 +136,18 @@ interface ApiRequest {
         @Part("userId") userId: RequestBody,
         @Part("messageId") messageId: RequestBody,
     ): BaseResponse<String>
+
+    //==========Control
+
+    @GET("/control/status")
+    suspend fun getControlStatus(
+        @Query("deviceId") deviceId: String
+    ): BaseResponse<ControlStatusResponse>
+
+    @POST("/control/command")
+    suspend fun sendControlCommand(
+        @Body request: ControlCommandRequest
+    ): BaseResponse<ControlCommandResponse>
 
     //==========User
 

@@ -11,6 +11,7 @@ import com.google.gson.GsonBuilder
 import com.magicvector.manager.ChatMapController
 import com.magicvector.manager.MessageListController
 import com.magicvector.manager.chat.ChatCacheManager
+import com.magicvector.manager.control.ControlConsoleManager
 import com.magicvector.manager.network.NetworkManager
 import com.magicvector.manager.user.UserManager
 import com.magicvector.manager.yolo.VisionManager
@@ -130,6 +131,14 @@ class MainApplication : Application() {
                 networkManager = NetworkManager(getApp())
             }
             return networkManager!!
+        }
+
+        private var controlConsoleManager: ControlConsoleManager? = null
+        fun getControlConsoleManager(): ControlConsoleManager {
+            if (controlConsoleManager == null) {
+                controlConsoleManager = ControlConsoleManager()
+            }
+            return controlConsoleManager!!
         }
 
         /**

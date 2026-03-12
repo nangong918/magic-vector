@@ -46,6 +46,7 @@ class BaseConstant {
 
     object WSConstantUrl {
         const val AGENT_REALTIME_CHAT_URL = "/agent/realtime/chat"
+        const val CONTROL_CONSOLE_URL = "/control/ws"
     }
 
     object NetworkCode {

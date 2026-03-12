@@ -29,6 +29,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import com.data.domain.ao.message.MessageContactItemAo
 import com.magicvector.fragment.AgentEditorOverlay
+import com.magicvector.fragment.ControlScreen
 import com.magicvector.fragment.MessageListScreen
 import com.magicvector.fragment.MineScreen
 import com.magicvector.manager.network.NetworkState
@@ -129,13 +130,7 @@ fun MainActivityScreen(
                     onOpenChat = onOpenChat,
                     onOpenAgentEditor = { latestEditor.value.invoke(it) }
                 )
-                MainSelectItemEnum.MEDIA -> MessageListScreen(
-                    isServiceBound = state.isChatServiceBound,
-                    onCreateAgentClick = { latestCreate.value.invoke() },
-                    refreshToken = refreshToken,
-                    onOpenChat = onOpenChat,
-                    onOpenAgentEditor = { latestEditor.value.invoke(it) }
-                )
+                MainSelectItemEnum.MEDIA -> ControlScreen()
                 MainSelectItemEnum.MINE -> MineScreen()
             }
         }

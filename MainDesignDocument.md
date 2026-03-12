@@ -42,10 +42,12 @@ Agent
     * 接收Nginx的Live推流
         * 另一台设备的Camera信道（Nginx）测试
         * 视频录制保存本地
+    * App与App推拉流测试（推流/拉流模式切换）
 * 离线蓝牙、Wifi操控
     * BLE蓝牙连接并发送指令
     * 连接RK创建的WIFI发送指令
     * Agent指令控制台输出
+    * RK端联调前，RK链路先按TODO占位
 
 #### Mine
 * Setting
@@ -55,6 +57,9 @@ Agent
     * 云上录播记录播放
     * 本地视频播放
     * 本地视频上传云端
+* 本次迭代范围
+    * 本地视频播放：实现
+    * Setting/云录播/上传云端：TODO
 * （Test；仅测试分支有，此分支不是）
 
 
