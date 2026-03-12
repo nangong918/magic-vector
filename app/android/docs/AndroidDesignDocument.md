@@ -9,18 +9,18 @@
 
 * **UI 层**：负责页面渲染、用户输入采集、导航执行。
   * Activity：`ComposeStartActivity`、`ComposeLoginActivity`、`ComposeRegisterActivity`、`MainActivity`、`ComposeChatActivity`、`ComposeAgentChatActivity`
-  * Fragment级组合函数：`MessageListScreen`、`AgentEditorOverlay`、`AgentEmojiFragment`、`AgentTextChatFragment`
+  * Fragment级组合函数：`MessageListScreen`、`ControlScreen`、`MineScreen`、`AgentEditorOverlay`、`AgentEmojiFragment`、`AgentTextChatFragment`
 * **状态管理层（MVI）**：负责处理 Intent、维护状态、发出 Effect。
-  * `StartVm`、`ComposeLoginVm`、`ComposeRegisterVm`、`MainVm`、`MessageListMviVm`、`ComposeChatVm`、`ComposeAgentChatVm`、`AgentEmojiFragmentVm`、`AgentTextChatFragmentVm`
+  * `StartVm`、`ComposeLoginVm`、`ComposeRegisterVm`、`MainVm`、`MessageListMviVm`、`ControlVm`、`MineVm`、`ComposeChatVm`、`ComposeAgentChatVm`、`AgentEmojiFragmentVm`、`AgentTextChatFragmentVm`
 * **业务与会话层**：封装会话与用户相关业务能力。
-* `UserManager`、`ChatMapController`、`ChatController`、`ChatCacheManager`、`NetworkManager(全局/Application级)`
+* `UserManager`、`ChatMapController`、`ChatController`、`ChatCacheManager`、`ControlCommandController`、`ControlConsoleManager`、`NetworkManager(全局/Application级)`
 * **数据访问层（Room）**：负责本地持久化。
   * `VectorDatabase`、`UserDao`、`AgentCacheDao`、`ChatMessageDao`
   * `UserEntity`、`AgentCacheEntity`、`ChatMessageEntity`
 * **网络访问层**：`ApiRequestImpl`，负责认证相关接口访问。
 * **领域与协议层**：定义业务与传输数据结构。
   * Module：`UserModule`
-  * DTO：`UserAuthResponse`、`UserTokenVerifyResponse`、`AgentResponse`、`AgentListResponse`、`ChatMessageResponse`
+  * DTO：`UserAuthResponse`、`UserTokenVerifyResponse`、`AgentResponse`、`AgentListResponse`、`ChatMessageResponse`、`ControlCommandRequest/Response`、`ControlStatusResponse`
 
 ### 架构类图
 ```mermaid
@@ -32,6 +32,8 @@ classDiagram
     class ComposeChatActivity
     class ComposeAgentChatActivity
     class MessageListScreen
+    class ControlScreen
+    class MineScreen
     class AgentEditorOverlay
     class AgentEmojiFragment
     class AgentTextChatFragment
@@ -40,6 +42,8 @@ classDiagram
     class ComposeRegisterVm
     class MainVm
     class MessageListMviVm
+    class ControlVm
+    class MineVm
     class ComposeChatVm
     class ComposeAgentChatVm
     class AgentEmojiFragmentVm
@@ -48,6 +52,8 @@ classDiagram
     class ChatMapController
     class ChatController
     class ChatCacheManager
+    class ControlCommandController
+    class ControlConsoleManager
     class NetworkManager
     class ApiRequestImpl
     class VectorDatabase
@@ -63,6 +69,8 @@ classDiagram
     ComposeRegisterActivity --> ComposeRegisterVm
     MainActivity --> MainVm
     MainActivity --> MessageListScreen
+    MainActivity --> ControlScreen
+    MainActivity --> MineScreen
     MainActivity --> AgentEditorOverlay
     ComposeChatActivity --> ComposeChatVm
     ComposeAgentChatActivity --> ComposeAgentChatVm
@@ -80,6 +88,10 @@ classDiagram
     MainVm --> ApiRequestImpl
     MainVm --> NetworkManager
     MessageListMviVm --> ApiRequestImpl
+    ControlVm --> ControlCommandController
+    ControlVm --> ControlConsoleManager
+    ControlVm --> ApiRequestImpl
+    MineVm --> ApiRequestImpl
     ComposeChatVm --> ChatMapController
     ComposeAgentChatVm --> RealtimeChatController
 
@@ -900,6 +912,226 @@ gantt
 * **状态模式（轻量）**：`AgentVoiceOrbPhase` 将颜色/动画映射集中化，避免在 UI 层散落条件判断。
 * **计算机网络/并发说明**：`WebSocket` 实时流与 `AudioRecord` 采集属于并发流水线，需避免主线程阻塞并保证消息顺序一致性。
 
+### Control 模块（Main 第二个 Tab）
+
+#### 功能职责
+* 展示设备状态操作监控：`RK<->App(BLE/WiFi)`、`RK<->SpringBoot`、`App<->SpringBoot`、`RK Agent 选用状态`。
+* 提供云操控平台（Cloud）与离线操控平台（WiFi/BLE）切换。
+* 提供双摇杆遥感控制（左方向、右移动）和基础按钮指令。
+* 提供 App 端推拉流测试 UI（推流/拉流模式 + RTMP URL + 视频视图）。
+* 提供录制状态切换和录制时长显示（编码链路本期保留 TODO）。
+
+#### UI/交互设计
+* 顶部状态卡统一显示连接态与重连态；支持手动刷新状态与重连 WS。
+* 中部平台切换 + 流来源切换：
+  * `RTMP + Nginx`（推荐，链路短、延迟更稳）
+  * `UDP裸帧 -> SpringBoot(Netty) -> App`（可选，便于服务端转发治理）
+* 视频区使用 `SurfaceView` 容器承载高性能渲染（本期预留挂载位）。
+* 控制区采用双摇杆 + 快捷按钮；BLE 模式下禁用视频，仅保留指令。
+* 底部提供录制与 App 推拉流测试区。
+
+#### UML静态图（类图）
+```mermaid
+classDiagram
+    class ControlScreen
+    class ControlVm {
+      -_uiState: StateFlow~ControlUiState~
+      -_dataState: StateFlow~ControlDataState~
+      -_effect: Channel~ControlEffect~
+      +processIntent(intent)
+    }
+    class ControlCommandController {
+      +buildJoystickCommand(...)
+      +buildButtonCommand(...)
+    }
+    class ControlConsoleManager {
+      +connectControlWs(...)
+      +queryControlStatus(...)
+      +sendControlCommand(...)
+    }
+    class ApiRequestImpl
+    class ControlUiState
+    class ControlDataState
+    class ControlIntent
+    class ControlEffect
+
+    ControlScreen --> ControlVm
+    ControlVm --> ControlCommandController
+    ControlVm --> ControlConsoleManager
+    ControlVm --> ApiRequestImpl
+    ControlVm --> ControlUiState
+    ControlVm --> ControlDataState
+    ControlVm --> ControlIntent
+    ControlVm --> ControlEffect
+```
+
+#### UML静态图（对象图）
+```mermaid
+classDiagram
+    class controlVm_1 {
+      platform = CLOUD
+      streamSource = RTMP_DIRECT
+      recording = false
+    }
+    class wsState_1 {
+      connected = true
+      retryCount = 0
+    }
+    class device_1 {
+      id = rk-default
+      rkAgentMode = TODO_RK_AGENT
+    }
+    controlVm_1 --> wsState_1
+    controlVm_1 --> device_1
+```
+
+#### UML动态图（状态图）
+```mermaid
+stateDiagram-v2
+    [*] --> Booting
+    Booting --> Connecting : Initialize
+    Connecting --> ReadyCloud : WS + status ok
+    ReadyCloud --> ReadyOfflineWiFi : switch OFFLINE_WIFI
+    ReadyCloud --> ReadyOfflineBle : switch OFFLINE_BLE
+    ReadyOfflineWiFi --> ReadyCloud : switch CLOUD
+    ReadyOfflineBle --> ReadyCloud : switch CLOUD
+    ReadyCloud --> Reconnecting : ws lost
+    Reconnecting --> ReadyCloud : ws resumed
+    ReadyCloud --> Recording : toggle recording
+    ReadyOfflineWiFi --> Recording : toggle recording
+    Recording --> ReadyCloud : stop recording
+    Recording --> ReadyOfflineWiFi : stop recording
+```
+
+#### UML动态图（活动图）
+```mermaid
+flowchart TD
+    A[进入Control页] --> B[初始化ControlVm]
+    B --> C[并发: 监听NetworkState + 连接ControlWS + 拉状态]
+    C --> D{平台选择}
+    D -- Cloud --> E[视频区可用 + 指令走WS/HTTP]
+    D -- Offline WiFi --> F[视频区可用 + 指令走局域网]
+    D -- Offline BLE --> G[仅指令, 视频禁用]
+    E --> H[双摇杆持续上报指令]
+    F --> H
+    G --> H
+    H --> I[可选开始录制]
+```
+
+#### UML动态图（时序图）
+```mermaid
+sequenceDiagram
+    participant UI as ControlScreen
+    participant VM as ControlVm
+    participant CCM as ControlConsoleManager
+    participant API as ApiRequestImpl
+    participant SB as SpringBoot
+    UI->>VM: Initialize
+    VM->>CCM: connectControlWs(userId,deviceId)
+    VM->>CCM: queryControlStatus(deviceId)
+    CCM->>API: GET /control/status
+    API->>SB: status request
+    SB-->>API: ControlStatusResponse
+    API-->>VM: status
+    UI->>VM: LeftJoystickDrag(x,y)
+    VM->>CCM: sendControlCommand(request)
+    CCM->>SB: WS COMMAND / HTTP fallback
+    SB-->>CCM: ack(optional)
+    CCM-->>VM: accepted/traceId
+```
+
+#### UML动态图（通信图）
+```mermaid
+flowchart LR
+    UI[ControlScreen] --> VM[ControlVm]
+    VM --> CMD[ControlCommandController]
+    VM --> CCM[ControlConsoleManager]
+    CCM --> HTTP[ApiRequestImpl]
+    CCM --> CWS[Control WS]
+    HTTP --> SB[(SpringBoot)]
+    CWS --> SB
+```
+
+#### 功能线程甘特图
+```mermaid
+gantt
+    title Control 模块线程甘特图
+    dateFormat  X
+    axisFormat %L ms
+    section Main线程
+    状态卡渲染/平台切换            :m1, 0, 40
+    摇杆拖拽事件采样               :m2, 40, 120
+    section IO线程
+    控制WS建立与保活               :i1, 10, 180
+    HTTP状态拉取                   :i2, 25, 60
+    section 录制线程(预留)
+    H264/UDP转MP4编码              :r1, 70, 220
+```
+
+### Mine 模块（本地视频）
+
+#### 功能职责
+* 实现本地视频选择与播放（本期实现）。
+* 保留 `Setting(修改密码/登出)`、`云录播播放`、`本地视频上传云端` 为 TODO。
+
+#### UML静态图（类图）
+```mermaid
+classDiagram
+    class MineScreen
+    class MineVm {
+      -_uiState: StateFlow~MineState~
+      -_effect: Channel~MineEffect~
+      +processIntent(intent)
+    }
+    class MineState
+    class MineIntent
+    class MineEffect
+    class VideoView
+    MineScreen --> MineVm
+    MineVm --> MineState
+    MineVm --> MineIntent
+    MineVm --> MineEffect
+    MineScreen --> VideoView
+```
+
+#### UML动态图（活动图）
+```mermaid
+flowchart TD
+    A[点击选择本地视频] --> B[OpenDocument/GetContent]
+    B --> C[返回Uri]
+    C --> D[MineVm更新selectedVideoUri]
+    D --> E[VideoView setVideoURI]
+    E --> F[播放/暂停切换]
+```
+
+#### UML动态图（时序图）
+```mermaid
+sequenceDiagram
+    participant UI as MineScreen
+    participant VM as MineVm
+    participant Picker as ActivityResultLauncher
+    participant VV as VideoView
+    UI->>VM: PickLocalVideoClick
+    VM-->>UI: Effect.OpenLocalVideoPicker
+    UI->>Picker: launch("video/*")
+    Picker-->>UI: Uri
+    UI->>VM: OnLocalVideoSelected(uri)
+    VM-->>UI: uiState.selectedVideoUri
+    UI->>VV: setVideoURI + start/pause
+```
+
+#### 功能线程甘特图
+```mermaid
+gantt
+    title Mine本地视频播放线程甘特图
+    dateFormat  X
+    axisFormat %L ms
+    section Main线程
+    文件选择器回调                :m1, 0, 35
+    UI状态更新与控件绑定          :m2, 35, 40
+    section Media线程
+    本地视频解码播放              :v1, 45, 180
+```
 
 ## Manager管理类设计
 
@@ -1930,6 +2162,132 @@ gantt
 #### 设计模式
 * **规则引擎（轻量）**：使用可调阈值与权重组合实现行为判定，后续可平滑迁移为模型推理。
 
+### 控制台管理模块（ControlConsoleManager + ControlCommandController）
+
+#### 功能职责
+* `ControlConsoleManager`：统一管理控制台 WS 连接、HTTP 状态查询、指令发送回退策略。
+* `ControlCommandController`：统一封装摇杆/按钮输入到控制协议 DTO，避免 VM 拼装细节外泄。
+* 向页面暴露连接状态（连接中/已连接/重连中/失败）和追踪信息（traceId）。
+
+#### UML静态图（类图）
+```mermaid
+classDiagram
+    class ControlConsoleManager {
+      -wsState: StateFlow~ControlWsState~
+      +connectControlWs(userId,deviceId,onPayload)
+      +disconnectControlWs()
+      +queryControlStatus(deviceId,onSuccess,onError)
+      +sendControlCommand(request,onSuccess,onError)
+    }
+    class ControlCommandController {
+      +buildJoystickCommand(...)
+      +buildButtonCommand(...)
+    }
+    class ApiRequestImpl
+    class ControlWsState
+    class ControlCommandRequest
+    class ControlStatusResponse
+    class ControlCommandResponse
+
+    ControlConsoleManager --> ApiRequestImpl
+    ControlConsoleManager --> ControlWsState
+    ControlConsoleManager --> ControlCommandRequest
+    ControlConsoleManager --> ControlStatusResponse
+    ControlConsoleManager --> ControlCommandResponse
+    ControlCommandController --> ControlCommandRequest
+```
+
+#### UML静态图（对象图）
+```mermaid
+classDiagram
+    class manager_1 {
+      ws.connected = true
+      ws.retryCount = 1
+    }
+    class controller_1 {
+      sequence = 124
+    }
+    class request_124 {
+      commandType = JOYSTICK
+      transport = CLOUD
+    }
+    controller_1 --> request_124
+    manager_1 --> request_124
+```
+
+#### UML动态图（状态图）
+```mermaid
+stateDiagram-v2
+    [*] --> Idle
+    Idle --> Connecting : connectControlWs
+    Connecting --> Connected : onOpen
+    Connected --> Reconnecting : onFailure
+    Reconnecting --> Connected : retry success
+    Reconnecting --> Failed : retry exhausted
+    Connected --> Closed : disconnectControlWs
+    Failed --> Closed
+```
+
+#### UML动态图（活动图）
+```mermaid
+flowchart TD
+    A[VM发起控制命令] --> B[ControlCommandController构建DTO]
+    B --> C{WS已连接?}
+    C -- 是 --> D[ControlConsoleManager通过WS发送]
+    C -- 否 --> E[回退HTTP /control/command]
+    D --> F[更新traceId与状态]
+    E --> F
+```
+
+#### UML动态图（时序图）
+```mermaid
+sequenceDiagram
+    participant VM as ControlVm
+    participant Ctl as ControlCommandController
+    participant Mgr as ControlConsoleManager
+    participant Api as ApiRequestImpl
+    participant SB as SpringBoot
+    VM->>Ctl: buildJoystickCommand(...)
+    Ctl-->>VM: ControlCommandRequest
+    VM->>Mgr: sendControlCommand(request)
+    alt ws connected
+      Mgr->>SB: WS COMMAND
+    else ws disconnected
+      Mgr->>Api: POST /control/command
+      Api->>SB: HTTP command
+    end
+    SB-->>Mgr: ack/response
+    Mgr-->>VM: accepted + traceId
+```
+
+#### UML动态图（通信图）
+```mermaid
+flowchart LR
+    ControlVm --> ControlCommandController
+    ControlVm --> ControlConsoleManager
+    ControlConsoleManager --> ApiRequestImpl
+    ControlConsoleManager --> SpringBootWS[SpringBoot Control WS]
+    ApiRequestImpl --> SpringBootHTTP[(SpringBoot HTTP)]
+```
+
+#### 功能线程甘特图
+```mermaid
+gantt
+    title Control 管理模块线程甘特图
+    dateFormat  X
+    axisFormat %L
+    section Main线程
+    DTO构建与UI反馈                :m1, 0, 25
+    section IO线程
+    WS发送/重连                    :i1, 10, 160
+    HTTP回退请求                   :i2, 35, 70
+```
+
+#### 设计模式
+* **门面模式**：`ControlConsoleManager` 统一对外暴露“状态 + 指令 + 重连”能力。
+* **策略模式**：发送链路按 `WS优先 -> HTTP回退` 策略执行。
+* **并发/网络说明**：高频摇杆指令应在 IO 线程处理，避免主线程阻塞造成输入抖动和背压堆积。
+
 ## 本地数据库设计（Room）
 
 ### 设计说明
@@ -1937,6 +2295,7 @@ gantt
 * 会话表用于保存当前登录用户快照，便于冷启动恢复。
 * Agent 缓存表与聊天消息表用于离线展示、重连补偿和锚点分页。
 * 头像采用 Glide/Coil 磁盘缓存，Room 保存头像 URL 与业务字段。
+* 控制台视频本期不新增 Room 表；离线可播放视频依赖系统本地文件（`Uri`）直接回放，后续如需“最近播放列表”可扩展 `local_video_cache` 表。
 
 ### ER 图（合并）
 ```mermaid
@@ -1998,12 +2357,16 @@ erDiagram
 * `GET /chat/getTimeLimitChat`：按截止时间拉取历史消息。
 * `POST /chat/getByAnchor`：请求体 `ChatByAnchorRequest(agentId,anchorTimestamp,before,limit)`，按锚点向前/向后分页拉取消息。
 * `POST /chat/vision/upload/img`：视觉图片上传任务。
+* `GET /control/status`：查询设备控制态（`deviceId` -> `ControlStatusResponse`）。
+* `POST /control/command`：发送控制台指令（`ControlCommandRequest` -> `ControlCommandResponse`）。
+* `WS /control/ws`：控制台长连接（App/RK 状态同步 + 低时延命令通道）。
 
 ### 契约原则
 * 非文件上传接口统一使用请求体 DTO；上传接口使用 Multipart。
 * 响应统一结构化 DTO，不返回裸类型。
 * 与 SpringBoot 契约字段保持一致，ID 传输按项目规范执行。
 * `getByAnchor` 使用 `before:Boolean` 表示方向（true历史/false补偿），并统一 limit 上限。
+* 控制台命令采用 `WS优先 + HTTP回退` 双链路，降低实时场景丢包影响。
 
 
 

@@ -11,6 +11,7 @@
 * **Service 层**：业务流程编排、鉴权判断、转换调用。
 * **Mapper 层**：`UserMapper` 访问 MySQL，执行增删改查。
 * **Domain 层**：`dto/entity(module)` 数据模型与错误定义。
+* **控制台链路（本次）**：`ControlController` + `ControlConsoleService` + `ControlSessionManager`，承接 App/RK 控制命令与状态同步。
 
 鉴权不引入 SpringCloudGateway；当前项目在应用内使用拦截器实现路由鉴权。
 
@@ -594,6 +595,144 @@ gantt
 * **模板化回调模式**：`StreamCallErrorCallback/STTCallback/TTSCallback` 抽象错误重试、任务登记、会话终止行为。
 * **计算机网络/并发说明**：音频流轮询 + STT 流式消费是典型 IO 管线；若在主线程执行会导致 WebSocket 处理阻塞和背压扩散。
 
+### Control 控制台模块（状态查询 + 指令下发 + WS桥接）
+
+#### 功能职责
+* 提供设备控制状态查询接口（`/control/status`）。
+* 提供控制指令下发接口（`/control/command`）。
+* 提供控制台 WS 通道（`/control/ws`），用于 App/RK 长连接状态同步与低时延命令桥接。
+* RK 端 MQTT/Agent 落地逻辑本期保留 TODO（先完成三端协议与路由骨架）。
+
+#### UML静态图（类图）
+```mermaid
+classDiagram
+    class ControlController {
+      +getControlStatus(deviceId)
+      +sendControlCommand(request)
+    }
+    class ControlConsoleService
+    class ControlConsoleServiceImpl
+    class ControlSessionManager {
+      +bindSession(deviceId,clientType,session)
+      +buildStatus(deviceId)
+      +forwardCommandToRk(deviceId,payload)
+    }
+    class ControlWsHandler
+    class ControlCommandRequest
+    class ControlStatusResponse
+    class ControlCommandResponse
+
+    ControlController --> ControlConsoleService
+    ControlConsoleServiceImpl ..|> ControlConsoleService
+    ControlConsoleServiceImpl --> ControlSessionManager
+    ControlWsHandler --> ControlConsoleService
+    ControlConsoleService --> ControlCommandRequest
+    ControlConsoleService --> ControlStatusResponse
+    ControlConsoleService --> ControlCommandResponse
+```
+
+#### UML静态图（对象图）
+```mermaid
+classDiagram
+    class app_session_rk01 {
+      clientType = app
+      connected = true
+    }
+    class rk_session_rk01 {
+      clientType = rk
+      connected = false
+    }
+    class status_rk01 {
+      appToSpring = true
+      rkToSpring = false
+      rkAgentMode = TODO_RK_AGENT
+    }
+    app_session_rk01 --> status_rk01
+    rk_session_rk01 --> status_rk01
+```
+
+#### UML动态图（状态图）
+```mermaid
+stateDiagram-v2
+    [*] --> NoChannel
+    NoChannel --> AppOnline : app ws connected
+    AppOnline --> FullOnline : rk ws connected
+    FullOnline --> AppOnline : rk ws disconnected
+    AppOnline --> Reconnecting : app ws lost
+    Reconnecting --> AppOnline : app retry success
+    FullOnline --> Dispatching : receive command
+    Dispatching --> FullOnline : forward success
+    Dispatching --> AppOnline : rk offline fallback
+```
+
+#### UML动态图（活动图）
+```mermaid
+flowchart TD
+    A[App发起控制命令] --> B[ControlController校验DTO]
+    B --> C[ControlConsoleService.dispatchCommand]
+    C --> D{RK WS在线?}
+    D -- 是 --> E[ControlSessionManager转发到RK]
+    D -- 否 --> F[返回未送达 + TODO队列]
+    E --> G[返回accepted=true + traceId]
+    F --> H[返回accepted=false + traceId]
+```
+
+#### UML动态图（时序图）
+```mermaid
+sequenceDiagram
+    participant App as Android ControlVm
+    participant Ctl as ControlController
+    participant Svc as ControlConsoleServiceImpl
+    participant Mgr as ControlSessionManager
+    participant Rk as RK Client
+    App->>Ctl: POST /control/command
+    Ctl->>Svc: dispatchCommand(request)
+    Svc->>Mgr: forwardCommandToRk(deviceId,payload)
+    alt rk connected
+      Mgr->>Rk: WS COMMAND
+      Rk-->>Mgr: ack(optional)
+      Mgr-->>Svc: true
+      Svc-->>Ctl: accepted=true
+    else rk offline
+      Mgr-->>Svc: false
+      Svc-->>Ctl: accepted=false (TODO queue)
+    end
+    Ctl-->>App: ControlCommandResponse
+```
+
+#### UML动态图（通信图）
+```mermaid
+flowchart LR
+    App[Android App] --> HTTP[ControlController]
+    App --> CWS[Control WS /control/ws]
+    RK[RK Device] --> CWS
+    HTTP --> Service[ControlConsoleService]
+    CWS --> Service
+    Service --> SessionMgr[ControlSessionManager]
+    SessionMgr --> RK
+```
+
+#### 功能线程甘特图
+```mermaid
+gantt
+    title Control 控制台线程甘特图
+    dateFormat  X
+    axisFormat %L ms
+    section WebSocket线程
+    App/RK连接建立与心跳处理           :w1, 0, 160
+    section HTTP-NIO线程
+    指令请求接收与响应回写             :h1, 25, 40
+    section 业务线程
+    DTO校验/转发决策                   :b1, 30, 55
+    section 网络发送线程
+    向RK发送控制命令                   :n1, 45, 60
+```
+
+#### 可选方案对比
+* **RTMP 方案（推荐主链路）**：端到端成熟，配合 Nginx 稳定；SpringBoot 只做控制面。
+* **UDP 方案（可选数据面）**：可做极低延迟转发，但需要额外处理丢包/乱序/重组与回压。
+* **命令链路建议**：控制命令 `WS优先 + HTTP回退`；RK 离线可扩展消息队列/MQTT（本期 TODO）。
+
 
 ## 数据库设计（MySQL）
 
@@ -653,12 +792,16 @@ erDiagram
 * `GET /chat/getLastChat`：查询最近消息 -> `ChatMessageResponse`
 * `GET /chat/getTimeLimitChat`：按截止时间查询历史消息 -> `ChatMessageResponse`
 * `POST /chat/getByAnchor`：请求体 `ChatByAnchorRequest(agentId,anchorTimestamp,before,limit)`，按锚点向前/向后分页 -> `ChatMessageResponse`
+* `GET /control/status`：查询控制台设备连接态（`deviceId`）-> `ControlStatusResponse`
+* `POST /control/command`：发送控制台命令（`ControlCommandRequest`）-> `ControlCommandResponse`
+* `WS /control/ws`：控制台长连接（`clientType=deviceId` 查询参数），用于状态同步与低时延命令桥接
 
 ### 契约原则
 * 非文件上传接口使用 `@RequestBody` + `jakarta.validation` 注解校验。
 * 文件上传接口使用 Multipart/FormData，不使用 `@Valid @RequestBody`，改为 `@RequestParam/@Part` + 手动校验。
 * 参数校验异常统一由全局异常处理器处理，业务错误类型统一维护在 `com/openapi/domain/constant/error`。
 * `getByAnchor` 使用 `before:Boolean` 表示方向（true历史/false补偿），并限制最大分页条数。
+* 控制台命令链路采用 `WS优先 + HTTP回退`，确保实时性与可达性平衡。
 
 ## Domain 转换模块（Converter）
 
