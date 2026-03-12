@@ -34,12 +34,11 @@ import com.magicvector.viewModel.fragment.MineIntent
 import com.magicvector.viewModel.fragment.MineState
 import com.view.appview.R
 import androidx.compose.ui.viewinterop.AndroidView
-import androidx.lifecycle.viewmodel.compose.viewModel
 
 @Composable
 fun MineScreen(
     modifier: Modifier = Modifier,
-    viewModel: MineVm = viewModel()
+    viewModel: MineVm = MineVm()
 ) {
     val context = LocalContext.current
     val state by viewModel.uiState.collectAsState()

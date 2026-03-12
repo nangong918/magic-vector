@@ -42,7 +42,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.magicvector.viewModel.fragment.ControlEffect
 import com.magicvector.viewModel.fragment.ControlIntent
 import com.magicvector.viewModel.fragment.ControlPlatform
@@ -55,7 +54,7 @@ import kotlin.math.roundToInt
 @Composable
 fun ControlScreen(
     modifier: Modifier = Modifier,
-    viewModel: ControlVm = viewModel()
+    viewModel: ControlVm = ControlVm()
 ) {
     val context = LocalContext.current
     val state by viewModel.uiState.collectAsState()

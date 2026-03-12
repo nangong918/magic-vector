@@ -61,7 +61,7 @@ class ControlCommandController {
             this.deviceId = deviceId
             this.transport = transport
             this.commandType = commandType
-            this.sequence = sequence.incrementAndGet()
+            this.sequence = sequence++
             this.timestamp = System.currentTimeMillis()
             this.payloadJson = payloadJson
         }
