@@ -430,8 +430,93 @@ Android：
 ```
 
 
+### 控制台开发
+
+#### Control
+* 设备状态操作监控
+  * RK与App连接状态（蓝牙，Wifi）
+  * RK与SpringBoot连接状态
+  * App与SpringBoot连接状态
+  * RK的Agent选用状态
+* 云操控平台(Live)
+  * 向SpringBoot发送请求指令
+  * 接收Nginx的Live推流
+    * 另一台设备的Camera信道（Nginx）测试
+    * 视频录制保存本地
+* 离线蓝牙、Wifi操控
+  * BLE蓝牙连接并发送指令
+  * 连接RK创建的WIFI发送指令
+  * Agent指令控制台输出
+
+#### Mine
+* Setting（本次不实现，写todo）
+  * 修改密码
+  * 登出
+* 视频
+  * 云上录播记录播放（本次不实现，写todo）
+  * 本地视频播放（本次实现）
+  * 本地视频上传云端（本次不实现，写todo）
+
+现在我要实现SpringBoot,Android,RK三端互通，
+因为暂时没有RK代码，跟RK相关的你都可以写todo.
 
 
+##### UI 设计
+MainActivity的第二个Fragment页面。
 
+* 设备连接状态
+顶部显示设备的连接状态，最好要有看上去还不错的UI：
+参考我刚刚说的`* 设备状态操作监控`
+下面就是显示几个按钮：
+（云操控平台）至少需要SpringBoot和Android连接。
+（离线操控平台）至少需要RK和Android连接。
+
+* 云操控平台
+首先是一个视频view用来展示从RTMP拉的流，你可以选择SurfaceView或者什么，反正希望性能好些。
+视频源：可以选择通过（RK\Android + RTMP + FFmpeg + Nginx不走SpringBoot推拉流）和
+（Android或者RK传输裸UDP帧给SpringBoot，SpringBoot用Netty接收转发给另一个App）这两个选项。
+低下是一些指令按钮，你就暂时先设计两个手柄的拖拽，左边是用于操控方向，右边是操控移动。你可以参考switch游戏手柄。
+你要设计通信的数据结构，这些是通过ws传递给SpringBoot。当然SpringBoot也要设计将这些指令通过ws或者mqtt交给RK，可以先写todo。
+关于RTMP拉流，这个我自己来实现吧，你写todo。
+关于推流，因为暂时没有RK代码，所以你还是写todo吧。
+要设计合理的状态显示UI与重连显示UI。
+
+** 还需要一个个App推拉流的测试功能，点击测试之后UI页面变为选择推流或者拉流。
+推流是：输入RTMP Url + 推流按钮 + 视频View
+拉流是：输入RTMP Url + 拉流按钮 + 视频View
+
+* 离线操控平台
+Android可以通过连接RK创造的WIFI进行视频流传输和指令传输。
+UI基本跟云操控平台一致。
+视频view直接展示UDP流，然后操控跟云平台基本一致，甚至你可以封装自定义view然后复用。
+如果选用BLE蓝牙连接的话，就不能看实时视频，但是遥感操控和命令按钮基本一致。
+要设计合理的状态显示UI与重连显示UI。
+
+** 视频录制保存本地
+在云操控平台或者离线操控平台都要有的按钮，点击UI就变成正在录制，显示录制时长。
+不采用系统录屏，而是想办法把接收的流变为Mp4，在线的话接收的是H264，离线的话接收的是UDP裸流。
+
+** Mine中的视频播放本地视频
+
+总体设计要能跑通，
+我需要你看目前已有的设计
+[MainDesignDocument.md](MainDesignDocument.md)
+[SpringBootDesignDocument.md](springboot/docs/SpringBootDesignDocument.md)
+[AndroidDesignDocument.md](app/android/docs/AndroidDesignDocument.md)
+并把新增的设计设计出来再去写代码。
+你还需要遵守开发规范：
+[developAndRules.md](app/android/docs/developAndRules.md)
+[developAndRules.md](springboot/docs/developAndRules.md)
+上述的开发设计要写道设计文档，插入到应该属于的地方，要参考之前怎么写的
+
+要设计合适的Page并设计Mvi设计模式的viewmodel，并绘制跟参考文档中其他page一样的UML图。
+要设计合理的Mangaer和Controller，并绘制：类图，对象图，状态图，活动图，时序图，功能线程甘特图，通信图
+要设计合理的ws和http接口，并写大概功能
+需要设置合理的缓存机制，比如说离线的时候能狗播放本地视频。
+包括一些可选方案比如推流是使用RTMP还是UDP，也要写在设计文档。
+
+然后再写代码，我认为首先要设计好，才能写代码。
+本次任务较难的大部分都是音视频开发，springboot只是下发指令和长连接，给RK设置Agent等简单的接口。当然如果用UDP推流还有部分逻辑。
+总体难度在Android端。总之好好设计，然后写代码。
 
 
