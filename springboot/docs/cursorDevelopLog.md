@@ -196,3 +196,24 @@ gantt
 ### 数据库改动记录
 - 已同步修改 `springboot/db/magic_vector.sql`：`user.id` 类型改为 `BIGINT`。
 - 设计原因（数据库理论）：`BIGINT` 主键在 B+Tree 索引中比较开销更低、索引体积更小、排序与范围查询更高效。
+
+## 2026-03-12 Mine/Control 扩展（视频与日志）
+
+### 本次开发内容
+- 新增控制台日志查询与落库：
+  - `GET /control/log/list`
+  - 新增 `agent_log` 表与 Mapper/Service
+- 新增视频模块接口骨架：
+  - `POST /video/upload/init`
+  - `POST /video/upload/chunk`
+  - `POST /video/upload/complete`
+  - `GET /video/cloud/list`
+  - `GET /video/cloud/play-url`
+  - `GET /video/cloud/download-url`
+- 新增 `video_record` 表与 Mapper/Service。
+- 新增 `POST /user/password/update`（Setting 修改密码）。
+
+### 数据库改动说明（MySQL）
+- 已同步修改 `springboot/db/magic_vector.sql`，新增：
+  - `agent_log(id,user_id,agent_id,log_time,log_content)`
+  - `video_record(id,user_id,object_name,hls_object_name,status,created_at,updated_at)`

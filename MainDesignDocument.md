@@ -37,6 +37,7 @@ Agent
     * RK与SpringBoot连接状态
     * RK的Agent选用状态
     * App与SpringBoot连接状态
+    * Agent指令控制台输出（含在线查询与离线缓存）
 * 云操控平台(Live)
     * 向SpringBoot发送请求指令
     * 接收Nginx的Live推流
@@ -47,6 +48,7 @@ Agent
     * BLE蓝牙连接并发送指令
     * 连接RK创建的WIFI发送指令
     * Agent指令控制台输出
+    * RK创建WIFI后向Android发送UDP摄像头帧并实时显示
     * RK端联调前，RK链路先按TODO占位
 
 #### Mine
@@ -58,8 +60,10 @@ Agent
     * 本地视频播放
     * 本地视频上传云端
 * 本次迭代范围
+    * Setting（修改密码、登出）：实现基础流程
+    * 云上录播记录播放：实现页面与接口骨架，FFmpeg转m3u8服务端方案先落设计
     * 本地视频播放：实现
-    * Setting/云录播/上传云端：TODO
+    * 本地视频上传云端：实现断点续传接口骨架（MinIO），可运行链路优先
 * （Test；仅测试分支有，此分支不是）
 
 

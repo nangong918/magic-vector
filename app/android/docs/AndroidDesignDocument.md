@@ -929,6 +929,21 @@ gantt
 * 视频区使用 `SurfaceView` 容器承载高性能渲染（本期预留挂载位）。
 * 控制区采用双摇杆 + 快捷按钮；BLE 模式下禁用视频，仅保留指令。
 * 底部提供录制与 App 推拉流测试区。
+* 底部新增 `Agent指令日志区`：展示 SpringBoot 返回的 Agent JSON 指令，支持在线分页查询与 Room 离线回放。
+
+#### 可行方案（音视频/连接）
+* **RTMP 拉流（在线）**：Android 采用 `Media3 ExoPlayer` 播放 m3u8/RTMP 转 HLS，播放器端性能稳定，便于缓冲与断线重连。
+* **离线WiFi UDP视频**：RK 在 AP 模式下通过 UDP 发送 H264/JPEG 分片，Android 本地重组并经 `MediaCodec/OpenGL` 渲染到 `SurfaceView`。
+* **BLE 控制链路**：BLE 用于低带宽控制命令（摇杆/按钮），视频链路不走 BLE。
+* **录像保存**：在线H264流与离线UDP重组帧都统一进 `FFmpeg/MediaCodec` 转封装 MP4。
+* **本期实现检查**：当前仓库 `UdpVisionManager` 仅实现了发送端分片能力，Control 页尚未接入 UDP 接收与渲染，属于待实现项。
+
+#### 技术资料链接
+* [Android Media3 HLS 官方文档](https://developer.android.com/media/media3/exoplayer/hls)
+* [Media3 HlsMediaSource API](https://developer.android.com/reference/androidx/media3/exoplayer/hls/HlsMediaSource.Factory)
+* [FFmpeg 官方文档](https://ffmpeg.org/ffmpeg.html)
+* [MinIO Java SDK API](https://minio-java.min.io/io/minio/package-summary.html)
+* [tus Java Client（断点续传协议可选）](https://github.com/tus/tus-java-client)
 
 #### UML静态图（类图）
 ```mermaid
@@ -1068,11 +1083,24 @@ gantt
     H264/UDP转MP4编码              :r1, 70, 220
 ```
 
-### Mine 模块（本地视频）
+### Mine 模块（Setting + 视频）
 
 #### 功能职责
-* 实现本地视频选择与播放（本期实现）。
-* 保留 `Setting(修改密码/登出)`、`云录播播放`、`本地视频上传云端` 为 TODO。
+* 顶部显示头像与大号 `UserAccount`，下方提供 `Setting` 与 `视频` 两个一级入口。
+* **Setting**：提供修改密码、登出（业务简单，轻量实现）。
+* **视频**：
+  * 云上录播记录播放（服务端 MinIO 视频源转 m3u8，Android 播放）
+  * 本地视频播放（MP4）
+  * 本地视频上传云端（支持断点续传、下载）
+
+#### UI/交互设计
+* Mine 首页为两层：
+  * 个人卡片（Avatar + UserAccount + 两个大按钮）
+  * 子页面区域（SettingPanel / VideoPanel）
+* VideoPanel 包含三个子 Tab：
+  * `CloudRecord`：云录播列表 + 播放器 + 下载按钮
+  * `LocalPlay`：本地 MP4 选择与播放
+  * `Upload`：上传任务列表（进度、暂停、继续、重试）
 
 #### UML静态图（类图）
 ```mermaid
@@ -1080,28 +1108,95 @@ classDiagram
     class MineScreen
     class MineVm {
       -_uiState: StateFlow~MineState~
+      -_dataState: StateFlow~MineDataState~
       -_effect: Channel~MineEffect~
       +processIntent(intent)
     }
+    class MineVideoManager {
+      +fetchCloudRecordList(...)
+      +resolveCloudPlayUrl(...)
+      +downloadCloudVideo(...)
+      +playLocalVideo(...)
+    }
+    class MineUploadManager {
+      +createUploadSession(...)
+      +uploadChunk(...)
+      +resumeUpload(...)
+      +completeUpload(...)
+    }
+    class MineUploadController {
+      +scheduleUpload(...)
+      +pauseTask(...)
+      +resumeTask(...)
+    }
     class MineState
+    class MineDataState
     class MineIntent
     class MineEffect
+    class ExoPlayer
     class VideoView
+    class ApiRequestImpl
+
     MineScreen --> MineVm
+    MineVm --> MineVideoManager
+    MineVm --> MineUploadController
+    MineUploadController --> MineUploadManager
+    MineVideoManager --> ApiRequestImpl
+    MineUploadManager --> ApiRequestImpl
+    MineVideoManager --> ExoPlayer
+    MineVideoManager --> VideoView
     MineVm --> MineState
+    MineVm --> MineDataState
     MineVm --> MineIntent
     MineVm --> MineEffect
-    MineScreen --> VideoView
+```
+
+#### UML静态图（对象图）
+```mermaid
+classDiagram
+    class mineVm_1 {
+      tab = VIDEO
+      subTab = CLOUD_RECORD
+      currentUser = user_1001
+    }
+    class uploadTask_1 {
+      file = local_a.mp4
+      uploadedBytes = 10485760
+      state = UPLOADING
+    }
+    class cloudRecord_1 {
+      objectName = v/2026/03/a.m3u8
+      playUrl = signed-url
+    }
+    mineVm_1 --> uploadTask_1
+    mineVm_1 --> cloudRecord_1
+```
+
+#### UML动态图（状态图）
+```mermaid
+stateDiagram-v2
+    [*] --> MineHome
+    MineHome --> SettingTab : click Setting
+    MineHome --> VideoTab : click 视频
+    VideoTab --> CloudRecord : subTab cloud
+    VideoTab --> LocalPlay : subTab local
+    VideoTab --> Uploading : subTab upload
+    Uploading --> UploadPaused : pause
+    UploadPaused --> Uploading : resume
+    Uploading --> UploadDone : complete
+    SettingTab --> LoggedOut : logout
 ```
 
 #### UML动态图（活动图）
 ```mermaid
 flowchart TD
-    A[点击选择本地视频] --> B[OpenDocument/GetContent]
-    B --> C[返回Uri]
-    C --> D[MineVm更新selectedVideoUri]
-    D --> E[VideoView setVideoURI]
-    E --> F[播放/暂停切换]
+    A[进入Mine页] --> B[显示头像+账号]
+    B --> C{选择模块}
+    C -- Setting --> D[修改密码/登出]
+    C -- 视频 --> E{子Tab}
+    E -- 云录播 --> F[请求云录播列表 -> 播放]
+    E -- 本地播放 --> G[选择本地MP4 -> 播放]
+    E -- 上传 --> H[创建上传会话 -> 分片上传 -> 完成]
 ```
 
 #### UML动态图（时序图）
@@ -1109,29 +1204,73 @@ flowchart TD
 sequenceDiagram
     participant UI as MineScreen
     participant VM as MineVm
-    participant Picker as ActivityResultLauncher
-    participant VV as VideoView
-    UI->>VM: PickLocalVideoClick
-    VM-->>UI: Effect.OpenLocalVideoPicker
-    UI->>Picker: launch("video/*")
-    Picker-->>UI: Uri
-    UI->>VM: OnLocalVideoSelected(uri)
-    VM-->>UI: uiState.selectedVideoUri
-    UI->>VV: setVideoURI + start/pause
+    participant VC as MineUploadController
+    participant UM as MineUploadManager
+    participant API as ApiRequestImpl
+    participant SB as SpringBoot
+    UI->>VM: SelectLocalVideo(fileUri)
+    UI->>VM: StartUpload
+    VM->>VC: scheduleUpload(fileUri)
+    VC->>UM: createUploadSession()
+    UM->>API: POST /video/upload/init
+    API->>SB: init request
+    SB-->>API: uploadId/chunkSize
+    loop chunk
+      VC->>UM: uploadChunk(index, bytes)
+      UM->>API: POST /video/upload/chunk
+      API->>SB: chunk request
+      SB-->>API: uploadedOffset
+    end
+    VC->>UM: completeUpload()
+    UM->>API: POST /video/upload/complete
+```
+
+#### UML动态图（通信图）
+```mermaid
+flowchart LR
+    MineScreen --> MineVm
+    MineVm --> MineVideoManager
+    MineVm --> MineUploadController
+    MineUploadController --> MineUploadManager
+    MineVideoManager --> ApiRequestImpl
+    MineUploadManager --> ApiRequestImpl
+    ApiRequestImpl --> SpringBoot[(SpringBoot)]
+    MineVideoManager --> ExoPlayer
+    MineVideoManager --> VideoView
 ```
 
 #### 功能线程甘特图
 ```mermaid
 gantt
-    title Mine本地视频播放线程甘特图
+    title Mine模块线程甘特图
     dateFormat  X
     axisFormat %L ms
     section Main线程
-    文件选择器回调                :m1, 0, 35
-    UI状态更新与控件绑定          :m2, 35, 40
+    模块切换与状态渲染              :m1, 0, 40
+    本地文件选择回调                :m2, 25, 30
+    section IO线程
+    云列表查询/签名URL获取          :i1, 20, 80
+    上传分片读盘与网络发送          :i2, 35, 220
+    下载任务写盘                    :i3, 60, 180
     section Media线程
-    本地视频解码播放              :v1, 45, 180
+    ExoPlayer/VideoView解码播放      :p1, 45, 240
 ```
+
+#### 可行方案与资料
+* **云录播播放**
+  * SpringBoot 读取 MinIO 对象，后台任务用 FFmpeg 将 MP4 切片成 HLS（m3u8 + ts/fmp4），返回播放 URL。
+  * Android 用 Media3 ExoPlayer 拉流播放 m3u8。
+* **本地播放**
+  * 轻量方案：`VideoView` 直接播放 MP4。
+  * 可扩展方案：`ExoPlayer` 统一本地+网络播放栈（便于缓存策略一致）。
+* **上传断点续传**
+  * 主方案：自定义 `uploadId + chunkIndex + offset` 分片接口，服务端持久化上传进度；完成后 MinIO compose/merge。
+  * 可选方案：Tus 协议（标准化 resumable upload）。
+* 参考：
+  * [Android Media3 HLS](https://developer.android.com/media/media3/exoplayer/hls)
+  * [FFmpeg Documentation](https://ffmpeg.org/ffmpeg.html)
+  * [MinIO Java SDK](https://minio-java.min.io/io/minio/package-summary.html)
+  * [tus-java-client](https://github.com/tus/tus-java-client)
 
 ## Manager管理类设计
 
@@ -2288,6 +2427,160 @@ gantt
 * **策略模式**：发送链路按 `WS优先 -> HTTP回退` 策略执行。
 * **并发/网络说明**：高频摇杆指令应在 IO 线程处理，避免主线程阻塞造成输入抖动和背压堆积。
 
+### Mine视频管理模块（MineVideoManager + MineUploadManager + MineUploadController）
+
+#### 功能职责
+* `MineVideoManager`：聚合“云录播列表查询、云播放 URL 解析、本地播放、下载任务”。
+* `MineUploadManager`：聚合“上传初始化、分片上传、断点恢复、上传完成”。
+* `MineUploadController`：处理上传队列调度、并发窗口、失败重试与暂停恢复。
+
+#### UML静态图（类图）
+```mermaid
+classDiagram
+    class MineVideoManager {
+      +fetchCloudRecordList(userId)
+      +resolveCloudPlayUrl(videoId)
+      +downloadCloudVideo(videoId)
+      +openLocalVideo(uri)
+    }
+    class MineUploadManager {
+      +createUploadSession(fileMeta)
+      +uploadChunk(uploadId,chunkIndex,bytes)
+      +resumeUpload(uploadId)
+      +completeUpload(uploadId)
+    }
+    class MineUploadController {
+      +scheduleUpload(fileUri)
+      +pauseTask(taskId)
+      +resumeTask(taskId)
+      +retryTask(taskId)
+    }
+    class ApiRequestImpl
+    class MineUploadTask
+    MineVideoManager --> ApiRequestImpl
+    MineUploadManager --> ApiRequestImpl
+    MineUploadController --> MineUploadManager
+    MineUploadController --> MineUploadTask
+```
+
+#### UML静态图（对象图）
+```mermaid
+classDiagram
+    class uploadController_1 {
+      running = 2
+      waiting = 3
+    }
+    class task_20260312 {
+      file = demo.mp4
+      state = PAUSED
+      uploadedOffset = 73400320
+    }
+    uploadController_1 --> task_20260312
+```
+
+#### UML动态图（状态图）
+```mermaid
+stateDiagram-v2
+    [*] --> Idle
+    Idle --> Preparing : createUploadSession
+    Preparing --> Uploading : get uploadId
+    Uploading --> Paused : user pause
+    Paused --> Uploading : resume
+    Uploading --> Failed : network fail
+    Failed --> Uploading : retry
+    Uploading --> Completed : completeUpload
+```
+
+#### UML动态图（活动图）
+```mermaid
+flowchart TD
+    A[选择本地视频] --> B[MineUploadController创建任务]
+    B --> C[MineUploadManager初始化上传会话]
+    C --> D[按chunk读取文件并上传]
+    D --> E{成功?}
+    E -- 否 --> F[记录offset并重试]
+    E -- 是 --> G{最后分片?}
+    G -- 否 --> D
+    G -- 是 --> H[completeUpload并落库记录]
+```
+
+#### UML动态图（时序图）
+```mermaid
+sequenceDiagram
+    participant VM as MineVm
+    participant UC as MineUploadController
+    participant UM as MineUploadManager
+    participant API as ApiRequestImpl
+    participant SB as SpringBoot
+    VM->>UC: scheduleUpload(fileUri)
+    UC->>UM: createUploadSession(meta)
+    UM->>API: POST /video/upload/init
+    API->>SB: init
+    SB-->>API: uploadId/chunkSize/uploadedOffset
+    loop chunk
+      UC->>UM: uploadChunk(...)
+      UM->>API: POST /video/upload/chunk
+      API->>SB: chunk
+      SB-->>API: nextOffset
+    end
+    UC->>UM: completeUpload(uploadId)
+    UM->>API: POST /video/upload/complete
+```
+
+#### UML动态图（通信图）
+```mermaid
+flowchart LR
+    MineVm --> MineVideoManager
+    MineVm --> MineUploadController
+    MineUploadController --> MineUploadManager
+    MineVideoManager --> ApiRequestImpl
+    MineUploadManager --> ApiRequestImpl
+    ApiRequestImpl --> SpringBoot
+```
+
+#### 功能线程甘特图
+```mermaid
+gantt
+    title Mine上传管理线程甘特图
+    dateFormat  X
+    axisFormat %L
+    section Main线程
+    任务创建/暂停恢复命令           :m1, 0, 35
+    section IO线程
+    分片读盘                        :i1, 20, 200
+    分片上传                        :i2, 30, 220
+    section DB线程
+    上传进度持久化                  :d1, 35, 140
+```
+
+### 控制台日志模块（ControlAgentLogManager + ControlAgentLogController）
+
+#### 功能职责
+* 在线：拉取 SpringBoot `Agent指令日志`，支持按 `user_id/agent_id/time` 查询。
+* 离线：将日志写入 Room，支持断网回看。
+* UI：Control 页面底部实时输出日志 JSON 文本。
+
+#### UML静态图（类图）
+```mermaid
+classDiagram
+    class ControlAgentLogManager {
+      +fetchOnlineLogs(userId,agentId,page,size)
+      +appendLocalLogs(logs)
+      +queryLocalLogs(agentId,limit)
+    }
+    class ControlAgentLogController {
+      +syncLogs(...)
+      +onNewWsLog(...)
+    }
+    class ControlAgentLogEntity
+    class ControlAgentLogDao
+    class ApiRequestImpl
+    ControlAgentLogManager --> ApiRequestImpl
+    ControlAgentLogManager --> ControlAgentLogDao
+    ControlAgentLogController --> ControlAgentLogManager
+    ControlAgentLogDao --> ControlAgentLogEntity
+```
+
 ## 本地数据库设计（Room）
 
 ### 设计说明
@@ -2295,13 +2588,15 @@ gantt
 * 会话表用于保存当前登录用户快照，便于冷启动恢复。
 * Agent 缓存表与聊天消息表用于离线展示、重连补偿和锚点分页。
 * 头像采用 Glide/Coil 磁盘缓存，Room 保存头像 URL 与业务字段。
-* 控制台视频本期不新增 Room 表；离线可播放视频依赖系统本地文件（`Uri`）直接回放，后续如需“最近播放列表”可扩展 `local_video_cache` 表。
+* 新增 `control_agent_log` 表，缓存 Agent 指令日志（在线查询 + 离线回放）。
+* 离线视频本期依赖系统本地文件（`Uri`）直接回放；后续可扩展 `local_video_cache`。
 
 ### ER 图（合并）
 ```mermaid
 erDiagram
     USER_SESSION ||--o{ AGENT_CACHE : has
     AGENT_CACHE ||--o{ CHAT_MESSAGE : has
+    AGENT_CACHE ||--o{ CONTROL_AGENT_LOG : has
     USER_SESSION {
       long id PK
       long user_id
@@ -2329,16 +2624,25 @@ erDiagram
       int role
       long created_at
     }
+    CONTROL_AGENT_LOG {
+      long id PK
+      long user_id
+      long agent_id
+      long log_time
+      string log_content
+    }
 ```
 
 ### DAO 设计
 * `UserDao`：会话读写（`upsert/getById/deleteById`）。
 * `AgentCacheDao`：Agent 缓存读写（`upsert/upsertBatch/queryByUser/deleteByAgentId`）。
 * `ChatMessageDao`：消息分页与批量写入（`queryLastByAgent/queryByAnchorBefore/queryByAnchorAfter/upsertBatch`）。
+* `ControlAgentLogDao`：控制台日志读写（`upsertBatch/queryByAgentIdLimit/queryByTimeRange`）。
 
 ### 数据结构与索引约束
 * `chat_message` 复合索引：`(agent_id, chat_timestamp, id)`。
 * `chat_message` 辅助索引：`(user_id, agent_id)`。
+* `control_agent_log` 索引：`(user_id, agent_id, log_time)`。
 * 主键统一 `id: Long`，遵循项目数据库规范。
 
 ## 网络接口契约（Auth / Agent / Chat）
@@ -2359,7 +2663,14 @@ erDiagram
 * `POST /chat/vision/upload/img`：视觉图片上传任务。
 * `GET /control/status`：查询设备控制态（`deviceId` -> `ControlStatusResponse`）。
 * `POST /control/command`：发送控制台指令（`ControlCommandRequest` -> `ControlCommandResponse`）。
+* `GET /control/log/list`：在线查询 Agent 控制日志（`userId/agentId/page/size`）。
 * `WS /control/ws`：控制台长连接（App/RK 状态同步 + 低时延命令通道）。
+* `POST /video/upload/init`：创建分片上传会话，返回 `uploadId/chunkSize/uploadedOffset`。
+* `POST /video/upload/chunk`：上传分片（支持断点续传）。
+* `POST /video/upload/complete`：完成上传并落库视频元数据。
+* `GET /video/cloud/list`：查询用户云录播列表。
+* `GET /video/cloud/play-url`：按 videoId 获取播放地址（m3u8）。
+* `GET /video/cloud/download-url`：按 videoId 获取下载地址（MP4/TS）。
 
 ### 契约原则
 * 非文件上传接口统一使用请求体 DTO；上传接口使用 Multipart。
@@ -2367,6 +2678,7 @@ erDiagram
 * 与 SpringBoot 契约字段保持一致，ID 传输按项目规范执行。
 * `getByAnchor` 使用 `before:Boolean` 表示方向（true历史/false补偿），并统一 limit 上限。
 * 控制台命令采用 `WS优先 + HTTP回退` 双链路，降低实时场景丢包影响。
+* 上传链路采用 `uploadId + chunkIndex + offset`，客户端与服务端都持久化进度实现断点续传。
 
 
 

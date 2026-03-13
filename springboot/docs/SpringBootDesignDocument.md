@@ -601,6 +601,7 @@ gantt
 * 提供设备控制状态查询接口（`/control/status`）。
 * 提供控制指令下发接口（`/control/command`）。
 * 提供控制台 WS 通道（`/control/ws`），用于 App/RK 长连接状态同步与低时延命令桥接。
+* 提供 Agent 指令日志在线查询（`/control/log/list`），并通过 WS 下发实时日志片段。
 * RK 端 MQTT/Agent 落地逻辑本期保留 TODO（先完成三端协议与路由骨架）。
 
 #### UML静态图（类图）
@@ -609,6 +610,7 @@ classDiagram
     class ControlController {
       +getControlStatus(deviceId)
       +sendControlCommand(request)
+      +getControlAgentLogs(userId,agentId,page,size)
     }
     class ControlConsoleService
     class ControlConsoleServiceImpl
@@ -621,6 +623,9 @@ classDiagram
     class ControlCommandRequest
     class ControlStatusResponse
     class ControlCommandResponse
+    class ControlAgentLogResponse
+    class ControlAgentLogService
+    class ControlAgentLogMapper
 
     ControlController --> ControlConsoleService
     ControlConsoleServiceImpl ..|> ControlConsoleService
@@ -629,6 +634,8 @@ classDiagram
     ControlConsoleService --> ControlCommandRequest
     ControlConsoleService --> ControlStatusResponse
     ControlConsoleService --> ControlCommandResponse
+    ControlController --> ControlAgentLogService
+    ControlAgentLogService --> ControlAgentLogMapper
 ```
 
 #### UML静态图（对象图）
@@ -673,7 +680,8 @@ flowchart TD
     C --> D{RK WS在线?}
     D -- 是 --> E[ControlSessionManager转发到RK]
     D -- 否 --> F[返回未送达 + TODO队列]
-    E --> G[返回accepted=true + traceId]
+    E --> G[写入Agent指令日志]
+    G --> H[返回accepted=true + traceId]
     F --> H[返回accepted=false + traceId]
 ```
 
@@ -684,6 +692,7 @@ sequenceDiagram
     participant Ctl as ControlController
     participant Svc as ControlConsoleServiceImpl
     participant Mgr as ControlSessionManager
+    participant LogSvc as ControlAgentLogService
     participant Rk as RK Client
     App->>Ctl: POST /control/command
     Ctl->>Svc: dispatchCommand(request)
@@ -691,6 +700,7 @@ sequenceDiagram
     alt rk connected
       Mgr->>Rk: WS COMMAND
       Rk-->>Mgr: ack(optional)
+      Svc->>LogSvc: saveControlLog(...)
       Mgr-->>Svc: true
       Svc-->>Ctl: accepted=true
     else rk offline
@@ -732,6 +742,134 @@ gantt
 * **RTMP 方案（推荐主链路）**：端到端成熟，配合 Nginx 稳定；SpringBoot 只做控制面。
 * **UDP 方案（可选数据面）**：可做极低延迟转发，但需要额外处理丢包/乱序/重组与回压。
 * **命令链路建议**：控制命令 `WS优先 + HTTP回退`；RK 离线可扩展消息队列/MQTT（本期 TODO）。
+* **日志链路建议**：控制命令与 Agent JSON 指令都写 `agent_log`，支持在线分页与离线同步。
+
+### Mine 视频模块（云录播 + 上传下载）
+
+#### 功能职责
+* 提供云录播列表查询与播放 URL 解析。
+* 提供本地视频上传（断点续传）与下载 URL 获取。
+* 后台任务提供 MinIO 对象转 m3u8（FFmpeg）能力。
+
+#### UML静态图（类图）
+```mermaid
+classDiagram
+    class VideoController {
+      +initUpload(request)
+      +uploadChunk(...)
+      +completeUpload(request)
+      +getCloudVideoList(userId)
+      +getCloudPlayUrl(videoId)
+      +getCloudDownloadUrl(videoId)
+    }
+    class VideoService
+    class VideoServiceImpl
+    class VideoUploadSessionManager
+    class OssService
+    class VideoRecordMapper
+    class FfmpegTranscodeManager
+    VideoController --> VideoService
+    VideoServiceImpl ..|> VideoService
+    VideoServiceImpl --> VideoUploadSessionManager
+    VideoServiceImpl --> OssService
+    VideoServiceImpl --> VideoRecordMapper
+    VideoServiceImpl --> FfmpegTranscodeManager
+```
+
+#### UML静态图（对象图）
+```mermaid
+classDiagram
+    class session_u123 {
+      uploadId = up_abc
+      uploadedOffset = 52428800
+      chunkSize = 5242880
+    }
+    class video_1 {
+      objectName = user123/video/demo.mp4
+      hlsState = TRANSCODING
+    }
+    session_u123 --> video_1
+```
+
+#### UML动态图（状态图）
+```mermaid
+stateDiagram-v2
+    [*] --> Created
+    Created --> Uploading : initUpload
+    Uploading --> Paused : client pause/disconnect
+    Paused --> Uploading : resume by offset
+    Uploading --> Uploaded : completeUpload
+    Uploaded --> Transcoding : ffmpeg job
+    Transcoding --> Ready : m3u8 generated
+    Transcoding --> Failed : transcode error
+```
+
+#### UML动态图（活动图）
+```mermaid
+flowchart TD
+    A[客户端initUpload] --> B[生成uploadId与会话]
+    B --> C[循环上传chunk]
+    C --> D[校验offset并写临时块]
+    D --> E{最后分片?}
+    E -- 否 --> C
+    E -- 是 --> F[completeUpload合并对象]
+    F --> G[触发FFmpeg转m3u8任务]
+    G --> H[写video_record并返回播放信息]
+```
+
+#### UML动态图（时序图）
+```mermaid
+sequenceDiagram
+    participant App
+    participant VC as VideoController
+    participant VS as VideoServiceImpl
+    participant Sess as VideoUploadSessionManager
+    participant Oss as OssService
+    participant FF as FfmpegTranscodeManager
+    App->>VC: POST /video/upload/init
+    VC->>VS: initUpload
+    VS->>Sess: createSession
+    App->>VC: POST /video/upload/chunk
+    VC->>VS: uploadChunk
+    VS->>Sess: validate offset
+    VS->>Oss: put chunk object
+    App->>VC: POST /video/upload/complete
+    VS->>Oss: compose/merge object
+    VS->>FF: transcode to m3u8 (async)
+```
+
+#### UML动态图（通信图）
+```mermaid
+flowchart LR
+    Android --> VideoController
+    VideoController --> VideoService
+    VideoService --> UploadSessionMgr
+    VideoService --> OssService
+    VideoService --> VideoRecordMapper
+    VideoService --> FfmpegTranscodeManager
+    FfmpegTranscodeManager --> MinIO[(MinIO)]
+```
+
+#### 功能线程甘特图
+```mermaid
+gantt
+    title Mine视频服务线程甘特图
+    dateFormat  X
+    axisFormat %L ms
+    section HTTP线程
+    init/chunk/complete接口处理          :h1, 0, 120
+    section IO线程
+    分片写入MinIO                         :i1, 20, 200
+    section 异步任务线程
+    FFmpeg转码m3u8                        :t1, 120, 400
+    section DB线程
+    video_record状态更新                  :d1, 80, 160
+```
+
+#### 可行方案与资料
+* [FFmpeg 官方文档](https://ffmpeg.org/ffmpeg.html)
+* [MinIO Java SDK](https://minio-java.min.io/io/minio/package-summary.html)
+* [tus-java-server（可选断点续传协议）](https://github.com/tomdesair/tus-java-server)
 
 
 ## 数据库设计（MySQL）
@@ -741,12 +879,16 @@ gantt
 * 主键和业务 `userId` 全链路统一为 `Long/BIGINT`。
 * 聊天消息表支持锚点分页，采用 `chat_timestamp` 作为排序主轴。
 * 新增复合索引 `(agent_id, chat_timestamp, id)`，用于历史/补偿消息高效分页。
+* 新增 `agent_log`：存储 Agent 控制台日志（在线查询 + 离线同步）。
+* 新增 `video_record`：存储用户上传视频、转码状态、播放/下载对象索引。
 
 ### ER 图（合并）
 ```mermaid
 erDiagram
     USER ||--o{ AGENT : owns
     AGENT ||--o{ CHAT_MESSAGE : has
+    AGENT ||--o{ AGENT_LOG : has
+    USER ||--o{ VIDEO_RECORD : owns
     USER ||--o{ CHAT_MESSAGE : sends
     USER {
       long id PK
@@ -771,6 +913,22 @@ erDiagram
       long chat_timestamp
       int role
     }
+    AGENT_LOG {
+      long id PK
+      long user_id
+      long agent_id
+      long log_time
+      string log_content
+    }
+    VIDEO_RECORD {
+      long id PK
+      long user_id
+      string object_name
+      string hls_object_name
+      string status
+      long created_at
+      long updated_at
+    }
 ```
 
 ### 主键规范说明
@@ -794,7 +952,14 @@ erDiagram
 * `POST /chat/getByAnchor`：请求体 `ChatByAnchorRequest(agentId,anchorTimestamp,before,limit)`，按锚点向前/向后分页 -> `ChatMessageResponse`
 * `GET /control/status`：查询控制台设备连接态（`deviceId`）-> `ControlStatusResponse`
 * `POST /control/command`：发送控制台命令（`ControlCommandRequest`）-> `ControlCommandResponse`
+* `GET /control/log/list`：分页查询 Agent 指令日志 -> `ControlAgentLogResponse`
 * `WS /control/ws`：控制台长连接（`clientType=deviceId` 查询参数），用于状态同步与低时延命令桥接
+* `POST /video/upload/init`：初始化断点上传 -> `VideoUploadInitResponse`
+* `POST /video/upload/chunk`：分片上传 -> `VideoUploadChunkResponse`
+* `POST /video/upload/complete`：完成上传 -> `VideoUploadCompleteResponse`
+* `GET /video/cloud/list`：查询云录播列表 -> `VideoCloudListResponse`
+* `GET /video/cloud/play-url`：查询播放地址（m3u8）-> `VideoPlayUrlResponse`
+* `GET /video/cloud/download-url`：查询下载地址（mp4）-> `VideoDownloadUrlResponse`
 
 ### 契约原则
 * 非文件上传接口使用 `@RequestBody` + `jakarta.validation` 注解校验。
@@ -802,6 +967,7 @@ erDiagram
 * 参数校验异常统一由全局异常处理器处理，业务错误类型统一维护在 `com/openapi/domain/constant/error`。
 * `getByAnchor` 使用 `before:Boolean` 表示方向（true历史/false补偿），并限制最大分页条数。
 * 控制台命令链路采用 `WS优先 + HTTP回退`，确保实时性与可达性平衡。
+* 视频上传链路采用会话化分片协议（uploadId + offset + chunkIndex），可恢复中断上传。
 
 ## Domain 转换模块（Converter）
 
