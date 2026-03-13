@@ -4,8 +4,12 @@ import android.content.ContentResolver
 import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.core.baseutil.network.BaseResponse
+import com.core.baseutil.network.OnSuccessCallback
+import com.core.baseutil.network.OnThrowableCallback
 import com.magicvector.activity.test.ComposeTestActivity
 import com.data.domain.dto.request.UserPasswordUpdateRequest
+import com.data.domain.dto.response.UserPasswordUpdateResponse
 import com.magicvector.MainApplication
 import com.magicvector.manager.mine.MineUploadController
 import com.magicvector.manager.mine.MineUploadManager
@@ -85,12 +89,18 @@ class MineVm : ViewModel() {
         }
         api.updatePassword(
             request = request,
-            onSuccessCallback = { response ->
-                val ok = response?.data?.updated == true
-                sendEffect(MineEffect.ShowToast(if (ok) "密码修改成功" else response?.data?.message ?: "修改失败"))
+            onSuccessCallback = object : OnSuccessCallback<BaseResponse<UserPasswordUpdateResponse>> {
+                override fun onResponse(response: BaseResponse<UserPasswordUpdateResponse>?) {
+                    val ok = response?.data?.updated == true
+                    sendEffect(effect = MineEffect.ShowToast(
+                        if (ok) "密码修改成功" else response?.data?.message ?: "修改失败")
+                    )
+                }
             },
-            throwableCallback = {
-                sendEffect(MineEffect.ShowToast("修改密码失败"))
+            throwableCallback = object : OnThrowableCallback {
+                override fun callback(throwable: Throwable?) {
+                    sendEffect(effect = MineEffect.ShowToast("修改密码失败"))
+                }
             }
         )
     }
