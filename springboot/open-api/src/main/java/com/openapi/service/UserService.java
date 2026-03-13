@@ -22,6 +22,8 @@ public interface UserService {
 
     boolean checkPassword(@NotNull String account, @NotNull String password);
 
+    boolean updatePasswordById(@NotNull Long userId, @NotNull String oldPassword, @NotNull String newPassword);
+
     @Nullable UserModule getUserModuleById(@NotNull Long id);
 
     @Nullable UserModule getUserModuleByAccount(@NotNull String account);

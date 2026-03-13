@@ -5,8 +5,10 @@ import com.openapi.domain.constant.error.CommonExceptions;
 import com.openapi.domain.constant.error.UserExceptions;
 import com.openapi.domain.dto.BaseResponse;
 import com.openapi.domain.dto.request.UserLoginRequest;
+import com.openapi.domain.dto.request.UserPasswordUpdateRequest;
 import com.openapi.domain.dto.request.UserTokenVerifyRequest;
 import com.openapi.domain.dto.resonse.UserAuthResponse;
+import com.openapi.domain.dto.resonse.UserPasswordUpdateResponse;
 import com.openapi.domain.dto.resonse.UserTokenVerifyResponse;
 import com.openapi.domain.module.user.UserModule;
 import jakarta.validation.Valid;
@@ -103,6 +105,24 @@ public class UserController {
         }
         response.setValid(true);
         response.setMessage("ok");
+        return BaseResponse.getResponseEntitySuccess(response);
+    }
+
+    @PostMapping("/password/update")
+    public BaseResponse<UserPasswordUpdateResponse> updatePassword(
+            @Valid @RequestBody UserPasswordUpdateRequest request
+    ) {
+        UserPasswordUpdateResponse response = new UserPasswordUpdateResponse();
+        Long userId;
+        try {
+            userId = Long.parseLong(request.getUserId());
+        } catch (Exception e) {
+            return BaseResponse.LogBackError(CommonExceptions.PARAM_ERROR);
+        }
+        response.setUserId(userId);
+        boolean updated = userService.updatePasswordById(userId, request.getOldPassword(), request.getNewPassword());
+        response.setUpdated(updated);
+        response.setMessage(updated ? "ok" : "旧密码错误或用户不存在");
         return BaseResponse.getResponseEntitySuccess(response);
     }
 }

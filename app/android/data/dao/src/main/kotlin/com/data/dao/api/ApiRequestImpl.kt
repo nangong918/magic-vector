@@ -8,14 +8,25 @@ import com.core.baseutil.network.OnThrowableCallback
 import com.data.domain.dto.request.AgentDeleteRequest
 import com.data.domain.dto.request.ChatByAnchorRequest
 import com.data.domain.dto.request.ControlCommandRequest
+import com.data.domain.dto.request.UserPasswordUpdateRequest
+import com.data.domain.dto.request.VideoUploadCompleteRequest
+import com.data.domain.dto.request.VideoUploadInitRequest
 import com.data.domain.dto.request.UserLoginRequest
 import com.data.domain.dto.request.UserTokenVerifyRequest
 import com.data.domain.dto.response.AgentLastChatListResponse
 import com.data.domain.dto.response.AgentListResponse
 import com.data.domain.dto.response.AgentResponse
 import com.data.domain.dto.response.ChatMessageResponse
+import com.data.domain.dto.response.ControlAgentLogResponse
 import com.data.domain.dto.response.ControlCommandResponse
 import com.data.domain.dto.response.ControlStatusResponse
+import com.data.domain.dto.response.UserPasswordUpdateResponse
+import com.data.domain.dto.response.VideoCloudListResponse
+import com.data.domain.dto.response.VideoDownloadUrlResponse
+import com.data.domain.dto.response.VideoPlayUrlResponse
+import com.data.domain.dto.response.VideoUploadChunkResponse
+import com.data.domain.dto.response.VideoUploadCompleteResponse
+import com.data.domain.dto.response.VideoUploadInitResponse
 import com.data.domain.dto.response.UserAuthResponse
 import com.data.domain.dto.response.UserTokenVerifyResponse
 import okhttp3.MultipartBody
@@ -263,6 +274,101 @@ open class ApiRequestImpl(apiRequest: ApiRequest) : BaseApiRequestImpl() {
         )
     }
 
+    fun getControlAgentLogs(
+        userId: String,
+        agentId: String?,
+        page: Int,
+        size: Int,
+        onSuccessCallback: OnSuccessCallback<BaseResponse<ControlAgentLogResponse>>?,
+        throwableCallback: OnThrowableCallback?
+    ) {
+        sendRequestCallback(
+            apiCall = { mApi.getControlAgentLogs(userId, agentId, page, size) },
+            successCallback = onSuccessCallback,
+            throwableCallback = throwableCallback
+        )
+    }
+
+    fun initVideoUpload(
+        request: VideoUploadInitRequest,
+        onSuccessCallback: OnSuccessCallback<BaseResponse<VideoUploadInitResponse>>?,
+        throwableCallback: OnThrowableCallback?
+    ) {
+        sendRequestCallback(
+            apiCall = { mApi.initVideoUpload(request) },
+            successCallback = onSuccessCallback,
+            throwableCallback = throwableCallback
+        )
+    }
+
+    fun uploadVideoChunk(
+        uploadId: RequestBody,
+        userId: RequestBody,
+        chunkIndex: RequestBody,
+        offset: RequestBody,
+        chunkFile: MultipartBody.Part,
+        onSuccessCallback: OnSuccessCallback<BaseResponse<VideoUploadChunkResponse>>?,
+        throwableCallback: OnThrowableCallback?
+    ) {
+        sendRequestCallback(
+            apiCall = {
+                mApi.uploadVideoChunk(uploadId, userId, chunkIndex, offset, chunkFile)
+            },
+            successCallback = onSuccessCallback,
+            throwableCallback = throwableCallback
+        )
+    }
+
+    fun completeVideoUpload(
+        request: VideoUploadCompleteRequest,
+        onSuccessCallback: OnSuccessCallback<BaseResponse<VideoUploadCompleteResponse>>?,
+        throwableCallback: OnThrowableCallback?
+    ) {
+        sendRequestCallback(
+            apiCall = { mApi.completeVideoUpload(request) },
+            successCallback = onSuccessCallback,
+            throwableCallback = throwableCallback
+        )
+    }
+
+    fun getCloudVideoList(
+        userId: String,
+        page: Int,
+        size: Int,
+        onSuccessCallback: OnSuccessCallback<BaseResponse<VideoCloudListResponse>>?,
+        throwableCallback: OnThrowableCallback?
+    ) {
+        sendRequestCallback(
+            apiCall = { mApi.getCloudVideoList(userId, page, size) },
+            successCallback = onSuccessCallback,
+            throwableCallback = throwableCallback
+        )
+    }
+
+    fun getCloudVideoPlayUrl(
+        videoId: String,
+        onSuccessCallback: OnSuccessCallback<BaseResponse<VideoPlayUrlResponse>>?,
+        throwableCallback: OnThrowableCallback?
+    ) {
+        sendRequestCallback(
+            apiCall = { mApi.getCloudVideoPlayUrl(videoId) },
+            successCallback = onSuccessCallback,
+            throwableCallback = throwableCallback
+        )
+    }
+
+    fun getCloudVideoDownloadUrl(
+        videoId: String,
+        onSuccessCallback: OnSuccessCallback<BaseResponse<VideoDownloadUrlResponse>>?,
+        throwableCallback: OnThrowableCallback?
+    ) {
+        sendRequestCallback(
+            apiCall = { mApi.getCloudVideoDownloadUrl(videoId) },
+            successCallback = onSuccessCallback,
+            throwableCallback = throwableCallback
+        )
+    }
+
     fun register(
         avatar: MultipartBody.Part?,
         account: RequestBody,
@@ -308,6 +414,18 @@ open class ApiRequestImpl(apiRequest: ApiRequest) : BaseApiRequestImpl() {
             apiCall = {
                 mApi.verifyAccessToken(request)
             },
+            successCallback = onSuccessCallback,
+            throwableCallback = throwableCallback
+        )
+    }
+
+    fun updatePassword(
+        request: UserPasswordUpdateRequest,
+        onSuccessCallback: OnSuccessCallback<BaseResponse<UserPasswordUpdateResponse>>?,
+        throwableCallback: OnThrowableCallback?
+    ) {
+        sendRequestCallback(
+            apiCall = { mApi.updatePassword(request) },
             successCallback = onSuccessCallback,
             throwableCallback = throwableCallback
         )

@@ -5,6 +5,7 @@ import com.openapi.component.manager.control.ControlSessionManager;
 import com.openapi.domain.dto.request.ControlCommandRequest;
 import com.openapi.domain.dto.resonse.ControlCommandResponse;
 import com.openapi.domain.dto.resonse.ControlStatusResponse;
+import com.openapi.service.ControlAgentLogService;
 import com.openapi.service.ControlConsoleService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -20,6 +21,7 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class ControlConsoleServiceImpl implements ControlConsoleService {
     private final ControlSessionManager controlSessionManager;
+    private final ControlAgentLogService controlAgentLogService;
 
     @Override
     public ControlStatusResponse getControlStatus(String deviceId) {
@@ -51,6 +53,13 @@ public class ControlConsoleServiceImpl implements ControlConsoleService {
         boolean forwarded = controlSessionManager.forwardCommandToRk(request.getDeviceId(), wsPayload);
         response.setAccepted(forwarded);
         response.setMessage(forwarded ? "dispatched by control ws" : "rk is offline, command queued TODO");
+        String agentId = parseAgentId(request.getPayloadJson(), request.getDeviceId());
+        controlAgentLogService.saveControlLog(
+                request.getUserId(),
+                agentId,
+                wsPayload,
+                System.currentTimeMillis()
+        );
         return response;
     }
 
@@ -80,6 +89,12 @@ public class ControlConsoleServiceImpl implements ControlConsoleService {
             if ("rk".equalsIgnoreCase(clientType)) {
                 controlSessionManager.updateRkAgentMode(deviceId, payload.getOrDefault("rkAgentMode", "TODO_RK_AGENT"));
             }
+            controlAgentLogService.saveControlLog(
+                    payload.getOrDefault("userId", "0"),
+                    payload.getOrDefault("agentId", deviceId),
+                    JSON.toJSONString(payload),
+                    System.currentTimeMillis()
+            );
             return;
         }
         log.info("[control] ignore ws message type={}, deviceId={}", type, deviceId);
@@ -88,5 +103,20 @@ public class ControlConsoleServiceImpl implements ControlConsoleService {
     @Override
     public void onWsDisconnect(String clientType, String deviceId, String sessionId) {
         controlSessionManager.unbindSession(deviceId, clientType, sessionId);
+    }
+
+    private String parseAgentId(String payloadJson, String fallback) {
+        try {
+            Map<String, String> map = JSON.parseObject(
+                    payloadJson,
+                    new com.alibaba.fastjson.TypeReference<Map<String, String>>() {
+                    }
+            );
+            if (map != null && StringUtils.hasText(map.get("agentId"))) {
+                return map.get("agentId");
+            }
+        } catch (Exception ignore) {
+        }
+        return fallback;
     }
 }

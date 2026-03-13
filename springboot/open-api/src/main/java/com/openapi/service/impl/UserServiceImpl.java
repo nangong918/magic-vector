@@ -100,6 +100,18 @@ public class UserServiceImpl implements UserService {
         return password.equals(userDo.getPassword());
     }
 
+    @Override
+    public boolean updatePasswordById(@NotNull Long userId, @NotNull String oldPassword, @NotNull String newPassword) {
+        UserDo userDo = userMapper.selectById(userId);
+        if (userDo == null || userDo.getId() == null) {
+            return false;
+        }
+        if (!oldPassword.equals(userDo.getPassword())) {
+            return false;
+        }
+        return userMapper.updatePasswordById(userId, newPassword) > 0;
+    }
+
     @Nullable
     @Override
     public UserModule getUserModuleById(@NotNull Long id) {

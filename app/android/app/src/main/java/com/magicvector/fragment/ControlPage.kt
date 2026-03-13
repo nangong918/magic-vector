@@ -153,6 +153,9 @@ private fun ControlContent(
                 onStopTest = onStopTest
             )
         }
+        item {
+            AgentLogCard(logs = state.agentLogs)
+        }
     }
 }
 
@@ -409,6 +412,28 @@ private fun AppRtmpTestCard(
                 text = if (state.testStreaming) "测试中..." else "未启动",
                 color = if (state.testStreaming) Color(0xFF0E9F6E) else Color(0xFF475467)
             )
+        }
+    }
+}
+
+@Composable
+private fun AgentLogCard(
+    logs: List<String>
+) {
+    Card {
+        Column(modifier = Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text(text = "Agent 指令控制台输出", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+            if (logs.isEmpty()) {
+                Text(text = "暂无日志", color = Color(0xFF667085))
+                return@Column
+            }
+            logs.take(12).forEach {
+                Text(
+                    text = it,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color(0xFF344054)
+                )
+            }
         }
     }
 }

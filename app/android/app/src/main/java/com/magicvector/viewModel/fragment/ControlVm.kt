@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.data.domain.dto.request.ControlCommandRequest
 import com.magicvector.MainApplication
 import com.magicvector.manager.control.ControlCommandController
+import com.magicvector.manager.control.ControlAgentLogEntity
 import com.magicvector.manager.control.ControlWsState
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
@@ -30,6 +31,7 @@ class ControlVm : ViewModel() {
     val effect = _effect.receiveAsFlow()
 
     private val manager = MainApplication.getControlConsoleManager()
+    private val logManager = MainApplication.getControlAgentLogManager()
     private val commandController = ControlCommandController()
     private var recordTickerJob: Job? = null
     private var initialized = false
@@ -58,6 +60,7 @@ class ControlVm : ViewModel() {
             ControlIntent.ReconnectControlWs -> reconnectControlWs()
             ControlIntent.SendQuickCommandForward -> sendQuickButtonCommand("FORWARD")
             ControlIntent.SendQuickCommandStop -> sendQuickButtonCommand("STOP")
+            ControlIntent.FetchControlAgentLogs -> fetchControlAgentLogs()
         }
     }
 
@@ -76,6 +79,7 @@ class ControlVm : ViewModel() {
         observeControlWsState()
         reconnectControlWs()
         fetchControlStatus()
+        fetchControlAgentLogs()
     }
 
     private fun observeNetworkState() {
@@ -125,6 +129,16 @@ class ControlVm : ViewModel() {
                         appToRkBleConnected = payload["appToRkBleConnected"] == "true",
                         rkAgentMode = payload["rkAgentMode"] ?: it.rkAgentMode
                     )
+                }
+                val logText = payload["agentJsonLog"]
+                if (!logText.isNullOrBlank()) {
+                    appendRealtimeLog(logText)
+                }
+            }
+            if (type == "AGENT_JSON_LOG") {
+                val logText = payload["logContent"].orEmpty()
+                if (logText.isNotBlank()) {
+                    appendRealtimeLog(logText)
                 }
             }
         }
@@ -185,6 +199,7 @@ class ControlVm : ViewModel() {
                 _uiState.update {
                     it.copy(lastCommandTraceId = response?.traceId ?: "local")
                 }
+                fetchControlAgentLogs()
             },
             onError = {
                 sendEffect(ControlEffect.ShowToast("指令发送失败"))
@@ -222,6 +237,59 @@ class ControlVm : ViewModel() {
 
     private fun onStopTestStream() {
         _uiState.update { it.copy(testStreaming = false) }
+    }
+
+    private fun fetchControlAgentLogs() {
+        val userId = _dataState.value.userId
+        if (userId.isBlank()) {
+            return
+        }
+        val agentId = _uiState.value.rkAgentMode.takeIf { it.all(Char::isDigit) }
+        logManager.fetchOnlineLogs(
+            userId = userId,
+            agentId = agentId,
+            page = 1,
+            size = 30,
+            onSuccess = { logs ->
+                _uiState.update {
+                    it.copy(
+                        agentLogs = logs.map { l -> formatAgentLog(l) }
+                    )
+                }
+            },
+            onError = {
+                logManager.queryLocalLogs(
+                    userId = userId.toLongOrNull() ?: 0L,
+                    agentId = agentId?.toLongOrNull(),
+                    limit = 30
+                ) { local ->
+                    _uiState.update {
+                        it.copy(agentLogs = local.map { l -> formatAgentLog(l) })
+                    }
+                }
+            }
+        )
+    }
+
+    private fun appendRealtimeLog(logText: String) {
+        val userId = _dataState.value.userId.toLongOrNull() ?: 0L
+        val agentId = _uiState.value.rkAgentMode.toLongOrNull() ?: 0L
+        val entity = ControlAgentLogEntity(
+            id = System.currentTimeMillis(),
+            userId = userId,
+            agentId = agentId,
+            logTime = System.currentTimeMillis(),
+            logContent = logText
+        )
+        logManager.appendLocalLogs(listOf(entity))
+        _uiState.update {
+            val newList = (listOf(formatAgentLog(entity)) + it.agentLogs).take(50)
+            it.copy(agentLogs = newList)
+        }
+    }
+
+    private fun formatAgentLog(entity: ControlAgentLogEntity): String {
+        return "[${entity.logTime}] ${entity.logContent}"
     }
 
     private fun sendEffect(effect: ControlEffect) {
@@ -283,7 +351,9 @@ data class ControlUiState(
     /** 测试 RTMP 地址输入。 */
     val testRtmpUrl: String = "",
     /** 测试流是否运行中。 */
-    val testStreaming: Boolean = false
+    val testStreaming: Boolean = false,
+    /** Agent 控制台日志（展示用）。 */
+    val agentLogs: List<String> = emptyList()
 )
 
 /**
@@ -311,6 +381,7 @@ sealed class ControlIntent {
     data class UpdateTestRtmpUrl(val url: String) : ControlIntent()
     data object SendQuickCommandForward : ControlIntent()
     data object SendQuickCommandStop : ControlIntent()
+    data object FetchControlAgentLogs : ControlIntent()
 }
 
 sealed class ControlEffect {

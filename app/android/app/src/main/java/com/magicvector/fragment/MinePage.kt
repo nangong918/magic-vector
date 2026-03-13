@@ -10,28 +10,41 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import com.magicvector.viewModel.fragment.MineVm
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Button
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.background
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.magicvector.activity.ComposeLoginActivity
 import com.magicvector.activity.test.ComposeTestActivity
 import com.magicvector.viewModel.fragment.MineEffect
 import com.magicvector.viewModel.fragment.MineIntent
+import com.magicvector.viewModel.fragment.MineMainTab
 import com.magicvector.viewModel.fragment.MineState
+import com.magicvector.viewModel.fragment.MineVideoTab
 import com.view.appview.R
 import androidx.compose.ui.viewinterop.AndroidView
 
@@ -47,6 +60,13 @@ fun MineScreen(
     ) { uri ->
         viewModel.processIntent(MineIntent.OnLocalVideoSelected(uri?.toString()))
     }
+    val uploadPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri ->
+        if (uri != null) {
+            viewModel.processIntent(MineIntent.StartUpload(context.contentResolver, uri, "local-upload.mp4"))
+        }
+    }
 
     LaunchedEffect(Unit) {
         viewModel.processIntent(MineIntent.Initialize)
@@ -60,6 +80,10 @@ fun MineScreen(
                         context.startActivity(Intent(context, ComposeTestActivity::class.java))
                     }
                 }
+                MineEffect.NavigateToLogin -> {
+                    context.startActivity(Intent(context, ComposeLoginActivity::class.java))
+                }
+                is MineEffect.ShowToast -> android.widget.Toast.makeText(context, effect.message, android.widget.Toast.LENGTH_SHORT).show()
             }
         }
     }
@@ -68,8 +92,20 @@ fun MineScreen(
         modifier = modifier,
         state = state,
         onTestClick = { viewModel.processIntent(MineIntent.TestButtonClick) },
+        onSwitchSetting = { viewModel.processIntent(MineIntent.SwitchToSetting) },
+        onSwitchVideo = { viewModel.processIntent(MineIntent.SwitchToVideo) },
+        onSwitchVideoTab = { viewModel.processIntent(MineIntent.SwitchVideoTab(it)) },
         onPickLocalVideo = { viewModel.processIntent(MineIntent.PickLocalVideoClick) },
         onTogglePlay = { viewModel.processIntent(MineIntent.ToggleVideoPlay) }
+        ,
+        onOldPasswordChange = { viewModel.processIntent(MineIntent.UpdateOldPassword(it)) },
+        onNewPasswordChange = { viewModel.processIntent(MineIntent.UpdateNewPassword(it)) },
+        onSubmitPassword = { viewModel.processIntent(MineIntent.SubmitPasswordUpdate) },
+        onLogout = { viewModel.processIntent(MineIntent.Logout) },
+        onLoadCloudVideos = { viewModel.processIntent(MineIntent.LoadCloudVideos) },
+        onOpenCloudVideo = { id -> viewModel.processIntent(MineIntent.OpenCloudVideo(id)) },
+        onUploadPick = { uploadPickerLauncher.launch("video/*") },
+        onPauseUpload = { viewModel.processIntent(MineIntent.PauseUpload) }
     )
 }
 
@@ -79,49 +115,52 @@ fun MineContent(
     modifier: Modifier = Modifier,
     state: MineState,
     onTestClick: () -> Unit,
+    onSwitchSetting: () -> Unit,
+    onSwitchVideo: () -> Unit,
+    onSwitchVideoTab: (MineVideoTab) -> Unit,
     onPickLocalVideo: () -> Unit,
-    onTogglePlay: () -> Unit
+    onTogglePlay: () -> Unit,
+    onOldPasswordChange: (String) -> Unit,
+    onNewPasswordChange: (String) -> Unit,
+    onSubmitPassword: () -> Unit,
+    onLogout: () -> Unit,
+    onLoadCloudVideos: () -> Unit,
+    onOpenCloudVideo: (String) -> Unit,
+    onUploadPick: () -> Unit,
+    onPauseUpload: () -> Unit
 ) {
     Column(
         modifier = modifier
             .fillMaxSize()
             .padding(20.dp)
     ) {
-        Text(text = "Mine", style = MaterialTheme.typography.headlineSmall)
+        HeaderProfile(userName = state.userName)
         Spacer(modifier = Modifier.height(10.dp))
-
-        Card(
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Column(modifier = Modifier.padding(12.dp)) {
-                Text(text = "视频")
-                Spacer(modifier = Modifier.height(8.dp))
-                Button(onClick = onPickLocalVideo) {
-                    Text("选择本地视频")
-                }
-                Spacer(modifier = Modifier.height(8.dp))
-                Button(onClick = onTogglePlay) {
-                    Text(if (state.isVideoPlaying) "暂停/停止" else "播放")
-                }
-                Spacer(modifier = Modifier.height(8.dp))
-                LocalVideoView(
-                    uriString = state.selectedVideoUri,
-                    isPlaying = state.isVideoPlaying
-                )
-            }
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Button(onClick = onSwitchSetting) { Text("Setting") }
+            Button(onClick = onSwitchVideo) { Text("视频") }
         }
-
         Spacer(modifier = Modifier.height(12.dp))
-        Card(modifier = Modifier.fillMaxWidth()) {
-            Column(modifier = Modifier.padding(12.dp)) {
-                Text("Setting")
-                Text(state.settingTodo, style = MaterialTheme.typography.bodySmall)
-                Spacer(modifier = Modifier.height(8.dp))
-                Text("云视频")
-                Text(state.cloudReplayTodo, style = MaterialTheme.typography.bodySmall)
-                Text(state.uploadTodo, style = MaterialTheme.typography.bodySmall)
-            }
+
+        if (state.tab == MineMainTab.SETTING) {
+            SettingPanel(
+                state = state,
+                onOldPasswordChange = onOldPasswordChange,
+                onNewPasswordChange = onNewPasswordChange,
+                onSubmitPassword = onSubmitPassword,
+                onLogout = onLogout
+            )
+        } else {
+            VideoPanel(
+                state = state,
+                onSwitchVideoTab = onSwitchVideoTab,
+                onPickLocalVideo = onPickLocalVideo,
+                onTogglePlay = onTogglePlay,
+                onLoadCloudVideos = onLoadCloudVideos,
+                onOpenCloudVideo = onOpenCloudVideo,
+                onUploadPick = onUploadPick,
+                onPauseUpload = onPauseUpload
+            )
         }
 
         Spacer(modifier = Modifier.height(12.dp))
@@ -135,6 +174,103 @@ fun MineContent(
                 text = stringResource(id = R.string.test),
                 modifier = Modifier.padding(vertical = 8.dp)
             )
+        }
+    }
+}
+
+@Composable
+private fun HeaderProfile(userName: String) {
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            androidx.compose.foundation.layout.Box(
+                modifier = Modifier
+                    .size(64.dp)
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.primaryContainer),
+                contentAlignment = Alignment.Center
+            ) {
+                Text("U")
+            }
+            Column {
+                Text(text = "UserAccount", style = MaterialTheme.typography.titleLarge)
+                Text(text = if (userName.isBlank()) "Guest" else userName)
+            }
+        }
+    }
+}
+
+@Composable
+private fun SettingPanel(
+    state: MineState,
+    onOldPasswordChange: (String) -> Unit,
+    onNewPasswordChange: (String) -> Unit,
+    onSubmitPassword: () -> Unit,
+    onLogout: () -> Unit
+) {
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text("Setting", style = MaterialTheme.typography.titleMedium)
+            OutlinedTextField(value = state.oldPassword, onValueChange = onOldPasswordChange, label = { Text("旧密码") }, modifier = Modifier.fillMaxWidth())
+            OutlinedTextField(value = state.newPassword, onValueChange = onNewPasswordChange, label = { Text("新密码") }, modifier = Modifier.fillMaxWidth())
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Button(onClick = onSubmitPassword) { Text("修改密码") }
+                Button(onClick = onLogout) { Text("登出") }
+            }
+        }
+    }
+}
+
+@Composable
+private fun VideoPanel(
+    state: MineState,
+    onSwitchVideoTab: (MineVideoTab) -> Unit,
+    onPickLocalVideo: () -> Unit,
+    onTogglePlay: () -> Unit,
+    onLoadCloudVideos: () -> Unit,
+    onOpenCloudVideo: (String) -> Unit,
+    onUploadPick: () -> Unit,
+    onPauseUpload: () -> Unit
+) {
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                MineVideoTab.entries.forEach {
+                    FilterChip(
+                        selected = state.videoTab == it,
+                        onClick = { onSwitchVideoTab(it) },
+                        label = { Text(it.name) }
+                    )
+                }
+            }
+            when (state.videoTab) {
+                MineVideoTab.CLOUD -> {
+                    Button(onClick = onLoadCloudVideos) { Text("刷新云录播") }
+                    state.cloudVideos.take(10).forEach {
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                            Text("${it.title} (${it.status})", modifier = Modifier.weight(1f))
+                            Button(onClick = { onOpenCloudVideo(it.videoId) }) { Text("播放") }
+                        }
+                    }
+                    if (!state.cloudPlayUrl.isNullOrBlank()) {
+                        Text("播放地址: ${state.cloudPlayUrl}", style = MaterialTheme.typography.bodySmall)
+                    }
+                }
+                MineVideoTab.LOCAL -> {
+                    Button(onClick = onPickLocalVideo) { Text("选择本地视频") }
+                    Button(onClick = onTogglePlay) { Text(if (state.isVideoPlaying) "暂停/停止" else "播放") }
+                    LocalVideoView(uriString = state.selectedVideoUri, isPlaying = state.isVideoPlaying)
+                }
+                MineVideoTab.UPLOAD -> {
+                    Button(onClick = onUploadPick) { Text("选择并上传MP4") }
+                    Button(onClick = onPauseUpload) { Text("暂停上传") }
+                    LinearProgressIndicator(progress = { state.uploadProgress }, modifier = Modifier.fillMaxWidth())
+                    Text("上传状态: ${state.uploadStatus}", style = MaterialTheme.typography.bodySmall)
+                }
+            }
         }
     }
 }
@@ -180,7 +316,18 @@ private fun MineContentPreview() {
         modifier = Modifier,
         state = MineState(userName = "Demo"),
         onTestClick = {},
+        onSwitchSetting = {},
+        onSwitchVideo = {},
+        onSwitchVideoTab = {},
         onPickLocalVideo = {},
-        onTogglePlay = {}
+        onTogglePlay = {},
+        onOldPasswordChange = {},
+        onNewPasswordChange = {},
+        onSubmitPassword = {},
+        onLogout = {},
+        onLoadCloudVideos = {},
+        onOpenCloudVideo = {},
+        onUploadPick = {},
+        onPauseUpload = {}
     )
 }

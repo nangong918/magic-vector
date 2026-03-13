@@ -11,6 +11,7 @@ import com.google.gson.GsonBuilder
 import com.magicvector.manager.ChatMapController
 import com.magicvector.manager.MessageListController
 import com.magicvector.manager.chat.ChatCacheManager
+import com.magicvector.manager.control.ControlAgentLogManager
 import com.magicvector.manager.control.ControlConsoleManager
 import com.magicvector.manager.network.NetworkManager
 import com.magicvector.manager.user.UserManager
@@ -139,6 +140,14 @@ class MainApplication : Application() {
                 controlConsoleManager = ControlConsoleManager()
             }
             return controlConsoleManager!!
+        }
+
+        private var controlAgentLogManager: ControlAgentLogManager? = null
+        fun getControlAgentLogManager(): ControlAgentLogManager {
+            if (controlAgentLogManager == null) {
+                controlAgentLogManager = ControlAgentLogManager()
+            }
+            return controlAgentLogManager!!
         }
 
         /**

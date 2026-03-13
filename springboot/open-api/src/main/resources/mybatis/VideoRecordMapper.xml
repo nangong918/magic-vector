@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.openapi.mapper.VideoRecordMapper">
+    <sql id="table">
+        video_record
+    </sql>
+    <sql id="columns">
+        id, user_id, object_name, hls_object_name, status, created_at, updated_at
+    </sql>
+
+    <insert id="insert">
+        insert into
+        <include refid="table"/>
+        (
+        <include refid="columns"/>
+        )
+        values(
+        #{id}, #{userId}, #{objectName}, #{hlsObjectName}, #{status}, #{createdAt}, #{updatedAt}
+        )
+    </insert>
+
+    <update id="update">
+        update
+        <include refid="table"/>
+        set
+            object_name = #{objectName},
+            hls_object_name = #{hlsObjectName},
+            status = #{status},
+            updated_at = #{updatedAt}
+        where id = #{id}
+    </update>
+
+    <select id="getById" resultType="com.openapi.domain.Do.VideoRecordDo">
+        select
+        <include refid="columns"/>
+        from
+        <include refid="table"/>
+        where id = #{id}
+    </select>
+
+    <select id="queryByUserId" resultType="com.openapi.domain.Do.VideoRecordDo">
+        select
+        <include refid="columns"/>
+        from
+        <include refid="table"/>
+        where user_id = #{userId}
+        order by created_at desc, id desc
+        limit #{offset}, #{size}
+    </select>
+</mapper>

@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.openapi.mapper.ControlAgentLogMapper">
+    <sql id="table">
+        agent_log
+    </sql>
+    <sql id="columns">
+        id, user_id, agent_id, log_time, log_content
+    </sql>
+
+    <insert id="insert">
+        insert into
+        <include refid="table"/>
+        (
+        <include refid="columns"/>
+        )
+        values(
+        #{id}, #{userId}, #{agentId}, #{logTime}, #{logContent}
+        )
+    </insert>
+
+    <select id="queryByUserAgentPage" resultType="com.openapi.domain.Do.ControlAgentLogDo">
+        select
+        <include refid="columns"/>
+        from
+        <include refid="table"/>
+        where user_id = #{userId}
+        <if test="agentId != null and agentId != ''">
+            and agent_id = #{agentId}
+        </if>
+        order by log_time desc, id desc
+        limit #{offset}, #{size}
+    </select>
+</mapper>

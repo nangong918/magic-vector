@@ -4,14 +4,25 @@ import com.core.baseutil.network.BaseResponse
 import com.data.domain.dto.request.AgentDeleteRequest
 import com.data.domain.dto.request.ChatByAnchorRequest
 import com.data.domain.dto.request.ControlCommandRequest
+import com.data.domain.dto.request.UserPasswordUpdateRequest
+import com.data.domain.dto.request.VideoUploadCompleteRequest
+import com.data.domain.dto.request.VideoUploadInitRequest
 import com.data.domain.dto.request.UserLoginRequest
 import com.data.domain.dto.request.UserTokenVerifyRequest
 import com.data.domain.dto.response.AgentLastChatListResponse
 import com.data.domain.dto.response.AgentListResponse
 import com.data.domain.dto.response.AgentResponse
 import com.data.domain.dto.response.ChatMessageResponse
+import com.data.domain.dto.response.ControlAgentLogResponse
 import com.data.domain.dto.response.ControlCommandResponse
 import com.data.domain.dto.response.ControlStatusResponse
+import com.data.domain.dto.response.UserPasswordUpdateResponse
+import com.data.domain.dto.response.VideoCloudListResponse
+import com.data.domain.dto.response.VideoDownloadUrlResponse
+import com.data.domain.dto.response.VideoPlayUrlResponse
+import com.data.domain.dto.response.VideoUploadChunkResponse
+import com.data.domain.dto.response.VideoUploadCompleteResponse
+import com.data.domain.dto.response.VideoUploadInitResponse
 import com.data.domain.dto.response.UserAuthResponse
 import com.data.domain.dto.response.UserTokenVerifyResponse
 import okhttp3.MultipartBody
@@ -149,6 +160,53 @@ interface ApiRequest {
         @Body request: ControlCommandRequest
     ): BaseResponse<ControlCommandResponse>
 
+    @GET("/control/log/list")
+    suspend fun getControlAgentLogs(
+        @Query("userId") userId: String,
+        @Query("agentId") agentId: String?,
+        @Query("page") page: Int,
+        @Query("size") size: Int
+    ): BaseResponse<ControlAgentLogResponse>
+
+    //==========Video
+
+    @POST("/video/upload/init")
+    suspend fun initVideoUpload(
+        @Body request: VideoUploadInitRequest
+    ): BaseResponse<VideoUploadInitResponse>
+
+    @Multipart
+    @POST("/video/upload/chunk")
+    suspend fun uploadVideoChunk(
+        @Part("uploadId") uploadId: RequestBody,
+        @Part("userId") userId: RequestBody,
+        @Part("chunkIndex") chunkIndex: RequestBody,
+        @Part("offset") offset: RequestBody,
+        @Part chunkFile: MultipartBody.Part
+    ): BaseResponse<VideoUploadChunkResponse>
+
+    @POST("/video/upload/complete")
+    suspend fun completeVideoUpload(
+        @Body request: VideoUploadCompleteRequest
+    ): BaseResponse<VideoUploadCompleteResponse>
+
+    @GET("/video/cloud/list")
+    suspend fun getCloudVideoList(
+        @Query("userId") userId: String,
+        @Query("page") page: Int,
+        @Query("size") size: Int
+    ): BaseResponse<VideoCloudListResponse>
+
+    @GET("/video/cloud/play-url")
+    suspend fun getCloudVideoPlayUrl(
+        @Query("videoId") videoId: String
+    ): BaseResponse<VideoPlayUrlResponse>
+
+    @GET("/video/cloud/download-url")
+    suspend fun getCloudVideoDownloadUrl(
+        @Query("videoId") videoId: String
+    ): BaseResponse<VideoDownloadUrlResponse>
+
     //==========User
 
     // register 与后端约定为 Multipart/FormData（不能改成 JSON Body）
@@ -170,4 +228,9 @@ interface ApiRequest {
     suspend fun verifyAccessToken(
         @Body request: UserTokenVerifyRequest
     ): BaseResponse<UserTokenVerifyResponse>
+
+    @POST("/user/password/update")
+    suspend fun updatePassword(
+        @Body request: UserPasswordUpdateRequest
+    ): BaseResponse<UserPasswordUpdateResponse>
 }

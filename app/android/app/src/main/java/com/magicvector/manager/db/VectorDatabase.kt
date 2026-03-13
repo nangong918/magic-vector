@@ -8,6 +8,8 @@ import com.magicvector.manager.chat.AgentCacheDao
 import com.magicvector.manager.chat.AgentCacheEntity
 import com.magicvector.manager.chat.ChatMessageDao
 import com.magicvector.manager.chat.ChatMessageEntity
+import com.magicvector.manager.control.ControlAgentLogDao
+import com.magicvector.manager.control.ControlAgentLogEntity
 import com.magicvector.manager.user.UserDao
 import com.magicvector.manager.user.UserEntity
 
@@ -16,14 +18,20 @@ import com.magicvector.manager.user.UserEntity
  * 业务表（如 User）作为该数据库的实体之一，不单独拆分数据库实例。
  */
 @Database(
-    entities = [UserEntity::class, AgentCacheEntity::class, ChatMessageEntity::class],
-    version = 3,
+    entities = [
+        UserEntity::class,
+        AgentCacheEntity::class,
+        ChatMessageEntity::class,
+        ControlAgentLogEntity::class
+    ],
+    version = 4,
     exportSchema = true
 )
 abstract class VectorDatabase : RoomDatabase() {
     abstract fun userDao(): UserDao
     abstract fun agentCacheDao(): AgentCacheDao
     abstract fun chatMessageDao(): ChatMessageDao
+    abstract fun controlAgentLogDao(): ControlAgentLogDao
 
     companion object {
         private const val DB_NAME = "magic_vector.db"

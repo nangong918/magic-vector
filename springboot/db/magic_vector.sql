@@ -49,6 +49,36 @@ CREATE TABLE `chat_message`  (
 ) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
+-- Table structure for agent_log
+-- ----------------------------
+DROP TABLE IF EXISTS `agent_log`;
+CREATE TABLE `agent_log`  (
+  `id` bigint NOT NULL,
+  `user_id` bigint NOT NULL,
+  `agent_id` bigint NOT NULL,
+  `log_time` bigint NOT NULL,
+  `log_content` text CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL,
+  PRIMARY KEY (`id`) USING BTREE,
+  INDEX `idx_user_agent_time`(`user_id` ASC, `agent_id` ASC, `log_time` ASC) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = DYNAMIC;
+
+-- ----------------------------
+-- Table structure for video_record
+-- ----------------------------
+DROP TABLE IF EXISTS `video_record`;
+CREATE TABLE `video_record`  (
+  `id` bigint NOT NULL,
+  `user_id` bigint NOT NULL,
+  `object_name` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL,
+  `hls_object_name` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL,
+  `status` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL,
+  `created_at` bigint NOT NULL,
+  `updated_at` bigint NOT NULL,
+  PRIMARY KEY (`id`) USING BTREE,
+  INDEX `idx_video_user_time`(`user_id` ASC, `created_at` ASC) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = DYNAMIC;
+
+-- ----------------------------
 -- Table structure for oss
 -- ----------------------------
 DROP TABLE IF EXISTS `oss`;

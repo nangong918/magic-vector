@@ -115,6 +115,9 @@ openapi:
     include-paths:
       - /agent/**
       - /chat/**
+      - /control/**
+      - /video/**
+      - /user/password/update
     exclude-paths:
       - /user/login
       - /user/register
