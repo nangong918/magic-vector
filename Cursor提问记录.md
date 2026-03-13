@@ -520,3 +520,94 @@ UI基本跟云操控平台一致。
 总体难度在Android端。总之好好设计，然后写代码。
 
 
+
+
+### Mine
+接着完成整个App最后一个功能Mine
+
+#### Mine
+* Setting
+  * 修改密码
+  * 登出
+* 视频
+  * 云上录播记录播放
+  * 本地视频播放
+  * 本地视频上传云端
+
+就跟正常的app一样，显示头像下面是大的UserAccount，
+有Setting按钮和视频按钮。
+Setting的业务逻辑暂时就那两个很简单，我都懒得绘制任何功能相关的uml了，随便设计设计。
+重点在下面，视频模块。
+首先SpringBoot要提供从minio获取视频源然后转为m3u8的方法，这部分可能要使用什么sdk或者依赖，先写todo，
+然后Android这边可就应播放器来播放这些视频。
+
+第二个比较简单，就是直接播放本地的MP4，用什么sdk就可以。
+
+第三个是本地视频上传云端，要支持上传和下载，服务端使用，minio。要支持断点续传。
+
+其实这一部分代码的业务逻辑很少，主要是让你给出可行方案以及设计Android的Manager和Android的Controller并给出方案和UML图。
+
+这次开发的需要一样
+总体设计要能跑通，
+我需要你看目前已有的设计
+[MainDesignDocument.md](MainDesignDocument.md)
+[SpringBootDesignDocument.md](springboot/docs/SpringBootDesignDocument.md)
+[AndroidDesignDocument.md](app/android/docs/AndroidDesignDocument.md)
+并把新增的设计设计出来再去写代码。
+你还需要遵守开发规范：
+[developAndRules.md](app/android/docs/developAndRules.md)
+[developAndRules.md](springboot/docs/developAndRules.md)
+上述的开发设计要写道设计文档，插入到应该属于的地方，要参考之前怎么写的
+
+要设计合适的Page并设计Mvi设计模式的viewmodel，并绘制跟参考文档中其他page一样的UML图。
+要设计合理的Mangaer和Controller，并绘制：类图，对象图，状态图，活动图，时序图，功能线程甘特图，通信图
+
+#### 补充
+
+上次的`Agent指令控制台输出`我是不是忘了说实现了，就是在云操控平台需要在下面创建一个Agent输出日志view，
+然后后端返回的AgentJson指令要显示出来。SpringBoot也要配合设计。给出UML的设计图，种类跟之前要求一样。
+对了最好还需要日志，这个日志是能够存储Android的Room的以及存储SpringBoot的Mysql的，要有（id, user_id, agent_id, log_time, log_content）
+所以要设计在线的查询http接口以及离线的查询dao接口。
+
+上次的离线操控平台我不记得我跟你说了没有，RK要创建wifi给Android发送摄像头的udp帧，Android这边要显示在视频view。我不记得实现没有。检查一下。
+
+#### 关于可行方案
+这部分加上我上次给你的操控平台的解决方案写在设计文档中。
+
+这个项目目前还有较多的为实现，因为涉及各种sdk所以我不要求你实现，但是我希望你去查资料，给出可行方案：
+
+我已经创建了[RKDesignDocument.md](rk/docs/RKDesignDocument.md)
+我的RK需要烧入系统级别App（我还没写）用于跟我现在的App和SpringBoot进行通讯。
+关于RK，我还没选好芯片，RK3566?RK3588?我的需求就是部署Android系统APP进行操控，以及能通过JNI操控cpp然后操控GPIO引脚操控sg90舵机运动，
+要有摄像头，并传输摄像头数据，我已经实现Android系统App的silero VAD（TensorflowLite）和YOLOv8，我希望能成功部署RK，我不要求有多高的性能其实跟手机差不多就行。
+帮我选用芯片并写入设计文档。
+
+下面的可行性方案分析要求：方案给出可行性分析以及方案大概设计，最好能给出可行方案的网上的文档链接。
+要求设计给出`大概的类图`，`大概通信图`，`甘特图`，`活动图`，`状态机图`（大概是因为还不确定，但是我觉得甘特，活动，状态机图可以直接确定）
+
+方案我希望你使用FFmpeg，RTMP，OpenGL甚至OpenCV等技术实现我提出的音视频方案。
+
+##### Control
+* 设备状态操作监控
+  * RK与App连接状态（给出连接状态匹配方案，RK和Android进行wifi连接，BLE蓝牙连接的）
+  * RK与SpringBoot连接状态（给出和SpringBoot进行Ws，Mqtt连接的方案，以及http请求）
+* 云操控平台(Live)
+  * 接收Nginx的Live推流
+    （我已经实现demo，基本上就是用nginx[nginx-rtmp-win32-dev](nginx-rtmp-win32-dev)）
+     我目前推流设计基本已经完成，并且我测试通过[LiveActivity.kt](demo/cpp/app/src/main/java/com/demo/cpp/activity/LiveActivity.kt)
+     大概是用jni + RTMP实现的，你可以参考。拉流我没实现。我是用Windows的VL player验证成功的。
+    * 另一台设备的Camera信道（Nginx）测试（参考上述我说的给出方案就行）
+    * 视频录制保存本地（给出方案）
+* 离线蓝牙、Wifi操控
+  * BLE蓝牙连接并发送指令（给出方案包括连接，连接状态，指令发送与接收，RK下发GPIO操控移动）
+  * 连接RK创建的WIFI发送指令（给出方案包括）
+  * WIFI下Android监控当前RK的Camera（给出方案，包括RK创建WIFI，UDP发送以及Android展示）
+
+##### Mine
+* 视频
+  * 云上录播记录播放（给出SpringBoot把视频文件拆分为m3u8的方案，以及给出url让Android拉流的方案）
+    （给出Android把已有的m3u8数据源整合下载成.m3u8文件或者mp4的方案）
+  * 本地视频播放（给出Android本地播放mp4方案）
+  * 本地视频上传云端（给出将mp4上传，断点续穿给SpringBoot的以及下载MP4的方案）
+
+文档全部写完才允许写代码，我认为首先要设计好，才能写代码。（RK不用写代码暂时）
