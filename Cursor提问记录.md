@@ -725,3 +725,54 @@ Setting的业务逻辑暂时就那两个很简单，我都懒得绘制任何功�
 
 
 
+
+### 问题：已有账号信息未跳转
+
+首先你看一下设计文档[MainDesignDocument.md](MainDesignDocument.md)
+[AndroidDesignDocument.md](app/android/docs/AndroidDesignDocument.md)
+[SpringBootDesignDocument.md](springboot/docs/SpringBootDesignDocument.md)
+
+#### 日志
+按照设计文档中写的，StartActivity中应该查询Android本地的数据库看看是否有已经登录的账号，如果有，找到token验证，看看是否生效。
+但是现在的问题我每次打开App都让我重新登录。
+所以我希望你修复这个bug，在Android中加入Log日志：在StartActivity输出数据库中的数据。以及在SpringBoot中配置总的DebugConfig，
+然后从配置文件可以配置是否输出log日志。然后再在debug的情况下输出日志。本次要加的日志是token验证的那个post接口。
+添加这些日志方便我排查为什么start页面登录成功之后再次登录还是没登陆上。
+
+#### 新增功能
+对了现在需要修改设计。登录的时候不仅可以输入，还可以下拉选择数据库中已有的账号，
+再新增加账号的密码存储功能，也就是说你现在想需要修改Android的数据库设计，
+数据库要新增密码字段。这个密码只有登录成功才存储。下拉选择任何账号的时候如果这个账号存储了密码，那么自动填充。
+
+修复bug的记录要存储在[CursorBug日志.md](CursorBug日志.md)
+
+
+
+#### 补充
+我发现你没有理解我设计文档中dataState的用途，我给你解释明白之后记得去记录到[AndroidDesignDocument.md](app/android/docs/AndroidDesignDocument.md)
+dataState就是数据缓存，除了uiState之外的业务数据缓存。
+
+首先你看到ComposeLoginVm的这一行代码：password = state.password
+我跟你讲这一行编译器报错了，是编译不通过的。
+因为state未定义，但是我跟你讲这个password应该从哪里拿呢？就是uiState的password。
+
+首先会加载数据量，数据库的数据会缓存到dataState；
+dataState的设计初衷就是存储跟uiState之外的业务数据，比如从数据库获取的List<UserEntity>就应该放在LoginState
+dataState内是允许放一些Entity，Module聚合一个整体的DataState的，但是不允许放DTO，DTO的数据应该单独拆分字段存储在dataState。
+很明显数据库的数据是用户不能直接看到的，而且这个数据也不会通过用户的输入改变因为是从数据库获取的，所以不应该存储在uiState中，应该存储在dataState中。
+
+很明显此处userManager.saveCurrentUser的业务逻辑是登录成功存储。
+首先初始化加载之后，uiState.password应该选用dataState中的userEntities的第一个，
+如果用户输入，dataState的值也不应该被改变，而是改变uiState的password。因为用户可能再次下拉选择，这时候应该把dataState的值再次填入uiState中。
+所以userManager.saveCurrentUser的password = uiState.password，
+而这个值来自于输入或者下拉选择dataState中的值。
+还有就是accessToken是不可见的，不应该写在uiState中，应该存储在dataState中。并且，登录成功会获取userId，这个值也不应该存储在uiState中，应该存储在dataState中。
+还有就是，我记得userManager应该存储当前登录用户是哪个，而不是每次都去查询数据库的last，
+所以应该在userMapper中缓存一个变量用来存储当前的currentUserSession，如果未null或者isEmpty就再用你写的dao接口查询。
+
+
+
+把我跟你说的dataState规则写入[developAndRules.md](app/android/docs/developAndRules.md)
+把我说的东西写进设计文档[AndroidDesignDocument.md](app/android/docs/AndroidDesignDocument.md)
+
+

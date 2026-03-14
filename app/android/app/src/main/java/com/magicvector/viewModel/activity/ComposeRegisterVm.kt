@@ -125,7 +125,8 @@ class ComposeRegisterVm : ViewModel() {
                     account = auth.account.orEmpty(),
                     name = auth.name.orEmpty(),
                     avatarUrl = auth.avatarUrl.orEmpty(),
-                    accessToken = auth.accessToken.orEmpty()
+                    accessToken = auth.accessToken.orEmpty(),
+                    password = ""
                 )
             )
             MainApplication.updateUserId(auth.userId ?: 0L)

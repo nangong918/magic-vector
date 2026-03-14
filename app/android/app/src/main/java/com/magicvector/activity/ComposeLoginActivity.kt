@@ -29,10 +29,13 @@ class ComposeLoginActivity : ComponentActivity() {
         setContent {
             MagicVectorTheme {
                 val state by vm.uiState.collectAsState()
+                val dataState by vm.dataState.collectAsState()
                 ComposeLoginScreen(
                     state = state,
+                    savedAccounts = dataState.savedUserSessions,
                     onAccountChange = { vm.processIntent(LoginIntent.UpdateAccount(it)) },
                     onPasswordChange = { vm.processIntent(LoginIntent.UpdatePassword(it)) },
+                    onSelectSavedAccount = { vm.processIntent(LoginIntent.SelectSavedAccount(it)) },
                     onSubmit = { vm.processIntent(LoginIntent.SubmitLogin) },
                     onGoRegister = { vm.processIntent(LoginIntent.NavigateToRegister) }
                 )

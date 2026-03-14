@@ -24,7 +24,7 @@ import com.magicvector.manager.user.UserEntity
         ChatMessageEntity::class,
         ControlAgentLogEntity::class
     ],
-    version = 4,
+    version = 5,
     exportSchema = true
 )
 abstract class VectorDatabase : RoomDatabase() {

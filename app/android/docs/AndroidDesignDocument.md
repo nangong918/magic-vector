@@ -112,6 +112,13 @@ classDiagram
 
 禁止在正文中用纯文本定义 MVI 的字段结构（如 `uiState/dataState/intent/effect` 具体值）；MVI 值模型必须通过 UML 类图表达。
 
+#### dataState 使用约束（新增）
+* `dataState` 定义为“业务数据缓存层”，用于承载 UI 之外的稳定业务数据（如 `userId/accessToken`、数据库账号列表）。
+* `dataState` 允许放置 `Entity/Module` 或其聚合集合；网络 DTO 不直接落 `dataState`，应拆分为业务字段后存储。
+* 用户输入只修改 `uiState`（例如登录页账号/密码输入），不直接修改 `dataState` 缓存。
+* 当用户执行“下拉选择本地账号”等动作时，允许将 `dataState` 中缓存值回填到 `uiState`。
+* `accessToken/userId` 等不可见鉴权数据禁止放在 `uiState`。
+
 ```mermaid
 classDiagram
     class ComposeXxxActivity {
@@ -279,20 +286,25 @@ gantt
 * 登录：账号密码提交、按钮可用态控制、成功后写入本地会话。
 * 注册：账号/密码/确认密码校验、头像选择与权限申请、成功后自动登录态落库。
 * 页面仅负责编排，业务状态由 VM 的 MVI 流统一管理。
+* 登录页 `dataState` 承载本地数据库账号缓存列表，`uiState` 仅承载当前可编辑输入值（账号、密码、加载态）。
 
 #### 登录 UI 设计
 
 ##### 登录页面（Login）
 **布局结构**：
 - 顶部：Logo 区域
-- 中间：账号输入框、密码输入框（隐藏输入内容）
+- 中间：账号输入框（支持下拉选择本地已有账号）、密码输入框（隐藏输入内容）
 - 底部：登录按钮（账号密码未完整时置灰）、"没有账号？去注册" 链接
 
 **交互设计**：
 - 账号输入框：实时校验输入格式，失焦时验证
+- 点击账号输入框可展开本地账号下拉列表；支持继续手输新账号
+- 下拉选择已有账号时，若本地存在该账号密码则自动回填密码
 - 密码输入框：隐藏输入内容，支持显示/隐藏切换
 - 登录按钮：账号和密码均非空时激活，点击后显示加载状态
+- 登录成功后，保存当前账号的最新 token 与密码到本地会话表
 - 注册链接：点击跳转到注册页面
+- 注册成功仅保存登录态（token），不默认持久化密码
 
 #### UML静态图（类图）
 ##### 登录页面 MVI 类图
@@ -362,6 +374,18 @@ flowchart LR
     VM -->|saveCurrentUser| UM
     VM -->|Effect: NavigateToMain / ShowError| Activity
     Activity -->|执行导航| Nav
+```
+
+##### 登录 dataState 与 uiState 关系（动态UML）
+```mermaid
+flowchart LR
+    DB[(Room user_session)] --> VM[ComposeLoginVm.dataState]
+    VM -->|初始化映射| UIState[ComposeLoginVm.uiState]
+    UserInput[用户输入账号/密码] --> UIState
+    SelectCached[用户下拉选择账号] --> VM
+    VM -->|dataState回填| UIState
+    UIState --> Submit[提交登录]
+    Submit -->|password来自uiState| Save[saveCurrentUser]
 ```
 
 #### UML动态图（通信图/活动图/时序图/甘特图）
@@ -1338,12 +1362,14 @@ gantt
 ### 会话管理模块（UserManager）
 
 #### 功能职责
-* 统一提供 `saveCurrentUser/getCurrentUser/clearCurrentUser`。
+* 统一提供 `saveCurrentUser/getCurrentUser/getAllUsers/clearCurrentUser`。
 * 对上层隐藏 Room 细节，保持 VM 与数据库解耦。
 * 启动与登录/注册流程共享同一会话入口。
+* 内部缓存当前会话 `currentUserSession`，优先返回内存缓存；缓存为空时再回源 Room 查询。
 
 #### 设计约束
-* 当前会话以单记录方式存储，主键采用 `id: Long`。
+* 本地会话支持多账号缓存，通过 `is_current` 标识当前登录账号。
+* `account` 字段唯一，用于登录页下拉账号选择与密码自动回填。
 * `userId` 与后端主键一致，统一为 `Long`。
 * 启动鉴权采用 `userId + accessToken` 强绑定校验，防止 token 串用。
 
@@ -1355,6 +1381,7 @@ classDiagram
     class UserManager {
         +saveCurrentUser(user: UserModule)
         +getCurrentUser(): UserSession?
+        +getAllUsers(): List~UserSession~
         +clearCurrentUser()
     }
     class VectorDatabase {
@@ -1363,7 +1390,8 @@ classDiagram
     class UserDao {
         +insertOrUpdate(entity: UserEntity)
         +queryCurrentUser(): UserEntity?
-        +deleteCurrentUser()
+        +queryAllUserSessions(): List~UserEntity~
+        +clearCurrentFlag()
     }
     class UserEntity {
         +id: Long
@@ -1372,6 +1400,9 @@ classDiagram
         +name: String
         +avatarUrl: String
         +accessToken: String
+        +password: String
+        +isCurrent: Boolean
+        +lastLoginAt: Long
     }
     class UserSession {
         +userId: Long
@@ -1379,6 +1410,9 @@ classDiagram
         +name: String
         +avatarUrl: String
         +accessToken: String
+        +password: String
+        +isCurrent: Boolean
+        +lastLoginAt: Long
     }
 
     UserManager --> VectorDatabase
@@ -2665,6 +2699,9 @@ erDiagram
       string name
       string avatar_url
       string access_token
+      string password
+      bool is_current
+      long last_login_at
     }
     AGENT_CACHE {
       long id PK
@@ -2695,7 +2732,7 @@ erDiagram
 ```
 
 ### DAO 设计
-* `UserDao`：会话读写（`upsert/getById/deleteById`）。
+* `UserDao`：会话读写（`upsert/getCurrent/getAll/clearCurrentFlag`）。
 * `AgentCacheDao`：Agent 缓存读写（`upsert/upsertBatch/queryByUser/deleteByAgentId`）。
 * `ChatMessageDao`：消息分页与批量写入（`queryLastByAgent/queryByAnchorBefore/queryByAnchorAfter/upsertBatch`）。
 * `ControlAgentLogDao`：控制台日志读写（`upsertBatch/queryByAgentIdLimit/queryByTimeRange`）。

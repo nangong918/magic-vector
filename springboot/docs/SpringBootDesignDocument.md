@@ -121,6 +121,8 @@ gantt
 * 在 `AuthTokenInterceptor` 中统一拦截需要鉴权的路由。
 * 在 `AuthInterceptorConfig` 中可配置“需要鉴权路由”和“白名单路由”。
 * token 校验采用内存 `Map<String, TokenSession>`，绑定 `userId + accessToken` 并处理过期清理。
+* 新增 `DebugConfig`：通过配置控制是否输出调试日志。
+* `/user/token/verify` 在 debug 开启时输出请求与校验结果日志（token 需脱敏）。
 * 当前不引入 Redis；当前不使用 JWT 无状态方案（避免无法主动踢人）。
 
 #### 路由拦截通信图
@@ -153,6 +155,9 @@ flowchart TD
 #### 路由配置示例
 ```yaml
 openapi:
+  debug:
+    enabled: false
+    token-verify-log-enabled: false
   auth:
     include-paths:
       - /agent/**
@@ -185,6 +190,9 @@ stateDiagram-v2
 flowchart TD
     A[接收 token verify 请求] --> B{userId/token 参数合法?}
     B -- 否 --> C[返回 valid=false + 参数错误]
+    C --> C1{debug已开启?}
+    C1 -- 是 --> C2[输出参数异常日志]
+    C1 -- 否 --> D
     B -- 是 --> D[根据 token 读取会话]
     D --> E{会话存在?}
     E -- 否 --> F[返回 valid=false + token 无效]
@@ -193,6 +201,12 @@ flowchart TD
     G -- 是 --> H{token 过期?}
     H -- 是 --> I[删除会话并返回无效]
     H -- 否 --> J[返回 valid=true]
+    F --> K{debug已开启?}
+    I --> K
+    J --> K
+    K -- 是 --> L["输出token校验结果日志(脱敏)"]
+    K -- 否 --> M[结束]
+    L --> M
 ```
 
 #### 鉴权甘特图

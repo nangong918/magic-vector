@@ -2,6 +2,7 @@ package com.magicvector.activity
 
 import android.content.Intent
 import android.os.Bundle
+import android.util.Log
 import android.view.View
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
@@ -26,6 +27,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import com.core.baseutil.fragmentActivity.ActivityLaunchUtils
+import com.magicvector.MainApplication
 import com.magicvector.ui.theme.MagicVectorTheme
 import com.magicvector.ui.theme.White
 import com.magicvector.viewModel.activity.StartEffect
@@ -34,6 +36,9 @@ import com.magicvector.viewModel.activity.StartVm
 import kotlinx.coroutines.launch
 
 class StartActivity : ComponentActivity() {
+    companion object {
+        private const val TAG = "StartActivity"
+    }
 
     private val vm: StartVm by viewModels()
 
@@ -43,6 +48,7 @@ class StartActivity : ComponentActivity() {
 
         // vm初始化
         vm.processIntent(StartIntent.Initialize)
+        logLocalUserSessions()
 
         // 观察 Effect
         observeEffects()
@@ -51,6 +57,29 @@ class StartActivity : ComponentActivity() {
         setContent {
             MagicVectorTheme {
                 StartScreen()
+            }
+        }
+    }
+
+    private fun logLocalUserSessions() {
+        lifecycleScope.launch {
+            val sessions = MainApplication.getUserManager().getAllUsers()
+            if (sessions.isEmpty()) {
+                Log.d(TAG, "[debug] local user_session is empty.")
+                return@launch
+            }
+            sessions.forEachIndexed { index, session ->
+                val maskedToken = if (session.accessToken.length <= 8) {
+                    session.accessToken
+                } else {
+                    session.accessToken.take(4) + "***" + session.accessToken.takeLast(4)
+                }
+                val passwordStatus = if (session.password.isBlank()) "empty" else "saved"
+                Log.d(
+                    TAG,
+                    "[debug] user_session[$index]; maskedToken = [$maskedToken]; " +
+                            "passwordStatus: [$passwordStatus] session=${session.toJsonString()}"
+                )
             }
         }
     }

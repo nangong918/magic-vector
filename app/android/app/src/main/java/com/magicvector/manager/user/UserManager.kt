@@ -11,26 +11,53 @@ class UserManager private constructor(
     context: Context
 ) {
     private val userDao: UserDao = VectorDatabase.getInstance(context).userDao()
+    @Volatile
+    private var currentUserSessionCache: UserSession? = null
 
     suspend fun saveCurrentUser(session: UserSession) {
+        val loginAt = System.currentTimeMillis()
+        userDao.clearCurrentFlag()
         userDao.upsert(
             UserEntity(
-                id = UserEntity.CURRENT_ROW_ID,
                 userId = session.userId,
                 account = session.account,
                 name = session.name,
                 avatarUrl = session.avatarUrl,
-                accessToken = session.accessToken
+                accessToken = session.accessToken,
+                password = session.password,
+                isCurrent = true,
+                lastLoginAt = loginAt
             )
+        )
+        currentUserSessionCache = session.copy(
+            isCurrent = true,
+            lastLoginAt = loginAt
         )
     }
 
     suspend fun getCurrentUser(): UserSession? {
-        return userDao.getById()?.toSession()
+        val cached = currentUserSessionCache
+        if (cached != null && cached.accessToken.isNotBlank()) {
+            return cached
+        }
+        val current = userDao.getCurrent()?.toSession()
+        currentUserSessionCache = current
+        return current
+    }
+
+    suspend fun getAllUsers(): List<UserSession> {
+        return userDao.getAll().map { it.toSession() }
     }
 
     suspend fun clearCurrentUser() {
-        userDao.deleteById()
+        val current = userDao.getCurrent() ?: return
+        userDao.upsert(
+            current.copy(
+                accessToken = "",
+                isCurrent = false
+            )
+        )
+        currentUserSessionCache = null
     }
 
     private fun UserEntity.toSession(): UserSession {
@@ -39,7 +66,10 @@ class UserManager private constructor(
             account = account,
             name = name,
             avatarUrl = avatarUrl,
-            accessToken = accessToken
+            accessToken = accessToken,
+            password = password,
+            isCurrent = isCurrent,
+            lastLoginAt = lastLoginAt
         )
     }
 

@@ -1,5 +1,6 @@
 package com.openapi.controller;
 
+import com.openapi.config.DebugConfig;
 import com.openapi.converter.UserConverter;
 import com.openapi.domain.constant.error.CommonExceptions;
 import com.openapi.domain.constant.error.UserExceptions;
@@ -34,6 +35,7 @@ public class UserController {
     private final UserService userService;
     private final AuthTokenService authTokenService;
     private final UserConverter userConverter;
+    private final DebugConfig debugConfig;
 
     @PostMapping("/register")
     public BaseResponse<UserAuthResponse> register(
@@ -96,15 +98,25 @@ public class UserController {
     ) {
         String accessToken = request.getAccessToken();
         Long userId = request.getUserId();
+        if (debugConfig.shouldLogTokenVerify()) {
+            log.debug("[token/verify] request userId={}, token={}", userId, maskToken(accessToken));
+        }
         UserTokenVerifyResponse response = new UserTokenVerifyResponse();
         response.setUserId(userId);
-        if (!authTokenService.verifyAccessToken(userId, accessToken)) {
+        boolean valid = authTokenService.verifyAccessToken(userId, accessToken);
+        if (!valid) {
             response.setValid(false);
             response.setMessage(UserExceptions.ACCESS_TOKEN_INVALID.getMessage());
+            if (debugConfig.shouldLogTokenVerify()) {
+                log.debug("[token/verify] result valid=false, userId={}", userId);
+            }
             return BaseResponse.getResponseEntitySuccess(response);
         }
         response.setValid(true);
         response.setMessage("ok");
+        if (debugConfig.shouldLogTokenVerify()) {
+            log.debug("[token/verify] result valid=true, userId={}", userId);
+        }
         return BaseResponse.getResponseEntitySuccess(response);
     }
 
@@ -124,5 +136,15 @@ public class UserController {
         response.setUpdated(updated);
         response.setMessage(updated ? "ok" : "旧密码错误或用户不存在");
         return BaseResponse.getResponseEntitySuccess(response);
+    }
+
+    private String maskToken(String token) {
+        if (!StringUtils.hasText(token)) {
+            return "<empty>";
+        }
+        if (token.length() <= 8) {
+            return token;
+        }
+        return token.substring(0, 4) + "***" + token.substring(token.length() - 4);
     }
 }

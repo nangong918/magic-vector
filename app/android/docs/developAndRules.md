@@ -43,11 +43,14 @@
 
 ## ViewModel
 * 本项目采用MVI设计模式, viewModel中需要注意设计以下这些, 如果没有则不需要:
-  uiState: ui的状态值, 用于控制页面的ui
-  dataState: 数据状态, 用于存储不参与ui显示的变量例如userId, access_token
+  uiState: ui的状态值, 用于控制页面的ui（跟ui无关的值应该放在dataState）
+  dataState: 业务数据缓存, 用于存储不参与直接输入编辑的业务数据（如 userId、access_token、数据库加载的账号列表等）
   intent: 用户意图
   effect: 界面的副作用
   event: 事件监听, 如eventBus, 广播
+* `dataState` 允许存放 `Entity/Module` 或其聚合集合；禁止直接存放 DTO。若来自 DTO（网络返回），需要拆分成 `dataState` 基础字段再存储。
+* 用户输入只更新 `uiState`，不要反向改写 `dataState` 的数据库缓存；当用户重新选择缓存项时，再由 `dataState` 映射覆盖到 `uiState`。
+* 不可见且非直接输入态的数据（如 `accessToken/userId`）必须放在 `dataState`，不应放入 `uiState`。
 * `uiState/dataState/intent/effect/event` 的字段定义都要写注释，便于后续维护与重构。
 * Fragment和Activity都要有vm, 自定义view不需要vm
 * viewModel放在viewModel下, 要区分fragment和activity的vm

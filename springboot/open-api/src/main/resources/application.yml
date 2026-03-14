@@ -111,6 +111,9 @@ mybatis-plus:
     log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
 
 openapi:
+  debug:
+    enabled: false
+    token-verify-log-enabled: false
   auth:
     include-paths:
       - /agent/**
