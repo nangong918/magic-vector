@@ -776,3 +776,11 @@ dataState内是允许放一些Entity，Module聚合一个整体的DataState的�
 把我说的东西写进设计文档[AndroidDesignDocument.md](app/android/docs/AndroidDesignDocument.md)
 
 
+
+### 重构App
+
+看到这个[StartActivity.kt](app/android/app/src/main/java/com/magicvector/activity/StartActivity.kt)
+现在我希望你封装一个BaseComponentActivity在[activity](app/android/app/src/main/java/com/magicvector/utils/activity)
+大概就是把setupFullScreen()的逻辑封装在BaseComponentActivity中，并且onResume()默认直接调用这个方法，
+然后把其他的composeActivity切换为继承这个BaseComponentActivity，就实现了代码复用
+不准删我任何注释！！！

@@ -2,7 +2,6 @@ package com.magicvector.activity
 
 import android.content.Intent
 import android.widget.Toast
-import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
@@ -13,12 +12,13 @@ import androidx.lifecycle.repeatOnLifecycle
 import com.core.baseutil.fragmentActivity.ActivityLaunchUtils
 import com.magicvector.ui.theme.MagicVectorTheme
 import com.magicvector.ui.view.activity.ComposeLoginScreen
+import com.magicvector.utils.activity.BaseComponentActivity
 import com.magicvector.viewModel.activity.LoginEffect
 import com.magicvector.viewModel.activity.LoginIntent
 import com.magicvector.viewModel.activity.ComposeLoginVm
 import kotlinx.coroutines.launch
 
-class ComposeLoginActivity : ComponentActivity() {
+class ComposeLoginActivity : BaseComponentActivity() {
     private val vm: ComposeLoginVm by viewModels()
 
     override fun onCreate(savedInstanceState: android.os.Bundle?) {

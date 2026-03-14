@@ -38,12 +38,13 @@ import com.magicvector.ui.view.InfoBarView
 import com.magicvector.ui.view.activity.AgentDescriptionInput
 import com.magicvector.ui.view.activity.AgentNameInput
 import com.magicvector.utils.permissions.ComposePermissionUtils
+import com.magicvector.utils.activity.BaseComponentActivity
 import com.magicvector.viewModel.activity.ComposeAgentInfoEffect
 import com.magicvector.viewModel.activity.ComposeAgentInfoIntent
 import com.magicvector.viewModel.activity.ComposeAgentInfoState
 import com.magicvector.viewModel.activity.ComposeAgentInfoVm
 
-class ComposeAgentInfoActivity : ComponentActivity() {
+class ComposeAgentInfoActivity : BaseComponentActivity() {
     private val vm: ComposeAgentInfoVm by viewModels()
     private val storagePermissionUtils = ComposePermissionUtils()
 

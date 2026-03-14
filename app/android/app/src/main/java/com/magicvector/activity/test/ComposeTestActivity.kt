@@ -36,13 +36,14 @@ import com.magicvector.ui.view.test.RealtimeQuestionInput
 import com.magicvector.ui.view.test.TestSectionCard
 import com.magicvector.ui.view.test.TestStateLine
 import com.magicvector.ui.view.test.TwoActionButtons
+import com.magicvector.utils.activity.BaseComponentActivity
 import com.magicvector.utils.permissions.ComposePermissionUtils
 import com.magicvector.viewModel.activity.ComposeTestEffect
 import com.magicvector.viewModel.activity.ComposeTestIntent
 import com.magicvector.viewModel.activity.ComposeTestState
 import com.magicvector.viewModel.activity.ComposeTestVm
 
-class ComposeTestActivity : ComponentActivity() {
+class ComposeTestActivity : BaseComponentActivity() {
     private val vm: ComposeTestVm by viewModels()
     private val cameraPermissionForEmoji = ComposePermissionUtils()
     private val cameraPermissionForYolo = ComposePermissionUtils()

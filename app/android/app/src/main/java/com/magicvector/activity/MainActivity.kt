@@ -23,12 +23,13 @@ import com.magicvector.viewModel.activity.MainIntent
 import com.magicvector.viewModel.activity.MainVm
 import com.magicvector.viewModel.base.ApiViewModelFactory
 import com.magicvector.ui.view.activity.MainActivityScreen
+import com.magicvector.utils.activity.BaseComponentActivity
 import com.view.appview.MainSelectItemEnum
 
 /**
  * 启动首页
  */
-class MainActivity : ComponentActivity() {
+class MainActivity : BaseComponentActivity() {
 
     private val vm: MainVm by viewModels { ApiViewModelFactory() }
 

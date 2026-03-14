@@ -18,13 +18,14 @@ import com.core.baseutil.fragmentActivity.ActivityLaunchUtils
 import com.core.baseutil.permissions.GainPermissionCallback
 import com.magicvector.ui.theme.MagicVectorTheme
 import com.magicvector.ui.view.activity.ComposeRegisterScreen
+import com.magicvector.utils.activity.BaseComponentActivity
 import com.magicvector.utils.permissions.ComposePermissionUtils
 import com.magicvector.viewModel.activity.ComposeRegisterVm
 import com.magicvector.viewModel.activity.RegisterEffect
 import com.magicvector.viewModel.activity.RegisterIntent
 import kotlinx.coroutines.launch
 
-class ComposeRegisterActivity : ComponentActivity() {
+class ComposeRegisterActivity : BaseComponentActivity() {
     private val vm: ComposeRegisterVm by viewModels()
     private val permissionUtils = ComposePermissionUtils()
 

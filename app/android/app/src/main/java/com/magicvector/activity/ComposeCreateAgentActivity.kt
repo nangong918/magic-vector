@@ -34,12 +34,13 @@ import com.magicvector.ui.view.activity.AgentDescriptionInput
 import com.magicvector.ui.view.activity.AgentNameInput
 import com.magicvector.ui.view.activity.SubmitButton
 import com.magicvector.viewModel.activity.ComposeCreateAgentVm
+import com.magicvector.utils.activity.BaseComponentActivity
 import com.magicvector.viewModel.activity.CreateAgentEffect
 import com.magicvector.viewModel.activity.CreateAgentIntent
 import com.magicvector.viewModel.activity.CreateAgentState
 import kotlinx.coroutines.launch
 
-class ComposeCreateAgentActivity : ComponentActivity() {
+class ComposeCreateAgentActivity : BaseComponentActivity() {
 
     private val vm: ComposeCreateAgentVm by viewModels()
 

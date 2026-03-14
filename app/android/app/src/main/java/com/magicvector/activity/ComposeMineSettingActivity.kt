@@ -13,12 +13,13 @@ import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import com.magicvector.ui.theme.MagicVectorTheme
 import com.magicvector.ui.view.activity.ComposeMineSettingActivityScreen
+import com.magicvector.utils.activity.BaseComponentActivity
 import com.magicvector.viewModel.activity.ComposeMineSettingVm
 import com.magicvector.viewModel.activity.MineSettingEffect
 import com.magicvector.viewModel.activity.MineSettingIntent
 import kotlinx.coroutines.launch
 
-class ComposeMineSettingActivity : ComponentActivity() {
+class ComposeMineSettingActivity : BaseComponentActivity() {
 
     private val vm: ComposeMineSettingVm by viewModels()
 

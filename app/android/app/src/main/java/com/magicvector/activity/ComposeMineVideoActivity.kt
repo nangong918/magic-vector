@@ -14,12 +14,13 @@ import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import com.magicvector.ui.theme.MagicVectorTheme
 import com.magicvector.ui.view.activity.ComposeMineVideoActivityScreen
+import com.magicvector.utils.activity.BaseComponentActivity
 import com.magicvector.viewModel.activity.ComposeMineVideoVm
 import com.magicvector.viewModel.activity.MineVideoEffect
 import com.magicvector.viewModel.activity.MineVideoIntent
 import kotlinx.coroutines.launch
 
-class ComposeMineVideoActivity : ComponentActivity() {
+class ComposeMineVideoActivity : BaseComponentActivity() {
 
     private val vm: ComposeMineVideoVm by viewModels()
 

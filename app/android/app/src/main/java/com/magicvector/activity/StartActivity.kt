@@ -3,9 +3,6 @@ package com.magicvector.activity
 import android.content.Intent
 import android.os.Bundle
 import android.util.Log
-import android.view.View
-import android.view.WindowManager
-import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
@@ -30,12 +27,13 @@ import com.core.baseutil.fragmentActivity.ActivityLaunchUtils
 import com.magicvector.MainApplication
 import com.magicvector.ui.theme.MagicVectorTheme
 import com.magicvector.ui.theme.White
+import com.magicvector.utils.activity.BaseComponentActivity
 import com.magicvector.viewModel.activity.StartEffect
 import com.magicvector.viewModel.activity.StartIntent
 import com.magicvector.viewModel.activity.StartVm
 import kotlinx.coroutines.launch
 
-class StartActivity : ComponentActivity() {
+class StartActivity : BaseComponentActivity() {
     companion object {
         private const val TAG = "StartActivity"
     }
@@ -127,26 +125,7 @@ class StartActivity : ComponentActivity() {
 
 
 
-    override fun onResume() {
-        super.onResume()
-        // 每次恢复时设置全屏
-        setupFullScreen()
-    }
 
-    private fun setupFullScreen() {
-        // 隐藏标题导航栏
-        window.setFlags(
-            WindowManager.LayoutParams.FLAG_FULLSCREEN,
-            WindowManager.LayoutParams.FLAG_FULLSCREEN
-        )
-
-        // 隐藏状态栏和导航栏
-        window.decorView.systemUiVisibility = (
-                View.SYSTEM_UI_FLAG_FULLSCREEN or
-                        View.SYSTEM_UI_FLAG_HIDE_NAVIGATION or
-                        View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
-                )
-    }
 
 
 }

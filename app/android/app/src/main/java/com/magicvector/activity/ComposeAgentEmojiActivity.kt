@@ -64,6 +64,7 @@ import com.magicvector.manager.mcp.HandleSystemResponse
 import com.magicvector.manager.yolo.TargetActivityDetectionManager
 import com.magicvector.manager.yolo.VisionCallback
 import com.magicvector.ui.theme.MagicVectorTheme
+import com.magicvector.utils.activity.BaseComponentActivity
 import com.magicvector.utils.permissions.ComposePermissionUtils
 import com.magicvector.viewModel.activity.AgentEmojiEffect
 import com.magicvector.viewModel.activity.AgentEmojiIntent
@@ -72,7 +73,7 @@ import com.magicvector.viewModel.activity.ComposeAgentEmojiVm
 import com.magicvector.viewModel.activity.DetectionColorType
 import kotlinx.coroutines.launch
 
-class ComposeAgentEmojiActivity : ComponentActivity(), HandleSystemResponse, VisionCallback {
+class ComposeAgentEmojiActivity : BaseComponentActivity(), HandleSystemResponse, VisionCallback {
 
     private val vm: ComposeAgentEmojiVm by viewModels()
     private var previewViewRef: PreviewView? = null
