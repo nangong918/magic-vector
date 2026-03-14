@@ -75,6 +75,11 @@ Agent
 
 [SpringBootDesignDocument.md](springboot/docs/SpringBootDesignDocument.md)
 
+
+## RK 设计文档
+
+[RKDesignDocument.md](rk/docs/RKDesignDocument.md)
+
 ## Agent 主流程约束（本次新增）
 
 * Main 首页导航语义统一为：`Agent`（聊天 Agent 相关）、`Control`（设备状态操作监控）、`Mine`（我的）。

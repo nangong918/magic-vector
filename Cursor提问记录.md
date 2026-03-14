@@ -611,3 +611,117 @@ Setting的业务逻辑暂时就那两个很简单，我都懒得绘制任何功�
   * 本地视频上传云端（给出将mp4上传，断点续穿给SpringBoot的以及下载MP4的方案）
 
 文档全部写完才允许写代码，我认为首先要设计好，才能写代码。（RK不用写代码暂时）
+
+
+
+### Fix
+
+你修复的bug要写入到[CursorBug日志.md](CursorBug日志.md)
+
+#### 1. 打开页面无法创建Agent
+你看[MainDesignDocument.md](MainDesignDocument.md)里面包含Android设计文档，
+看到Android设计文档的##### Agent 列表页面（MessageListScreen）
+**布局结构**：
+- 空状态：中心提示 + 创建按钮
+- 非空状态：Agent 列表 + 创建 FAB
+我看好像并没有实现，我没有看到提示`创建Agent`的按钮，显示是`当前暂无消息`，
+我觉得的状态机错了，我觉得需要两个状态值来管理：是否有Agent和是否有消息。这两个值共同来管理UI界面。重构一下这部分的设计文档和代码（添加状态机UML图，更新其他相关UML图）。
+当前逻辑在[MainActivity.kt](demo/app/app/src/main/java/com/magicvector/demo/activity/MainActivity.kt)
+你认真看设计文档并做修改，如果修改改动了设计架构要写在设计文档中。
+
+当然我还能提供你的信息：
+```shell
+                                                                                                    <---- Response (27.184716ms)
+2026-03-14 10:43:11.986  7947-7980  com.core.b...nterceptor com.magicvector                      D  Response URL: http://192.168.1.2:48888/agent/getLastAgentChatList?userId=2032466744930009088
+2026-03-14 10:43:11.986  7947-7980  com.core.b...nterceptor com.magicvector                      D  Status Code: 200
+2026-03-14 10:43:11.986  7947-7980  com.core.b...nterceptor com.magicvector                      D  Response Headers: Vary: Origin
+                                                                                                    Vary: Access-Control-Request-Method
+                                                                                                    Vary: Access-Control-Request-Headers
+                                                                                                    Content-Type: application/json;charset=UTF-8
+                                                                                                    Content-Length: 52
+                                                                                                    Date: Sat, 14 Mar 2026 02:43:11 GMT
+                                                                                                    Keep-Alive: timeout=60
+                                                                                                    Connection: keep-alive
+2026-03-14 10:43:11.993  7947-7980  com.core.b...nterceptor com.magicvector                      I  
+                                                                                                    
+                                                                                                    <---- ResponseBody: 
+                                                                                                    {
+                                                                                                      "code": "C_10001",
+                                                                                                      "message": "参数错误、不全"
+                                                                                                    }
+```
+去其实觉得Android和SpringBoot的接口对接是错误的。你检察一下
+
+#### 2. Mine页面布局错误
+你去看Android开发文档的### Mine 模块（Setting + 视频）
+我看你页面有问题，是不是我描述的有问题：
+```markdown
+功能职责
+* 顶部显示头像与大号 `UserAccount`，下方提供 `Setting` 与 `视频` 两个一级入口。
+* **Setting**：提供修改密码、登出（业务简单，轻量实现）。
+* **视频**：
+  * 云上录播记录播放（服务端 MinIO 视频源转 m3u8，Android 播放）
+  * 本地视频播放（MP4）
+  * 本地视频上传云端（支持断点续传、下载）
+```
+这个页面的头像和用户信息下面其实就是三个按钮啊，
+这三个按钮分别是：设置，视频，测试
+你现在是写在同一个页面了，这是不对的，这三个按钮是应该跳转三个不同的ComposeActivity的。
+现在需要你重新写设计文档并实现功能。
+
+#### 3.Control页面错误
+你找到Android设计文档这一部分：### Control 模块（Main 第二个 Tab）
+首先`App-Spring`连接状态就是App登录之后通过userId和SpringBoot进行长连接
+`Control WS`我没喊你设计吧？你看设计文档没有吧，现在改为RTMP拉流状态。
+还有你要结合看一下Android和SpringBoot的设计文档。
+好像长连接经常不稳定，你检查一下：
+```shell
+2026-03-14 10:52:53.918  7947-8079  ControlConsoleManager   com.magicvector                      E  control ws onFailure
+                                                                                                    java.net.SocketException: Socket closed
+                                                                                                    	at java.net.SocketInputStream.socketRead0(Native Method)
+                                                                                                    	at java.net.SocketInputStream.socketRead(SocketInputStream.java:119)
+                                                                                                    	at java.net.SocketInputStream.read(SocketInputStream.java:176)
+                                                                                                    	at java.net.SocketInputStream.read(SocketInputStream.java:144)
+```
+而且我每次跳转到Control页面的时候：Control WS，App Spring连接状态，网络连接状态都会闪绿一下然后闪红。
+我怀疑你是MVI的生命周期处理错了。是不是先处理Intent改变UI状态然后onResume初始化覆盖掉了？我不确定你排查一下，
+而且有很多类似的闪烁问题：比如云操控平台点击离线BLE就会闪烁出提示然后马上消失。
+点击开始录制会闪烁出时间然后马上闪烁出未录制，页面就结束了。修复问题。
+
+#### 4. Control页面操控RK错误
+我只要一拖拽遥感，或者是点击前进或者急停按钮就会闪退：
+```shell
+2026-03-14 11:30:36.649  8119-8119  AndroidRuntime          com.magicvector                      D  Shutting down VM
+2026-03-14 11:30:36.652  8119-8119  AndroidRuntime          com.magicvector                      E  FATAL EXCEPTION: main
+                                                                                                    Process: com.magicvector, PID: 8119
+                                                                                                    java.lang.NullPointerException: Attempt to invoke virtual method 'long java.lang.Long.longValue()' on a null object reference
+                                                                                                    	at com.magicvector.manager.control.ControlCommandController.baseRequest(ControlCommandController.kt:64)
+                                                                                                    	at com.magicvector.manager.control.ControlCommandController.buildButtonCommand(ControlCommandController.kt:43)
+                                                                                                    	at com.magicvector.viewModel.fragment.ControlVm.sendQuickButtonCommand(ControlVm.kt:186)
+                                                                                                    	at com.magicvector.viewModel.fragment.ControlVm.processIntent(ControlVm.kt:62)
+                                                                                                    	at com.magicvector.fragment.ControlPageKt.ControlScreen$lambda$18$lambda$17(ControlPage.kt:86)
+                                                                                                    	at com.magicvector.fragment.ControlPageKt.$r8$lambda$iq98z32ATgeu04qb-YyKghjRkXw(Unknown Source:0)
+                                                                                                    	at com.magicvector.fragment.ControlPageKt$$ExternalSyntheticLambda9.invoke(D8$$SyntheticClass:0)
+                                                                                                    	at androidx.compose.foundation.ClickableNode.onPointerEvent-H0pRuoY(Clickable.kt:1009)
+                                                                                                    	at androidx.compose.ui.input.pointer.Node.dispatchMainEventPass(HitPathTracker.kt:436)
+                                                                                                    	at androidx.compose.ui.input.pointer.Node.dispatchMainEventPass(HitPathTracker.kt:422)
+                                                                                                    	at androidx.compose.ui.input.pointer.Node.dispatchMainEventPass(HitPathTracker.kt:422)
+                                                                                                    	at androidx.compose.ui.input.pointer.Node.dispatchMainEventPass(HitPathTracker.kt:422)
+                                                                                                    	at androidx.compose.ui.input.pointer.NodeParent.dispatchMainEventPass(HitPathTracker.kt:275)
+                                                                                                    	at androidx.compose.ui.input.pointer.HitPathTracker.dispatchChanges(HitPathTracker.kt:171)
+                                                                                                    	at androidx.compose.ui.input.pointer.PointerInputEventProcessor.process-BIzXfog(PointerInputEventProcessor.kt:118)
+                                                                                                    	at androidx.compose.ui.platform.AndroidComposeView.sendMotionEvent-8iAsVTc(AndroidComposeView.android.kt:2428)
+                                                                                                    	at androidx.compose.ui.platform.AndroidComposeView.handleMotionEvent-8iAsVTc(AndroidComposeView.android.kt:2378)
+                                                                                                    	at androidx.compose.ui.platform.AndroidComposeView.dispatchTouchEvent(AndroidComposeView.android.kt:2249)
+                                                                                                    	at android.view.ViewGroup.dispatchTransformedTouchEvent(ViewGroup.java:3062)
+                                                                                                    	at android.view.ViewGroup.dispatchTouchEvent(ViewGroup.java:2751)
+                                                                                                    	at android.view.ViewGroup.dispatchTransformedTouchEvent(ViewGroup.java:3062)
+                                                                                                    	at android.view.ViewGroup.dispatchTouchEvent(ViewGroup.java:2751)
+                                                                                                    	at android.view.ViewGroup.dispatchTransformedTouchEvent(ViewGroup.java:3062)
+                                                                                                    	at android.view.ViewGroup.dispatchTouchEvent(ViewGroup.java:2751)
+                                                                                                    	at android.view.ViewGroup.dispatchTransformedTouchEvent(ViewGroup.java:3062)
+                                                                                                    	at android.view.ViewGroup.dispatchTouchEvent(ViewGroup.java:2751)
+```
+
+
+
