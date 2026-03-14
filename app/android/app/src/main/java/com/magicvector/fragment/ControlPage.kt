@@ -177,7 +177,7 @@ private fun DeviceStatusCard(
                 StatusChip("RK-App BLE", state.appToRkBleConnected)
             }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-                StatusChip("Control WS", state.controlWsConnected)
+                StatusChip("RTMP拉流", state.rtmpPullConnected)
                 StatusChip("网络在线", state.networkOnline)
             }
             Text(text = "RK Agent: ${state.rkAgentMode}", style = MaterialTheme.typography.bodySmall)

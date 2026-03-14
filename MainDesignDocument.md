@@ -52,10 +52,14 @@ Agent
     * RK端联调前，RK链路先按TODO占位
 
 #### Mine
-* Setting
+* Mine主页入口（头像 + 三按钮）
+    * 设置 -> `ComposeMineSettingActivity`
+    * 视频 -> `ComposeMineVideoActivity`
+    * 测试 -> `ComposeTestActivity`
+* 设置页
     * 修改密码
     * 登出
-* 视频
+* 视频页
     * 云上录播记录播放
     * 本地视频播放
     * 本地视频上传云端

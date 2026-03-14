@@ -42,6 +42,9 @@ class ControlConsoleManager {
     private val api = MainApplication.getApiRequestImplInstance()
     private val managerScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val reconnectEnabled = AtomicBoolean(false)
+    private val wsClient = OkHttpClient.Builder()
+        .pingInterval(20, TimeUnit.SECONDS)
+        .build()
 
     private val _wsState = MutableStateFlow(ControlWsState())
     val wsState: StateFlow<ControlWsState> = _wsState.asStateFlow()
@@ -57,6 +60,10 @@ class ControlConsoleManager {
         onWsPayload: (Map<String, String>) -> Unit
     ) {
         if (userId.isBlank() || deviceId.isBlank()) {
+            return
+        }
+        if (this.userId == userId && this.deviceId == deviceId && _wsState.value.connected) {
+            this.onWsPayload = onWsPayload
             return
         }
         this.userId = userId
@@ -154,22 +161,28 @@ class ControlConsoleManager {
     }
 
     private fun openWebSocket() {
-        webSocket?.cancel()
+        val previous = webSocket
+        if (previous != null) {
+            runCatching { previous.close(1000, "replace control ws") }
+        }
         _wsState.value = _wsState.value.copy(connected = false, reconnecting = true)
         val wsUrl = buildControlWsUrl(userId = userId, deviceId = deviceId)
-        val client = OkHttpClient.Builder()
-            .pingInterval(20, TimeUnit.SECONDS)
-            .build()
         val request = Request.Builder()
             .url(wsUrl)
             .build()
-        webSocket = client.newWebSocket(request, object : WebSocketListener() {
+        val nextSocket = wsClient.newWebSocket(request, object : WebSocketListener() {
             override fun onOpen(webSocket: WebSocket, response: okhttp3.Response) {
+                if (this@ControlConsoleManager.webSocket !== webSocket) {
+                    return
+                }
                 _wsState.value = ControlWsState(connected = true, reconnecting = false, retryCount = 0)
                 sendHeartbeat()
             }
 
             override fun onMessage(webSocket: WebSocket, text: String) {
+                if (this@ControlConsoleManager.webSocket !== webSocket) {
+                    return
+                }
                 runCatching {
                     gson.fromJson<Map<String, String>>(
                         text,
@@ -183,23 +196,35 @@ class ControlConsoleManager {
             }
 
             override fun onMessage(webSocket: WebSocket, bytes: ByteString) {
+                if (this@ControlConsoleManager.webSocket !== webSocket) {
+                    return
+                }
                 Log.d(TAG, "binary payload size=${bytes.size}")
             }
 
             override fun onFailure(webSocket: WebSocket, t: Throwable, response: okhttp3.Response?) {
+                if (this@ControlConsoleManager.webSocket !== webSocket) {
+                    return
+                }
                 Log.e(TAG, "control ws onFailure", t)
                 _wsState.value = _wsState.value.copy(
                     connected = false,
                     reconnecting = true,
                     lastError = t.message
                 )
-                tryReconnect()
+                if (reconnectEnabled.get()) {
+                    tryReconnect()
+                }
             }
 
             override fun onClosed(webSocket: WebSocket, code: Int, reason: String) {
+                if (this@ControlConsoleManager.webSocket !== webSocket) {
+                    return
+                }
                 _wsState.value = _wsState.value.copy(connected = false, reconnecting = false)
             }
         })
+        webSocket = nextSocket
     }
 
     private fun tryReconnect() {

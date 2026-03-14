@@ -42,13 +42,19 @@ class ControlVm : ViewModel() {
             is ControlIntent.UpdateDeviceId -> _uiState.update { it.copy(deviceId = intent.deviceId) }
             is ControlIntent.SwitchPlatform -> {
                 _uiState.update {
-                    it.copy(
+                    val next = it.copy(
                         platform = intent.platform,
                         streamEnabled = intent.platform != ControlPlatform.OFFLINE_BLE
                     )
+                    next.copy(
+                        rtmpPullConnected = resolveRtmpPullConnected(next)
+                    )
                 }
             }
-            is ControlIntent.SwitchStreamSource -> _uiState.update { it.copy(streamSource = intent.source) }
+            is ControlIntent.SwitchStreamSource -> _uiState.update {
+                val next = it.copy(streamSource = intent.source)
+                next.copy(rtmpPullConnected = resolveRtmpPullConnected(next))
+            }
             is ControlIntent.SwitchTestMode -> _uiState.update { it.copy(testMode = intent.mode) }
             is ControlIntent.UpdateTestRtmpUrl -> _uiState.update { it.copy(testRtmpUrl = intent.url) }
             ControlIntent.StartTestStream -> onStartTestStream()
@@ -86,10 +92,11 @@ class ControlVm : ViewModel() {
         viewModelScope.launch {
             MainApplication.getNetworkManager().state.collect { state ->
                 _uiState.update {
-                    it.copy(
+                    val next = it.copy(
                         appToSpringConnected = state.isOnlineAndWsReady,
                         networkOnline = state.isNetworkOnline
                     )
+                    next.copy(rtmpPullConnected = resolveRtmpPullConnected(next))
                 }
             }
         }
@@ -99,12 +106,13 @@ class ControlVm : ViewModel() {
         viewModelScope.launch {
             manager.wsState.collect { wsState: ControlWsState ->
                 _uiState.update {
-                    it.copy(
+                    val next = it.copy(
                         controlWsConnected = wsState.connected,
                         wsReconnecting = wsState.reconnecting,
                         wsRetryCount = wsState.retryCount,
                         wsErrorMessage = wsState.lastError
                     )
+                    next.copy(rtmpPullConnected = resolveRtmpPullConnected(next))
                 }
             }
         }
@@ -123,12 +131,13 @@ class ControlVm : ViewModel() {
             val type = payload["type"].orEmpty()
             if (type == "STATUS_SYNC") {
                 _uiState.update {
-                    it.copy(
+                    val next = it.copy(
                         rkToSpringConnected = payload["rkToSpringConnected"] == "true",
                         appToRkWifiConnected = payload["appToRkWifiConnected"] == "true",
                         appToRkBleConnected = payload["appToRkBleConnected"] == "true",
                         rkAgentMode = payload["rkAgentMode"] ?: it.rkAgentMode
                     )
+                    next.copy(rtmpPullConnected = resolveRtmpPullConnected(next))
                 }
                 val logText = payload["agentJsonLog"]
                 if (!logText.isNullOrBlank()) {
@@ -152,14 +161,14 @@ class ControlVm : ViewModel() {
                     return@queryControlStatus
                 }
                 _uiState.update {
-                    it.copy(
-                        appToSpringConnected = status.appToSpringConnected == true,
+                    val next = it.copy(
                         rkToSpringConnected = status.rkToSpringConnected == true,
                         appToRkWifiConnected = status.appToRkWifiConnected == true,
                         appToRkBleConnected = status.appToRkBleConnected == true,
                         rkAgentMode = status.rkAgentMode ?: "TODO_RK_AGENT",
                         lastHeartbeatAt = status.lastHeartbeatAt
                     )
+                    next.copy(rtmpPullConnected = resolveRtmpPullConnected(next))
                 }
             },
             onError = {
@@ -232,11 +241,17 @@ class ControlVm : ViewModel() {
             return
         }
         _uiState.update { it.copy(testStreaming = true) }
+        _uiState.update { current ->
+            current.copy(rtmpPullConnected = resolveRtmpPullConnected(current))
+        }
         sendEffect(ControlEffect.ShowToast("测试流已启动（TODO: RTMP 推拉实现）"))
     }
 
     private fun onStopTestStream() {
-        _uiState.update { it.copy(testStreaming = false) }
+        _uiState.update { current ->
+            val next = current.copy(testStreaming = false)
+            next.copy(rtmpPullConnected = resolveRtmpPullConnected(next))
+        }
     }
 
     private fun fetchControlAgentLogs() {
@@ -298,6 +313,16 @@ class ControlVm : ViewModel() {
         }
     }
 
+    private fun resolveRtmpPullConnected(state: ControlUiState): Boolean {
+        if (!state.streamEnabled || state.streamSource != StreamSource.RTMP_DIRECT) {
+            return false
+        }
+        if (state.testStreaming && state.testMode == StreamTestMode.PULL) {
+            return true
+        }
+        return state.rkToSpringConnected
+    }
+
     override fun onCleared() {
         super.onCleared()
         recordTickerJob?.cancel()
@@ -330,6 +355,8 @@ data class ControlUiState(
     val networkOnline: Boolean = false,
     /** 控制 WS 连接状态。 */
     val controlWsConnected: Boolean = false,
+    /** RTMP 拉流状态（用于页面展示）。 */
+    val rtmpPullConnected: Boolean = false,
     /** 控制 WS 是否重连中。 */
     val wsReconnecting: Boolean = false,
     /** 控制 WS 重试次数。 */

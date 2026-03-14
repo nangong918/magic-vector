@@ -3,15 +3,19 @@ package com.magicvector.viewModel.fragment
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.core.baseutil.cache.HttpRequestManager
 import com.core.baseutil.network.BaseResponse
 import com.core.baseutil.network.OnSuccessCallback
 import com.core.baseutil.network.OnThrowableCallback
 import com.data.domain.ao.message.MessageContactItemAo
+import com.data.domain.constant.BaseConstant
 import com.data.domain.dto.response.AgentLastChatListResponse
+import com.data.domain.dto.response.AgentListResponse
 import com.magicvector.MainApplication
+import com.magicvector.convertor.MessageConvertor
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -36,182 +40,211 @@ class MessageListMviVm : ViewModel() {
     private val _effect = Channel<MessageListEffect>(Channel.BUFFERED)
     val effect: Flow<MessageListEffect> = _effect.receiveAsFlow()
 
-    // 意图处理 （跟事件处理什么区别？）
     fun processIntent(intent: MessageListIntent) {
         when (intent) {
-            is MessageListIntent.Initialize -> {
-                initialize()
-            }
-            is MessageListIntent.SelectMessage -> {
-                onMessageItemClick(intent.position)
-            }
-            is MessageListIntent.EditAgent -> {
-                onEditAgent(intent.position)
-            }
-            MessageListIntent.CreateAgent -> {
-                sendEffect(MessageListEffect.OpenCreateAgent)
-            }
-            MessageListIntent.Refresh -> {
-                refreshMessages()
-            }
+            MessageListIntent.Initialize -> initialize()
+            is MessageListIntent.SelectMessage -> onMessageItemClick(intent.position)
+            is MessageListIntent.EditAgent -> onEditAgent(intent.position)
+            MessageListIntent.CreateAgent -> sendEffect(MessageListEffect.OpenCreateAgent)
+            MessageListIntent.Refresh -> refreshMessages()
             is MessageListIntent.AgentCreated -> {
                 if (intent.created) {
                     refreshMessages()
                 }
             }
-            is MessageListIntent.StartChat -> {
-                // 将权限请求的结果通过 Effect 返回
-                sendEffect(MessageListEffect.RequestAudioPermission)
-            }
+            MessageListIntent.StartChat -> sendEffect(MessageListEffect.RequestAudioPermission)
         }
     }
 
-
-    //---------------------------初始化---------------------------
-
     private fun initialize() {
-
-        _uiState.update {
-            it.copy(isLoading = true)
-        }
-
-        // 检查是否第一次打开 + 网络请求
-        initNetworkRequest()
+        loadCachedMessages()
+        refreshMessages(showLoading = _uiState.value.messages.isEmpty())
     }
 
     private fun loadCachedMessages() {
         val cachedMessages = MainApplication.getMessageListManager().messageContactItemAos
         _uiState.update {
+            val hasMessage = cachedMessages.isNotEmpty()
             it.copy(
                 messages = cachedMessages.toList(),
-                messageCount = cachedMessages.size
+                messageCount = cachedMessages.size,
+                hasMessage = hasMessage,
+                uiMode = deriveUiMode(it.hasAgent, hasMessage)
             )
         }
     }
 
-    private fun refreshMessages() {
+    private fun refreshMessages(showLoading: Boolean = false) {
         viewModelScope.launch {
-            _uiState.update { it.copy(isRefreshing = true) }
-            initNetworkRequest()
-            _uiState.update { it.copy(isRefreshing = false) }
+            _uiState.update { it.copy(isRefreshing = true, isLoading = showLoading) }
+            syncAgentAndMessageState()
         }
     }
 
     private fun onMessageItemClick(position: Int) {
         val messages = _uiState.value.messages
         if (messages.size > position) {
-            val ao = messages[position]
-            sendEffect(MessageListEffect.NavigateToChat(ao))
+            sendEffect(MessageListEffect.NavigateToChat(messages[position]))
         }
     }
 
     private fun onEditAgent(position: Int) {
         val messages = _uiState.value.messages
         if (messages.size > position) {
-            val ao = messages[position]
-            val agentId = ao.contactId
+            val agentId = messages[position].contactId
             if (!agentId.isNullOrBlank()) {
                 sendEffect(MessageListEffect.OpenAgentEditor(agentId))
             }
         }
     }
 
-    //---------------------------工具方法---------------------------
     private fun sendEffect(effect: MessageListEffect) {
         viewModelScope.launch {
             _effect.send(effect)
         }
     }
 
-    //---------------------------Network---------------------------
+    fun initNetworkRequest() {
+        refreshMessages(showLoading = _uiState.value.messages.isEmpty())
+    }
 
-    fun initNetworkRequest(){
-        if (HttpRequestManager.getIsFirstOpen(TAG)){
-            // 第一次打开，初始化
-            Log.i(TAG, "initNetworkRequest: 第一次打开")
-            doGetLastAgentChatList()
-        }
-        else {
-            Log.i(TAG, "initNetworkRequest: 不是第一次打开")
-            val messageContactItemAos = MainApplication.getMessageListManager().messageContactItemAos
-            _uiState.update {
-                it.copy(
-                    isLoading = false,
-                    messages = messageContactItemAos.toList(),
-                    messageCount = messageContactItemAos.size
-                )
+    private suspend fun syncAgentAndMessageState() {
+        try {
+            val userId = resolveUserId()
+            if (userId.isBlank()) {
+                handleError("用户未登录")
+                return
             }
+            val (agentListResp, chatListResp) = withContext(Dispatchers.IO) {
+                coroutineScope {
+                    val agentListDeferred = async { requestAgentList(userId) }
+                    val chatListDeferred = async { requestLastAgentChatList(userId) }
+                    agentListDeferred.await() to chatListDeferred.await()
+                }
+            }
+            handleAgentAndChatResponse(agentListResp, chatListResp)
+        } catch (e: Exception) {
+            handleError(e.message ?: "网络请求失败")
+        } finally {
+            _uiState.update { it.copy(isLoading = false, isRefreshing = false) }
         }
     }
 
-    // 网络请求直接在 ViewModel 中
-    private fun doGetLastAgentChatList() {
-        viewModelScope.launch {
-            try {
-                // 使用 suspend 函数或回调转协程
-                val response = withContext(Dispatchers.IO) {
-                    // 这里需要将回调转为 suspend 函数
-                    suspendCoroutine { continuation ->
-                        MainApplication.getApiRequestImplInstance().getLastAgentChatList(
-                            MainApplication.getUserId(),
-                            object : OnSuccessCallback<BaseResponse<AgentLastChatListResponse>> {
-                                override fun onResponse(response: BaseResponse<AgentLastChatListResponse>?) {
-                                    continuation.resume(response!!)
-                                }
-                            },
-                            object : OnThrowableCallback {
-                                override fun callback(throwable: Throwable?) {
-                                    continuation.resumeWithException(throwable ?: Exception("Unknown error"))
-                                }
-                            }
-                        )
+    private suspend fun resolveUserId(): String {
+        val cached = MainApplication.getUserId()
+        if (cached.isNotBlank()) {
+            return cached
+        }
+        val localUser = MainApplication.getUserManager().getCurrentUser()
+        val localUserId = localUser?.userId ?: 0L
+        if (localUserId > 0L) {
+            MainApplication.updateUserId(localUserId)
+            return localUserId.toString()
+        }
+        return ""
+    }
+
+    private suspend fun requestAgentList(userId: String): BaseResponse<AgentListResponse> {
+        return suspendCoroutine { continuation ->
+            MainApplication.getApiRequestImplInstance().getAgentList(
+                userId,
+                object : OnSuccessCallback<BaseResponse<AgentListResponse>> {
+                    override fun onResponse(response: BaseResponse<AgentListResponse>?) {
+                        if (response != null) {
+                            continuation.resume(response)
+                        } else {
+                            continuation.resumeWithException(Exception("获取Agent列表返回空响应"))
+                        }
+                    }
+                },
+                object : OnThrowableCallback {
+                    override fun callback(throwable: Throwable?) {
+                        continuation.resumeWithException(throwable ?: Exception("获取Agent列表失败"))
                     }
                 }
-
-                // 处理响应
-                handleResponse(response)
-
-            } catch (e: Exception) {
-                handleError(e.message ?: "网络请求失败")
-            }
+            )
         }
     }
 
-    private fun handleResponse(response: BaseResponse<AgentLastChatListResponse>) {
-        if (response.data != null) {
-            // 缓存
-            MainApplication.getMessageListManager().setAgentChatAos(response.data!!)
-            // 更新 State
-            loadCachedMessages()
-            _uiState.update {
-                it.copy(
-                    isFirstOpen = false,
-                    isLoading = false
-                )
-            }
+    private suspend fun requestLastAgentChatList(userId: String): BaseResponse<AgentLastChatListResponse> {
+        return suspendCoroutine { continuation ->
+            MainApplication.getApiRequestImplInstance().getLastAgentChatList(
+                userId,
+                object : OnSuccessCallback<BaseResponse<AgentLastChatListResponse>> {
+                    override fun onResponse(response: BaseResponse<AgentLastChatListResponse>?) {
+                        if (response != null) {
+                            continuation.resume(response)
+                        } else {
+                            continuation.resumeWithException(Exception("获取最近聊天返回空响应"))
+                        }
+                    }
+                },
+                object : OnThrowableCallback {
+                    override fun callback(throwable: Throwable?) {
+                        continuation.resumeWithException(throwable ?: Exception("获取最近聊天失败"))
+                    }
+                }
+            )
+        }
+    }
+
+    private fun handleAgentAndChatResponse(
+        agentListResponse: BaseResponse<AgentListResponse>,
+        chatListResponse: BaseResponse<AgentLastChatListResponse>
+    ) {
+        val agentListSuccess = agentListResponse.code == BaseConstant.NetworkCode.SUCCESS_CODE
+        if (!agentListSuccess) {
+            handleError(agentListResponse.message ?: "获取Agent列表失败")
+            return
+        }
+        val chatListSuccess = chatListResponse.code == BaseConstant.NetworkCode.SUCCESS_CODE
+        if (!chatListSuccess) {
+            handleError(chatListResponse.message ?: "获取最近聊天失败")
+            return
+        }
+        val hasAgent = (agentListResponse.data?.agentAos?.size ?: 0) > 0
+        val chatData = chatListResponse.data
+        val messages = chatData?.agentChatAos.orEmpty()
+        val messageContactItemAos = MessageConvertor.agentChatAos2MessageContactItemAos(messages)
+        if (chatData != null) {
+            MainApplication.getMessageListManager().setAgentChatAos(chatData)
         } else {
             MainApplication.getMessageListManager().clear()
-            // 更新 State
-            _uiState.update {
-                it.copy(
-                    messages = emptyList(),
-                    messageCount = 0,
-                    isLoading = false
-                )
-            }
+        }
+        _uiState.update {
+            val hasMessage = messages.isNotEmpty()
+            it.copy(
+                isFirstOpen = false,
+                error = null,
+                messages = messageContactItemAos,
+                messageCount = messages.size,
+                agentCount = agentListResponse.data?.agentAos?.size ?: 0,
+                hasAgent = hasAgent,
+                hasMessage = hasMessage,
+                uiMode = deriveUiMode(hasAgent, hasMessage)
+            )
         }
     }
 
     private fun handleError(error: String) {
+        Log.e(TAG, "handleError: $error")
         _uiState.update {
             it.copy(
                 isLoading = false,
+                isRefreshing = false,
                 error = error
             )
         }
         sendEffect(MessageListEffect.ShowToast(error))
     }
 
+    private fun deriveUiMode(hasAgent: Boolean, hasMessage: Boolean): MessageListUiMode {
+        return when {
+            !hasAgent -> MessageListUiMode.NO_AGENT
+            !hasMessage -> MessageListUiMode.HAS_AGENT_NO_MESSAGE
+            else -> MessageListUiMode.HAS_MESSAGE
+        }
+    }
 }
 
 sealed class MessageListIntent {
@@ -221,7 +254,6 @@ sealed class MessageListIntent {
     data object CreateAgent : MessageListIntent()
     data object Refresh : MessageListIntent()
     data class AgentCreated(val created: Boolean) : MessageListIntent()
-    // 启动聊天
     data object StartChat : MessageListIntent()
 }
 
@@ -230,10 +262,20 @@ data class MessageListState(
     val isRefreshing: Boolean = false,
     val messages: List<MessageContactItemAo> = emptyList(),
     val messageCount: Int = 0,
+    val agentCount: Int = 0,
+    val hasAgent: Boolean = false,
+    val hasMessage: Boolean = false,
+    val uiMode: MessageListUiMode = MessageListUiMode.NO_AGENT,
     val error: String? = null,
-    val isFirstOpen: Boolean = true,  // 是否第一次打开
-    val needLoadNetworkData: Boolean = false  // 是否需要加载网络数据
+    val isFirstOpen: Boolean = true,
+    val needLoadNetworkData: Boolean = false
 )
+
+enum class MessageListUiMode {
+    NO_AGENT,
+    HAS_AGENT_NO_MESSAGE,
+    HAS_MESSAGE
+}
 
 sealed class MessageListEffect {
     data object OpenCreateAgent : MessageListEffect()
@@ -241,6 +283,6 @@ sealed class MessageListEffect {
     data class NavigateToChat(val ao: MessageContactItemAo) : MessageListEffect()
     data object NavigateToChatActivity : MessageListEffect()
     data class ShowToast(val message: String) : MessageListEffect()
-    data object RefreshNetworkData : MessageListEffect()  // 刷新网络数据
-    data object RequestAudioPermission : MessageListEffect()  // 请求录音权限
+    data object RefreshNetworkData : MessageListEffect()
+    data object RequestAudioPermission : MessageListEffect()
 }

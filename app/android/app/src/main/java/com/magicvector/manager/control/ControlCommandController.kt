@@ -9,7 +9,7 @@ import java.util.concurrent.atomic.AtomicLong
  * 负责把摇杆/按钮输入转换为统一请求结构。
  */
 class ControlCommandController {
-    private val sequence = AtomicLong(0L)
+    private val sequenceCounter = AtomicLong(0L)
 
     fun buildJoystickCommand(
         userId: String,
@@ -61,7 +61,7 @@ class ControlCommandController {
             this.deviceId = deviceId
             this.transport = transport
             this.commandType = commandType
-            this.sequence = sequence++
+            this.sequence = sequenceCounter.getAndIncrement()
             this.timestamp = System.currentTimeMillis()
             this.payloadJson = payloadJson
         }

@@ -613,13 +613,29 @@ gantt
 
 ##### Agent 列表页面（MessageListScreen）
 **布局结构**：
-- 空状态：中心提示 + 创建按钮
-- 非空状态：Agent 列表 + 创建 FAB
+- 状态机由 `hasAgent` 与 `hasMessage` 两个值共同驱动。
+- `!hasAgent`：中心空状态 + `创建Agent` 主按钮（无 FAB）
+- `hasAgent && !hasMessage`：中心提示“当前暂无消息” + 右下创建 FAB
+- `hasAgent && hasMessage`：Agent 列表 + 右下创建 FAB
 
 **交互设计**：
 - 点击创建：打开 `AgentEditorOverlay`（创建模式）
 - 点击 Agent：跳转 `ComposeChatActivity`
 - 长按 Agent：打开 `AgentEditorOverlay`（编辑模式）
+
+##### Agent 列表状态机图（新增）
+```mermaid
+stateDiagram-v2
+    [*] --> NoAgent
+    NoAgent: hasAgent=false
+    HasAgentNoMessage: hasAgent=true, hasMessage=false
+    HasAgentWithMessage: hasAgent=true, hasMessage=true
+    NoAgent --> HasAgentNoMessage : 创建成功
+    HasAgentNoMessage --> HasAgentWithMessage : 收到消息
+    HasAgentWithMessage --> HasAgentNoMessage : 清空最近消息摘要
+    HasAgentNoMessage --> NoAgent : 删除最后一个Agent
+    HasAgentWithMessage --> NoAgent : 删除最后一个Agent
+```
 
 ##### Agent 弹层页面（AgentEditorOverlay）
 **布局结构**：
@@ -647,16 +663,19 @@ classDiagram
     }
     class MessageListMviVm {
       +processIntent(intent)
+      +syncAgentAndMessageState()
     }
     class AgentEditorOverlay
     class MainState
     class AgentEditorState
+    class MessageListUiMode
 
     MainActivity --> MainVm
     MainActivity --> MessageListMviVm
     MainActivity --> AgentEditorOverlay
     MainVm --> MainState
     MainState --> AgentEditorState
+    MessageListMviVm --> MessageListUiMode
 ```
 
 #### UML动态图（通信图/活动图/时序图/甘特图）
@@ -684,17 +703,21 @@ flowchart LR
 ```mermaid
 flowchart TD
     A[进入Agent页] --> B{列表是否为空}
-    B -- 是 --> C[显示中心创建按钮]
-    B -- 否 --> D[显示Agent列表]
-    C --> E[打开创建弹层]
-    D --> F{点击 or 长按}
-    F -- 点击 --> G[跳转ChatActivity]
-    F -- 长按 --> H[打开编辑弹层]
-    E --> I[提交创建]
-    H --> J[保存或删除]
-    I --> K[发出AgentListEvent]
-    J --> K
-    K --> L[刷新MessageList]
+    B --> B1{hasAgent}
+    B1 -- 否 --> C[显示中心创建按钮]
+    B1 -- 是 --> D{hasMessage}
+    D -- 否 --> E[显示暂无消息+创建FAB]
+    D -- 是 --> F[显示Agent列表+创建FAB]
+    C --> G[打开创建弹层]
+    E --> G
+    F --> H{点击 or 长按}
+    H -- 点击 --> I[跳转ChatActivity]
+    H -- 长按 --> J[打开编辑弹层]
+    G --> K[提交创建]
+    J --> L[保存或删除]
+    K --> M[发出AgentListEvent]
+    L --> M
+    M --> N[刷新Agent+最近消息摘要]
 ```
 
 ##### Agent 页面时序图
@@ -922,7 +945,8 @@ gantt
 * 提供录制状态切换和录制时长显示（编码链路本期保留 TODO）。
 
 #### UI/交互设计
-* 顶部状态卡统一显示连接态与重连态；支持手动刷新状态与重连 WS。
+* 顶部状态卡统一显示连接态：`App-Spring`、`RK-Spring`、`RK-App WiFi`、`RK-App BLE`、`RTMP拉流`、`网络在线`。
+* `App-Spring` 连接状态以登录后常驻 `RealtimeChatController` 长连接为准，不再被 `GET /control/status` 返回值覆盖，避免进入页面闪绿再闪红。
 * 中部平台切换 + 流来源切换：
   * `RTMP + Nginx`（推荐，链路短、延迟更稳）
   * `UDP裸帧 -> SpringBoot(Netty) -> App`（可选，便于服务端转发治理）
@@ -1005,13 +1029,13 @@ classDiagram
 stateDiagram-v2
     [*] --> Booting
     Booting --> Connecting : Initialize
-    Connecting --> ReadyCloud : WS + status ok
+    Connecting --> ReadyCloud : App-Spring在线 + 状态同步
     ReadyCloud --> ReadyOfflineWiFi : switch OFFLINE_WIFI
     ReadyCloud --> ReadyOfflineBle : switch OFFLINE_BLE
     ReadyOfflineWiFi --> ReadyCloud : switch CLOUD
     ReadyOfflineBle --> ReadyCloud : switch CLOUD
-    ReadyCloud --> Reconnecting : ws lost
-    Reconnecting --> ReadyCloud : ws resumed
+    ReadyCloud --> Reconnecting : 控制通道中断
+    Reconnecting --> ReadyCloud : 状态恢复
     ReadyCloud --> Recording : toggle recording
     ReadyOfflineWiFi --> Recording : toggle recording
     Recording --> ReadyCloud : stop recording
@@ -1062,9 +1086,9 @@ flowchart LR
     VM --> CMD[ControlCommandController]
     VM --> CCM[ControlConsoleManager]
     CCM --> HTTP[ApiRequestImpl]
-    CCM --> CWS[Control WS]
+    CCM --> SyncChannel[控制通道]
     HTTP --> SB[(SpringBoot)]
-    CWS --> SB
+    SyncChannel --> SB
 ```
 
 #### 功能线程甘特图
@@ -1086,7 +1110,11 @@ gantt
 ### Mine 模块（Setting + 视频）
 
 #### 功能职责
-* 顶部显示头像与大号 `UserAccount`，下方提供 `Setting` 与 `视频` 两个一级入口。
+* 顶部显示头像与大号 `UserAccount`，下方提供三个一级入口按钮：`设置`、`视频`、`测试`。
+* 三个按钮分别跳转三个独立 Activity，不在同一页面内混排子业务：
+  * `设置` -> `ComposeMineSettingActivity`
+  * `视频` -> `ComposeMineVideoActivity`
+  * `测试` -> `ComposeTestActivity`
 * **Setting**：提供修改密码、登出（业务简单，轻量实现）。
 * **视频**：
   * 云上录播记录播放（服务端 MinIO 视频源转 m3u8，Android 播放）
@@ -1094,10 +1122,9 @@ gantt
   * 本地视频上传云端（支持断点续传、下载）
 
 #### UI/交互设计
-* Mine 首页为两层：
-  * 个人卡片（Avatar + UserAccount + 两个大按钮）
-  * 子页面区域（SettingPanel / VideoPanel）
-* VideoPanel 包含三个子 Tab：
+* Mine 首页只保留导航入口，不承载 Setting/Video 业务面板。
+* `ComposeMineSettingActivity` 承载 Setting 业务，页面 MVI 由 `ComposeMineSettingVm` 管理。
+* `ComposeMineVideoActivity` 承载视频业务，页面 MVI 由 `ComposeMineVideoVm` 管理，VideoPanel 包含三个子 Tab：
   * `CloudRecord`：云录播列表 + 播放器 + 下载按钮
   * `LocalPlay`：本地 MP4 选择与播放
   * `Upload`：上传任务列表（进度、暂停、继续、重试）
@@ -1106,10 +1133,22 @@ gantt
 ```mermaid
 classDiagram
     class MineScreen
+    class ComposeMineSettingActivity
+    class ComposeMineVideoActivity
+    class ComposeTestActivity
     class MineVm {
-      -_uiState: StateFlow~MineState~
-      -_dataState: StateFlow~MineDataState~
-      -_effect: Channel~MineEffect~
+      +processIntent(intent)
+    }
+    class ComposeMineSettingVm {
+      -_uiState: StateFlow~MineSettingState~
+      -_dataState: StateFlow~MineSettingDataState~
+      -_effect: Channel~MineSettingEffect~
+      +processIntent(intent)
+    }
+    class ComposeMineVideoVm {
+      -_uiState: StateFlow~MineVideoState~
+      -_dataState: StateFlow~MineVideoDataState~
+      -_effect: Channel~MineVideoEffect~
       +processIntent(intent)
     }
     class MineVideoManager {
@@ -1130,25 +1169,40 @@ classDiagram
       +resumeTask(...)
     }
     class MineState
-    class MineDataState
-    class MineIntent
-    class MineEffect
+    class MineSettingState
+    class MineSettingDataState
+    class MineSettingIntent
+    class MineSettingEffect
+    class MineVideoState
+    class MineVideoDataState
+    class MineVideoIntent
+    class MineVideoEffect
     class ExoPlayer
     class VideoView
     class ApiRequestImpl
 
     MineScreen --> MineVm
-    MineVm --> MineVideoManager
-    MineVm --> MineUploadController
+    MineScreen --> ComposeMineSettingActivity
+    MineScreen --> ComposeMineVideoActivity
+    MineScreen --> ComposeTestActivity
+    ComposeMineSettingActivity --> ComposeMineSettingVm
+    ComposeMineVideoActivity --> ComposeMineVideoVm
+    ComposeMineVideoVm --> MineVideoManager
+    ComposeMineVideoVm --> MineUploadController
     MineUploadController --> MineUploadManager
     MineVideoManager --> ApiRequestImpl
     MineUploadManager --> ApiRequestImpl
     MineVideoManager --> ExoPlayer
     MineVideoManager --> VideoView
     MineVm --> MineState
-    MineVm --> MineDataState
-    MineVm --> MineIntent
-    MineVm --> MineEffect
+    ComposeMineSettingVm --> MineSettingState
+    ComposeMineSettingVm --> MineSettingDataState
+    ComposeMineSettingVm --> MineSettingIntent
+    ComposeMineSettingVm --> MineSettingEffect
+    ComposeMineVideoVm --> MineVideoState
+    ComposeMineVideoVm --> MineVideoDataState
+    ComposeMineVideoVm --> MineVideoIntent
+    ComposeMineVideoVm --> MineVideoEffect
 ```
 
 #### UML静态图（对象图）
@@ -1176,27 +1230,34 @@ classDiagram
 ```mermaid
 stateDiagram-v2
     [*] --> MineHome
-    MineHome --> SettingTab : click Setting
-    MineHome --> VideoTab : click 视频
-    VideoTab --> CloudRecord : subTab cloud
-    VideoTab --> LocalPlay : subTab local
-    VideoTab --> Uploading : subTab upload
+    MineHome --> SettingPage : click 设置
+    MineHome --> VideoPage : click 视频
+    MineHome --> TestPage : click 测试
+    TestPage --> MineHome : back
+    SettingPage --> MineHome : back
+    VideoPage --> MineHome : back
+    VideoPage --> CloudRecord : subTab cloud
+    VideoPage --> LocalPlay : subTab local
+    VideoPage --> Uploading : subTab upload
     Uploading --> UploadPaused : pause
     UploadPaused --> Uploading : resume
     Uploading --> UploadDone : complete
-    SettingTab --> LoggedOut : logout
+    SettingPage --> LoggedOut : logout
 ```
 
 #### UML动态图（活动图）
 ```mermaid
 flowchart TD
     A[进入Mine页] --> B[显示头像+账号]
-    B --> C{选择模块}
-    C -- Setting --> D[修改密码/登出]
-    C -- 视频 --> E{子Tab}
-    E -- 云录播 --> F[请求云录播列表 -> 播放]
-    E -- 本地播放 --> G[选择本地MP4 -> 播放]
-    E -- 上传 --> H[创建上传会话 -> 分片上传 -> 完成]
+    B --> C[展示三个按钮: 设置/视频/测试]
+    C --> D{点击入口}
+    D -- 设置 --> E[跳转 ComposeMineSettingActivity]
+    D -- 视频 --> F[跳转 ComposeMineVideoActivity]
+    D -- 测试 --> G[跳转 ComposeTestActivity]
+    F --> H{子Tab}
+    H -- 云录播 --> I[请求云录播列表 -> 播放]
+    H -- 本地播放 --> J[选择本地MP4 -> 播放]
+    H -- 上传 --> K[创建上传会话 -> 分片上传 -> 完成]
 ```
 
 #### UML动态图（时序图）

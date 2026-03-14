@@ -946,7 +946,7 @@ erDiagram
 * `POST /agent/delete`：删除 Agent -> `AgentResponse`
 * `GET /agent/getInfo`：查询单 Agent 信息 -> `AgentResponse`
 * `GET /agent/getList`：查询用户 Agent 列表 -> `AgentListResponse`
-* `GET /agent/getLastAgentChatList`：查询 Agent 最近聊天摘要 -> `AgentLastChatListResponse`
+* `GET /agent/getLastAgentChatList`：查询 Agent 最近聊天摘要（`userId` 必填且必须存在）-> `AgentLastChatListResponse`
 * `GET /chat/getLastChat`：查询最近消息 -> `ChatMessageResponse`
 * `GET /chat/getTimeLimitChat`：按截止时间查询历史消息 -> `ChatMessageResponse`
 * `POST /chat/getByAnchor`：请求体 `ChatByAnchorRequest(agentId,anchorTimestamp,before,limit)`，按锚点向前/向后分页 -> `ChatMessageResponse`
@@ -965,6 +965,7 @@ erDiagram
 * 非文件上传接口使用 `@RequestBody` + `jakarta.validation` 注解校验。
 * 文件上传接口使用 Multipart/FormData，不使用 `@Valid @RequestBody`，改为 `@RequestParam/@Part` + 手动校验。
 * 参数校验异常统一由全局异常处理器处理，业务错误类型统一维护在 `com/openapi/domain/constant/error`。
+* Agent 列表页状态机需要 `GET /agent/getList` 与 `GET /agent/getLastAgentChatList` 联合判定：`hasAgent` 与 `hasMessage`。
 * `getByAnchor` 使用 `before:Boolean` 表示方向（true历史/false补偿），并限制最大分页条数。
 * 控制台命令链路采用 `WS优先 + HTTP回退`，确保实时性与可达性平衡。
 * 视频上传链路采用会话化分片协议（uploadId + offset + chunkIndex），可恢复中断上传。

@@ -29,6 +29,7 @@ import com.data.domain.vo.message.MessageContactItemVo
 import com.magicvector.viewModel.fragment.MessageListIntent
 import com.magicvector.viewModel.fragment.MessageListMviVm
 import com.magicvector.viewModel.fragment.MessageListState
+import com.magicvector.viewModel.fragment.MessageListUiMode
 import com.magicvector.ui.view.messageList.MessageListItem
 import com.magicvector.ui.view.NetworkLoadingOverlay
 import com.magicvector.viewModel.fragment.MessageListEffect
@@ -86,27 +87,35 @@ fun MessageListScreen(
         modifier = modifier.fillMaxSize()
     ) {
         Box(modifier = Modifier.fillMaxSize()) {
-            if (state.messages.isEmpty()) {
-                // 空状态
-                EmptyStateView()
-            } else {
-                // 消息列表
-                MessageListContent(
-                    state = state,
-                    listState = listState,
-                    onItemClick = { position ->
-                        viewModel.processIntent(MessageListIntent.SelectMessage(position))
-                    },
-                    onItemLongClick = { position ->
-                        viewModel.processIntent(MessageListIntent.EditAgent(position))
-                    }
-                )
+            when (state.uiMode) {
+                MessageListUiMode.NO_AGENT -> {
+                    EmptyStateView(
+                        onCreateAgentClick = onCreateAgentClick
+                    )
+                }
+                MessageListUiMode.HAS_AGENT_NO_MESSAGE -> {
+                    NoMessageStateView()
+                }
+                MessageListUiMode.HAS_MESSAGE -> {
+                    MessageListContent(
+                        state = state,
+                        listState = listState,
+                        onItemClick = { position ->
+                            viewModel.processIntent(MessageListIntent.SelectMessage(position))
+                        },
+                        onItemLongClick = { position ->
+                            viewModel.processIntent(MessageListIntent.EditAgent(position))
+                        }
+                    )
+                }
             }
 
-            // 创建Agent的FAB
-            CreateAgentFloatingButton(
-                onClick = onCreateAgentClick
-            )
+            if (state.uiMode != MessageListUiMode.NO_AGENT) {
+                CreateAgentFloatingButton(
+                    onClick = onCreateAgentClick,
+                    modifier = Modifier.align(Alignment.BottomEnd)
+                )
+            }
 
             // 顶层加载遮罩，完全由 uiState.isLoading 控制
             NetworkLoadingOverlay(isLoading = state.isLoading)
@@ -156,7 +165,8 @@ fun MessageListContent(
 // 空状态组件
 @Composable
 fun EmptyStateView(
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onCreateAgentClick: () -> Unit = {}
 ) {
     Box(
         modifier = modifier.fillMaxSize(),
@@ -173,11 +183,31 @@ fun EmptyStateView(
             )
             Spacer(modifier = Modifier.height(10.dp))
             Text(
-                text = stringResource(id = com.view.appview.R.string.have_no_message_now),
+                text = "当前还没有Agent",
                 color = colorResource(id = com.view.appview.R.color.s1_800),
                 fontSize = 20.sp
             )
+            Spacer(modifier = Modifier.height(16.dp))
+            Button(onClick = onCreateAgentClick) {
+                Text(text = stringResource(id = com.view.appview.R.string.create_agent))
+            }
         }
+    }
+}
+
+@Composable
+fun NoMessageStateView(
+    modifier: Modifier = Modifier
+) {
+    Box(
+        modifier = modifier.fillMaxSize(),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = stringResource(id = com.view.appview.R.string.have_no_message_now),
+            color = colorResource(id = com.view.appview.R.color.s1_800),
+            fontSize = 20.sp
+        )
     }
 }
 
@@ -207,7 +237,7 @@ fun CreateAgentFloatingButton(
 @Composable
 private fun EmptyStatePreview() {
     MaterialTheme {
-        EmptyStateView()
+        EmptyStateView(onCreateAgentClick = {})
     }
 }
 
