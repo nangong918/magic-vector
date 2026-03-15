@@ -81,13 +81,15 @@ class ComposeMineVideoVm : ViewModel() {
         if (userId.isBlank()) {
             return
         }
-        videoManager.fetchCloudRecordList(
-            userId = userId,
-            page = 1,
-            size = 30,
-            onSuccess = { list ->
+        viewModelScope.launch {
+            try {
+                val list = videoManager.fetchCloudRecordList(
+                    userId = userId,
+                    page = 1,
+                    size = 30
+                )
                 _uiState.value = _uiState.value.copy(
-                    cloudVideos = list?.videos.orEmpty().map { item ->
+                    cloudVideos = list.videos.orEmpty().map { item ->
                         MineCloudVideoItemState(
                             videoId = item.videoId?.toString().orEmpty(),
                             title = item.objectName ?: "video-${item.videoId}",
@@ -95,27 +97,25 @@ class ComposeMineVideoVm : ViewModel() {
                         )
                     }
                 )
-            },
-            onError = {
+            } catch (_: Throwable) {
                 sendEffect(MineVideoEffect.ShowToast("获取云录播失败"))
             }
-        )
+        }
     }
 
     private fun openCloudVideo(videoId: String) {
-        videoManager.resolveCloudPlayUrl(
-            videoId = videoId,
-            onSuccess = { url ->
-                if (url?.playUrl.isNullOrBlank()) {
+        viewModelScope.launch {
+            try {
+                val url = videoManager.resolveCloudPlayUrl(videoId = videoId)
+                if (url.playUrl.isNullOrBlank()) {
                     sendEffect(MineVideoEffect.ShowToast("播放地址为空"))
-                    return@resolveCloudPlayUrl
+                    return@launch
                 }
-                _uiState.value = _uiState.value.copy(cloudPlayUrl = url?.playUrl)
-            },
-            onError = {
+                _uiState.value = _uiState.value.copy(cloudPlayUrl = url.playUrl)
+            } catch (_: Throwable) {
                 sendEffect(MineVideoEffect.ShowToast("获取播放地址失败"))
             }
-        )
+        }
     }
 
     private fun startUpload(contentResolver: ContentResolver, uri: Uri, fileName: String) {

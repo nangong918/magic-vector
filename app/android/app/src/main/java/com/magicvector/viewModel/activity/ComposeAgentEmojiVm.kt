@@ -12,12 +12,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.application
 import androidx.lifecycle.viewModelScope
-import com.magicvector.repository.api.handler.SyncRequestCallback
-import com.magicvector.repository.api.utils.AppResponseUtil
 import com.core.baseutil.file.FileUtil
-import com.core.baseutil.network.BaseResponse
-import com.core.baseutil.network.OnSuccessCallback
-import com.core.baseutil.network.OnThrowableCallback
 import com.data.domain.constant.BaseConstant
 import com.data.domain.constant.VadChatState
 import com.data.domain.constant.chat.RealtimeRequestDataTypeEnum
@@ -98,7 +93,7 @@ class ComposeAgentEmojiVm : AndroidViewModel(application = MainApplication.getAp
             is AgentEmojiIntent.Initialize -> initialize(intent.agentId, intent.agentName)
             is AgentEmojiIntent.OnServiceBound -> onServiceBound(intent.afterBound)
             AgentEmojiIntent.OnResume -> sendEffect(AgentEmojiEffect.RequestRecordPermission)
-            is AgentEmojiIntent.OnRecordPermissionGranted -> onRecordPermissionGranted(intent.context)
+            is AgentEmojiIntent.OnRecordPermissionGranted -> onRecordPermissionGranted()
             AgentEmojiIntent.OnRecordPermissionDenied -> sendEffect(AgentEmojiEffect.ShowToast("录音权限被拒绝"))
             AgentEmojiIntent.OnPause -> onPause()
             AgentEmojiIntent.OnDestroy -> onDestroy()
@@ -111,7 +106,7 @@ class ComposeAgentEmojiVm : AndroidViewModel(application = MainApplication.getAp
             is AgentEmojiIntent.OnDetectionChanged -> onDetectionChanged(intent.detectionType)
             is AgentEmojiIntent.OnTargetChanged -> onTargetChanged(intent.xFraction, intent.yFraction)
             is AgentEmojiIntent.OnCurrentFrame -> currentFrameBitmap = intent.bitmap
-            is AgentEmojiIntent.HandleSystemResponse -> handleSystemResponse(intent.map, intent.context)
+            is AgentEmojiIntent.HandleSystemResponse -> handleSystemResponse(intent.map)
             AgentEmojiIntent.StartVision -> sendEffect(AgentEmojiEffect.StartVision)
             is AgentEmojiIntent.SetEmojiCallbacksBound -> {
                 _uiState.update { it.copy(emojiCallbacksBound = intent.bound) }
@@ -145,9 +140,9 @@ class ComposeAgentEmojiVm : AndroidViewModel(application = MainApplication.getAp
     /**
      * 录音权限通过后，启动 Emoji 模式下的 VAD 通话。
      */
-    private fun onRecordPermissionGranted(context: Context) {
+    private fun onRecordPermissionGranted() {
         realtimeChatController?.let { controller ->
-            controller.initVadCall(WeakReference(context))
+            controller.initVadCall(WeakReference(application))
             controller.currentIsEmoji.set(true)
             _uiState.update { it.copy(isMicClosed = false, vadChatState = VadChatState.Silent) }
         }
@@ -255,7 +250,7 @@ class ComposeAgentEmojiVm : AndroidViewModel(application = MainApplication.getAp
     /**
      * 处理 MCP 系统消息（当前主要是上传图片事件）。
      */
-    private fun handleSystemResponse(map: Map<String, String>, context: Context) {
+    private fun handleSystemResponse(map: Map<String, String>) {
         val event = map[RealtimeSystemResponseEventEnum.EVENT_KET] ?: return
         if (event != RealtimeSystemResponseEventEnum.UPLOAD_PHOTO.code) return
 
@@ -287,7 +282,6 @@ class ComposeAgentEmojiVm : AndroidViewModel(application = MainApplication.getAp
         when (BaseConstant.VISION.UPLOAD_METHOD) {
             VisionUploadTypeEnum.HTTP -> {
                 httpUploadSingleImageVision(
-                    context = context,
                     bitmaps = listOf(bitmap),
                     agentId = localAgentId,
                     userId = userId,
@@ -312,31 +306,27 @@ class ComposeAgentEmojiVm : AndroidViewModel(application = MainApplication.getAp
      * HTTP 上传视觉图片。
      */
     private fun httpUploadSingleImageVision(
-        context: Context,
         bitmaps: List<Bitmap>,
         agentId: String,
         userId: String,
         messageId: String
     ) {
-        val files = VisionMcpManager.bitmapsToFlies(bitmaps, context)
+        val files = VisionMcpManager.bitmapsToFlies(bitmaps, application)
         sendEffect(AgentEmojiEffect.ShowLoading)
-        doUploadImageVision(
-            context = context,
-            images = files,
-            agentId = agentId,
-            userId = userId,
-            messageId = messageId,
-            callback = object : SyncRequestCallback {
-                override fun onThrowable(throwable: Throwable?) {
-                    Log.e(TAG, "httpUploadSingleImageVision error", throwable)
-                    sendEffect(AgentEmojiEffect.HideLoading)
-                }
-
-                override fun onAllRequestSuccess() {
-                    sendEffect(AgentEmojiEffect.HideLoading)
-                }
+        viewModelScope.launch {
+            try {
+                uploadImageVision(
+                    images = files,
+                    agentId = agentId,
+                    userId = userId,
+                    messageId = messageId
+                )
+                sendEffect(AgentEmojiEffect.HideLoading)
+            } catch (throwable: Throwable) {
+                Log.e(TAG, "httpUploadSingleImageVision error", throwable)
+                sendEffect(AgentEmojiEffect.HideLoading)
             }
-        )
+        }
     }
 
     /**
@@ -380,48 +370,23 @@ class ComposeAgentEmojiVm : AndroidViewModel(application = MainApplication.getAp
         }
     }
 
-    /**
-     * 复用旧仓储逻辑：multipart 上传图片并处理统一响应。
-     */
-    private fun doUploadImageVision(
-        context: Context,
+    private suspend fun uploadImageVision(
         images: List<File>,
         agentId: String,
         userId: String,
-        messageId: String,
-        callback: SyncRequestCallback
-    ) {
+        messageId: String
+    ): String {
         val imageParam: List<MultipartBody.Part> = FileUtil.createImageMultipartBodyParts(images, "images")
-            ?: run {
-                callback.onThrowable(Throwable("image is null"))
-                return
-            }
+            ?: throw IllegalArgumentException("image is null")
 
         val agentIdParam = RequestBody.create("text/plain".toMediaTypeOrNull(), agentId)
         val userIdParam = RequestBody.create("text/plain".toMediaTypeOrNull(), userId)
         val messageIdParam = RequestBody.create("text/plain".toMediaTypeOrNull(), messageId)
-
-        api.uploadImageVision(
+        return api.uploadImageVision(
             images = imageParam,
             agentId = agentIdParam,
             userId = userIdParam,
-            messageId = messageIdParam,
-            onSuccessCallback = object : OnSuccessCallback<BaseResponse<String>> {
-                override fun onResponse(response: BaseResponse<String>?) {
-                    AppResponseUtil.handleSyncResponseEx(
-                        response = response,
-                        context = context,
-                        callback = callback
-                    ) { _, _ ->
-                        callback.onAllRequestSuccess()
-                    }
-                }
-            },
-            throwableCallback = object : OnThrowableCallback {
-                override fun callback(throwable: Throwable?) {
-                    callback.onThrowable(throwable)
-                }
-            }
+            messageId = messageIdParam
         )
     }
 
@@ -491,7 +456,7 @@ sealed class AgentEmojiIntent {
     data class OnServiceBound(val afterBound: Runnable) : AgentEmojiIntent()
 
     data object OnResume : AgentEmojiIntent()
-    data class OnRecordPermissionGranted(val context: Context) : AgentEmojiIntent()
+    data object OnRecordPermissionGranted : AgentEmojiIntent()
     data object OnRecordPermissionDenied : AgentEmojiIntent()
     data object OnPause : AgentEmojiIntent()
     data object OnDestroy : AgentEmojiIntent()
@@ -509,7 +474,7 @@ sealed class AgentEmojiIntent {
     data class OnDetectionChanged(val detectionType: Int?) : AgentEmojiIntent()
     data class OnTargetChanged(val xFraction: Float, val yFraction: Float) : AgentEmojiIntent()
     data class OnCurrentFrame(val bitmap: Bitmap) : AgentEmojiIntent()
-    data class HandleSystemResponse(val map: Map<String, String>, val context: Context) : AgentEmojiIntent()
+    data class HandleSystemResponse(val map: Map<String, String>) : AgentEmojiIntent()
     data class SetEmojiCallbacksBound(val bound: Boolean) : AgentEmojiIntent()
 }
 

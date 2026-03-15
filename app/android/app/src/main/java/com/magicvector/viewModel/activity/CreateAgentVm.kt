@@ -9,20 +9,16 @@ import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.ViewModel
-import com.magicvector.repository.api.handler.SyncRequestCallback
-import com.magicvector.repository.api.utils.AppResponseUtil
+import androidx.lifecycle.viewModelScope
 import com.core.baseutil.file.FileUtil
-import com.core.baseutil.network.BaseResponse
-import com.core.baseutil.network.OnSuccessCallback
-import com.core.baseutil.network.OnThrowableCallback
 import com.core.baseutil.permissions.GainPermissionCallback
 import com.core.baseutil.permissions.PermissionUtil
 import com.core.baseutil.photo.SelectPhotoUtil
 import com.core.baseutil.ui.ToastUtils
 import com.data.domain.constant.BaseConstant
-import com.magicvector.domain.dto.http.response.AgentResponse
 import com.data.domain.fragmentActivity.aao.CreateAgentAAo
 import com.magicvector.MainApplication
+import kotlinx.coroutines.launch
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
 import okhttp3.RequestBody
@@ -49,7 +45,7 @@ class CreateAgentVm(
     val api = MainApplication.getRemoteApiSource()
 
     // 创建Agent
-    fun doCreateAgent(context: Context, callback: SyncRequestCallback){
+    suspend fun requestCreateAgent(context: Context): Boolean {
         // 入参校验
         var name = aao.nameLd.value
         // 清除空格和特殊符号
@@ -61,8 +57,7 @@ class CreateAgentVm(
             Log.d(TAG, "name.isEmpty(): ${name?.isEmpty()}")
             Log.d(TAG, "isNameAllWhitespaceOrSpecialChars: $isNameAllWhitespaceOrSpecialChars")
             ToastUtils.showToastActivity(context, context.getString(com.view.appview.R.string.please_input_agent_name))
-            callback.onThrowable(Throwable(context.getString(com.view.appview.R.string.please_input_agent_name)))
-            return
+            return false
         }
 
         val description = aao.descriptionLd.value
@@ -74,8 +69,7 @@ class CreateAgentVm(
             Log.d(TAG, "description.isEmpty(): ${description?.isEmpty()}")
             Log.d(TAG, "isDescAllWhitespaceOrSpecialChars: $isDescAllWhitespaceOrSpecialChars")
             ToastUtils.showToastActivity(context, context.getString(com.view.appview.R.string.please_input_agent_description))
-            callback.onThrowable(Throwable(context.getString(com.view.appview.R.string.please_input_agent_description)))
-            return
+            return false
         }
 
         var filePart: MultipartBody.Part? = null
@@ -99,7 +93,7 @@ class CreateAgentVm(
             if (imageFile == null || !imageFile.exists()) {
                 // 处理文件未创建或路径不正确的情况
                 Log.w(TAG, "Image file creation failed")
-                return
+                return false
             }
 
             // 获取文件名
@@ -122,41 +116,21 @@ class CreateAgentVm(
             aao.descriptionLd.value!!
         )
 
-        api.createAgent(
-            filePart,
-            userIdBody,
-            nameBody,
-            descriptionBody,
-            object : OnSuccessCallback<BaseResponse<AgentResponse>> {
-                override fun onResponse(response: BaseResponse<AgentResponse>?) {
-                    AppResponseUtil.handleSyncResponseEx(
-                        response,
-                        context,
-                        callback,
-                        ::handleCreateAgent
-                    )
-                }
-            },
-            object : OnThrowableCallback {
-                override fun callback(throwable: Throwable?) {
-                    callback.onThrowable(throwable)
-                }
-            }
+        val response = api.createAgent(
+            avatar = filePart,
+            userId = userIdBody,
+            name = nameBody,
+            description = descriptionBody
         )
-    }
-
-    private fun handleCreateAgent(response: BaseResponse<AgentResponse>?,
-                                  context: Context,
-                                  callback: SyncRequestCallback) {
-        response?.let {
-            if (response.data?.agentAo?.agentId != null){
-                ToastUtils.showToastActivity(context, context.getString(
-                    com.view.appview.R.string.create_success
-                ))
-                aao.isCreateSuccess = true
-            }
+        if (response.agentAo?.agentId != null) {
+            ToastUtils.showToastActivity(
+                context,
+                context.getString(com.view.appview.R.string.create_success)
+            )
+            aao.isCreateSuccess = true
+            return true
         }
-        callback.onAllRequestSuccess()
+        return false
     }
 
 

@@ -76,7 +76,6 @@ class ComposeRegisterActivity : BaseComponentActivity() {
                 vm.effect.collect { effect ->
                     when (effect) {
                         RegisterEffect.RequestStoragePermission -> requestStoragePermission()
-                        RegisterEffect.SubmitRequest -> vm.register(this@ComposeRegisterActivity)
                         RegisterEffect.NavigateToMain -> navigateToMain()
                         RegisterEffect.NavigateToLogin -> finish()
                         is RegisterEffect.ShowToast -> {

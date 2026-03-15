@@ -57,7 +57,7 @@ class ComposeCreateAgentActivity : BaseComponentActivity() {
     private val permissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { isGranted ->
-        vm.onPermissionResult(isGranted, this)
+        vm.onPermissionResult(isGranted)
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -113,9 +113,6 @@ class ComposeCreateAgentActivity : BaseComponentActivity() {
                                 putExtra("agent_id", effect.agentId)
                             }
                             setResult(RESULT_OK, resultIntent)
-                        }
-                        is CreateAgentEffect.CreateAgent -> {
-                            vm.createAgent(context = this@ComposeCreateAgentActivity)
                         }
                     }
                 }

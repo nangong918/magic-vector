@@ -20,12 +20,8 @@ import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.application
-import com.magicvector.repository.api.handler.SyncRequestCallback
-import com.magicvector.repository.api.utils.AppResponseUtil
+import androidx.lifecycle.viewModelScope
 import com.core.baseutil.cache.HttpRequestManager
-import com.core.baseutil.network.BaseResponse
-import com.core.baseutil.network.OnSuccessCallback
-import com.core.baseutil.network.OnThrowableCallback
 import com.core.baseutil.network.networkLoad.NetworkLoadUtils
 import com.core.baseutil.permissions.GainPermissionCallback
 import com.core.baseutil.permissions.PermissionUtil
@@ -34,7 +30,6 @@ import com.core.baseutil.ui.ToastUtils
 import com.data.domain.ao.message.MessageContactItemAo
 import com.data.domain.constant.BaseConstant
 import com.data.domain.constant.chat.RealtimeRequestDataTypeEnum
-import com.magicvector.domain.dto.http.response.ChatMessageResponse
 import com.data.domain.fragmentActivity.aao.ChatAAo
 import com.magicvector.MainApplication
 import com.magicvector.callback.OnVadChatStateChange
@@ -46,6 +41,7 @@ import com.view.appview.call.CallAo
 import com.view.appview.recycler.RecyclerViewWhereNeedUpdate
 import com.view.appview.chat.ChatMessageAdapter
 import com.view.appview.chat.OnChatMessageClick
+import kotlinx.coroutines.launch
 
 
 /**
@@ -152,15 +148,10 @@ class ChatVm(
         // 初始化网络请求
         val initNetworkRunnable = {
             NetworkLoadUtils.showDialog(activity)
-            initNetworkRequest(activity, object : SyncRequestCallback {
-                override fun onThrowable(throwable: Throwable?) {
-                    NetworkLoadUtils.dismissDialogSafety(activity)
-                }
-
-                override fun onAllRequestSuccess() {
-                    NetworkLoadUtils.dismissDialogSafety(activity)
-                }
-            })
+            viewModelScope.launch {
+                runCatching { initNetworkRequest(activity) }
+                NetworkLoadUtils.dismissDialogSafety(activity)
+            }
         }
 
         messageAo = ao
@@ -196,11 +187,11 @@ class ChatVm(
     //---------------------------NetWork---------------------------
 
     // chat
-    private fun initNetworkRequest(context: Context, callback: SyncRequestCallback){
+    private suspend fun initNetworkRequest(context: Context){
         if (HttpRequestManager.getIsFirstOpen(TAG)){
             // 第一次打开，初始化
             Log.i(TAG, "initNetworkRequest: 第一次打开")
-            doGetLastChat(context, callback)
+            fetchLastChat()
         }
         else {
             Log.i(TAG, "initNetworkRequest: 重启viewModel了")
@@ -214,80 +205,40 @@ class ChatVm(
     }
 
     // chatHistory First
-    fun doGetLastChat(context: Context, callback: SyncRequestCallback){
+    private suspend fun fetchLastChat() {
         if (realtimeChatController?.messageContactItemAo != null) {
-            MainApplication.getRemoteApiSource().getLastChat(
-                realtimeChatController?.messageContactItemAo!!.contactId!!,
-                object : OnSuccessCallback<BaseResponse<ChatMessageResponse>>{
-                    override fun onResponse(response: BaseResponse<ChatMessageResponse>?) {
-                        AppResponseUtil.handleSyncResponseEx(
-                            response,
-                            context,
-                            callback,
-                            ::handleGetChatHistory
-                        )
-                    }
-
-                },
-                object : OnThrowableCallback{
-                    override fun callback(throwable: Throwable?) {
-                        Log.e(TAG, "doGetLastChat: onThrowable", throwable)
-                        callback.onThrowable(Throwable("Get ChatHistory Failed"))
-                    }
-                }
+            val response = MainApplication.getRemoteApiSource().getLastChat(
+                realtimeChatController?.messageContactItemAo!!.contactId!!
             )
+            applyChatHistory(response)
         }
         else {
-            Log.w(TAG, "doGetLastChat: messageContactItemAo == null")
-            ToastUtils.showToastActivity(context, "获取聊天记录失败")
-            val throwable = Throwable("Get ChatHistory Failed")
-            callback.onThrowable(throwable)
+            Log.w(TAG, "fetchLastChat: messageContactItemAo == null")
+            throw Throwable("Get ChatHistory Failed")
         }
     }
 
     // 特定时间段的chat history todo: 上拉上滑获取之前的chat History
-    fun doGetTimeLimitChat(context: Context, deadline: String, callback: SyncRequestCallback){
+    suspend fun fetchTimeLimitChat(deadline: String) {
         if (realtimeChatController?.messageContactItemAo != null){
-            MainApplication.getRemoteApiSource().getTimeLimitChat(
+            val response = MainApplication.getRemoteApiSource().getTimeLimitChat(
                 realtimeChatController?.messageContactItemAo!!.contactId!!,
                 deadline,
-                BaseConstant.Constant.CHAT_HISTORY_LIMIT_COUNT,
-                object : OnSuccessCallback<BaseResponse<ChatMessageResponse>>{
-                    override fun onResponse(response: BaseResponse<ChatMessageResponse>?) {
-                        AppResponseUtil.handleSyncResponseEx(
-                            response,
-                            context,
-                            callback,
-                            ::handleGetChatHistory
-                        )
-                    }
-
-                },
-                object : OnThrowableCallback{
-                    override fun callback(throwable: Throwable?) {
-                        Log.e(TAG, "doGetTimeLimitChat: onThrowable", throwable)
-                        callback.onThrowable(Throwable("doGetTimeLimitChat: onThrowable"))
-                    }
-                }
+                BaseConstant.Constant.CHAT_HISTORY_LIMIT_COUNT
             )
+            applyChatHistory(response)
         }
         else {
-            Log.w(TAG, "doGetTimeLimitChat: messageContactItemAo == null")
-            ToastUtils.showToastActivity(context, "获取聊天记录失败")
-            callback.onThrowable(Throwable("doGetTimeLimitChat: onThrowable"))
+            Log.w(TAG, "fetchTimeLimitChat: messageContactItemAo == null")
+            throw Throwable("fetchTimeLimitChat: onThrowable")
         }
     }
 
-    private fun handleGetChatHistory(response: BaseResponse<ChatMessageResponse>?,
-                                     context: Context,
-                                     callback: SyncRequestCallback){
-
-        response?.data?.chatMessages?.let {
+    private fun applyChatHistory(response: com.magicvector.domain.dto.http.response.ChatMessageResponse?) {
+        response?.chatMessages?.let {
             realtimeChatController?.getChatManagerPointer()?.setResponsesToViews(it)
             realtimeChatController?.updateMessage()
         }
-
-        callback.onAllRequestSuccess()
     }
 
     //---------------------------Logic---------------------------

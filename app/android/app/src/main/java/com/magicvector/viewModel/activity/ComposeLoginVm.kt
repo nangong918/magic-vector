@@ -2,13 +2,9 @@ package com.magicvector.viewModel.activity
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.core.baseutil.network.BaseResponse
-import com.core.baseutil.network.OnSuccessCallback
-import com.core.baseutil.network.OnThrowableCallback
-import com.data.domain.constant.BaseConstant
 import com.magicvector.domain.dto.http.request.UserLoginRequest
-import com.magicvector.domain.dto.http.response.UserAuthResponse
 import com.magicvector.MainApplication
+import com.magicvector.domain.exception.NetworkBusinessException
 import com.magicvector.domain.model.UserSessionModel
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
@@ -103,31 +99,27 @@ class ComposeLoginVm : ViewModel() {
             account = state.account.trim()
             password = passwordToSave
         }
-        remoteApiSource.login(
-            request = request,
-            onSuccessCallback = object : OnSuccessCallback<BaseResponse<UserAuthResponse>> {
-                override fun onResponse(response: BaseResponse<UserAuthResponse>?) {
-                    handleLoginResponse(response, passwordToSave)
-                }
-            },
-            throwableCallback = object : OnThrowableCallback {
-                override fun callback(throwable: Throwable?) {
-                    _uiState.update { it.copy(isLoading = false) }
-                    sendEffect(LoginEffect.ShowToast("网络异常，请稍后再试"))
-                }
+        viewModelScope.launch {
+            try {
+                val auth = remoteApiSource.login(request)
+                handleLoginResponse(auth, passwordToSave)
+            } catch (e: NetworkBusinessException) {
+                _uiState.update { it.copy(isLoading = false) }
+                sendEffect(LoginEffect.ShowToast(e.msg ?: "登录失败"))
+            } catch (_: Throwable) {
+                _uiState.update { it.copy(isLoading = false) }
+                sendEffect(LoginEffect.ShowToast("网络异常，请稍后再试"))
             }
-        )
+        }
     }
 
     private fun handleLoginResponse(
-        response: BaseResponse<UserAuthResponse>?,
+        auth: com.magicvector.domain.dto.http.response.UserAuthResponse,
         loginPassword: String
     ) {
-        val isSuccess = response?.code == BaseConstant.NetworkCode.SUCCESS_CODE
-        val auth = response?.data
-        if (!isSuccess || auth == null || auth.userId == null || auth.userId <= 0L) {
+        if (auth.userId == null || auth.userId <= 0L) {
             _uiState.update { it.copy(isLoading = false) }
-            sendEffect(LoginEffect.ShowToast(response?.message ?: "登录失败"))
+            sendEffect(LoginEffect.ShowToast("登录失败"))
             return
         }
 

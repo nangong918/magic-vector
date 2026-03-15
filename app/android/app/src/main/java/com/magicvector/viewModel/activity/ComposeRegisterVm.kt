@@ -6,12 +6,9 @@ import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.core.baseutil.file.FileUtil
-import com.core.baseutil.network.BaseResponse
-import com.core.baseutil.network.OnSuccessCallback
-import com.core.baseutil.network.OnThrowableCallback
 import com.data.domain.constant.BaseConstant
-import com.magicvector.domain.dto.http.response.UserAuthResponse
 import com.magicvector.MainApplication
+import com.magicvector.domain.exception.NetworkBusinessException
 import com.magicvector.domain.model.UserSessionModel
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
@@ -72,42 +69,40 @@ class ComposeRegisterVm : ViewModel() {
         }
 
         _uiState.update { it.copy(isLoading = true) }
-        sendEffect(RegisterEffect.SubmitRequest)
+        register()
     }
 
-    fun register(context: Context) {
+    private fun register() {
         val state = _uiState.value
-        val avatarPart = createAvatarPartOrNull(context, state.avatarUri)
+        val avatarPart = createAvatarPartOrNull(MainApplication.getApp(), state.avatarUri)
 
         val accountBody = RequestBody.create("text/plain".toMediaTypeOrNull(), state.account.trim())
         val passwordBody = RequestBody.create("text/plain".toMediaTypeOrNull(), state.password)
         val nameBody = RequestBody.create("text/plain".toMediaTypeOrNull(), state.account.trim())
 
-        remoteApiSource.register(
-            avatar = avatarPart,
-            account = accountBody,
-            password = passwordBody,
-            name = nameBody,
-            onSuccessCallback = object : OnSuccessCallback<BaseResponse<UserAuthResponse>> {
-                override fun onResponse(response: BaseResponse<UserAuthResponse>?) {
-                    handleRegisterResponse(response)
-                }
-            },
-            throwableCallback = object : OnThrowableCallback {
-                override fun callback(throwable: Throwable?) {
-                    _uiState.update { it.copy(isLoading = false) }
-                    sendEffect(RegisterEffect.ShowToast("网络异常，请稍后再试"))
-                }
+        viewModelScope.launch {
+            try {
+                val auth = remoteApiSource.register(
+                    avatar = avatarPart,
+                    account = accountBody,
+                    password = passwordBody,
+                    name = nameBody
+                )
+                handleRegisterResponse(auth)
+            } catch (e: NetworkBusinessException) {
+                _uiState.update { it.copy(isLoading = false) }
+                sendEffect(RegisterEffect.ShowToast(e.msg ?: "注册失败"))
+            } catch (_: Throwable) {
+                _uiState.update { it.copy(isLoading = false) }
+                sendEffect(RegisterEffect.ShowToast("网络异常，请稍后再试"))
             }
-        )
+        }
     }
 
-    private fun handleRegisterResponse(response: BaseResponse<UserAuthResponse>?) {
-        val isSuccess = response?.code == BaseConstant.NetworkCode.SUCCESS_CODE
-        val auth = response?.data
-        if (!isSuccess || auth == null || auth.userId == null || auth.userId <= 0L) {
+    private fun handleRegisterResponse(auth: com.magicvector.domain.dto.http.response.UserAuthResponse) {
+        if (auth.userId == null || auth.userId <= 0L) {
             _uiState.update { it.copy(isLoading = false) }
-            sendEffect(RegisterEffect.ShowToast(response?.message ?: "注册失败"))
+            sendEffect(RegisterEffect.ShowToast("注册失败"))
             return
         }
 
@@ -204,8 +199,6 @@ data class RegisterDataState(
 sealed class RegisterEffect {
     // 申请存储权限
     data object RequestStoragePermission : RegisterEffect()
-    // 提交注册请求
-    data object SubmitRequest : RegisterEffect()
     // 导航主页
     data object NavigateToMain : RegisterEffect()
     // 导航登录页

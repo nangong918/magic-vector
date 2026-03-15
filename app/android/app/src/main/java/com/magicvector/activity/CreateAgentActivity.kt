@@ -2,13 +2,14 @@ package com.magicvector.activity
 
 import android.content.Intent
 import android.os.Bundle
-import com.magicvector.repository.api.handler.SyncRequestCallback
+import androidx.lifecycle.lifecycleScope
 import com.core.baseutil.network.networkLoad.NetworkLoadUtils
 import com.core.baseutil.ui.ToastUtils
 import com.data.domain.constant.BaseConstant
 import com.magicvector.databinding.ActivityCreateAgentBinding
 import com.magicvector.utils.BaseAppCompatVmActivity
 import com.magicvector.viewModel.activity.CreateAgentVm
+import kotlinx.coroutines.launch
 
 class CreateAgentActivity : BaseAppCompatVmActivity<ActivityCreateAgentBinding, CreateAgentVm>(
     CreateAgentActivity::class,
@@ -64,29 +65,25 @@ class CreateAgentActivity : BaseAppCompatVmActivity<ActivityCreateAgentBinding, 
 
         binding.btnConfirm.setOnClickListener {
             NetworkLoadUtils.showDialog(this)
-            vm.doCreateAgent(this, object : SyncRequestCallback{
-                override fun onThrowable(throwable: Throwable?) {
+            lifecycleScope.launch {
+                runCatching {
+                    vm.requestCreateAgent(this@CreateAgentActivity)
+                }.onSuccess { success ->
                     NetworkLoadUtils.dismissDialogSafety(this@CreateAgentActivity)
-                    ToastUtils.showToastActivity(
-                        this@CreateAgentActivity,
-                        getString(com.view.appview.R.string.create_failed)
-                    )
-                }
-
-                override fun onAllRequestSuccess() {
-                    NetworkLoadUtils.dismissDialogSafety(this@CreateAgentActivity)
-                    if (vm.aao.isCreateSuccess){
+                    if (success && vm.aao.isCreateSuccess) {
                         val resultIntent = Intent().apply {
-                            putExtra(CreateAgentActivity::class.simpleName, true) // 设置返回值
+                            putExtra(CreateAgentActivity::class.simpleName, true)
                         }
                         setResult(RESULT_OK, resultIntent)
                         finish()
+                        return@onSuccess
                     }
-                    // 创建失败弹窗
-                    ToastUtils.showToastActivity(this@CreateAgentActivity,
-                        getString(com.view.appview.R.string.create_failed))
+                    ToastUtils.showToastActivity(this@CreateAgentActivity, getString(com.view.appview.R.string.create_failed))
+                }.onFailure {
+                    NetworkLoadUtils.dismissDialogSafety(this@CreateAgentActivity)
+                    ToastUtils.showToastActivity(this@CreateAgentActivity, getString(com.view.appview.R.string.create_failed))
                 }
-            })
+            }
         }
     }
 }

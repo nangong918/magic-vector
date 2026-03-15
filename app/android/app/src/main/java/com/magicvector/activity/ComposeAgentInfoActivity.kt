@@ -77,7 +77,7 @@ class ComposeAgentInfoActivity : BaseComponentActivity() {
                 )
             }
         }
-        vm.processIntent(ComposeAgentInfoIntent.Initialize(intent.getStringExtra("agentId"), this))
+        vm.processIntent(ComposeAgentInfoIntent.Initialize(intent.getStringExtra("agentId")))
     }
 
     private fun observeEffects() {

@@ -9,18 +9,14 @@ import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.ViewModel
-import com.magicvector.repository.api.handler.SyncRequestCallback
-import com.magicvector.repository.api.utils.AppResponseUtil
-import com.core.baseutil.network.BaseResponse
-import com.core.baseutil.network.OnSuccessCallback
-import com.core.baseutil.network.OnThrowableCallback
+import androidx.lifecycle.viewModelScope
 import com.core.baseutil.permissions.GainPermissionCallback
 import com.core.baseutil.permissions.PermissionUtil
 import com.core.baseutil.photo.SelectPhotoUtil
 import com.core.baseutil.ui.ToastUtils
-import com.magicvector.domain.dto.http.response.AgentResponse
 import com.data.domain.fragmentActivity.aao.AgentInfoAAo
 import com.magicvector.MainApplication
+import kotlinx.coroutines.launch
 
 class AgentInfoVm(
 
@@ -43,39 +39,15 @@ class AgentInfoVm(
     val api = MainApplication.getRemoteApiSource()
 
     // 查询Agent
-    fun doGetAgentInfo(context: Context, agentId: String, callback: SyncRequestCallback){
-        api.getAgentInfo(
-            agentId,
-            object : OnSuccessCallback<BaseResponse<AgentResponse>> {
-                override fun onResponse(response: BaseResponse<AgentResponse>?) {
-                    AppResponseUtil.handleSyncResponseEx(
-                        response,
-                        context,
-                        callback,
-                        ::handleGetAgentInfo
-                    )
-                }
-            },
-            object : OnThrowableCallback {
-                override fun callback(throwable: Throwable?) {
-                    callback.onThrowable(throwable)
-                }
-            }
-        )
-    }
-
-    private fun handleGetAgentInfo(response: BaseResponse<AgentResponse>?,
-                                   context: Context,
-                                   callback: SyncRequestCallback) {
-        response?.data?.agentAo?.let { ao ->
-
+    suspend fun requestAgentInfo(agentId: String) {
+        val response = api.getAgentInfo(agentId)
+        response.agentAo?.let { ao ->
             ao.agentVo?.let { vo ->
                 aao.avatarUrlLd.postValue(vo.avatarUrl)
                 aao.nameLd.postValue(vo.name)
                 aao.descriptionLd.postValue(vo.description)
             }
         }
-        callback.onAllRequestSuccess()
     }
 
     //---------------------Logic---------------------

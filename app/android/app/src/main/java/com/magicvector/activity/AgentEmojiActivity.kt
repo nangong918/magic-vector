@@ -12,7 +12,6 @@ import android.view.WindowManager
 import androidx.annotation.RequiresPermission
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.lifecycleScope
-import com.magicvector.repository.api.handler.SyncRequestCallback
 import com.core.baseutil.network.networkLoad.NetworkLoadUtils
 import com.core.baseutil.permissions.GainPermissionCallback
 import com.core.baseutil.permissions.PermissionUtil
@@ -398,23 +397,21 @@ class AgentEmojiActivity : BaseAppCompatVmActivity<ActivityAgentEmojiBinding, Ag
             context = this
         )
         NetworkLoadUtils.showDialog(this)
-        vm.doUploadImageVision(
-            context = this,
-            images = files,
-            agentId = agentId,
-            userId = userId,
-            messageId = messageId,
-            callback = object : SyncRequestCallback{
-                override fun onThrowable(throwable: Throwable?) {
-                    Log.e(TAG, "httpUploadSingleImageVision::error: ", throwable)
-                    NetworkLoadUtils.dismissDialogSafety(this@AgentEmojiActivity)
-                }
-
-                override fun onAllRequestSuccess() {
-                    NetworkLoadUtils.dismissDialogSafety(this@AgentEmojiActivity)
-                }
+        lifecycleScope.launch {
+            runCatching {
+                vm.requestUploadImageVision(
+                    images = files,
+                    agentId = agentId,
+                    userId = userId,
+                    messageId = messageId
+                )
+            }.onFailure {
+                Log.e(TAG, "httpUploadSingleImageVision::error: ", it)
+                NetworkLoadUtils.dismissDialogSafety(this@AgentEmojiActivity)
+            }.onSuccess {
+                NetworkLoadUtils.dismissDialogSafety(this@AgentEmojiActivity)
             }
-        )
+        }
     }
 
     // ws上传 [额外的kotlin协程异步上传，并设置上传休眠时间，避免出现网络拥塞]

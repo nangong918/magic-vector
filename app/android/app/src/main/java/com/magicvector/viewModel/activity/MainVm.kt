@@ -1,12 +1,10 @@
 package com.magicvector.viewModel.activity
 
 import androidx.lifecycle.ViewModel
-import com.core.baseutil.network.BaseResponse
-import com.core.baseutil.network.OnSuccessCallback
-import com.core.baseutil.network.OnThrowableCallback
+import androidx.lifecycle.viewModelScope
 import com.magicvector.domain.dto.http.request.AgentDeleteRequest
-import com.magicvector.domain.dto.http.response.AgentResponse
 import com.magicvector.MainApplication
+import com.magicvector.domain.exception.NetworkBusinessException
 import com.magicvector.manager.RealtimeChatController
 import com.view.appview.MainSelectItemEnum
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -16,6 +14,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.RequestBody.Companion.toRequestBody
 
@@ -107,28 +106,23 @@ class MainVm : ViewModel() {
                 )
             )
         }
-        api.getAgentInfo(
-            agentId,
-            object : OnSuccessCallback<BaseResponse<AgentResponse>> {
-                override fun onResponse(response: BaseResponse<AgentResponse>?) {
-                    val vo = response?.data?.agentAo?.agentVo
-                    _uiState.update {
-                        it.copy(
-                            agentEditor = it.agentEditor.copy(
-                                isLoading = false,
-                                name = vo?.name ?: "",
-                                description = vo?.description ?: ""
-                            )
+        viewModelScope.launch {
+            try {
+                val response = api.getAgentInfo(agentId)
+                val vo = response.agentAo?.agentVo
+                _uiState.update {
+                    it.copy(
+                        agentEditor = it.agentEditor.copy(
+                            isLoading = false,
+                            name = vo?.name ?: "",
+                            description = vo?.description ?: ""
                         )
-                    }
+                    )
                 }
-            },
-            object : OnThrowableCallback {
-                override fun callback(throwable: Throwable?) {
-                    _uiState.update { it.copy(agentEditor = AgentEditorState()) }
-                }
+            } catch (_: Throwable) {
+                _uiState.update { it.copy(agentEditor = AgentEditorState()) }
             }
-        )
+        }
     }
 
     private fun submitAgentEditor() {
@@ -142,47 +136,41 @@ class MainVm : ViewModel() {
         val name = editor.name.toRequestBody(plain)
         val description = editor.description.toRequestBody(plain)
         if (editor.mode == AgentEditorMode.CREATE) {
-            api.createAgent(
-                avatar = null,
-                userId = userId,
-                name = name,
-                description = description,
-                onSuccessCallback = object : OnSuccessCallback<BaseResponse<AgentResponse>> {
-                    override fun onResponse(response: BaseResponse<AgentResponse>?) {
-                        _uiState.update { it.copy(agentEditor = AgentEditorState()) }
-                        _agentListEvent.tryEmit(AgentListEvent.Created(response?.data?.agentAo?.agentId.orEmpty()))
-                    }
-                },
-                throwableCallback = object : OnThrowableCallback {
-                    override fun callback(throwable: Throwable?) {
-                        _uiState.update { it.copy(agentEditor = it.agentEditor.copy(isSubmitting = false)) }
-                    }
+            viewModelScope.launch {
+                try {
+                    val response = api.createAgent(
+                        avatar = null,
+                        userId = userId,
+                        name = name,
+                        description = description
+                    )
+                    _uiState.update { it.copy(agentEditor = AgentEditorState()) }
+                    _agentListEvent.emit(AgentListEvent.Created(response.agentAo?.agentId.orEmpty()))
+                } catch (_: Throwable) {
+                    _uiState.update { it.copy(agentEditor = it.agentEditor.copy(isSubmitting = false)) }
                 }
-            )
+            }
             return
         }
         val agentId = editor.agentId?.toRequestBody(plain) ?: run {
             _uiState.update { it.copy(agentEditor = it.agentEditor.copy(isSubmitting = false)) }
             return
         }
-        api.updateAgent(
-            avatar = null,
-            agentId = agentId,
-            userId = userId,
-            name = name,
-            description = description,
-            onSuccessCallback = object : OnSuccessCallback<BaseResponse<AgentResponse>> {
-                override fun onResponse(response: BaseResponse<AgentResponse>?) {
-                    _uiState.update { it.copy(agentEditor = AgentEditorState()) }
-                    _agentListEvent.tryEmit(AgentListEvent.Updated(response?.data?.agentAo?.agentId.orEmpty()))
-                }
-            },
-            throwableCallback = object : OnThrowableCallback {
-                override fun callback(throwable: Throwable?) {
-                    _uiState.update { it.copy(agentEditor = it.agentEditor.copy(isSubmitting = false)) }
-                }
+        viewModelScope.launch {
+            try {
+                val response = api.updateAgent(
+                    avatar = null,
+                    agentId = agentId,
+                    userId = userId,
+                    name = name,
+                    description = description
+                )
+                _uiState.update { it.copy(agentEditor = AgentEditorState()) }
+                _agentListEvent.emit(AgentListEvent.Updated(response.agentAo?.agentId.orEmpty()))
+            } catch (_: Throwable) {
+                _uiState.update { it.copy(agentEditor = it.agentEditor.copy(isSubmitting = false)) }
             }
-        )
+        }
     }
 
     private fun deleteCurrentAgent() {
@@ -193,20 +181,15 @@ class MainVm : ViewModel() {
             this.userId = MainApplication.getUserId()
         }
         _uiState.update { it.copy(agentEditor = it.agentEditor.copy(isSubmitting = true)) }
-        api.deleteAgent(
-            request = request,
-            onSuccessCallback = object : OnSuccessCallback<BaseResponse<AgentResponse>> {
-                override fun onResponse(response: BaseResponse<AgentResponse>?) {
-                    _uiState.update { it.copy(agentEditor = AgentEditorState()) }
-                    _agentListEvent.tryEmit(AgentListEvent.Deleted(agentId))
-                }
-            },
-            throwableCallback = object : OnThrowableCallback {
-                override fun callback(throwable: Throwable?) {
-                    _uiState.update { it.copy(agentEditor = it.agentEditor.copy(isSubmitting = false)) }
-                }
+        viewModelScope.launch {
+            try {
+                api.deleteAgent(request)
+                _uiState.update { it.copy(agentEditor = AgentEditorState()) }
+                _agentListEvent.emit(AgentListEvent.Deleted(agentId))
+            } catch (_: Throwable) {
+                _uiState.update { it.copy(agentEditor = it.agentEditor.copy(isSubmitting = false)) }
             }
-        )
+        }
     }
 }
 

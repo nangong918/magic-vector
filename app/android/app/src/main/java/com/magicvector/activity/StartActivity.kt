@@ -3,6 +3,7 @@ package com.magicvector.activity
 import android.content.Intent
 import android.os.Bundle
 import android.util.Log
+import android.widget.Toast
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
@@ -97,7 +98,7 @@ class StartActivity : BaseComponentActivity() {
                         }
                         is StartEffect.ShowToast -> {
                             // 处理弹窗提示（使用你项目中的Toast/弹窗工具）
-                            Toast.makeText(context, effect.message, Toast.LENGTH_SHORT).show()
+                            Toast.makeText(this@StartActivity, effect.message, Toast.LENGTH_SHORT).show()
                             // 若有自定义弹窗：CustomToast.show(context, effect.message)
                         }
                     }

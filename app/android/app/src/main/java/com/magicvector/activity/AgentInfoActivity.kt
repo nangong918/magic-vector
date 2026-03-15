@@ -3,13 +3,14 @@ package com.magicvector.activity
 import android.os.Bundle
 import android.text.TextUtils
 import android.util.Log
-import com.magicvector.repository.api.handler.SyncRequestCallback
+import androidx.lifecycle.lifecycleScope
 import com.core.baseutil.network.networkLoad.NetworkLoadUtils
 import com.core.baseutil.ui.ToastUtils
 import com.data.domain.constant.BaseConstant
 import com.magicvector.databinding.ActivityAgentInfoBinding
 import com.magicvector.utils.BaseAppCompatVmActivity
 import com.magicvector.viewModel.activity.AgentInfoVm
+import kotlinx.coroutines.launch
 
 class AgentInfoActivity : BaseAppCompatVmActivity<ActivityAgentInfoBinding, AgentInfoVm>(
     AgentInfoActivity::class,
@@ -40,16 +41,16 @@ class AgentInfoActivity : BaseAppCompatVmActivity<ActivityAgentInfoBinding, Agen
         }
 
         NetworkLoadUtils.showDialog(this)
-        vm.doGetAgentInfo(this, agentId!!, object : SyncRequestCallback {
-            override fun onThrowable(throwable: Throwable?) {
-                Log.e(TAG, "getAgentInfo error: ", throwable)
+        lifecycleScope.launch {
+            runCatching {
+                vm.requestAgentInfo(agentId!!)
+            }.onFailure {
+                Log.e(TAG, "getAgentInfo error: ", it)
+                NetworkLoadUtils.dismissDialogSafety(this@AgentInfoActivity)
+            }.onSuccess {
                 NetworkLoadUtils.dismissDialogSafety(this@AgentInfoActivity)
             }
-
-            override fun onAllRequestSuccess() {
-                NetworkLoadUtils.dismissDialogSafety(this@AgentInfoActivity)
-            }
-        })
+        }
 
         observeData()
     }

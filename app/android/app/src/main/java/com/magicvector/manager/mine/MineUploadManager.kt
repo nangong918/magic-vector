@@ -2,9 +2,6 @@ package com.magicvector.manager.mine
 
 import android.content.ContentResolver
 import android.net.Uri
-import com.core.baseutil.network.BaseResponse
-import com.core.baseutil.network.OnSuccessCallback
-import com.core.baseutil.network.OnThrowableCallback
 import com.magicvector.domain.dto.http.request.VideoUploadCompleteRequest
 import com.magicvector.domain.dto.http.request.VideoUploadInitRequest
 import com.magicvector.domain.dto.http.response.VideoUploadChunkResponse
@@ -21,42 +18,26 @@ import java.io.FileOutputStream
 class MineUploadManager {
     private val api = MainApplication.getRemoteApiSource()
 
-    fun createUploadSession(
+    suspend fun createUploadSession(
         userId: String,
         fileName: String,
-        fileSize: Long,
-        onSuccess: (VideoUploadInitResponse?) -> Unit,
-        onError: (Throwable?) -> Unit
-    ) {
+        fileSize: Long
+    ): VideoUploadInitResponse {
         val request = VideoUploadInitRequest().apply {
             this.userId = userId
             this.fileName = fileName
             this.fileSize = fileSize
         }
-        api.initVideoUpload(
-            request = request,
-            onSuccessCallback = object : OnSuccessCallback<BaseResponse<VideoUploadInitResponse>> {
-                override fun onResponse(response: BaseResponse<VideoUploadInitResponse>?) {
-                    onSuccess.invoke(response?.data)
-                }
-            },
-            throwableCallback = object : OnThrowableCallback {
-                override fun callback(throwable: Throwable?) {
-                    onError.invoke(throwable)
-                }
-            }
-        )
+        return api.initVideoUpload(request)
     }
 
-    fun uploadChunk(
+    suspend fun uploadChunk(
         uploadId: String,
         userId: String,
         chunkIndex: Int,
         offset: Long,
-        chunkFile: File,
-        onSuccess: (VideoUploadChunkResponse?) -> Unit,
-        onError: (Throwable?) -> Unit
-    ) {
+        chunkFile: File
+    ): VideoUploadChunkResponse {
         val plain = "text/plain".toMediaTypeOrNull()
         val uploadIdBody = uploadId.toRequestBody(plain)
         val userIdBody = userId.toRequestBody(plain)
@@ -67,48 +48,24 @@ class MineUploadManager {
             chunkFile.name,
             chunkFile.asRequestBody("application/octet-stream".toMediaTypeOrNull())
         )
-        api.uploadVideoChunk(
+        return api.uploadVideoChunk(
             uploadId = uploadIdBody,
             userId = userIdBody,
             chunkIndex = chunkIndexBody,
             offset = offsetBody,
-            chunkFile = chunkPart,
-            onSuccessCallback = object : OnSuccessCallback<BaseResponse<VideoUploadChunkResponse>> {
-                override fun onResponse(response: BaseResponse<VideoUploadChunkResponse>?) {
-                    onSuccess.invoke(response?.data)
-                }
-            },
-            throwableCallback = object : OnThrowableCallback {
-                override fun callback(throwable: Throwable?) {
-                    onError.invoke(throwable)
-                }
-            }
+            chunkFile = chunkPart
         )
     }
 
-    fun completeUpload(
+    suspend fun completeUpload(
         uploadId: String,
-        userId: String,
-        onSuccess: (VideoUploadCompleteResponse?) -> Unit,
-        onError: (Throwable?) -> Unit
-    ) {
+        userId: String
+    ): VideoUploadCompleteResponse {
         val request = VideoUploadCompleteRequest().apply {
             this.uploadId = uploadId
             this.userId = userId
         }
-        api.completeVideoUpload(
-            request = request,
-            onSuccessCallback = object : OnSuccessCallback<BaseResponse<VideoUploadCompleteResponse>> {
-                override fun onResponse(response: BaseResponse<VideoUploadCompleteResponse>?) {
-                    onSuccess.invoke(response?.data)
-                }
-            },
-            throwableCallback = object : OnThrowableCallback {
-                override fun callback(throwable: Throwable?) {
-                    onError.invoke(throwable)
-                }
-            }
-        )
+        return api.completeVideoUpload(request)
     }
 
     fun copyUriToTempFile(contentResolver: ContentResolver, uri: Uri, fileName: String): File {

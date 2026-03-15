@@ -1,9 +1,6 @@
 package com.magicvector.dataSource.remote
 
-import com.core.baseutil.network.BaseApiRequestImpl
 import com.core.baseutil.network.BaseResponse
-import com.core.baseutil.network.OnSuccessCallback
-import com.core.baseutil.network.OnThrowableCallback
 import com.data.domain.constant.BaseConstant
 import com.magicvector.MainApplication
 import com.magicvector.domain.dto.http.request.AgentDeleteRequest
@@ -38,7 +35,18 @@ import okhttp3.RequestBody
 
 class RemoteApiSource(
     private val apiRequest: ApiRequest
-) : BaseApiRequestImpl() {
+) {
+
+    private suspend fun <T> requestData(
+        apiCall: suspend () -> BaseResponse<T>,
+        emptyDataMessage: String = "响应数据为空"
+    ): T {
+        val response = apiCall()
+        if (BaseConstant.NetworkCode.SUCCESS_CODE != response.code) {
+            throw NetworkBusinessException(response.code, response.message)
+        }
+        return response.data ?: throw NetworkBusinessException(response.code, emptyDataMessage)
+    }
 
     suspend fun verifyAccessToken(
         accessToken: String
@@ -53,288 +61,195 @@ class RemoteApiSource(
             this.accessToken = accessToken
         }
 
-        val response = runCatching { apiRequest.verifyAccessToken(request) }.getOrNull()
-        if (BaseConstant.NetworkCode.SUCCESS_CODE != response?.code || response.data == null) {
-            throw NetworkBusinessException(response?.code, response?.message)
-        }
-
-        return response.data!!
+        return requestData(apiCall = { apiRequest.verifyAccessToken(request) }, emptyDataMessage = "Token验证响应为空")
     }
 
-    fun createAgent(
+    suspend fun createAgent(
         avatar: MultipartBody.Part?,
         userId: RequestBody,
         name: RequestBody,
-        description: RequestBody,
-        onSuccessCallback: OnSuccessCallback<BaseResponse<AgentResponse>>?,
-        throwableCallback: OnThrowableCallback?
-    ) {
-        sendRequestCallback(
-            apiCall = {
-                apiRequest.createAgent(
-                    avatar,
-                    userId,
-                    name,
-                    description
-                )
-            },
-            successCallback = onSuccessCallback,
-            throwableCallback = throwableCallback
+        description: RequestBody
+    ): AgentResponse {
+        return requestData(
+            apiCall = { apiRequest.createAgent(avatar, userId, name, description) },
+            emptyDataMessage = "创建Agent响应为空"
         )
     }
 
-    fun getAgentInfo(
-        agentId: String,
-        onSuccessCallback: OnSuccessCallback<BaseResponse<AgentResponse>>?,
-        throwableCallback: OnThrowableCallback?
-    ) {
-        sendRequestCallback(
+    suspend fun getAgentInfo(agentId: String): AgentResponse {
+        return requestData(
             apiCall = { apiRequest.getAgentInfo(agentId) },
-            successCallback = onSuccessCallback,
-            throwableCallback = throwableCallback
+            emptyDataMessage = "Agent详情响应为空"
         )
     }
 
-    fun getAgentList(
-        userId: String,
-        onSuccessCallback: OnSuccessCallback<BaseResponse<AgentListResponse>>?,
-        throwableCallback: OnThrowableCallback?
-    ) {
-        sendRequestCallback(
+    suspend fun getAgentList(userId: String): AgentListResponse {
+        return requestData(
             apiCall = { apiRequest.getAgentList(userId) },
-            successCallback = onSuccessCallback,
-            throwableCallback = throwableCallback
+            emptyDataMessage = "Agent列表响应为空"
         )
     }
 
-    fun updateAgent(
+    suspend fun updateAgent(
         avatar: MultipartBody.Part?,
         agentId: RequestBody,
         userId: RequestBody,
         name: RequestBody,
-        description: RequestBody,
-        onSuccessCallback: OnSuccessCallback<BaseResponse<AgentResponse>>?,
-        throwableCallback: OnThrowableCallback?
-    ) {
-        sendRequestCallback(
+        description: RequestBody
+    ): AgentResponse {
+        return requestData(
             apiCall = { apiRequest.updateAgent(avatar, agentId, userId, name, description) },
-            successCallback = onSuccessCallback,
-            throwableCallback = throwableCallback
+            emptyDataMessage = "更新Agent响应为空"
         )
     }
 
-    fun deleteAgent(
-        request: AgentDeleteRequest,
-        onSuccessCallback: OnSuccessCallback<BaseResponse<AgentResponse>>?,
-        throwableCallback: OnThrowableCallback?
-    ) {
-        sendRequestCallback(
+    suspend fun deleteAgent(request: AgentDeleteRequest): AgentResponse {
+        return requestData(
             apiCall = { apiRequest.deleteAgent(request) },
-            successCallback = onSuccessCallback,
-            throwableCallback = throwableCallback
+            emptyDataMessage = "删除Agent响应为空"
         )
     }
 
-    fun getLastAgentChatList(
-        userId: String,
-        onSuccessCallback: OnSuccessCallback<BaseResponse<AgentLastChatListResponse>>?,
-        throwableCallback: OnThrowableCallback?
-    ) {
-        sendRequestCallback(
+    suspend fun getLastAgentChatList(userId: String): AgentLastChatListResponse {
+        return requestData(
             apiCall = { apiRequest.getLastAgentChatList(userId) },
-            successCallback = onSuccessCallback,
-            throwableCallback = throwableCallback
+            emptyDataMessage = "最近会话列表响应为空"
         )
     }
 
-    fun getLastChat(
-        agentId: String,
-        onSuccessCallback: OnSuccessCallback<BaseResponse<ChatMessageResponse>>?,
-        throwableCallback: OnThrowableCallback?
-    ) {
-        sendRequestCallback(
+    suspend fun getLastChat(agentId: String): ChatMessageResponse {
+        return requestData(
             apiCall = { apiRequest.getLastChat(agentId) },
-            successCallback = onSuccessCallback,
-            throwableCallback = throwableCallback
+            emptyDataMessage = "聊天记录响应为空"
         )
     }
 
-    fun getTimeLimitChat(
+    suspend fun getTimeLimitChat(
         agentId: String,
         deadline: String,
-        limit: Int,
-        onSuccessCallback: OnSuccessCallback<BaseResponse<ChatMessageResponse>>?,
-        throwableCallback: OnThrowableCallback?
-    ) {
-        sendRequestCallback(
+        limit: Int
+    ): ChatMessageResponse {
+        return requestData(
             apiCall = { apiRequest.getTimeLimitChat(agentId = agentId, deadline = deadline, limit = limit) },
-            successCallback = onSuccessCallback,
-            throwableCallback = throwableCallback
+            emptyDataMessage = "时间段聊天记录响应为空"
         )
     }
 
-    fun getChatByAnchor(
+    suspend fun getChatByAnchor(
         agentId: String,
         anchorTimestamp: Long,
         before: Boolean,
-        limit: Int,
-        onSuccessCallback: OnSuccessCallback<BaseResponse<ChatMessageResponse>>?,
-        throwableCallback: OnThrowableCallback?
-    ) {
+        limit: Int
+    ): ChatMessageResponse {
         val request = ChatByAnchorRequest().apply {
             this.agentId = agentId
             this.anchorTimestamp = anchorTimestamp
             this.before = before
             this.limit = limit
         }
-        sendRequestCallback(
+        return requestData(
             apiCall = { apiRequest.getChatByAnchor(request) },
-            successCallback = onSuccessCallback,
-            throwableCallback = throwableCallback
+            emptyDataMessage = "锚点聊天记录响应为空"
         )
     }
 
-    fun uploadImageVision(
+    suspend fun uploadImageVision(
         images: List<MultipartBody.Part>,
         agentId: RequestBody,
         userId: RequestBody,
-        messageId: RequestBody,
-        onSuccessCallback: OnSuccessCallback<BaseResponse<String>>?,
-        throwableCallback: OnThrowableCallback?
-    ) {
-        sendRequestCallback(
+        messageId: RequestBody
+    ): String {
+        return requestData(
             apiCall = { apiRequest.uploadImageVision(images, agentId, userId, messageId) },
-            successCallback = onSuccessCallback,
-            throwableCallback = throwableCallback
+            emptyDataMessage = "视觉上传响应为空"
         )
     }
 
-    fun getControlStatus(
-        deviceId: String,
-        onSuccessCallback: OnSuccessCallback<BaseResponse<ControlStatusResponse>>?,
-        throwableCallback: OnThrowableCallback?
-    ) {
-        sendRequestCallback(
+    suspend fun getControlStatus(deviceId: String): ControlStatusResponse {
+        return requestData(
             apiCall = { apiRequest.getControlStatus(deviceId) },
-            successCallback = onSuccessCallback,
-            throwableCallback = throwableCallback
+            emptyDataMessage = "控制状态响应为空"
         )
     }
 
-    fun sendControlCommand(
-        request: ControlCommandRequest,
-        onSuccessCallback: OnSuccessCallback<BaseResponse<ControlCommandResponse>>?,
-        throwableCallback: OnThrowableCallback?
-    ) {
-        sendRequestCallback(
+    suspend fun sendControlCommand(request: ControlCommandRequest): ControlCommandResponse {
+        return requestData(
             apiCall = { apiRequest.sendControlCommand(request) },
-            successCallback = onSuccessCallback,
-            throwableCallback = throwableCallback
+            emptyDataMessage = "控制命令响应为空"
         )
     }
 
-    fun getControlAgentLogs(
+    suspend fun getControlAgentLogs(
         userId: String,
         agentId: String?,
         page: Int,
-        size: Int,
-        onSuccessCallback: OnSuccessCallback<BaseResponse<ControlAgentLogResponse>>?,
-        throwableCallback: OnThrowableCallback?
-    ) {
-        sendRequestCallback(
+        size: Int
+    ): ControlAgentLogResponse {
+        return requestData(
             apiCall = { apiRequest.getControlAgentLogs(userId, agentId, page, size) },
-            successCallback = onSuccessCallback,
-            throwableCallback = throwableCallback
+            emptyDataMessage = "控制日志响应为空"
         )
     }
 
-    fun initVideoUpload(
-        request: VideoUploadInitRequest,
-        onSuccessCallback: OnSuccessCallback<BaseResponse<VideoUploadInitResponse>>?,
-        throwableCallback: OnThrowableCallback?
-    ) {
-        sendRequestCallback(
+    suspend fun initVideoUpload(request: VideoUploadInitRequest): VideoUploadInitResponse {
+        return requestData(
             apiCall = { apiRequest.initVideoUpload(request) },
-            successCallback = onSuccessCallback,
-            throwableCallback = throwableCallback
+            emptyDataMessage = "初始化上传响应为空"
         )
     }
 
-    fun uploadVideoChunk(
+    suspend fun uploadVideoChunk(
         uploadId: RequestBody,
         userId: RequestBody,
         chunkIndex: RequestBody,
         offset: RequestBody,
-        chunkFile: MultipartBody.Part,
-        onSuccessCallback: OnSuccessCallback<BaseResponse<VideoUploadChunkResponse>>?,
-        throwableCallback: OnThrowableCallback?
-    ) {
-        sendRequestCallback(
+        chunkFile: MultipartBody.Part
+    ): VideoUploadChunkResponse {
+        return requestData(
             apiCall = { apiRequest.uploadVideoChunk(uploadId, userId, chunkIndex, offset, chunkFile) },
-            successCallback = onSuccessCallback,
-            throwableCallback = throwableCallback
+            emptyDataMessage = "上传分片响应为空"
         )
     }
 
-    fun completeVideoUpload(
-        request: VideoUploadCompleteRequest,
-        onSuccessCallback: OnSuccessCallback<BaseResponse<VideoUploadCompleteResponse>>?,
-        throwableCallback: OnThrowableCallback?
-    ) {
-        sendRequestCallback(
+    suspend fun completeVideoUpload(request: VideoUploadCompleteRequest): VideoUploadCompleteResponse {
+        return requestData(
             apiCall = { apiRequest.completeVideoUpload(request) },
-            successCallback = onSuccessCallback,
-            throwableCallback = throwableCallback
+            emptyDataMessage = "完成上传响应为空"
         )
     }
 
-    fun getCloudVideoList(
+    suspend fun getCloudVideoList(
         userId: String,
         page: Int,
-        size: Int,
-        onSuccessCallback: OnSuccessCallback<BaseResponse<VideoCloudListResponse>>?,
-        throwableCallback: OnThrowableCallback?
-    ) {
-        sendRequestCallback(
+        size: Int
+    ): VideoCloudListResponse {
+        return requestData(
             apiCall = { apiRequest.getCloudVideoList(userId, page, size) },
-            successCallback = onSuccessCallback,
-            throwableCallback = throwableCallback
+            emptyDataMessage = "云视频列表响应为空"
         )
     }
 
-    fun getCloudVideoPlayUrl(
-        videoId: String,
-        onSuccessCallback: OnSuccessCallback<BaseResponse<VideoPlayUrlResponse>>?,
-        throwableCallback: OnThrowableCallback?
-    ) {
-        sendRequestCallback(
+    suspend fun getCloudVideoPlayUrl(videoId: String): VideoPlayUrlResponse {
+        return requestData(
             apiCall = { apiRequest.getCloudVideoPlayUrl(videoId) },
-            successCallback = onSuccessCallback,
-            throwableCallback = throwableCallback
+            emptyDataMessage = "云视频播放地址响应为空"
         )
     }
 
-    fun getCloudVideoDownloadUrl(
-        videoId: String,
-        onSuccessCallback: OnSuccessCallback<BaseResponse<VideoDownloadUrlResponse>>?,
-        throwableCallback: OnThrowableCallback?
-    ) {
-        sendRequestCallback(
+    suspend fun getCloudVideoDownloadUrl(videoId: String): VideoDownloadUrlResponse {
+        return requestData(
             apiCall = { apiRequest.getCloudVideoDownloadUrl(videoId) },
-            successCallback = onSuccessCallback,
-            throwableCallback = throwableCallback
+            emptyDataMessage = "云视频下载地址响应为空"
         )
     }
 
-    fun register(
+    suspend fun register(
         avatar: MultipartBody.Part?,
         account: RequestBody,
         password: RequestBody,
-        name: RequestBody,
-        onSuccessCallback: OnSuccessCallback<BaseResponse<UserAuthResponse>>?,
-        throwableCallback: OnThrowableCallback?
-    ) {
-        sendRequestCallback(
+        name: RequestBody
+    ): UserAuthResponse {
+        return requestData(
             apiCall = {
                 apiRequest.register(
                     avatar = avatar,
@@ -343,32 +258,21 @@ class RemoteApiSource(
                     name = name
                 )
             },
-            successCallback = onSuccessCallback,
-            throwableCallback = throwableCallback
+            emptyDataMessage = "注册响应为空"
         )
     }
 
-    fun login(
-        request: UserLoginRequest,
-        onSuccessCallback: OnSuccessCallback<BaseResponse<UserAuthResponse>>?,
-        throwableCallback: OnThrowableCallback?
-    ) {
-        sendRequestCallback(
+    suspend fun login(request: UserLoginRequest): UserAuthResponse {
+        return requestData(
             apiCall = { apiRequest.login(request) },
-            successCallback = onSuccessCallback,
-            throwableCallback = throwableCallback
+            emptyDataMessage = "登录响应为空"
         )
     }
 
-    fun updatePassword(
-        request: UserPasswordUpdateRequest,
-        onSuccessCallback: OnSuccessCallback<BaseResponse<UserPasswordUpdateResponse>>?,
-        throwableCallback: OnThrowableCallback?
-    ) {
-        sendRequestCallback(
+    suspend fun updatePassword(request: UserPasswordUpdateRequest): UserPasswordUpdateResponse {
+        return requestData(
             apiCall = { apiRequest.updatePassword(request) },
-            successCallback = onSuccessCallback,
-            throwableCallback = throwableCallback
+            emptyDataMessage = "修改密码响应为空"
         )
     }
 }

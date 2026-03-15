@@ -14,7 +14,7 @@
   * `StartVm`、`ComposeLoginVm`、`ComposeRegisterVm`、`MainVm`、`MessageListMviVm`、`ControlVm`、`MineVm`、`ComposeChatVm`、`ComposeAgentChatVm`、`AgentEmojiFragmentVm`、`AgentTextChatFragmentVm`
 * **业务与会话层（Manager/Controller）**：封装业务规则与状态编排，不直接持有 DAO 与 Retrofit。
 * `UserManager`、`ChatMapController`、`ChatController`、`ChatCacheManager`、`ControlCommandController`、`ControlConsoleManager`、`NetworkManager(全局/Application级)`
-* **数据源层（DataSource）**：承接可复用数据流程（参数校验、请求拼装、回调归一化、协程桥接），向上暴露处理回调。
+* **数据源层（DataSource）**：承接可复用数据流程（参数校验、请求拼装、统一响应校验），向上暴露 `suspend` 结果与异常语义。
   * `remote/RemoteApiSource`：远程请求流程封装（基于 `repository/api/ApiRequest`）
   * `local/UserLocalSource`：本地数据流程封装（基于 `repository/dao/UserDao`）
 * **仓储接口层（Repository）**：仅定义数据访问接口，不承载业务流程。
@@ -115,6 +115,96 @@ classDiagram
     AgentCacheDao --> AgentCacheEntity
     ChatMessageDao --> ChatMessageEntity
 ```
+
+### DataSource/Repository 架构（Remote + Local）
+
+#### 职责规划
+* [`dataSource/remote/RemoteApiSource.kt`](../app/src/main/java/com/magicvector/dataSource/remote/RemoteApiSource.kt)：统一远程请求流程模板（参数校验、DTO拼装、业务码校验、异常语义），对上只暴露 `suspend`。
+* [`dataSource/local/*LocalSource`](../app/src/main/java/com/magicvector/dataSource/local)：统一本地数据流程模板（参数约束、DAO调用、事务边界、返回语义），对上暴露 `suspend`。
+* [`repository`](../app/src/main/java/com/magicvector/repository)：仅保留“访问接口定义”，不承载业务分支与状态编排。
+* `ViewModel/Manager`：作为调用端，负责 `try-catch + state/effect`；不再依赖回调接口。
+
+#### 设计模式说明
+* **Template Method（流程模板）**：Remote/Local Source 固定“校验 -> 调用 -> 结果归一”的主流程，业务只填充输入与后处理。
+* **Repository Pattern（接口隔离）**：`ApiRequest`/`Dao` 仅提供数据访问契约，减少上层对底层实现耦合。
+* **Structured Concurrency（结构化并发）**：ViewModel 统一 `viewModelScope`，Manager 统一 `CoroutineScope`，生命周期内自动取消。
+
+#### DataSource-Repository-Caller 类图（静态 UML）
+```mermaid
+classDiagram
+    class RemoteApiSource {
+        +verifyAccessToken(accessToken) UserTokenVerifyResponse
+        +getLastChat(agentId) ChatMessageResponse
+        +createAgent(...) AgentResponse
+        +...
+        -requestData(apiCall, emptyDataMessage) T
+    }
+    class LocalUserSource {
+        +getCurrentUser() UserSessionModel?
+        +saveCurrentUser(user) Unit
+        +clearCurrentUser() Unit
+    }
+    class ApiRequest {
+        <<interface>>
+        +suspend verifyAccessToken(request) BaseResponse~UserTokenVerifyResponse~
+        +suspend getLastChat(agentId) BaseResponse~ChatMessageResponse~
+        +...
+    }
+    class UserDao {
+        <<interface>>
+        +queryCurrentUser() UserEntity?
+        +upsert(user) Long
+        +clear() Int
+    }
+    class StartVm
+    class ComposeLoginVm
+    class MessageListMviVm
+    class ControlConsoleManager
+
+    RemoteApiSource --> ApiRequest : suspend调用
+    LocalUserSource --> UserDao : suspend调用
+    StartVm --> RemoteApiSource : try/catch
+    ComposeLoginVm --> RemoteApiSource : try/catch
+    MessageListMviVm --> RemoteApiSource : async并发
+    ControlConsoleManager --> RemoteApiSource : IO scope
+```
+
+#### DataSource 通用函数甘特图（动态 UML）
+```mermaid
+gantt
+    title DataSource通用函数执行时序（Remote/Local）
+    dateFormat  X
+    axisFormat  %L
+    section 调用端(ViewModel/Manager)
+    launch协程+意图分发                 :a1, 0, 10
+    try-catch状态更新/effect处理        :a2, 10, 25
+    section Source层(Remote/Local)
+    参数校验/前置约束                   :b1, 25, 12
+    组装请求(远程DTO或本地查询条件)      :b2, 37, 10
+    调用Repository接口                  :b3, 47, 35
+    统一结果归一(返回或抛异常)           :b4, 82, 12
+    section Repository层(Api/Dao)
+    Retrofit或Room执行                  :c1, 47, 35
+```
+
+#### DataSource 通用状态图（动态 UML）
+```mermaid
+stateDiagram-v2
+    [*] --> Validate
+    Validate --> BuildRequest : 参数合法
+    Validate --> Failed : 参数非法
+    BuildRequest --> ExecuteRepo
+    ExecuteRepo --> Success : code/data有效或查询命中
+    ExecuteRepo --> Failed : 业务码失败/空数据/IO异常
+    Success --> [*]
+    Failed --> [*]
+```
+
+#### 计算机理论基础（为什么 suspend 取消回调）
+* **异步控制流复杂度**：回调模式会把顺序逻辑拆成多分支闭包，导致控制流图复杂度上升，增大维护成本。
+* **协程挂起恢复模型**：`suspend` 把异步过程映射为顺序语句，降低认知负担，便于推理状态迁移。
+* **结构化并发取消传播**：父作用域取消时，子请求协程自动取消，避免“页面销毁但请求仍回调”。
+* **一致异常语义**：异常沿协程调用栈传播，调用端用单一 `try-catch` 管理错误与 `effect`，更符合 MVI 单向数据流。
 
 ### MVI 建模约束（UML）
 

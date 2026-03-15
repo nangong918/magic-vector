@@ -1,9 +1,5 @@
 package com.magicvector.manager.control
 
-import com.core.baseutil.network.BaseResponse
-import com.core.baseutil.network.OnSuccessCallback
-import com.core.baseutil.network.OnThrowableCallback
-import com.magicvector.domain.dto.http.response.ControlAgentLogResponse
 import com.magicvector.MainApplication
 import com.magicvector.dataSource.local.db.VectorDatabase
 import com.magicvector.domain.entity.ControlAgentLogEntity
@@ -24,36 +20,32 @@ class ControlAgentLogManager {
         onSuccess: (List<ControlAgentLogEntity>) -> Unit,
         onError: (Throwable?) -> Unit
     ) {
-        api.getControlAgentLogs(
-            userId = userId,
-            agentId = agentId,
-            page = page,
-            size = size,
-            onSuccessCallback = object : OnSuccessCallback<BaseResponse<ControlAgentLogResponse>> {
-                override fun onResponse(response: BaseResponse<ControlAgentLogResponse>?) {
-                    val list = response?.data?.logs.orEmpty().map {
-                        ControlAgentLogEntity(
-                            id = it.id ?: 0L,
-                            userId = it.userId ?: 0L,
-                            agentId = it.agentId ?: 0L,
-                            logTime = it.logTime ?: System.currentTimeMillis(),
-                            logContent = it.logContent.orEmpty()
-                        )
-                    }
-                    ioScope.launch {
-                        if (list.isNotEmpty()) {
-                            dao.upsertBatch(list)
-                        }
-                    }
-                    onSuccess.invoke(list)
+        ioScope.launch {
+            runCatching {
+                api.getControlAgentLogs(
+                    userId = userId,
+                    agentId = agentId,
+                    page = page,
+                    size = size
+                )
+            }.onSuccess { response ->
+                val list = response.logs.orEmpty().map {
+                    ControlAgentLogEntity(
+                        id = it.id ?: 0L,
+                        userId = it.userId ?: 0L,
+                        agentId = it.agentId ?: 0L,
+                        logTime = it.logTime ?: System.currentTimeMillis(),
+                        logContent = it.logContent.orEmpty()
+                    )
                 }
-            },
-            throwableCallback = object : OnThrowableCallback {
-                override fun callback(throwable: Throwable?) {
-                    onError.invoke(throwable)
+                if (list.isNotEmpty()) {
+                    dao.upsertBatch(list)
                 }
+                onSuccess.invoke(list)
+            }.onFailure {
+                onError.invoke(it)
             }
-        )
+        }
     }
 
     fun appendLocalLogs(list: List<ControlAgentLogEntity>) {

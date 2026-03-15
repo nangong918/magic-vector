@@ -34,11 +34,11 @@ import com.magicvector.manager.ws.WsManager
 import com.magicvector.utils.chat.RealtimeChatWsClient
 import com.view.appview.recycler.RecyclerViewWhereNeedUpdate
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
 import okhttp3.Response
 import okhttp3.WebSocket
 import okhttp3.WebSocketListener
 import okio.ByteString
-import java.lang.Runnable
 import java.lang.ref.WeakReference
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.math.sqrt
@@ -101,6 +101,7 @@ class RealtimeChatController : IsAudioRecording{
     }
 
     // user级别常驻连接：登录成功后/主页面绑定service后调用
+    @RequiresPermission(Manifest.permission.RECORD_AUDIO)
     fun ensureUserConnection(userId: String) {
         if (userId.isBlank()) {
             Log.w(TAG, "ensureUserConnection: userId is blank")
@@ -587,11 +588,12 @@ class RealtimeChatController : IsAudioRecording{
         return chatControllerPointer!!
     }
 
+    @RequiresPermission(Manifest.permission.RECORD_AUDIO)
     fun initResource(
         chatActivity: FragmentActivity,
-        ao : MessageContactItemAo?,
+        ao: MessageContactItemAo?,
         chatAAo: ChatAAo,
-        initNetworkRunnable: Runnable,
+        initNetworkRunnable: () -> Job,
         whereNeedUpdate: RecyclerViewWhereNeedUpdate,
         onReceiveAgentTextCallback: OnReceiveAgentTextCallback,
         onVadChatStateChange: OnVadChatStateChange
@@ -622,7 +624,7 @@ class RealtimeChatController : IsAudioRecording{
             messageContactItemAo!!.contactId!!
         )
         // 初始化网络请求
-        initNetworkRunnable.run()
+        initNetworkRunnable.invoke()
     }
 
     // update Message

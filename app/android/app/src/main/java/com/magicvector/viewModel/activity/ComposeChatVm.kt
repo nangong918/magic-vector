@@ -1,5 +1,6 @@
 package com.magicvector.viewModel.activity
 
+import android.Manifest
 import android.content.ComponentName
 import android.content.Context
 import android.content.Context.BIND_AUTO_CREATE
@@ -7,6 +8,7 @@ import android.content.Intent
 import android.content.ServiceConnection
 import android.os.IBinder
 import android.util.Log
+import androidx.annotation.RequiresPermission
 import androidx.compose.runtime.Stable
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.AndroidViewModel
@@ -25,9 +27,11 @@ import com.magicvector.callback.OnReceiveAgentTextCallback
 import com.magicvector.callback.OnVadChatStateChange
 import com.magicvector.manager.RealtimeChatController
 import com.magicvector.service.ChatService
+import com.view.appview.R
 import com.view.appview.recycler.RecyclerViewWhereNeedUpdate
 import com.view.appview.recycler.UpdateRecyclerViewItem
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -119,6 +123,7 @@ open class ComposeChatVm : AndroidViewModel(application = MainApplication.getApp
         }
     }
 
+    @RequiresPermission(Manifest.permission.RECORD_AUDIO)
     open fun processIntent(intent: ChatIntent) {
         when (intent) {
             is ChatIntent.Initialize -> initialize(intent.intent, intent.activity)
@@ -128,11 +133,11 @@ open class ComposeChatVm : AndroidViewModel(application = MainApplication.getApp
             ChatIntent.StopSendVoice -> stopSendVoice()
             ChatIntent.RequestCall -> sendEffect(ChatEffect.RequestCallPermission)
             is ChatIntent.CallPermissionGranted -> openCallDialog(intent.context)
-            ChatIntent.CallPermissionDenied -> sendEffect(ChatEffect.ShowToastRes(com.view.appview.R.string.permission_denied))
+            ChatIntent.CallPermissionDenied -> sendEffect(ChatEffect.ShowToastRes(R.string.permission_denied))
             ChatIntent.ToggleCallMute -> toggleMicState()
             ChatIntent.EndCall -> endCall()
             ChatIntent.RequestVideoCall -> sendEffect(ChatEffect.RequestVideoPermission)
-            ChatIntent.VideoPermissionDenied -> sendEffect(ChatEffect.ShowToastRes(com.view.appview.R.string.permission_denied))
+            ChatIntent.VideoPermissionDenied -> sendEffect(ChatEffect.ShowToastRes(R.string.permission_denied))
             ChatIntent.VideoPermissionGranted -> gotoVideoCall()
         }
     }
@@ -155,7 +160,7 @@ open class ComposeChatVm : AndroidViewModel(application = MainApplication.getApp
         }
 
         initService(
-            Runnable {
+            Runnable @androidx.annotation.RequiresPermission(android.Manifest.permission.RECORD_AUDIO) {
                 initResource(activity)
             }
         )
@@ -167,6 +172,7 @@ open class ComposeChatVm : AndroidViewModel(application = MainApplication.getApp
         application.bindService(serviceIntent, chatServiceConnection, BIND_AUTO_CREATE)
     }
 
+    @RequiresPermission(Manifest.permission.RECORD_AUDIO)
     private fun initResource(activity: FragmentActivity) {
         val ao = messageAo ?: run {
             sendEffect(ChatEffect.ShowToast("Agent信息为空，初始化失败"))
@@ -180,7 +186,7 @@ open class ComposeChatVm : AndroidViewModel(application = MainApplication.getApp
                 chatActivity = activity,
                 ao = ao,
                 chatAAo = chatAAo,
-                initNetworkRunnable = Runnable {},
+                initNetworkRunnable = { Job() },
                 whereNeedUpdate = object : RecyclerViewWhereNeedUpdate {
                     override fun whereNeedUpdate(updateInfos: List<UpdateRecyclerViewItem>) {
                     }
@@ -190,7 +196,7 @@ open class ComposeChatVm : AndroidViewModel(application = MainApplication.getApp
             )
         } catch (e: Exception) {
             Log.e(TAG, "ComposeChatActivity::initResource失败", e)
-            sendEffect(ChatEffect.ShowToastRes(com.view.appview.R.string.init_agent_failed))
+            sendEffect(ChatEffect.ShowToastRes(R.string.init_agent_failed))
             sendEffect(ChatEffect.Finish)
         } finally {
             _uiState.update { it.copy(isLoading = false) }
@@ -221,6 +227,7 @@ open class ComposeChatVm : AndroidViewModel(application = MainApplication.getApp
         realtimeChatController?.stopAndSendRealtimeChatAudio()
     }
 
+    @RequiresPermission(Manifest.permission.RECORD_AUDIO)
     private fun openCallDialog(context: Context) {
         realtimeChatController?.initVadCall(WeakReference(context))
         isCalling.set(true)

@@ -70,6 +70,19 @@
 * Manager比较核心, 大部分是核心代码, 需要注解
 * 我希望学习一些计算机理论, 如果涉及到核心的`操作系统(线程, IO)`, `计算机网络`, `数据结构`, `算法`, `计算机组成原理`, `数据库`的知识你要标注出来.
 
+## 网络请求
+* **RemoteApiSource 必须统一为 suspend 链路（禁止回调）**：
+  * 所有 `RemoteApiSource` 方法均为 `suspend`，只做两件事：成功返回业务数据；失败抛出异常。
+  * 标准实现以 `verifyAccessToken` 为基线：`参数校验 -> 组装 request DTO -> 调用 ApiRequest(suspend) -> code/data 校验 -> 返回数据`。
+  * 禁止在 `RemoteApiSource` 暴露 `OnSuccessCallback` / `OnThrowableCallback`。
+* **ViewModel/Manager 调用规范**：
+  * ViewModel 统一在 `viewModelScope.launch` 中调用 `RemoteApiSource`，使用 `try-catch` 聚合错误处理。
+  * Manager 如需对外保留回调 API，可在内部协程中调用 suspend Source，再向上层回调；但 Source 层不再保留回调式接口。
+* **为什么要 suspend 化**：
+  * 解决回调地狱，跨多请求链路（登录/注册/Agent/聊天/控制台/视频）保持线性代码。
+  * 继承结构化并发的取消能力，页面销毁时自动取消请求，降低资源泄漏风险。
+  * 错误语义统一（异常流），减少“成功回调/失败回调”分叉逻辑，提升可维护性和可测试性。
+
 ## 文档
 * 你写的功能和模块，统一写入 [AndroidDesignDocument.md](AndroidDesignDocument.md) 的对应模块章节。
 * 若涉及数据库（Room/MySQL）调整，设计文档必须记录：表设计、字段变更、变更原因，并附数据库设计图（Mermaid ER/类图）。

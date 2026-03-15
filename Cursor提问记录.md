@@ -946,15 +946,47 @@ request组成，都放在这里面，然后各种异常回调，相应处理，�
 然后更新设计文档
 
 
+### RemoteApiSource调用suspend化
+
+我希望RemoteApiSource的调用都能suspend化，因为这样就可以可以取消各种嵌套回调。
+你现在要做的是：
+1. 学习我写的RemoteApiSource.verifyAccessToken的这个完整链路，这个链路我是人审过代码的。
+2. 浏览RemoteApiSource然后大概思考要怎么改并不做修改，让你有个印象。
+3. 把我的这个总结到开规则[developAndRules.md](app/android/docs/developAndRules.md)和详细设计
+  [AndroidDesignDocument.md](app/android/docs/AndroidDesignDocument.md)
+  并说明为什么要suspend化，解决了什么问题
+4. 梳理代码，并实现涉及到RemoteApiSource相关的整个app请求链路suspend化。
+
+
+#### 补充
+
+第一，关于代码的问题，你并没有理解我的意思。
+我认为你RemoteApiSource改的还不错，但是上层没有理解我的意思，
+你先再看一边我写的`verifyAccessToken``resolveStartTargetEffect()`怎么调用的。
+因为我看了一下我之前经常写doxxx，handlexxx这种请求回调模式，但是这样就会带来大量的回调处理非常麻烦，
+而且违背了mvi设计模式中的effect事件原则。
+现在我希望你做的修改是：取消调用doxxx，handlexxx这种回调模式；
+然后，不同的功能直接返回，这才符合suspend，我现在打个比方：
+RemoteApiSource的getLastChat这个方法，我看了一下吗还是使用把response交给handleGetChatHistory去处理，
+这里明显还有回调callback: SyncRequestCallback，而且还竟然持有context: Context，
+全都干掉，doGetLastChat应该是一个suspend函数，要取消handlexxx直接业务逻辑放在函数内部，
+在内部直接用effect执行之前SyncRequestCallback设计的回调。反正我现在希望你取消叫全部的回调，用suspend。
+而且我这个方法以前入参包含context，以前我是mvvm是合理的，现在是mvi，是不合理的，我看你都没有质疑我这样写的合理性。
+你不要怕改activity的内容，你都可改的。
 
 
 
-
-
-
-
-
-
+第二，关于设计文档的问题：
+@app/android/docs/AndroidDesignDocument.md 
+这里面`## RemoteApiSource suspend 化改造` 是另一个AI写的，它比较笨，把这个当设计日志了。
+你现在要把这部分内容拆分到RemoteApiSource以及设计文档应有的位置，我这个设计文档是由目录层次结构的，不能这么写。
+```以 `verifyAccessToken` 为标准链路：```这种例子都得删掉。与之替换的是应该添加上
+[remote](app/android/app/src/main/java/com/magicvector/dataSource/remote)中的[RemoteApiSource.kt](app/android/app/src/main/java/com/magicvector/dataSource/remote/RemoteApiSource.kt)
+[local](app/android/app/src/main/java/com/magicvector/dataSource/local)中的 **LocalSource
+[repository](app/android/app/src/main/java/com/magicvector/repository)
+以及调用他们的vm和manager的这样规划的架构。
+并写上remote，local的设计模式，绘制UML图：整体类图，内部函数架构的通用甘特图（就是里面的函数基本相同统一绘制一个就行），
+内部函数的通用状态图。以及补充上这样设计的计算机理论基础，包括为什么使用suspend取消回调。
 
 
 

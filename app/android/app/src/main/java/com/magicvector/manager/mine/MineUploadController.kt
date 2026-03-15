@@ -41,32 +41,31 @@ class MineUploadController(
         uploadJob?.cancel()
         uploadJob = scope.launch {
             val sourceFile = uploadManager.copyUriToTempFile(contentResolver, uri, fileName)
-            uploadManager.createUploadSession(
-                userId = userId,
-                fileName = fileName,
-                fileSize = sourceFile.length(),
-                onSuccess = { init ->
-                    if (init == null || init.uploadId.isNullOrBlank()) {
-                        callback.invoke(MineUploadProgress(error = "创建上传会话失败"))
-                        return@createUploadSession
-                    }
-                    startUploadChunks(
-                        sourceFile = sourceFile,
-                        uploadId = init.uploadId,
-                        userId = userId,
-                        offset = init.uploadedOffset ?: 0L,
-                        chunkSize = init.chunkSize ?: 5 * 1024 * 1024,
-                        callback = callback
-                    )
-                },
-                onError = {
+            try {
+                val init = uploadManager.createUploadSession(
+                    userId = userId,
+                    fileName = fileName,
+                    fileSize = sourceFile.length()
+                )
+                if (init.uploadId.isNullOrBlank()) {
                     callback.invoke(MineUploadProgress(error = "创建上传会话失败"))
+                    return@launch
                 }
-            )
+                startUploadChunks(
+                    sourceFile = sourceFile,
+                    uploadId = init.uploadId,
+                    userId = userId,
+                    offset = init.uploadedOffset ?: 0L,
+                    chunkSize = init.chunkSize ?: 5 * 1024 * 1024,
+                    callback = callback
+                )
+            } catch (_: Throwable) {
+                callback.invoke(MineUploadProgress(error = "创建上传会话失败"))
+            }
         }
     }
 
-    private fun startUploadChunks(
+    private suspend fun startUploadChunks(
         sourceFile: File,
         uploadId: String,
         userId: String,
@@ -98,34 +97,50 @@ class MineUploadController(
                     }
                 }
             }
-            uploadManager.uploadChunk(
-                uploadId = uploadId,
-                userId = userId,
-                chunkIndex = chunkIndex,
-                offset = currentOffset,
-                chunkFile = chunkFile,
-                onSuccess = { chunk ->
-                    currentOffset = chunk?.uploadedOffset ?: currentOffset
-                    callback.invoke(MineUploadProgress(uploadedBytes = currentOffset, totalBytes = sourceFile.length()))
-                },
-                onError = {
-                    callback.invoke(MineUploadProgress(uploadedBytes = currentOffset, totalBytes = sourceFile.length(), error = "上传分片失败"))
-                }
-            )
+            try {
+                val chunk = uploadManager.uploadChunk(
+                    uploadId = uploadId,
+                    userId = userId,
+                    chunkIndex = chunkIndex,
+                    offset = currentOffset,
+                    chunkFile = chunkFile
+                )
+                currentOffset = chunk.uploadedOffset ?: currentOffset
+                callback.invoke(MineUploadProgress(uploadedBytes = currentOffset, totalBytes = sourceFile.length()))
+            } catch (_: Throwable) {
+                callback.invoke(
+                    MineUploadProgress(
+                        uploadedBytes = currentOffset,
+                        totalBytes = sourceFile.length(),
+                        error = "上传分片失败"
+                    )
+                )
+            }
             //noinspection ResultOfMethodCallIgnored
             chunkFile.delete()
             chunkIndex += 1
         }
-        uploadManager.completeUpload(
-            uploadId = uploadId,
-            userId = userId,
-            onSuccess = {
-                callback.invoke(MineUploadProgress(uploadedBytes = sourceFile.length(), totalBytes = sourceFile.length(), completed = true))
-            },
-            onError = {
-                callback.invoke(MineUploadProgress(uploadedBytes = currentOffset, totalBytes = sourceFile.length(), error = "完成上传失败"))
-            }
-        )
+        try {
+            uploadManager.completeUpload(
+                uploadId = uploadId,
+                userId = userId
+            )
+            callback.invoke(
+                MineUploadProgress(
+                    uploadedBytes = sourceFile.length(),
+                    totalBytes = sourceFile.length(),
+                    completed = true
+                )
+            )
+        } catch (_: Throwable) {
+            callback.invoke(
+                MineUploadProgress(
+                    uploadedBytes = currentOffset,
+                    totalBytes = sourceFile.length(),
+                    error = "完成上传失败"
+                )
+            )
+        }
     }
 }
 

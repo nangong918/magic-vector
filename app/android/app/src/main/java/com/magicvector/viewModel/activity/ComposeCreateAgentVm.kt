@@ -8,13 +8,9 @@ import androidx.compose.runtime.Stable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.core.baseutil.file.FileUtil
-import com.core.baseutil.network.BaseResponse
-import com.core.baseutil.network.OnSuccessCallback
-import com.core.baseutil.network.OnThrowableCallback
-import com.core.baseutil.ui.ToastUtils
 import com.data.domain.constant.BaseConstant
-import com.magicvector.domain.dto.http.response.AgentResponse
 import com.magicvector.MainApplication
+import com.magicvector.domain.exception.NetworkBusinessException
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -114,14 +110,14 @@ class ComposeCreateAgentVm() : ViewModel() {
 
 
     // 权限请求结果回调（由 UI 层调用）
-    fun onPermissionResult(granted: Boolean, context: Context) {
+    fun onPermissionResult(granted: Boolean) {
         if (granted) {
             // 权限已授予，打开图片选择器
             sendEffect(CreateAgentEffect.NavigateToImagePicker())
         } else {
             // 权限被拒绝，显示提示
             sendEffect(CreateAgentEffect.ShowError(
-                context.getString(com.view.appview.R.string.please_give_permission)
+                MainApplication.getApp().getString(com.view.appview.R.string.please_give_permission)
             ))
         }
     }
@@ -139,18 +135,19 @@ class ComposeCreateAgentVm() : ViewModel() {
             return
         }
 
-        sendEffect(CreateAgentEffect.CreateAgent)
+        createAgent()
     }
 
-    fun createAgent(context: Context) {
+    private fun createAgent() {
         val state = _uiState.value
+        val appContext = MainApplication.getApp()
 
         var filePart: MultipartBody.Part? = null
 
         state.avatarUri.let {
             uri ->
             var bitmap: Bitmap? = MainApplication.getImageManager()!!.
-            uriToBitmapMediaStore(context, uri)
+            uriToBitmapMediaStore(appContext, uri)
             // 裁剪
             bitmap = MainApplication.getImageManager()!!.
             processImage(bitmap, BaseConstant.Constant.BITMAP_MAX_SIZE_AVATAR)
@@ -159,7 +156,7 @@ class ComposeCreateAgentVm() : ViewModel() {
             var imageFile: File? = null
 
             imageFile = MainApplication.getImageManager()!!.
-            bitmapToFile(bitmap, uri, context)
+            bitmapToFile(bitmap, uri, appContext)
 
             if (imageFile == null || !imageFile.exists()) {
                 // 处理文件未创建或路径不正确的情况
@@ -187,34 +184,27 @@ class ComposeCreateAgentVm() : ViewModel() {
             state.agentDescription
         )
 
-        api.createAgent(
-            filePart,
-            userIdBody,
-            nameBody,
-            descriptionBody,
-            onSuccessCallback = object : OnSuccessCallback<BaseResponse<AgentResponse>> {
-                override fun onResponse(response: BaseResponse<AgentResponse>?) {
-                    response?.let {
-                        if (response.data?.agentAo?.agentId != null){
-                            ToastUtils.showToastActivity(context, context.getString(
-                                com.view.appview.R.string.create_success
-                            ))
-                            _uiState.update {
-                                it.copy(isCreateSuccess = false)
-                            }
-                        }
-                    }
+        viewModelScope.launch {
+            try {
+                val response = api.createAgent(
+                    avatar = filePart,
+                    userId = userIdBody,
+                    name = nameBody,
+                    description = descriptionBody
+                )
+                if (response.agentAo?.agentId != null) {
+                    _uiState.update { it.copy(isCreateSuccess = false) }
+                    sendEffect(CreateAgentEffect.ShowToast(appContext.getString(com.view.appview.R.string.create_success)))
+                    sendEffect(CreateAgentEffect.AgentCreated(response.agentAo?.agentId.orEmpty()))
                 }
-            },
-            throwableCallback = object : OnThrowableCallback {
-                override fun callback(throwable: Throwable?) {
-                    Log.e(TAG, "Create agent failed: ", throwable)
-                    sendEffect(CreateAgentEffect.ShowError(
-                        context.getString(com.view.appview.R.string.create_failed)
-                    ))
-                }
+            } catch (e: NetworkBusinessException) {
+                Log.e(TAG, "Create agent business failed", e)
+                sendEffect(CreateAgentEffect.ShowError(e.msg ?: appContext.getString(com.view.appview.R.string.create_failed)))
+            } catch (e: Throwable) {
+                Log.e(TAG, "Create agent failed: ", e)
+                sendEffect(CreateAgentEffect.ShowError(appContext.getString(com.view.appview.R.string.create_failed)))
             }
-        )
+        }
     }
 
     private fun cancelCreate() {
@@ -314,9 +304,6 @@ sealed class CreateAgentEffect {
     // 提示相关
     data class ShowToast(val message: String) : CreateAgentEffect()
     data class ShowError(val message: String) : CreateAgentEffect()
-
-    // 创建
-    data object CreateAgent : CreateAgentEffect()
 
     // 结果相关
     data class AgentCreated(val agentId: String) : CreateAgentEffect()

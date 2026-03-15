@@ -1,9 +1,6 @@
 package com.magicvector.manager.control
 
 import android.util.Log
-import com.core.baseutil.network.BaseResponse
-import com.core.baseutil.network.OnSuccessCallback
-import com.core.baseutil.network.OnThrowableCallback
 import com.data.domain.constant.BaseConstant
 import com.magicvector.domain.dto.http.request.ControlCommandRequest
 import com.magicvector.domain.dto.http.response.ControlCommandResponse
@@ -85,19 +82,11 @@ class ControlConsoleManager {
         onSuccess: (ControlStatusResponse?) -> Unit,
         onError: (Throwable?) -> Unit
     ) {
-        api.getControlStatus(
-            deviceId = deviceId,
-            onSuccessCallback = object : OnSuccessCallback<BaseResponse<ControlStatusResponse>> {
-                override fun onResponse(response: BaseResponse<ControlStatusResponse>?) {
-                    onSuccess.invoke(response?.data)
-                }
-            },
-            throwableCallback = object : OnThrowableCallback {
-                override fun callback(throwable: Throwable?) {
-                    onError.invoke(throwable)
-                }
-            }
-        )
+        managerScope.launch {
+            runCatching { api.getControlStatus(deviceId) }
+                .onSuccess { onSuccess.invoke(it) }
+                .onFailure { onError.invoke(it) }
+        }
     }
 
     fun sendControlCommand(
@@ -117,19 +106,11 @@ class ControlConsoleManager {
             )
             return
         }
-        api.sendControlCommand(
-            request = request,
-            onSuccessCallback = object : OnSuccessCallback<BaseResponse<ControlCommandResponse>> {
-                override fun onResponse(response: BaseResponse<ControlCommandResponse>?) {
-                    onSuccess.invoke(response?.data)
-                }
-            },
-            throwableCallback = object : OnThrowableCallback {
-                override fun callback(throwable: Throwable?) {
-                    onError.invoke(throwable)
-                }
-            }
-        )
+        managerScope.launch {
+            runCatching { api.sendControlCommand(request) }
+                .onSuccess { onSuccess.invoke(it) }
+                .onFailure { onError.invoke(it) }
+        }
     }
 
     fun sendHeartbeat() {

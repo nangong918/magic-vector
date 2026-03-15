@@ -138,7 +138,7 @@ class ComposeAgentEmojiActivity : BaseComponentActivity(), HandleSystemResponse,
                         AgentEmojiEffect.RequestRecordPermission -> {
                             recordPermissionUtils.requestPermissions(this@ComposeAgentEmojiActivity, object : GainPermissionCallback {
                                 override fun allGranted() {
-                                    vm.processIntent(AgentEmojiIntent.OnRecordPermissionGranted(this@ComposeAgentEmojiActivity))
+                                    vm.processIntent(AgentEmojiIntent.OnRecordPermissionGranted)
                                     bindRealtimeCallbacksOnce()
                                 }
 
@@ -248,7 +248,7 @@ class ComposeAgentEmojiActivity : BaseComponentActivity(), HandleSystemResponse,
     }
 
     override fun handleSystemResponse(map: Map<String, String>) {
-        vm.processIntent(AgentEmojiIntent.HandleSystemResponse(map, this))
+        vm.processIntent(AgentEmojiIntent.HandleSystemResponse(map))
     }
 
     private fun initWindow() {

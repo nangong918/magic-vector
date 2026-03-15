@@ -1,17 +1,10 @@
 package com.magicvector.viewModel.activity
 
-import android.content.Context
 import android.net.Uri
 import android.util.Log
 import androidx.compose.runtime.Stable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.magicvector.repository.api.handler.SyncRequestCallback
-import com.magicvector.repository.api.utils.AppResponseUtil
-import com.core.baseutil.network.BaseResponse
-import com.core.baseutil.network.OnSuccessCallback
-import com.core.baseutil.network.OnThrowableCallback
-import com.magicvector.domain.dto.http.response.AgentResponse
 import com.magicvector.MainApplication
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
@@ -40,7 +33,7 @@ class ComposeAgentInfoVm : ViewModel() {
 
     fun processIntent(intent: ComposeAgentInfoIntent) {
         when (intent) {
-            is ComposeAgentInfoIntent.Initialize -> initialize(intent.agentId, intent.context)
+            is ComposeAgentInfoIntent.Initialize -> initialize(intent.agentId)
             is ComposeAgentInfoIntent.UpdateName -> _uiState.update { it.copy(name = intent.value) }
             is ComposeAgentInfoIntent.UpdateDescription -> _uiState.update { it.copy(description = intent.value) }
             ComposeAgentInfoIntent.ClickBack -> sendEffect(ComposeAgentInfoEffect.Finish)
@@ -64,7 +57,7 @@ class ComposeAgentInfoVm : ViewModel() {
         }
     }
 
-    private fun initialize(agentId: String?, context: Context) {
+    private fun initialize(agentId: String?) {
         if (agentId.isNullOrEmpty()) {
             sendEffect(ComposeAgentInfoEffect.ShowToastRes(com.view.appview.R.string.agent_is_not_found))
             sendEffect(ComposeAgentInfoEffect.Finish)
@@ -72,57 +65,26 @@ class ComposeAgentInfoVm : ViewModel() {
         }
         _uiState.update { it.copy(agentId = agentId, isLoading = true) }
         sendEffect(ComposeAgentInfoEffect.ShowLoading)
-        doGetAgentInfo(context, agentId, object : SyncRequestCallback {
-            override fun onThrowable(throwable: Throwable?) {
+        viewModelScope.launch {
+            try {
+                val response = api.getAgentInfo(agentId)
+                response.agentAo?.agentVo?.let { vo ->
+                    _uiState.update {
+                        it.copy(
+                            avatarUrl = vo.avatarUrl,
+                            name = vo.name ?: "",
+                            description = vo.description ?: ""
+                        )
+                    }
+                }
+                _uiState.update { it.copy(isLoading = false) }
+                sendEffect(ComposeAgentInfoEffect.HideLoading)
+            } catch (throwable: Throwable) {
                 Log.e(TAG, "getAgentInfo error", throwable)
                 _uiState.update { it.copy(isLoading = false) }
                 sendEffect(ComposeAgentInfoEffect.HideLoading)
             }
-
-            override fun onAllRequestSuccess() {
-                _uiState.update { it.copy(isLoading = false) }
-                sendEffect(ComposeAgentInfoEffect.HideLoading)
-            }
-        })
-    }
-
-    // 复用原 AgentInfoVm 网络逻辑
-    private fun doGetAgentInfo(context: Context, agentId: String, callback: SyncRequestCallback) {
-        api.getAgentInfo(
-            agentId,
-            object : OnSuccessCallback<BaseResponse<AgentResponse>> {
-                override fun onResponse(response: BaseResponse<AgentResponse>?) {
-                    AppResponseUtil.handleSyncResponseEx(
-                        response,
-                        context,
-                        callback,
-                        ::handleGetAgentInfo
-                    )
-                }
-            },
-            object : OnThrowableCallback {
-                override fun callback(throwable: Throwable?) {
-                    callback.onThrowable(throwable)
-                }
-            }
-        )
-    }
-
-    private fun handleGetAgentInfo(
-        response: BaseResponse<AgentResponse>?,
-        context: Context,
-        callback: SyncRequestCallback
-    ) {
-        response?.data?.agentAo?.agentVo?.let { vo ->
-            _uiState.update {
-                it.copy(
-                    avatarUrl = vo.avatarUrl,
-                    name = vo.name ?: "",
-                    description = vo.description ?: ""
-                )
-            }
         }
-        callback.onAllRequestSuccess()
     }
 
     private fun sendEffect(effect: ComposeAgentInfoEffect) {
@@ -143,7 +105,7 @@ data class ComposeAgentInfoState(
 )
 
 sealed class ComposeAgentInfoIntent {
-    data class Initialize(val agentId: String?, val context: Context) : ComposeAgentInfoIntent()
+    data class Initialize(val agentId: String?) : ComposeAgentInfoIntent()
     data class UpdateName(val value: String) : ComposeAgentInfoIntent()
     data class UpdateDescription(val value: String) : ComposeAgentInfoIntent()
     data object ClickBack : ComposeAgentInfoIntent()

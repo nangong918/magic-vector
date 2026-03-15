@@ -8,7 +8,6 @@ import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import com.magicvector.repository.api.handler.SyncRequestCallback
 import com.core.baseutil.network.networkLoad.NetworkLoadUtils
 import com.data.domain.OnPositionItemClick
 import com.data.domain.fragmentActivity.intentAo.ChatIntentAo
@@ -18,6 +17,8 @@ import com.magicvector.callback.OnCreateAgentCallback
 import com.magicvector.databinding.FragmentMessageListBinding
 import com.magicvector.utils.BaseAppCompatVmFragment
 import com.magicvector.viewModel.fragment.MessageListVm
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.launch
 import java.util.Optional
 
 class MessageListFragment : BaseAppCompatVmFragment<
@@ -110,26 +111,16 @@ class MessageListFragment : BaseAppCompatVmFragment<
 
         binding.layoutMain.setOnRefreshListener{
             if (isAdded) {
-                vm.doGetLastAgentChatList(requireActivity(), object : SyncRequestCallback {
-                    override fun onThrowable(throwable: Throwable?) {
-                        requireActivity().let {
-                            NetworkLoadUtils.dismissDialogSafety(it)
-                            it.runOnUiThread {
-                                binding.layoutMain.isRefreshing = false
-                            }
-                        }
-                        Log.e(TAG, "initResource: onThrowable", throwable)
-                    }
-
-                    override fun onAllRequestSuccess() {
-                        requireActivity().let {
-                            NetworkLoadUtils.dismissDialogSafety(it)
-                            it.runOnUiThread {
-                                binding.layoutMain.isRefreshing = false
-                            }
+                lifecycleScope.launch {
+                    runCatching { vm.fetchLastAgentChatList() }
+                        .onFailure { Log.e(TAG, "initResource: onThrowable", it) }
+                    requireActivity().let {
+                        NetworkLoadUtils.dismissDialogSafety(it)
+                        it.runOnUiThread {
+                            binding.layoutMain.isRefreshing = false
                         }
                     }
-                })
+                }
             }
             else {
                 Log.w("MessageListFragment", "activity is not added")
@@ -139,16 +130,11 @@ class MessageListFragment : BaseAppCompatVmFragment<
 
     override fun onCreateAgent(createResult: Boolean) {
         if (createResult) {
-            vm.doGetLastAgentChatList(requireActivity(), object : SyncRequestCallback {
-                override fun onThrowable(throwable: Throwable?) {
-                    NetworkLoadUtils.dismissDialogSafety(requireActivity())
-                    Log.e(TAG, "initResource: onThrowable", throwable)
-                }
-
-                override fun onAllRequestSuccess() {
-                    NetworkLoadUtils.dismissDialogSafety(requireActivity())
-                }
-            })
+            lifecycleScope.launch {
+                runCatching { vm.fetchLastAgentChatList() }
+                    .onFailure { Log.e(TAG, "initResource: onThrowable", it) }
+                NetworkLoadUtils.dismissDialogSafety(requireActivity())
+            }
         }
         else {
             Log.i(TAG, "创建Agent失败/未创建")

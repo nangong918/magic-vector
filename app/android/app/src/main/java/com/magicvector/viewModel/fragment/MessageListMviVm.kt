@@ -3,11 +3,7 @@ package com.magicvector.viewModel.fragment
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.core.baseutil.network.BaseResponse
-import com.core.baseutil.network.OnSuccessCallback
-import com.core.baseutil.network.OnThrowableCallback
 import com.data.domain.ao.message.MessageContactItemAo
-import com.data.domain.constant.BaseConstant
 import com.magicvector.domain.dto.http.response.AgentLastChatListResponse
 import com.magicvector.domain.dto.http.response.AgentListResponse
 import com.magicvector.MainApplication
@@ -24,9 +20,6 @@ import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import kotlin.coroutines.resume
-import kotlin.coroutines.resumeWithException
-import kotlin.coroutines.suspendCoroutine
 
 class MessageListMviVm : ViewModel() {
 
@@ -144,66 +137,20 @@ class MessageListMviVm : ViewModel() {
         return ""
     }
 
-    private suspend fun requestAgentList(userId: String): BaseResponse<AgentListResponse> {
-        return suspendCoroutine { continuation ->
-            MainApplication.getRemoteApiSource().getAgentList(
-                userId,
-                object : OnSuccessCallback<BaseResponse<AgentListResponse>> {
-                    override fun onResponse(response: BaseResponse<AgentListResponse>?) {
-                        if (response != null) {
-                            continuation.resume(response)
-                        } else {
-                            continuation.resumeWithException(Exception("获取Agent列表返回空响应"))
-                        }
-                    }
-                },
-                object : OnThrowableCallback {
-                    override fun callback(throwable: Throwable?) {
-                        continuation.resumeWithException(throwable ?: Exception("获取Agent列表失败"))
-                    }
-                }
-            )
-        }
+    private suspend fun requestAgentList(userId: String): AgentListResponse {
+        return MainApplication.getRemoteApiSource().getAgentList(userId)
     }
 
-    private suspend fun requestLastAgentChatList(userId: String): BaseResponse<AgentLastChatListResponse> {
-        return suspendCoroutine { continuation ->
-            MainApplication.getRemoteApiSource().getLastAgentChatList(
-                userId,
-                object : OnSuccessCallback<BaseResponse<AgentLastChatListResponse>> {
-                    override fun onResponse(response: BaseResponse<AgentLastChatListResponse>?) {
-                        if (response != null) {
-                            continuation.resume(response)
-                        } else {
-                            continuation.resumeWithException(Exception("获取最近聊天返回空响应"))
-                        }
-                    }
-                },
-                object : OnThrowableCallback {
-                    override fun callback(throwable: Throwable?) {
-                        continuation.resumeWithException(throwable ?: Exception("获取最近聊天失败"))
-                    }
-                }
-            )
-        }
+    private suspend fun requestLastAgentChatList(userId: String): AgentLastChatListResponse {
+        return MainApplication.getRemoteApiSource().getLastAgentChatList(userId)
     }
 
     private fun handleAgentAndChatResponse(
-        agentListResponse: BaseResponse<AgentListResponse>,
-        chatListResponse: BaseResponse<AgentLastChatListResponse>
+        agentListResponse: AgentListResponse,
+        chatListResponse: AgentLastChatListResponse
     ) {
-        val agentListSuccess = agentListResponse.code == BaseConstant.NetworkCode.SUCCESS_CODE
-        if (!agentListSuccess) {
-            handleError(agentListResponse.message ?: "获取Agent列表失败")
-            return
-        }
-        val chatListSuccess = chatListResponse.code == BaseConstant.NetworkCode.SUCCESS_CODE
-        if (!chatListSuccess) {
-            handleError(chatListResponse.message ?: "获取最近聊天失败")
-            return
-        }
-        val hasAgent = (agentListResponse.data?.agentAos?.size ?: 0) > 0
-        val chatData = chatListResponse.data
+        val hasAgent = (agentListResponse.agentAos?.size ?: 0) > 0
+        val chatData = chatListResponse
         val messages = chatData?.agentChatAos.orEmpty()
         val messageContactItemAos = MessageConvertor.agentChatAos2MessageContactItemAos(messages)
         if (chatData != null) {
@@ -218,7 +165,7 @@ class MessageListMviVm : ViewModel() {
                 error = null,
                 messages = messageContactItemAos,
                 messageCount = messages.size,
-                agentCount = agentListResponse.data?.agentAos?.size ?: 0,
+                agentCount = agentListResponse.agentAos?.size ?: 0,
                 hasAgent = hasAgent,
                 hasMessage = hasMessage,
                 uiMode = deriveUiMode(hasAgent, hasMessage)

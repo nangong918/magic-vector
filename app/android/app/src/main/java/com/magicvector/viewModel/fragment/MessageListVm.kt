@@ -6,12 +6,8 @@ import android.util.Log
 import androidx.annotation.RequiresPermission
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.ViewModel
-import com.magicvector.repository.api.handler.SyncRequestCallback
-import com.magicvector.repository.api.utils.AppResponseUtil
+import androidx.lifecycle.viewModelScope
 import com.core.baseutil.cache.HttpRequestManager
-import com.core.baseutil.network.BaseResponse
-import com.core.baseutil.network.OnSuccessCallback
-import com.core.baseutil.network.OnThrowableCallback
 import com.core.baseutil.network.networkLoad.NetworkLoadUtils
 import com.core.baseutil.permissions.GainPermissionCallback
 import com.core.baseutil.permissions.PermissionUtil
@@ -21,6 +17,7 @@ import com.magicvector.domain.dto.http.response.AgentLastChatListResponse
 import com.data.domain.fragmentActivity.fao.MessageFAo
 import com.magicvector.MainApplication
 import com.view.appview.message.MessageContactAdapter
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.Runnable
 
 
@@ -34,16 +31,11 @@ open class MessageListVm(
     fun initResource(activity: FragmentActivity){
 
         NetworkLoadUtils.showDialog(activity)
-        initNetworkRequest(activity, object : SyncRequestCallback {
-            override fun onThrowable(throwable: Throwable?) {
-                NetworkLoadUtils.dismissDialogSafety(activity)
-                Log.e(TAG, "initResource: onThrowable", throwable)
-            }
-
-            override fun onAllRequestSuccess() {
-                NetworkLoadUtils.dismissDialogSafety(activity)
-            }
-        })
+        viewModelScope.launch {
+            runCatching { initNetworkRequest(activity) }
+                .onFailure { Log.e(TAG, "initResource: onThrowable", it) }
+            NetworkLoadUtils.dismissDialogSafety(activity)
+        }
     }
 
     //---------------------------FAo Ld---------------------------
@@ -65,11 +57,11 @@ open class MessageListVm(
 
     //---------------------------NetWork---------------------------
 
-    fun initNetworkRequest(context: Context, callback: SyncRequestCallback){
+    suspend fun initNetworkRequest(context: Context){
         if (HttpRequestManager.getIsFirstOpen(TAG)){
             // 第一次打开，初始化
             Log.i(TAG, "initNetworkRequest: 第一次打开")
-            doGetLastAgentChatList(context, callback)
+            fetchLastAgentChatList()
         }
         else {
             Log.i(TAG, "initNetworkRequest: 不是第一次打开")
@@ -79,33 +71,15 @@ open class MessageListVm(
         }
     }
 
-    fun doGetLastAgentChatList(context: Context, callback: SyncRequestCallback){
-        MainApplication.getRemoteApiSource().getLastAgentChatList(
-            MainApplication.getUserId(),
-            object : OnSuccessCallback<BaseResponse<AgentLastChatListResponse>>{
-                override fun onResponse(response: BaseResponse<AgentLastChatListResponse>?) {
-                    AppResponseUtil.handleSyncResponseEx(
-                        response,
-                        context,
-                        callback,
-                        ::handleGetLastAgentChatList
-                    )
-                }
-
-            },
-            object : OnThrowableCallback{
-                override fun callback(throwable: Throwable?) {
-                    callback.onThrowable(throwable)
-                }
-            }
-        )
+    suspend fun fetchLastAgentChatList() {
+        val response = MainApplication.getRemoteApiSource()
+            .getLastAgentChatList(MainApplication.getUserId())
+        applyLastAgentChatList(response)
     }
 
-    private fun handleGetLastAgentChatList(response: BaseResponse<AgentLastChatListResponse>?,
-                                           context: Context,
-                                           callback: SyncRequestCallback){
-        if (response?.data != null){
-            MainApplication.getMessageListManager().setAgentChatAos(response.data!!)
+    private fun applyLastAgentChatList(response: AgentLastChatListResponse?) {
+        if (response != null){
+            MainApplication.getMessageListManager().setAgentChatAos(response)
             fao.messageContactCountLd.postValue(
                 MainApplication.getMessageListManager().messageContactItemAos.size
             )
@@ -114,7 +88,6 @@ open class MessageListVm(
             MainApplication.getMessageListManager().clear()
             fao.messageContactCountLd.postValue(0)
         }
-        callback.onAllRequestSuccess()
     }
 
     //---------------------------Logic---------------------------

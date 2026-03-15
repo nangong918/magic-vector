@@ -10,12 +10,8 @@ import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.application
-import com.magicvector.repository.api.handler.SyncRequestCallback
-import com.magicvector.repository.api.utils.AppResponseUtil
+import androidx.lifecycle.viewModelScope
 import com.core.baseutil.file.FileUtil
-import com.core.baseutil.network.BaseResponse
-import com.core.baseutil.network.OnSuccessCallback
-import com.core.baseutil.network.OnThrowableCallback
 import com.data.domain.constant.chat.RealtimeRequestDataTypeEnum
 import com.magicvector.MainApplication
 import com.magicvector.manager.RealtimeChatController
@@ -24,6 +20,7 @@ import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
 import okhttp3.RequestBody
 import java.io.File
+import kotlinx.coroutines.launch
 
 class AgentEmojiVm(
 ) : AndroidViewModel(
@@ -122,13 +119,12 @@ class AgentEmojiVm(
      * @param messageId     消息id
      * @param callback      回调
      */
-    fun doUploadImageVision(context: Context,
-                            images: List<File>,
-                            agentId: String,
-                            userId: String,
-                            messageId: String,
-                            callback: SyncRequestCallback){
-
+    suspend fun requestUploadImageVision(
+        images: List<File>,
+        agentId: String,
+        userId: String,
+        messageId: String
+    ): String {
         // 创建 MultipartBody.Part 列表
         val imageParam: List<MultipartBody.Part>? = FileUtil.createImageMultipartBodyParts(
             images,
@@ -136,8 +132,7 @@ class AgentEmojiVm(
         )
 
         if (imageParam == null){
-            callback.onThrowable(Throwable("image is null"))
-            return
+            throw IllegalArgumentException("image is null")
         }
 
         // 创建其他参数请求体
@@ -145,38 +140,12 @@ class AgentEmojiVm(
         val userIdParam = RequestBody.create("text/plain".toMediaTypeOrNull(), userId)
         val messageIdParam = RequestBody.create("text/plain".toMediaTypeOrNull(), messageId)
 
-        mApi.uploadImageVision(
+        return mApi.uploadImageVision(
             images = imageParam,
             agentId = agentIdParam,
             userId = userIdParam,
-            messageId = messageIdParam,
-            onSuccessCallback = object : OnSuccessCallback<BaseResponse<String>>{
-                override fun onResponse(response: BaseResponse<String>?) {
-                    AppResponseUtil.handleSyncResponseEx(
-                        response = response,
-                        context = context,
-                        callback = callback,
-                        handler = { response, context ->
-                            handleUploadImageVision(context, response, callback)
-                        }
-                    )
-                }
-
-            },
-            throwableCallback = object : OnThrowableCallback{
-                override fun callback(throwable: Throwable?) {
-                    callback.onThrowable(throwable)
-                }
-            }
+            messageId = messageIdParam
         )
-    }
-
-    private fun handleUploadImageVision(context: Context, response: BaseResponse<String>?, callback: SyncRequestCallback){
-        response?.let {
-            println("response: ${it.data}")
-            println("response: ${it.message}")
-        }
-        callback.onAllRequestSuccess()
     }
 
     // vision测试

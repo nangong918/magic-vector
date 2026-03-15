@@ -2,12 +2,9 @@ package com.magicvector.viewModel.activity
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.core.baseutil.network.BaseResponse
-import com.core.baseutil.network.OnSuccessCallback
-import com.core.baseutil.network.OnThrowableCallback
 import com.magicvector.domain.dto.http.request.UserPasswordUpdateRequest
-import com.magicvector.domain.dto.http.response.UserPasswordUpdateResponse
 import com.magicvector.MainApplication
+import com.magicvector.domain.exception.NetworkBusinessException
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -76,24 +73,21 @@ class ComposeMineSettingVm : ViewModel() {
             this.oldPassword = old
             this.newPassword = new
         }
-        remoteApiSource.updatePassword(
-            request = request,
-            onSuccessCallback = object : OnSuccessCallback<BaseResponse<UserPasswordUpdateResponse>> {
-                override fun onResponse(response: BaseResponse<UserPasswordUpdateResponse>?) {
-                    val ok = response?.data?.updated == true
-                    sendEffect(
-                        MineSettingEffect.ShowToast(
-                            if (ok) "密码修改成功" else (response?.data?.message ?: "修改失败")
-                        )
+        viewModelScope.launch {
+            try {
+                val response = remoteApiSource.updatePassword(request)
+                val ok = response.updated == true
+                sendEffect(
+                    MineSettingEffect.ShowToast(
+                        if (ok) "密码修改成功" else (response.message ?: "修改失败")
                     )
-                }
-            },
-            throwableCallback = object : OnThrowableCallback {
-                override fun callback(throwable: Throwable?) {
-                    sendEffect(MineSettingEffect.ShowToast("修改密码失败"))
-                }
+                )
+            } catch (e: NetworkBusinessException) {
+                sendEffect(MineSettingEffect.ShowToast(e.msg ?: "修改密码失败"))
+            } catch (_: Throwable) {
+                sendEffect(MineSettingEffect.ShowToast("修改密码失败"))
             }
-        )
+        }
     }
 
     private fun logout() {
