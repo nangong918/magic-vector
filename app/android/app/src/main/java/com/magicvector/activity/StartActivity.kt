@@ -86,6 +86,7 @@ class StartActivity : BaseComponentActivity() {
     // 观察 Effect
     private fun observeEffects() {
         lifecycleScope.launch {
+            // STARTED协程启动，并在STOPPED协程自动取消；否者协程不会自动取消
             repeatOnLifecycle(androidx.lifecycle.Lifecycle.State.STARTED) {
                 vm.effect.collect { effect ->
                     when (effect) {
