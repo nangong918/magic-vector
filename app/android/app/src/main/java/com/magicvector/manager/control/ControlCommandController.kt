@@ -1,6 +1,6 @@
 package com.magicvector.manager.control
 
-import com.data.domain.dto.request.ControlCommandRequest
+import com.magicvector.domain.dto.http.request.ControlCommandRequest
 import com.magicvector.MainApplication
 import java.util.concurrent.atomic.AtomicLong
 

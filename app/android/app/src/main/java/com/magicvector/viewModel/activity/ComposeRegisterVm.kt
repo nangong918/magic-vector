@@ -10,7 +10,7 @@ import com.core.baseutil.network.BaseResponse
 import com.core.baseutil.network.OnSuccessCallback
 import com.core.baseutil.network.OnThrowableCallback
 import com.data.domain.constant.BaseConstant
-import com.data.domain.dto.response.UserAuthResponse
+import com.magicvector.domain.dto.http.response.UserAuthResponse
 import com.magicvector.MainApplication
 import com.magicvector.domain.model.UserSessionModel
 import kotlinx.coroutines.channels.Channel

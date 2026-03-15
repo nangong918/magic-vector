@@ -4,8 +4,8 @@ import androidx.lifecycle.ViewModel
 import com.core.baseutil.network.BaseResponse
 import com.core.baseutil.network.OnSuccessCallback
 import com.core.baseutil.network.OnThrowableCallback
-import com.data.domain.dto.request.AgentDeleteRequest
-import com.data.domain.dto.response.AgentResponse
+import com.magicvector.domain.dto.http.request.AgentDeleteRequest
+import com.magicvector.domain.dto.http.response.AgentResponse
 import com.magicvector.MainApplication
 import com.magicvector.manager.RealtimeChatController
 import com.view.appview.MainSelectItemEnum

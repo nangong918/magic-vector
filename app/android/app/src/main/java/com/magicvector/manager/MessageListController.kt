@@ -3,7 +3,7 @@ package com.magicvector.manager
 import com.core.baseutil.date.DateUtils
 import com.data.domain.ao.agent.AgentChatAo
 import com.data.domain.ao.message.MessageContactItemAo
-import com.data.domain.dto.response.AgentLastChatListResponse
+import com.magicvector.domain.dto.http.response.AgentLastChatListResponse
 import java.util.Optional
 
 class MessageListController {

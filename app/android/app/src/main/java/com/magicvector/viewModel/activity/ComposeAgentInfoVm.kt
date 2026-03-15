@@ -11,7 +11,7 @@ import com.magicvector.repository.api.utils.AppResponseUtil
 import com.core.baseutil.network.BaseResponse
 import com.core.baseutil.network.OnSuccessCallback
 import com.core.baseutil.network.OnThrowableCallback
-import com.data.domain.dto.response.AgentResponse
+import com.magicvector.domain.dto.http.response.AgentResponse
 import com.magicvector.MainApplication
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow

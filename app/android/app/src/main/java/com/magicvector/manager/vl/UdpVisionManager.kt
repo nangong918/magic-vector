@@ -1,10 +1,9 @@
 package com.magicvector.manager.vl
 
 import android.graphics.Bitmap
-import android.util.Base64
 import com.core.baseutil.log.Log
 import com.data.domain.constant.BaseConstant
-import com.data.domain.dto.udp.VideoUdpPacket
+import com.magicvector.domain.dto.udp.VideoUdpPacket
 import com.magicvector.MainApplication
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers

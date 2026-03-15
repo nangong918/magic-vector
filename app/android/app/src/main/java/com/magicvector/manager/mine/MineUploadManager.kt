@@ -5,11 +5,11 @@ import android.net.Uri
 import com.core.baseutil.network.BaseResponse
 import com.core.baseutil.network.OnSuccessCallback
 import com.core.baseutil.network.OnThrowableCallback
-import com.data.domain.dto.request.VideoUploadCompleteRequest
-import com.data.domain.dto.request.VideoUploadInitRequest
-import com.data.domain.dto.response.VideoUploadChunkResponse
-import com.data.domain.dto.response.VideoUploadCompleteResponse
-import com.data.domain.dto.response.VideoUploadInitResponse
+import com.magicvector.domain.dto.http.request.VideoUploadCompleteRequest
+import com.magicvector.domain.dto.http.request.VideoUploadInitRequest
+import com.magicvector.domain.dto.http.response.VideoUploadChunkResponse
+import com.magicvector.domain.dto.http.response.VideoUploadCompleteResponse
+import com.magicvector.domain.dto.http.response.VideoUploadInitResponse
 import com.magicvector.MainApplication
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody

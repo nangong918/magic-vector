@@ -3,7 +3,7 @@ package com.magicvector.manager.control
 import com.core.baseutil.network.BaseResponse
 import com.core.baseutil.network.OnSuccessCallback
 import com.core.baseutil.network.OnThrowableCallback
-import com.data.domain.dto.response.ControlAgentLogResponse
+import com.magicvector.domain.dto.http.response.ControlAgentLogResponse
 import com.magicvector.MainApplication
 import com.magicvector.dataSource.local.db.VectorDatabase
 import com.magicvector.domain.entity.ControlAgentLogEntity

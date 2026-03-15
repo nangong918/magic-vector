@@ -6,8 +6,8 @@ import com.core.baseutil.network.BaseResponse
 import com.core.baseutil.network.OnSuccessCallback
 import com.core.baseutil.network.OnThrowableCallback
 import com.data.domain.constant.BaseConstant
-import com.data.domain.dto.request.UserTokenVerifyRequest
-import com.data.domain.dto.response.UserTokenVerifyResponse
+import com.magicvector.domain.dto.http.request.UserTokenVerifyRequest
+import com.magicvector.domain.dto.http.response.UserTokenVerifyResponse
 import com.magicvector.MainApplication
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay

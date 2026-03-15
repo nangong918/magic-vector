@@ -20,7 +20,7 @@ import com.core.baseutil.permissions.PermissionUtil
 import com.core.baseutil.photo.SelectPhotoUtil
 import com.core.baseutil.ui.ToastUtils
 import com.data.domain.constant.BaseConstant
-import com.data.domain.dto.response.AgentResponse
+import com.magicvector.domain.dto.http.response.AgentResponse
 import com.data.domain.fragmentActivity.aao.CreateAgentAAo
 import com.magicvector.MainApplication
 import okhttp3.MediaType.Companion.toMediaTypeOrNull

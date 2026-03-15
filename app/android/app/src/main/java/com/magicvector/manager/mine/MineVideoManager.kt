@@ -3,9 +3,9 @@ package com.magicvector.manager.mine
 import com.core.baseutil.network.BaseResponse
 import com.core.baseutil.network.OnSuccessCallback
 import com.core.baseutil.network.OnThrowableCallback
-import com.data.domain.dto.response.VideoCloudListResponse
-import com.data.domain.dto.response.VideoDownloadUrlResponse
-import com.data.domain.dto.response.VideoPlayUrlResponse
+import com.magicvector.domain.dto.http.response.VideoCloudListResponse
+import com.magicvector.domain.dto.http.response.VideoDownloadUrlResponse
+import com.magicvector.domain.dto.http.response.VideoPlayUrlResponse
 import com.magicvector.MainApplication
 
 class MineVideoManager {

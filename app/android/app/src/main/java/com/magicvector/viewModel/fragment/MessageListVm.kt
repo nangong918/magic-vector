@@ -17,7 +17,7 @@ import com.core.baseutil.permissions.GainPermissionCallback
 import com.core.baseutil.permissions.PermissionUtil
 import com.core.baseutil.ui.ToastUtils
 import com.data.domain.OnPositionItemClick
-import com.data.domain.dto.response.AgentLastChatListResponse
+import com.magicvector.domain.dto.http.response.AgentLastChatListResponse
 import com.data.domain.fragmentActivity.fao.MessageFAo
 import com.magicvector.MainApplication
 import com.view.appview.message.MessageContactAdapter

@@ -5,9 +5,9 @@ import com.data.domain.ao.chat.ChatWsTextMessageParseResult
 import com.data.domain.constant.chat.RealtimeRequestDataTypeEnum
 import com.data.domain.constant.chat.RealtimeResponseDataTypeEnum
 import com.data.domain.constant.chat.RoleTypeEnum
-import com.data.domain.dto.ws.reponse.RealtimeChatTextResponse
-import com.data.domain.dto.ws.request.RealtimeChatBindChannelRequest
-import com.data.domain.dto.ws.request.RealtimeChatConnectRequest
+import com.magicvector.domain.dto.ws.response.RealtimeChatTextResponse
+import com.magicvector.domain.dto.ws.request.RealtimeChatBindChannelRequest
+import com.magicvector.domain.dto.ws.request.RealtimeChatConnectRequest
 import com.google.gson.reflect.TypeToken
 import com.magicvector.MainApplication
 import com.magicvector.callback.OnReceiveAgentTextCallback

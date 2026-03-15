@@ -5,8 +5,8 @@ import androidx.lifecycle.viewModelScope
 import com.core.baseutil.network.BaseResponse
 import com.core.baseutil.network.OnSuccessCallback
 import com.core.baseutil.network.OnThrowableCallback
-import com.data.domain.dto.request.UserPasswordUpdateRequest
-import com.data.domain.dto.response.UserPasswordUpdateResponse
+import com.magicvector.domain.dto.http.request.UserPasswordUpdateRequest
+import com.magicvector.domain.dto.http.response.UserPasswordUpdateResponse
 import com.magicvector.MainApplication
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow

@@ -1,7 +1,7 @@
 package com.magicvector.utils.test
 
 import android.util.Log
-import com.data.domain.dto.request.ChatRequest
+import com.magicvector.domain.dto.http.request.ChatRequest
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import kotlinx.coroutines.channels.awaitClose

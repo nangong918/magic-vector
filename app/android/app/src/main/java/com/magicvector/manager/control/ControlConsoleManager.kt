@@ -5,9 +5,9 @@ import com.core.baseutil.network.BaseResponse
 import com.core.baseutil.network.OnSuccessCallback
 import com.core.baseutil.network.OnThrowableCallback
 import com.data.domain.constant.BaseConstant
-import com.data.domain.dto.request.ControlCommandRequest
-import com.data.domain.dto.response.ControlCommandResponse
-import com.data.domain.dto.response.ControlStatusResponse
+import com.magicvector.domain.dto.http.request.ControlCommandRequest
+import com.magicvector.domain.dto.http.response.ControlCommandResponse
+import com.magicvector.domain.dto.http.response.ControlStatusResponse
 import com.google.gson.reflect.TypeToken
 import com.magicvector.MainApplication
 import kotlinx.coroutines.CoroutineScope

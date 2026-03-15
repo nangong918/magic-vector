@@ -23,7 +23,7 @@ import com.data.domain.constant.VadChatState
 import com.data.domain.constant.chat.RealtimeRequestDataTypeEnum
 import com.data.domain.constant.chat.RealtimeSystemResponseEventEnum
 import com.data.domain.constant.chat.VisionUploadTypeEnum
-import com.data.domain.dto.ws.request.UploadPhotoRequest
+import com.magicvector.domain.dto.ws.request.UploadPhotoRequest
 import com.magicvector.MainApplication
 import com.magicvector.manager.RealtimeChatController
 import com.magicvector.manager.mcp.VisionMcpManager

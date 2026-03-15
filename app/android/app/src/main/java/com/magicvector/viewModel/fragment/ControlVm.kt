@@ -2,7 +2,7 @@ package com.magicvector.viewModel.fragment
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.data.domain.dto.request.ControlCommandRequest
+import com.magicvector.domain.dto.http.request.ControlCommandRequest
 import com.magicvector.MainApplication
 import com.magicvector.manager.control.ControlCommandController
 import com.magicvector.domain.entity.ControlAgentLogEntity

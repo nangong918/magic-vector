@@ -13,7 +13,7 @@ import com.core.baseutil.network.OnSuccessCallback
 import com.core.baseutil.network.OnThrowableCallback
 import com.core.baseutil.ui.ToastUtils
 import com.data.domain.constant.BaseConstant
-import com.data.domain.dto.response.AgentResponse
+import com.magicvector.domain.dto.http.response.AgentResponse
 import com.magicvector.MainApplication
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow

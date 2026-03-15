@@ -34,7 +34,7 @@ import com.core.baseutil.ui.ToastUtils
 import com.data.domain.ao.message.MessageContactItemAo
 import com.data.domain.constant.BaseConstant
 import com.data.domain.constant.chat.RealtimeRequestDataTypeEnum
-import com.data.domain.dto.response.ChatMessageResponse
+import com.magicvector.domain.dto.http.response.ChatMessageResponse
 import com.data.domain.fragmentActivity.aao.ChatAAo
 import com.magicvector.MainApplication
 import com.magicvector.callback.OnVadChatStateChange

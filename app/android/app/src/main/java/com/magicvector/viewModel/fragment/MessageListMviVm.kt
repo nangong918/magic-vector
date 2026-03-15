@@ -8,8 +8,8 @@ import com.core.baseutil.network.OnSuccessCallback
 import com.core.baseutil.network.OnThrowableCallback
 import com.data.domain.ao.message.MessageContactItemAo
 import com.data.domain.constant.BaseConstant
-import com.data.domain.dto.response.AgentLastChatListResponse
-import com.data.domain.dto.response.AgentListResponse
+import com.magicvector.domain.dto.http.response.AgentLastChatListResponse
+import com.magicvector.domain.dto.http.response.AgentListResponse
 import com.magicvector.MainApplication
 import com.magicvector.convertor.MessageConvertor
 import kotlinx.coroutines.Dispatchers

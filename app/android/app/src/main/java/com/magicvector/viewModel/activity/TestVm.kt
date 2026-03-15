@@ -21,8 +21,8 @@ import com.core.baseutil.permissions.PermissionUtil
 import com.core.baseutil.ui.ToastUtils
 import com.data.domain.constant.BaseConstant
 import com.data.domain.constant.test.RealtimeDataTypeEnum
-import com.data.domain.dto.ws.request.RealtimeChatConnectRequest
-import com.data.domain.dto.ws.reponse.RealtimeChatTextResponse
+import com.magicvector.domain.dto.ws.request.RealtimeChatConnectRequest
+import com.magicvector.domain.dto.ws.response.RealtimeChatTextResponse
 import com.data.domain.event.WebSocketMessageEvent
 import com.data.domain.event.WebsocketEventTypeEnum
 import com.data.domain.vo.test.AudioRecordPlayState
