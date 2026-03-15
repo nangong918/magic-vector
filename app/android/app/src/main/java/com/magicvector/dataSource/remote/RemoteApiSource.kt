@@ -30,6 +30,8 @@ import com.magicvector.domain.dto.http.response.VideoPlayUrlResponse
 import com.magicvector.domain.dto.http.response.VideoUploadChunkResponse
 import com.magicvector.domain.dto.http.response.VideoUploadCompleteResponse
 import com.magicvector.domain.dto.http.response.VideoUploadInitResponse
+import com.magicvector.domain.exception.NetworkBusinessException
+import com.magicvector.domain.exception.NetworkParamIllegalException
 import com.magicvector.repository.api.ApiRequest
 import okhttp3.MultipartBody
 import okhttp3.RequestBody
@@ -39,22 +41,24 @@ class RemoteApiSource(
 ) : BaseApiRequestImpl() {
 
     suspend fun verifyAccessToken(
-        accessToken: String,
-        handleVerifyAccessToken: (Boolean) -> Unit
-    ) {
+        accessToken: String
+    ): UserTokenVerifyResponse {
         val localUser = MainApplication.getUserManager().getCurrentUser()
         if (localUser == null || localUser.userId <= 0L || accessToken.isBlank()) {
-            handleVerifyAccessToken(false)
-            return
+            throw NetworkParamIllegalException("用户不存在")
         }
+
         val request = UserTokenVerifyRequest().apply {
             userId = localUser.userId
             this.accessToken = accessToken
         }
+
         val response = runCatching { apiRequest.verifyAccessToken(request) }.getOrNull()
-        val isSuccessCode = response?.code == BaseConstant.NetworkCode.SUCCESS_CODE
-        val isValid = response?.data?.valid == true
-        handleVerifyAccessToken(isSuccessCode && isValid)
+        if (BaseConstant.NetworkCode.SUCCESS_CODE != response?.code || response.data == null) {
+            throw NetworkBusinessException(response?.code, response?.message)
+        }
+
+        return response.data!!
     }
 
     fun createAgent(

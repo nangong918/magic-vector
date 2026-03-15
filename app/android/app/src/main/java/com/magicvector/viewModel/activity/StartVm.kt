@@ -1,9 +1,14 @@
 package com.magicvector.viewModel.activity
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.data.domain.constant.BaseConstant
 import com.magicvector.MainApplication
+import com.magicvector.domain.exception.NetworkBusinessException
+import com.magicvector.domain.exception.NetworkException
+import com.magicvector.domain.exception.NetworkParamIllegalException
+import com.magicvector.domain.model.UserSessionModel
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
@@ -71,49 +76,67 @@ class StartVm : ViewModel() {
         }
     }
 
+    // 使用suspend标注方法，避免回调嵌套
     private suspend fun resolveStartTargetEffect(): StartEffect {
         val localUser = userManager.getCurrentUser()
+
+        // 1. 前置校验：用户/Token为空 → 直接返回登录页
         if (localUser == null || localUser.accessToken.isBlank()) {
-            MainApplication.clearUserId()
-            _dataState.update { it.copy(isLoggedIn = false, userId = 0L) }
+            clearUserState()
             return StartEffect.NavigateToLogin
         }
 
-        return try {
-            val isValid = verifyAccessToken(localUser.accessToken)
-            if (isValid) {
-                MainApplication.updateUserId(localUser.userId)
-                _dataState.update {
-                    it.copy(
-                        isLoggedIn = true,
-                        userId = localUser.userId,
-                        accessToken = localUser.accessToken
-                    )
-                }
-                StartEffect.NavigateToMain
-            } else {
-                userManager.clearCurrentUser()
-                MainApplication.clearUserId()
-                _dataState.update { it.copy(isLoggedIn = false, userId = 0L) }
-                StartEffect.NavigateToLogin
-            }
-        } catch (_: Throwable) {
-            userManager.clearCurrentUser()
-            MainApplication.clearUserId()
-            _dataState.update { it.copy(isLoggedIn = false, userId = 0L) }
+        // 2. 验证Token（异常直接外抛到VM层处理）
+        val isValid = verifyAccessToken(localUser.accessToken)
+
+        // 3. 根据验证结果返回对应Effect
+        return if (isValid) {
+            // Token有效 → 更新登录状态，返回主页
+            updateUserLoginState(localUser)
+            StartEffect.NavigateToMain
+        } else {
+            // Token无效 → 清空状态，返回登录页
+            clearUserState()
             StartEffect.NavigateToLogin
         }
     }
 
+    /**
+     * 验证 access_token (采用suspend可以取消各种回调)
+     * @param accessToken       access_token
+     * @return true: 验证成功
+     */
     private suspend fun verifyAccessToken(accessToken: String): Boolean {
-        var verifyResult = false
-        remoteApiSource.verifyAccessToken(
-            accessToken = accessToken,
-            handleVerifyAccessToken = { isValid ->
-                verifyResult = isValid
-            }
-        )
-        return verifyResult
+        return try {
+            val response = remoteApiSource.verifyAccessToken(accessToken)
+            response.valid
+        } catch (e: NetworkBusinessException) {
+            Log.e(TAG, "verifyAccessToken 业务异常: ", e)
+            val toastMsg = e.msg ?: "服务器验证失败，请稍后重试"
+            sendEffect(StartEffect.ShowToast(toastMsg))
+            false
+        } catch (e: Throwable) {
+            Log.e(TAG, "verifyAccessToken 系统异常: ", e)
+            sendEffect(StartEffect.ShowToast("系统异常"))
+            false
+        }
+    }
+
+    private fun updateUserLoginState(localUser: UserSessionModel) {
+        MainApplication.updateUserId(localUser.userId)
+        _dataState.update {
+            it.copy(
+                isLoggedIn = true,
+                userId = localUser.userId,
+                accessToken = localUser.accessToken
+            )
+        }
+    }
+
+    private suspend fun clearUserState() {
+        userManager.clearCurrentUser()
+        MainApplication.clearUserId()
+        _dataState.update { it.copy(isLoggedIn = false, userId = 0L) }
     }
 }
 
@@ -143,6 +166,8 @@ sealed class StartEffect {
     object NavigateToMain : StartEffect()
     // 导航到登录页
     object NavigateToLogin : StartEffect()
+    // 弹窗提示（携带提示文案）
+    data class ShowToast(val message: String) : StartEffect()
 }
 
 

@@ -83,10 +83,9 @@ class StartActivity : BaseComponentActivity() {
     }
 
 
-    // 观察 Effect
+    // 观察 Effect（新增弹窗处理分支）
     private fun observeEffects() {
         lifecycleScope.launch {
-            // STARTED协程启动，并在STOPPED协程自动取消；否者协程不会自动取消
             repeatOnLifecycle(androidx.lifecycle.Lifecycle.State.STARTED) {
                 vm.effect.collect { effect ->
                     when (effect) {
@@ -95,6 +94,11 @@ class StartActivity : BaseComponentActivity() {
                         }
                         StartEffect.NavigateToLogin -> {
                             navigateToLogin()
+                        }
+                        is StartEffect.ShowToast -> {
+                            // 处理弹窗提示（使用你项目中的Toast/弹窗工具）
+                            Toast.makeText(context, effect.message, Toast.LENGTH_SHORT).show()
+                            // 若有自定义弹窗：CustomToast.show(context, effect.message)
                         }
                     }
                 }
