@@ -27,7 +27,7 @@ import okhttp3.RequestBody
 
 class ComposeRegisterVm : ViewModel() {
     companion object {
-        private val api = MainApplication.getApiRequestImplInstance()
+        private val remoteApiSource = MainApplication.getRemoteApiSource()
         private val userManager = MainApplication.getUserManager()
     }
 
@@ -83,7 +83,7 @@ class ComposeRegisterVm : ViewModel() {
         val passwordBody = RequestBody.create("text/plain".toMediaTypeOrNull(), state.password)
         val nameBody = RequestBody.create("text/plain".toMediaTypeOrNull(), state.account.trim())
 
-        api.register(
+        remoteApiSource.register(
             avatar = avatarPart,
             account = accountBody,
             password = passwordBody,

@@ -50,7 +50,7 @@ class ComposeAgentEmojiVm : AndroidViewModel(application = MainApplication.getAp
 
     companion object {
         val TAG: String = ComposeAgentEmojiVm::class.java.name
-        private val api = MainApplication.getApiRequestImplInstance()
+        private val api = MainApplication.getRemoteApiSource()
         private const val EYE_RESET_DELAY_MS = 2000L
     }
 

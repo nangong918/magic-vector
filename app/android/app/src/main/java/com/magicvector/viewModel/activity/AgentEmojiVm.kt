@@ -33,7 +33,7 @@ class AgentEmojiVm(
     companion object {
         val TAG: String = AgentEmojiVm::class.java.name
         val GSON = MainApplication.GSON
-        val mApi = MainApplication.getApiRequestImplInstance()
+        val mApi = MainApplication.getRemoteApiSource()
     }
 
     //-----------------------Ao-----------------------

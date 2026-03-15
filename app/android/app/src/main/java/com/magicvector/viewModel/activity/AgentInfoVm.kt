@@ -40,7 +40,7 @@ class AgentInfoVm(
 
     //---------------------Network---------------------
 
-    val api = MainApplication.getApiRequestImplInstance()
+    val api = MainApplication.getRemoteApiSource()
 
     // 查询Agent
     fun doGetAgentInfo(context: Context, agentId: String, callback: SyncRequestCallback){

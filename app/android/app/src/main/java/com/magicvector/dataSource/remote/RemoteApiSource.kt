@@ -1,9 +1,11 @@
-package com.magicvector.repository.api
+package com.magicvector.dataSource.remote
 
 import com.core.baseutil.network.BaseApiRequestImpl
 import com.core.baseutil.network.BaseResponse
 import com.core.baseutil.network.OnSuccessCallback
 import com.core.baseutil.network.OnThrowableCallback
+import com.data.domain.constant.BaseConstant
+import com.magicvector.MainApplication
 import com.magicvector.domain.dto.http.request.AgentDeleteRequest
 import com.magicvector.domain.dto.http.request.ChatByAnchorRequest
 import com.magicvector.domain.dto.http.request.ControlCommandRequest
@@ -28,22 +30,33 @@ import com.magicvector.domain.dto.http.response.VideoPlayUrlResponse
 import com.magicvector.domain.dto.http.response.VideoUploadChunkResponse
 import com.magicvector.domain.dto.http.response.VideoUploadCompleteResponse
 import com.magicvector.domain.dto.http.response.VideoUploadInitResponse
+import com.magicvector.repository.api.ApiRequest
 import okhttp3.MultipartBody
 import okhttp3.RequestBody
 
-open class ApiRequestImpl(apiRequest: ApiRequest) : BaseApiRequestImpl() {
+class RemoteApiSource(
+    private val apiRequest: ApiRequest
+) : BaseApiRequestImpl() {
 
-    // mApi 可以直接使用构造函数参数
-    private val mApi: ApiRequest = apiRequest
+    suspend fun verifyAccessToken(
+        accessToken: String,
+        handleVerifyAccessToken: (Boolean) -> Unit
+    ) {
+        val localUser = MainApplication.getUserManager().getCurrentUser()
+        if (localUser == null || localUser.userId <= 0L || accessToken.isBlank()) {
+            handleVerifyAccessToken(false)
+            return
+        }
+        val request = UserTokenVerifyRequest().apply {
+            userId = localUser.userId
+            this.accessToken = accessToken
+        }
+        val response = runCatching { apiRequest.verifyAccessToken(request) }.getOrNull()
+        val isSuccessCode = response?.code == BaseConstant.NetworkCode.SUCCESS_CODE
+        val isValid = response?.data?.valid == true
+        handleVerifyAccessToken(isSuccessCode && isValid)
+    }
 
-    //    @Multipart
-    //    @POST("/agent/create")
-    //    suspend fun createAgent(
-    //        @Part avatar: MultipartBody.Part,
-    //        @Part("userId") userId: RequestBody,
-    //        @Part("name") name: RequestBody,
-    //        @Part("description") description: RequestBody
-    //    ): BaseResponse<AgentResponse>
     fun createAgent(
         avatar: MultipartBody.Part?,
         userId: RequestBody,
@@ -54,7 +67,7 @@ open class ApiRequestImpl(apiRequest: ApiRequest) : BaseApiRequestImpl() {
     ) {
         sendRequestCallback(
             apiCall = {
-                mApi.createAgent(
+                apiRequest.createAgent(
                     avatar,
                     userId,
                     name,
@@ -66,37 +79,25 @@ open class ApiRequestImpl(apiRequest: ApiRequest) : BaseApiRequestImpl() {
         )
     }
 
-    //    @GET("/agent/getInfo")
-    //    suspend fun getAgentInfo(
-    //        @Query("agentId") agentId: String
-    //    ): BaseResponse<AgentResponse>
     fun getAgentInfo(
         agentId: String,
         onSuccessCallback: OnSuccessCallback<BaseResponse<AgentResponse>>?,
         throwableCallback: OnThrowableCallback?
-    ){
+    ) {
         sendRequestCallback(
-            apiCall = {
-                mApi.getAgentInfo(agentId)
-            },
+            apiCall = { apiRequest.getAgentInfo(agentId) },
             successCallback = onSuccessCallback,
             throwableCallback = throwableCallback
         )
     }
 
-    //    @GET("/agent/getList")
-    //    suspend fun getAgentList(
-    //        @Query("userId") userId: String
-    //    ): BaseResponse<AgentListResponse>
     fun getAgentList(
         userId: String,
         onSuccessCallback: OnSuccessCallback<BaseResponse<AgentListResponse>>?,
         throwableCallback: OnThrowableCallback?
-    ){
+    ) {
         sendRequestCallback(
-            apiCall = {
-                mApi.getAgentList(userId)
-            },
+            apiCall = { apiRequest.getAgentList(userId) },
             successCallback = onSuccessCallback,
             throwableCallback = throwableCallback
         )
@@ -112,9 +113,7 @@ open class ApiRequestImpl(apiRequest: ApiRequest) : BaseApiRequestImpl() {
         throwableCallback: OnThrowableCallback?
     ) {
         sendRequestCallback(
-            apiCall = {
-                mApi.updateAgent(avatar, agentId, userId, name, description)
-            },
+            apiCall = { apiRequest.updateAgent(avatar, agentId, userId, name, description) },
             successCallback = onSuccessCallback,
             throwableCallback = throwableCallback
         )
@@ -126,71 +125,45 @@ open class ApiRequestImpl(apiRequest: ApiRequest) : BaseApiRequestImpl() {
         throwableCallback: OnThrowableCallback?
     ) {
         sendRequestCallback(
-            apiCall = { mApi.deleteAgent(request) },
+            apiCall = { apiRequest.deleteAgent(request) },
             successCallback = onSuccessCallback,
             throwableCallback = throwableCallback
         )
     }
 
-    //    @GET("/agent/getLastAgentChatList")
-    //    suspend fun getLastAgentChatList(
-    //        @Query("userId") userId: String
-    //    ): BaseResponse<AgentLastChatListResponse>
     fun getLastAgentChatList(
         userId: String,
         onSuccessCallback: OnSuccessCallback<BaseResponse<AgentLastChatListResponse>>?,
         throwableCallback: OnThrowableCallback?
-    ){
+    ) {
         sendRequestCallback(
-            apiCall = {
-                mApi.getLastAgentChatList(userId)
-            },
+            apiCall = { apiRequest.getLastAgentChatList(userId) },
             successCallback = onSuccessCallback,
             throwableCallback = throwableCallback
         )
     }
 
-    //    @GET("/chat/getLastChat")
-    //    suspend fun getLastChat(
-    //        @Query("agentId") agentId: String
-    //    ): BaseResponse<ChatMessageResponse>
     fun getLastChat(
         agentId: String,
         onSuccessCallback: OnSuccessCallback<BaseResponse<ChatMessageResponse>>?,
         throwableCallback: OnThrowableCallback?
     ) {
         sendRequestCallback(
-            apiCall = { mApi.getLastChat(agentId) },
+            apiCall = { apiRequest.getLastChat(agentId) },
             successCallback = onSuccessCallback,
             throwableCallback = throwableCallback
         )
     }
 
-    //    @GET("/chat/getTimeLimitChat")
-    //    suspend fun getTimeLimitChat(
-    //        @Query("agentId") agentId: String,
-    //        // yyyy-MM-dd HH:mm:ss
-    //        @Query("deadline") deadline: String,
-    //        // max 50
-    //        @Query("limit") limit: Int,
-    //    ): BaseResponse<ChatMessageResponse>
     fun getTimeLimitChat(
         agentId: String,
-        // yyyy-MM-dd HH:mm:ss
         deadline: String,
-        // max 50
         limit: Int,
         onSuccessCallback: OnSuccessCallback<BaseResponse<ChatMessageResponse>>?,
         throwableCallback: OnThrowableCallback?
-    ){
+    ) {
         sendRequestCallback(
-            apiCall = {
-                mApi.getTimeLimitChat(
-                    agentId = agentId,
-                    deadline = deadline,
-                    limit = limit
-                )
-            },
+            apiCall = { apiRequest.getTimeLimitChat(agentId = agentId, deadline = deadline, limit = limit) },
             successCallback = onSuccessCallback,
             throwableCallback = throwableCallback
         )
@@ -211,22 +184,12 @@ open class ApiRequestImpl(apiRequest: ApiRequest) : BaseApiRequestImpl() {
             this.limit = limit
         }
         sendRequestCallback(
-            apiCall = {
-                mApi.getChatByAnchor(request)
-            },
+            apiCall = { apiRequest.getChatByAnchor(request) },
             successCallback = onSuccessCallback,
             throwableCallback = throwableCallback
         )
     }
 
-    //    @Multipart
-    //    @POST("/chat/vision/upload/img")
-    //    suspend fun uploadImageVision(
-    //        @Part images: List<MultipartBody.Part>,
-    //        @Part("agentId") agentId: RequestBody,
-    //        @Part("userId") userId: RequestBody,
-    //        @Part("messageId") messageId: RequestBody,
-    //    ): BaseResponse<String>
     fun uploadImageVision(
         images: List<MultipartBody.Part>,
         agentId: RequestBody,
@@ -234,16 +197,9 @@ open class ApiRequestImpl(apiRequest: ApiRequest) : BaseApiRequestImpl() {
         messageId: RequestBody,
         onSuccessCallback: OnSuccessCallback<BaseResponse<String>>?,
         throwableCallback: OnThrowableCallback?
-    ){
+    ) {
         sendRequestCallback(
-            apiCall = {
-                mApi.uploadImageVision(
-                    images,
-                    agentId,
-                    userId,
-                    messageId
-                )
-            },
+            apiCall = { apiRequest.uploadImageVision(images, agentId, userId, messageId) },
             successCallback = onSuccessCallback,
             throwableCallback = throwableCallback
         )
@@ -255,7 +211,7 @@ open class ApiRequestImpl(apiRequest: ApiRequest) : BaseApiRequestImpl() {
         throwableCallback: OnThrowableCallback?
     ) {
         sendRequestCallback(
-            apiCall = { mApi.getControlStatus(deviceId) },
+            apiCall = { apiRequest.getControlStatus(deviceId) },
             successCallback = onSuccessCallback,
             throwableCallback = throwableCallback
         )
@@ -267,7 +223,7 @@ open class ApiRequestImpl(apiRequest: ApiRequest) : BaseApiRequestImpl() {
         throwableCallback: OnThrowableCallback?
     ) {
         sendRequestCallback(
-            apiCall = { mApi.sendControlCommand(request) },
+            apiCall = { apiRequest.sendControlCommand(request) },
             successCallback = onSuccessCallback,
             throwableCallback = throwableCallback
         )
@@ -282,7 +238,7 @@ open class ApiRequestImpl(apiRequest: ApiRequest) : BaseApiRequestImpl() {
         throwableCallback: OnThrowableCallback?
     ) {
         sendRequestCallback(
-            apiCall = { mApi.getControlAgentLogs(userId, agentId, page, size) },
+            apiCall = { apiRequest.getControlAgentLogs(userId, agentId, page, size) },
             successCallback = onSuccessCallback,
             throwableCallback = throwableCallback
         )
@@ -294,7 +250,7 @@ open class ApiRequestImpl(apiRequest: ApiRequest) : BaseApiRequestImpl() {
         throwableCallback: OnThrowableCallback?
     ) {
         sendRequestCallback(
-            apiCall = { mApi.initVideoUpload(request) },
+            apiCall = { apiRequest.initVideoUpload(request) },
             successCallback = onSuccessCallback,
             throwableCallback = throwableCallback
         )
@@ -310,9 +266,7 @@ open class ApiRequestImpl(apiRequest: ApiRequest) : BaseApiRequestImpl() {
         throwableCallback: OnThrowableCallback?
     ) {
         sendRequestCallback(
-            apiCall = {
-                mApi.uploadVideoChunk(uploadId, userId, chunkIndex, offset, chunkFile)
-            },
+            apiCall = { apiRequest.uploadVideoChunk(uploadId, userId, chunkIndex, offset, chunkFile) },
             successCallback = onSuccessCallback,
             throwableCallback = throwableCallback
         )
@@ -324,7 +278,7 @@ open class ApiRequestImpl(apiRequest: ApiRequest) : BaseApiRequestImpl() {
         throwableCallback: OnThrowableCallback?
     ) {
         sendRequestCallback(
-            apiCall = { mApi.completeVideoUpload(request) },
+            apiCall = { apiRequest.completeVideoUpload(request) },
             successCallback = onSuccessCallback,
             throwableCallback = throwableCallback
         )
@@ -338,7 +292,7 @@ open class ApiRequestImpl(apiRequest: ApiRequest) : BaseApiRequestImpl() {
         throwableCallback: OnThrowableCallback?
     ) {
         sendRequestCallback(
-            apiCall = { mApi.getCloudVideoList(userId, page, size) },
+            apiCall = { apiRequest.getCloudVideoList(userId, page, size) },
             successCallback = onSuccessCallback,
             throwableCallback = throwableCallback
         )
@@ -350,7 +304,7 @@ open class ApiRequestImpl(apiRequest: ApiRequest) : BaseApiRequestImpl() {
         throwableCallback: OnThrowableCallback?
     ) {
         sendRequestCallback(
-            apiCall = { mApi.getCloudVideoPlayUrl(videoId) },
+            apiCall = { apiRequest.getCloudVideoPlayUrl(videoId) },
             successCallback = onSuccessCallback,
             throwableCallback = throwableCallback
         )
@@ -362,7 +316,7 @@ open class ApiRequestImpl(apiRequest: ApiRequest) : BaseApiRequestImpl() {
         throwableCallback: OnThrowableCallback?
     ) {
         sendRequestCallback(
-            apiCall = { mApi.getCloudVideoDownloadUrl(videoId) },
+            apiCall = { apiRequest.getCloudVideoDownloadUrl(videoId) },
             successCallback = onSuccessCallback,
             throwableCallback = throwableCallback
         )
@@ -378,7 +332,7 @@ open class ApiRequestImpl(apiRequest: ApiRequest) : BaseApiRequestImpl() {
     ) {
         sendRequestCallback(
             apiCall = {
-                mApi.register(
+                apiRequest.register(
                     avatar = avatar,
                     account = account,
                     password = password,
@@ -396,23 +350,7 @@ open class ApiRequestImpl(apiRequest: ApiRequest) : BaseApiRequestImpl() {
         throwableCallback: OnThrowableCallback?
     ) {
         sendRequestCallback(
-            apiCall = {
-                mApi.login(request)
-            },
-            successCallback = onSuccessCallback,
-            throwableCallback = throwableCallback
-        )
-    }
-
-    fun verifyAccessToken(
-        request: UserTokenVerifyRequest,
-        onSuccessCallback: OnSuccessCallback<BaseResponse<UserTokenVerifyResponse>>?,
-        throwableCallback: OnThrowableCallback?
-    ) {
-        sendRequestCallback(
-            apiCall = {
-                mApi.verifyAccessToken(request)
-            },
+            apiCall = { apiRequest.login(request) },
             successCallback = onSuccessCallback,
             throwableCallback = throwableCallback
         )
@@ -424,7 +362,7 @@ open class ApiRequestImpl(apiRequest: ApiRequest) : BaseApiRequestImpl() {
         throwableCallback: OnThrowableCallback?
     ) {
         sendRequestCallback(
-            apiCall = { mApi.updatePassword(request) },
+            apiCall = { apiRequest.updatePassword(request) },
             successCallback = onSuccessCallback,
             throwableCallback = throwableCallback
         )

@@ -4,10 +4,10 @@ import android.app.Application
 import com.magicvector.repository.api.ApiRequest
 import com.magicvector.repository.api.config.ApiRequestProvider
 import com.core.baseutil.image.ImageManager
-import com.magicvector.repository.api.ApiRequestImpl
 import com.data.domain.ao.mixLLM.McpSwitch
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
+import com.magicvector.dataSource.remote.RemoteApiSource
 import com.magicvector.manager.ChatMapController
 import com.magicvector.manager.MessageListController
 import com.magicvector.manager.chat.ChatCacheManager
@@ -70,18 +70,22 @@ class MainApplication : Application() {
             return imageManager
         }
 
-        // 请求接口实现
-        private var apiRequestImplInstance: ApiRequestImpl? = null
+        // 远程数据源
+        private var remoteApiSource: RemoteApiSource? = null
         @Volatile
         private var cachedUserId: String = ""
 
         @Synchronized
-        fun getApiRequestImplInstance(): ApiRequestImpl {
-            if (apiRequestImplInstance == null) {
-                apiRequestImplInstance = ApiRequestImpl(getApiRequestInstance()!!)
+        fun getRemoteApiSource(): RemoteApiSource {
+            if (remoteApiSource == null) {
+                remoteApiSource = RemoteApiSource(getApiRequestInstance()!!)
             }
+            return remoteApiSource!!
+        }
 
-            return apiRequestImplInstance!!
+        // 兼容旧调用入口，逐步迁移到 getRemoteApiSource()
+        fun getApiRequestImplInstance(): RemoteApiSource {
+            return getRemoteApiSource()
         }
 
         fun getUserId(): String{

@@ -36,7 +36,7 @@ class ComposeAgentInfoVm : ViewModel() {
     private val _effect = Channel<ComposeAgentInfoEffect>(Channel.BUFFERED)
     val effect: Flow<ComposeAgentInfoEffect> = _effect.receiveAsFlow()
 
-    private val api = MainApplication.getApiRequestImplInstance()
+    private val api = MainApplication.getRemoteApiSource()
 
     fun processIntent(intent: ComposeAgentInfoIntent) {
         when (intent) {

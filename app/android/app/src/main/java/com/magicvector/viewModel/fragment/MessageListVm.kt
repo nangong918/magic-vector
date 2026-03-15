@@ -80,7 +80,7 @@ open class MessageListVm(
     }
 
     fun doGetLastAgentChatList(context: Context, callback: SyncRequestCallback){
-        MainApplication.getApiRequestImplInstance().getLastAgentChatList(
+        MainApplication.getRemoteApiSource().getLastAgentChatList(
             MainApplication.getUserId(),
             object : OnSuccessCallback<BaseResponse<AgentLastChatListResponse>>{
                 override fun onResponse(response: BaseResponse<AgentLastChatListResponse>?) {

@@ -12,7 +12,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 class ControlAgentLogManager {
-    private val api = MainApplication.getApiRequestImplInstance()
+    private val api = MainApplication.getRemoteApiSource()
     private val dao = VectorDatabase.getInstance(MainApplication.getApp()).controlAgentLogDao()
     private val ioScope = CoroutineScope(Dispatchers.IO)
 

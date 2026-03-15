@@ -39,7 +39,7 @@ class ControlConsoleManager {
     }
 
     private val gson = MainApplication.GSON
-    private val api = MainApplication.getApiRequestImplInstance()
+    private val api = MainApplication.getRemoteApiSource()
     private val managerScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val reconnectEnabled = AtomicBoolean(false)
     private val wsClient = OkHttpClient.Builder()

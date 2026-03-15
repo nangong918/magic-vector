@@ -34,7 +34,7 @@ class ComposeMineSettingVm : ViewModel() {
     private val _effect = Channel<MineSettingEffect>(Channel.BUFFERED)
     val effect = _effect.receiveAsFlow()
 
-    private val api = MainApplication.getApiRequestImplInstance()
+    private val remoteApiSource = MainApplication.getRemoteApiSource()
 
     fun processIntent(intent: MineSettingIntent) {
         when (intent) {
@@ -76,7 +76,7 @@ class ComposeMineSettingVm : ViewModel() {
             this.oldPassword = old
             this.newPassword = new
         }
-        api.updatePassword(
+        remoteApiSource.updatePassword(
             request = request,
             onSuccessCallback = object : OnSuccessCallback<BaseResponse<UserPasswordUpdateResponse>> {
                 override fun onResponse(response: BaseResponse<UserPasswordUpdateResponse>?) {

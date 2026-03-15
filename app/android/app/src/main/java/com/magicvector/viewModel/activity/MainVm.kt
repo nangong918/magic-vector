@@ -33,7 +33,7 @@ class MainVm : ViewModel() {
     private val _uiState = MutableStateFlow(MainState())
     val uiState: StateFlow<MainState> = _uiState.asStateFlow()
 
-    private val api = MainApplication.getApiRequestImplInstance()
+    private val api = MainApplication.getRemoteApiSource()
     private val _agentListEvent = MutableSharedFlow<AgentListEvent>(extraBufferCapacity = 16)
     val agentListEvent: SharedFlow<AgentListEvent> = _agentListEvent.asSharedFlow()
 

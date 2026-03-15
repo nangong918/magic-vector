@@ -216,7 +216,7 @@ class ChatVm(
     // chatHistory First
     fun doGetLastChat(context: Context, callback: SyncRequestCallback){
         if (realtimeChatController?.messageContactItemAo != null) {
-            MainApplication.getApiRequestImplInstance().getLastChat(
+            MainApplication.getRemoteApiSource().getLastChat(
                 realtimeChatController?.messageContactItemAo!!.contactId!!,
                 object : OnSuccessCallback<BaseResponse<ChatMessageResponse>>{
                     override fun onResponse(response: BaseResponse<ChatMessageResponse>?) {
@@ -248,7 +248,7 @@ class ChatVm(
     // 特定时间段的chat history todo: 上拉上滑获取之前的chat History
     fun doGetTimeLimitChat(context: Context, deadline: String, callback: SyncRequestCallback){
         if (realtimeChatController?.messageContactItemAo != null){
-            MainApplication.getApiRequestImplInstance().getTimeLimitChat(
+            MainApplication.getRemoteApiSource().getTimeLimitChat(
                 realtimeChatController?.messageContactItemAo!!.contactId!!,
                 deadline,
                 BaseConstant.Constant.CHAT_HISTORY_LIMIT_COUNT,

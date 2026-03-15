@@ -2,12 +2,7 @@ package com.magicvector.viewModel.activity
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.core.baseutil.network.BaseResponse
-import com.core.baseutil.network.OnSuccessCallback
-import com.core.baseutil.network.OnThrowableCallback
 import com.data.domain.constant.BaseConstant
-import com.magicvector.domain.dto.http.request.UserTokenVerifyRequest
-import com.magicvector.domain.dto.http.response.UserTokenVerifyResponse
 import com.magicvector.MainApplication
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
@@ -18,14 +13,12 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlin.coroutines.resume
-import kotlin.coroutines.suspendCoroutine
 
 
 class StartVm : ViewModel() {
     companion object {
         val TAG: String = StartVm::class.java.name
-        private val api = MainApplication.getApiRequestImplInstance()
+        private val remoteApiSource = MainApplication.getRemoteApiSource()
         private val userManager = MainApplication.getUserManager()
     }
 
@@ -113,42 +106,14 @@ class StartVm : ViewModel() {
     }
 
     private suspend fun verifyAccessToken(accessToken: String): Boolean {
-        // suspend的定义，线程可以不用等待，可以先去运行其他代码
-        // 挂起点1：调用 suspend 函数 getCurrentUser()
-        // 协程挂起，直到数据库返回结果，线程不阻塞
-        val localUser = userManager.getCurrentUser()
-
-        // 只有挂起点1完成，才会执行到这里
-        // suspendCoroutine 是一个 suspend 函数，调用它的瞬间，当前协程就会主动挂起，需要continuation.resume()恢复
-        return suspendCoroutine { continuation ->
-            if (localUser == null || localUser.userId <= 0L) {
-                continuation.resume(false)
-                return@suspendCoroutine
+        var verifyResult = false
+        remoteApiSource.verifyAccessToken(
+            accessToken = accessToken,
+            handleVerifyAccessToken = { isValid ->
+                verifyResult = isValid
             }
-            val request = UserTokenVerifyRequest().apply {
-                this.userId = localUser.userId
-                this.accessToken = accessToken
-            }
-            api.verifyAccessToken(
-                request = request,
-                onSuccessCallback = object : OnSuccessCallback<BaseResponse<UserTokenVerifyResponse>> {
-                    override fun onResponse(response: BaseResponse<UserTokenVerifyResponse>?) {
-                        val isSuccessCode = response?.code == BaseConstant.NetworkCode.SUCCESS_CODE
-                        val isValid = response?.data?.valid == true
-                        // 网络请求发出后，suspendCoroutine 代码块执行完毕，但协程仍处于挂起状态
-                        // 直到回调里调用 continuation.resume()，协程才恢复
-                        continuation.resume(isSuccessCode && isValid)
-                    }
-                },
-                throwableCallback = object : OnThrowableCallback {
-                    override fun callback(throwable: Throwable?) {
-                        // 网络请求发出后，suspendCoroutine 代码块执行完毕，但协程仍处于挂起状态
-                        // 直到回调里调用 continuation.resume()，协程才恢复
-                        continuation.resume(false)
-                    }
-                }
-            )
-        }
+        )
+        return verifyResult
     }
 }
 

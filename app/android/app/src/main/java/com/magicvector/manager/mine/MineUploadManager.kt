@@ -19,7 +19,7 @@ import java.io.File
 import java.io.FileOutputStream
 
 class MineUploadManager {
-    private val api = MainApplication.getApiRequestImplInstance()
+    private val api = MainApplication.getRemoteApiSource()
 
     fun createUploadSession(
         userId: String,

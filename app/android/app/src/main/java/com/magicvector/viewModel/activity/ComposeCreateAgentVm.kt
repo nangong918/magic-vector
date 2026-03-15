@@ -34,7 +34,7 @@ class ComposeCreateAgentVm() : ViewModel() {
     companion object {
         val TAG: String = ComposeCreateAgentVm::class.java.name
         private const val MAX_NAME_LENGTH = BaseConstant.Constant.MAX_AGENT_NAME_LENGTH
-        val api = MainApplication.getApiRequestImplInstance()
+        val api = MainApplication.getRemoteApiSource()
     }
 
     // State

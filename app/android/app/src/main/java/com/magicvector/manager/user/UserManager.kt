@@ -1,10 +1,9 @@
 package com.magicvector.manager.user
 
 import android.content.Context
-import com.magicvector.repository.dao.UserDao
-import com.magicvector.domain.entity.UserEntity
+import com.magicvector.dataSource.local.UserLocalSource
+import com.magicvector.domain.convertor.UserConvertor
 import com.magicvector.domain.model.UserSessionModel
-import com.magicvector.dataSource.local.db.VectorDatabase
 
 /**
  * UserManager 负责用户会话持久化。
@@ -13,29 +12,25 @@ import com.magicvector.dataSource.local.db.VectorDatabase
 class UserManager private constructor(
     context: Context
 ) {
-    private val userDao: UserDao = VectorDatabase.getInstance(context).userDao()
+    private val userLocalSource: UserLocalSource = UserLocalSource.getInstance(context)
     @Volatile
     private var currentUserSessionCache: UserSessionModel? = null
 
     suspend fun saveCurrentUser(session: UserSessionModel) {
         val loginAt = System.currentTimeMillis()
-        userDao.clearCurrentFlag()
-        userDao.upsert(
-            UserEntity(
-                userId = session.userId,
-                account = session.account,
-                name = session.name,
-                avatarUrl = session.avatarUrl,
-                accessToken = session.accessToken,
-                password = session.password,
-                isCurrent = true,
-                lastLoginAt = loginAt
-            )
-        )
-        currentUserSessionCache = session.copy(
+        val currentSession = session.copy(
             isCurrent = true,
             lastLoginAt = loginAt
         )
+        val userEntity = UserConvertor.model2Entity(currentSession)
+        userLocalSource.saveCurrentUser(userEntity) { savedEntity ->
+            if (savedEntity != null) {
+                currentUserSessionCache = currentSession.copy(
+                    isCurrent = true,
+                    lastLoginAt = savedEntity.lastLoginAt
+                )
+            }
+        }
     }
 
     suspend fun getCurrentUser(): UserSessionModel? {
@@ -43,37 +38,21 @@ class UserManager private constructor(
         if (cached != null && cached.accessToken.isNotBlank()) {
             return cached
         }
-        val current = userDao.getCurrent()?.toSession()
-        currentUserSessionCache = current
+        val current = userLocalSource.getCurrentUser { entity ->
+            currentUserSessionCache = entity?.let { UserConvertor.entity2Model(it) }
+        }?.let { UserConvertor.entity2Model(it) }
         return current
     }
 
     suspend fun getAllUsers(): List<UserSessionModel> {
-        return userDao.getAll().map { it.toSession() }
+        val entities = userLocalSource.getAllUsers { }
+        return entities.map { UserConvertor.entity2Model(it) }
     }
 
     suspend fun clearCurrentUser() {
-        val current = userDao.getCurrent() ?: return
-        userDao.upsert(
-            current.copy(
-                accessToken = "",
-                isCurrent = false
-            )
-        )
-        currentUserSessionCache = null
-    }
-
-    private fun UserEntity.toSession(): UserSessionModel {
-        return UserSessionModel(
-            userId = userId,
-            account = account,
-            name = name,
-            avatarUrl = avatarUrl,
-            accessToken = accessToken,
-            password = password,
-            isCurrent = isCurrent,
-            lastLoginAt = lastLoginAt
-        )
+        userLocalSource.clearCurrentUser { _ ->
+            currentUserSessionCache = null
+        }
     }
 
     companion object {

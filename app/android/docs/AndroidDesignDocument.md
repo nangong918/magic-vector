@@ -12,15 +12,19 @@
   * Fragment级组合函数：`MessageListScreen`、`ControlScreen`、`MineScreen`、`AgentEditorOverlay`、`AgentEmojiFragment`、`AgentTextChatFragment`
 * **状态管理层（MVI）**：负责处理 Intent、维护状态、发出 Effect。
   * `StartVm`、`ComposeLoginVm`、`ComposeRegisterVm`、`MainVm`、`MessageListMviVm`、`ControlVm`、`MineVm`、`ComposeChatVm`、`ComposeAgentChatVm`、`AgentEmojiFragmentVm`、`AgentTextChatFragmentVm`
-* **业务与会话层**：封装会话与用户相关业务能力。
+* **业务与会话层（Manager/Controller）**：封装业务规则与状态编排，不直接持有 DAO 与 Retrofit。
 * `UserManager`、`ChatMapController`、`ChatController`、`ChatCacheManager`、`ControlCommandController`、`ControlConsoleManager`、`NetworkManager(全局/Application级)`
-* **数据访问层（Room）**：负责本地持久化。
-  * `VectorDatabase`、`UserDao`、`AgentCacheDao`、`ChatMessageDao`
-  * `UserEntity`、`AgentCacheEntity`、`ChatMessageEntity`
-* **网络访问层**：`ApiRequestImpl`，负责认证相关接口访问。
-* **领域与协议层**：定义业务与传输数据结构。
-  * Module：`UserModule`
-  * DTO：`UserAuthResponse`、`UserTokenVerifyResponse`、`AgentResponse`、`AgentListResponse`、`ChatMessageResponse`、`ControlCommandRequest/Response`、`ControlStatusResponse`
+* **数据源层（DataSource）**：承接可复用数据流程（参数校验、请求拼装、回调归一化、协程桥接），向上暴露处理回调。
+  * `remote/RemoteApiSource`：远程请求流程封装（基于 `repository/api/ApiRequest`）
+  * `local/UserLocalSource`：本地数据流程封装（基于 `repository/dao/UserDao`）
+* **仓储接口层（Repository）**：仅定义数据访问接口，不承载业务流程。
+  * `repository/api/ApiRequest`（Retrofit）
+  * `repository/dao/UserDao`、`AgentCacheDao`、`ChatMessageDao`
+* **领域与协议层（Domain）**：按类型存放结构定义，类型转换统一走 `convertor`。
+  * `domain/dto`：网络与传输结构（request/response）
+  * `domain/entity`：数据库实体（Room）
+  * `domain/model`：业务模型（Manager/VM 使用）
+  * `domain/convertor`：`dto/entity/model` 转换器
 
 ### 架构类图
 ```mermaid
@@ -55,7 +59,9 @@ classDiagram
     class ControlCommandController
     class ControlConsoleManager
     class NetworkManager
-    class ApiRequestImpl
+    class RemoteApiSource
+    class UserLocalSource
+    class ApiRequest
     class VectorDatabase
     class UserDao
     class AgentCacheDao
@@ -80,22 +86,24 @@ classDiagram
     AgentTextChatFragment --> AgentTextChatFragmentVm
 
     StartVm --> UserManager
-    StartVm --> ApiRequestImpl
-    ComposeLoginVm --> ApiRequestImpl
+    StartVm --> RemoteApiSource
+    ComposeLoginVm --> RemoteApiSource
     ComposeLoginVm --> UserManager
-    ComposeRegisterVm --> ApiRequestImpl
+    ComposeRegisterVm --> RemoteApiSource
     ComposeRegisterVm --> UserManager
-    MainVm --> ApiRequestImpl
+    MainVm --> RemoteApiSource
     MainVm --> NetworkManager
-    MessageListMviVm --> ApiRequestImpl
+    MessageListMviVm --> RemoteApiSource
     ControlVm --> ControlCommandController
     ControlVm --> ControlConsoleManager
-    ControlVm --> ApiRequestImpl
-    MineVm --> ApiRequestImpl
+    ControlVm --> RemoteApiSource
+    MineVm --> RemoteApiSource
     ComposeChatVm --> ChatMapController
     ComposeAgentChatVm --> RealtimeChatController
 
-    UserManager --> UserDao
+    UserManager --> UserLocalSource
+    UserLocalSource --> UserDao
+    RemoteApiSource --> ApiRequest
     ChatMapController --> ChatController
     ChatController --> ChatCacheManager
     ChatCacheManager --> ChatMessageDao
@@ -219,7 +227,7 @@ flowchart LR
     Activity[ComposeStartActivity]
     VM[StartVm]
     UM[UserManager]
-    Api[ApiRequestImpl]
+    Api[RemoteApiSource]
     Nav[Navigator]
 
     Activity -->|Initialize Intent| VM
@@ -362,7 +370,7 @@ classDiagram
 flowchart LR
     Activity[ComposeLoginActivity]
     VM[ComposeLoginVm]
-    Api[ApiRequestImpl]
+    Api[RemoteApiSource]
     UM[UserManager]
     Nav[Navigator]
 
@@ -409,7 +417,7 @@ flowchart TD
 sequenceDiagram
     participant Activity as ComposeLoginActivity
     participant VM as ComposeLoginVm
-    participant Api as ApiRequestImpl
+    participant Api as RemoteApiSource
     participant UM as UserManager
     participant Nav as Navigator
 
@@ -523,7 +531,7 @@ flowchart LR
     VM[ComposeRegisterVm]
     Permission[ComposePermissionUtils]
     Gallery[GalleryPicker]
-    Api[ApiRequestImpl]
+    Api[RemoteApiSource]
     UM[UserManager]
     Nav[Navigator]
 
@@ -583,7 +591,7 @@ sequenceDiagram
     participant VM as ComposeRegisterVm
     participant Permission as ComposePermissionUtils
     participant Gallery as GalleryPicker
-    participant Api as ApiRequestImpl
+    participant Api as RemoteApiSource
     participant UM as UserManager
     participant Nav as Navigator
 
@@ -710,7 +718,7 @@ flowchart LR
     List[MessageListScreen]
     VM[MainVm]
     ListVm[MessageListMviVm]
-    Api[ApiRequestImpl]
+    Api[RemoteApiSource]
     Chat[ComposeChatActivity]
     UI --> VM
     UI --> List
@@ -749,7 +757,7 @@ flowchart TD
 sequenceDiagram
     participant Main as MainActivity
     participant VM as MainVm
-    participant Api as ApiRequestImpl
+    participant Api as RemoteApiSource
     participant ListVm as MessageListMviVm
     Main->>VM: OpenCreateAgent/OpenEditAgent
     VM->>Api: create/update/deleteAgent
@@ -1012,7 +1020,7 @@ classDiagram
       +queryControlStatus(...)
       +sendControlCommand(...)
     }
-    class ApiRequestImpl
+    class RemoteApiSource
     class ControlUiState
     class ControlDataState
     class ControlIntent
@@ -1021,7 +1029,7 @@ classDiagram
     ControlScreen --> ControlVm
     ControlVm --> ControlCommandController
     ControlVm --> ControlConsoleManager
-    ControlVm --> ApiRequestImpl
+    ControlVm --> RemoteApiSource
     ControlVm --> ControlUiState
     ControlVm --> ControlDataState
     ControlVm --> ControlIntent
@@ -1087,7 +1095,7 @@ sequenceDiagram
     participant UI as ControlScreen
     participant VM as ControlVm
     participant CCM as ControlConsoleManager
-    participant API as ApiRequestImpl
+    participant API as RemoteApiSource
     participant SB as SpringBoot
     UI->>VM: Initialize
     VM->>CCM: connectControlWs(userId,deviceId)
@@ -1109,7 +1117,7 @@ flowchart LR
     UI[ControlScreen] --> VM[ControlVm]
     VM --> CMD[ControlCommandController]
     VM --> CCM[ControlConsoleManager]
-    CCM --> HTTP[ApiRequestImpl]
+    CCM --> HTTP[RemoteApiSource]
     CCM --> SyncChannel[控制通道]
     HTTP --> SB[(SpringBoot)]
     SyncChannel --> SB
@@ -1203,7 +1211,7 @@ classDiagram
     class MineVideoEffect
     class ExoPlayer
     class VideoView
-    class ApiRequestImpl
+    class RemoteApiSource
 
     MineScreen --> MineVm
     MineScreen --> ComposeMineSettingActivity
@@ -1214,8 +1222,8 @@ classDiagram
     ComposeMineVideoVm --> MineVideoManager
     ComposeMineVideoVm --> MineUploadController
     MineUploadController --> MineUploadManager
-    MineVideoManager --> ApiRequestImpl
-    MineUploadManager --> ApiRequestImpl
+    MineVideoManager --> RemoteApiSource
+    MineUploadManager --> RemoteApiSource
     MineVideoManager --> ExoPlayer
     MineVideoManager --> VideoView
     MineVm --> MineState
@@ -1291,7 +1299,7 @@ sequenceDiagram
     participant VM as MineVm
     participant VC as MineUploadController
     participant UM as MineUploadManager
-    participant API as ApiRequestImpl
+    participant API as RemoteApiSource
     participant SB as SpringBoot
     UI->>VM: SelectLocalVideo(fileUri)
     UI->>VM: StartUpload
@@ -1317,9 +1325,9 @@ flowchart LR
     MineVm --> MineVideoManager
     MineVm --> MineUploadController
     MineUploadController --> MineUploadManager
-    MineVideoManager --> ApiRequestImpl
-    MineUploadManager --> ApiRequestImpl
-    ApiRequestImpl --> SpringBoot[(SpringBoot)]
+    MineVideoManager --> RemoteApiSource
+    MineUploadManager --> RemoteApiSource
+    RemoteApiSource --> SpringBoot[(SpringBoot)]
     MineVideoManager --> ExoPlayer
     MineVideoManager --> VideoView
 ```
@@ -1379,18 +1387,25 @@ gantt
 ```mermaid
 classDiagram
     class UserManager {
-        +saveCurrentUser(user: UserModule)
+        +saveCurrentUser(user: UserSession)
         +getCurrentUser(): UserSession?
         +getAllUsers(): List~UserSession~
         +clearCurrentUser()
     }
-    class VectorDatabase {
-        +userDao(): UserDao
+    class UserLocalSource {
+        +saveCurrentUser(entity: UserEntity, handleResult)
+        +getCurrentUser(handleResult)
+        +getAllUsers(handleResult)
+        +clearCurrentUser(handleResult)
+    }
+    class UserConvertor {
+        +model2Entity(model: UserSession): UserEntity
+        +entity2Model(entity: UserEntity): UserSession
     }
     class UserDao {
-        +insertOrUpdate(entity: UserEntity)
-        +queryCurrentUser(): UserEntity?
-        +queryAllUserSessions(): List~UserEntity~
+        +upsert(entity: UserEntity)
+        +getCurrent(): UserEntity?
+        +getAll(): List~UserEntity~
         +clearCurrentFlag()
     }
     class UserEntity {
@@ -1415,9 +1430,11 @@ classDiagram
         +lastLoginAt: Long
     }
 
-    UserManager --> VectorDatabase
-    VectorDatabase --> UserDao
+    UserManager --> UserLocalSource
+    UserManager --> UserConvertor
+    UserLocalSource --> UserDao
     UserDao --> UserEntity
+    UserConvertor --> UserEntity
     UserManager --> UserSession
 ```
 
@@ -1428,13 +1445,16 @@ classDiagram
 flowchart LR
     VM[Start/Login/Register Vm]
     UM[UserManager]
+    LS[UserLocalSource]
     DAO[UserDao]
-    DB[(VectorDatabase)]
+    CVT[UserConvertor]
 
     VM -->|saveCurrentUser/getCurrentUser/clearCurrentUser| UM
-    UM -->|读写会话| DAO
-    DAO --> DB
-    DAO -->|UserEntity| UM
+    UM -->|读写请求| LS
+    UM -->|model/entity转换| CVT
+    LS -->|执行SQL| DAO
+    DAO -->|UserEntity| LS
+    LS -->|回调结果| UM
     UM -->|UserSession| VM
 ```
 
@@ -1503,7 +1523,7 @@ flowchart LR
     UI[MessageList/Chat UI] --> VM[MessageListMviVm/ComposeChatVm]
     VM --> MapMgr[ChatMapController]
     MapMgr --> Ctrl[ChatController]
-    VM --> Api[ApiRequestImpl]
+    VM --> Api[RemoteApiSource]
     VM --> Ws[RealtimeChatController]
     Ctrl --> Cache[ChatCacheManager]
     Cache --> Room[(VectorDatabase)]
@@ -1562,7 +1582,7 @@ classDiagram
     网络 + WS状态监听
   }
 
-  class ApiRequestImpl {
+  class RemoteApiSource {
     HTTP请求
   }
 
@@ -1582,14 +1602,14 @@ classDiagram
   NetworkManager --> ChatCacheManager : 状态通知
   NetworkManager --> ViewModel : 状态通知
 
-  ApiRequestImpl --> ChatCacheManager : 写入历史
-  ApiRequestImpl --> ChatController : 批量插入
+  RemoteApiSource --> ChatCacheManager : 写入历史
+  RemoteApiSource --> ChatController : 批量插入
 
   RealtimeChatController --> ChatController : 单条插入
   RealtimeChatController --> ChatCacheManager : 持久化
 
   ViewModel --> ChatMapController : 获取
-  ViewModel --> ApiRequestImpl : 调用
+  ViewModel --> RemoteApiSource : 调用
   ViewModel --> RealtimeChatController : 管理
   ViewModel --> NetworkManager : 监听
 ```
@@ -2417,13 +2437,13 @@ classDiagram
       +buildJoystickCommand(...)
       +buildButtonCommand(...)
     }
-    class ApiRequestImpl
+    class RemoteApiSource
     class ControlWsState
     class ControlCommandRequest
     class ControlStatusResponse
     class ControlCommandResponse
 
-    ControlConsoleManager --> ApiRequestImpl
+    ControlConsoleManager --> RemoteApiSource
     ControlConsoleManager --> ControlWsState
     ControlConsoleManager --> ControlCommandRequest
     ControlConsoleManager --> ControlStatusResponse
@@ -2479,7 +2499,7 @@ sequenceDiagram
     participant VM as ControlVm
     participant Ctl as ControlCommandController
     participant Mgr as ControlConsoleManager
-    participant Api as ApiRequestImpl
+    participant Api as RemoteApiSource
     participant SB as SpringBoot
     VM->>Ctl: buildJoystickCommand(...)
     Ctl-->>VM: ControlCommandRequest
@@ -2499,9 +2519,9 @@ sequenceDiagram
 flowchart LR
     ControlVm --> ControlCommandController
     ControlVm --> ControlConsoleManager
-    ControlConsoleManager --> ApiRequestImpl
+    ControlConsoleManager --> RemoteApiSource
     ControlConsoleManager --> SpringBootWS[SpringBoot Control WS]
-    ApiRequestImpl --> SpringBootHTTP[(SpringBoot HTTP)]
+    RemoteApiSource --> SpringBootHTTP[(SpringBoot HTTP)]
 ```
 
 #### 功能线程甘特图
@@ -2550,10 +2570,10 @@ classDiagram
       +resumeTask(taskId)
       +retryTask(taskId)
     }
-    class ApiRequestImpl
+    class RemoteApiSource
     class MineUploadTask
-    MineVideoManager --> ApiRequestImpl
-    MineUploadManager --> ApiRequestImpl
+    MineVideoManager --> RemoteApiSource
+    MineUploadManager --> RemoteApiSource
     MineUploadController --> MineUploadManager
     MineUploadController --> MineUploadTask
 ```
@@ -2605,7 +2625,7 @@ sequenceDiagram
     participant VM as MineVm
     participant UC as MineUploadController
     participant UM as MineUploadManager
-    participant API as ApiRequestImpl
+    participant API as RemoteApiSource
     participant SB as SpringBoot
     VM->>UC: scheduleUpload(fileUri)
     UC->>UM: createUploadSession(meta)
@@ -2628,9 +2648,9 @@ flowchart LR
     MineVm --> MineVideoManager
     MineVm --> MineUploadController
     MineUploadController --> MineUploadManager
-    MineVideoManager --> ApiRequestImpl
-    MineUploadManager --> ApiRequestImpl
-    ApiRequestImpl --> SpringBoot
+    MineVideoManager --> RemoteApiSource
+    MineUploadManager --> RemoteApiSource
+    RemoteApiSource --> SpringBoot
 ```
 
 #### 功能线程甘特图
@@ -2669,8 +2689,8 @@ classDiagram
     }
     class ControlAgentLogEntity
     class ControlAgentLogDao
-    class ApiRequestImpl
-    ControlAgentLogManager --> ApiRequestImpl
+    class RemoteApiSource
+    ControlAgentLogManager --> RemoteApiSource
     ControlAgentLogManager --> ControlAgentLogDao
     ControlAgentLogController --> ControlAgentLogManager
     ControlAgentLogDao --> ControlAgentLogEntity

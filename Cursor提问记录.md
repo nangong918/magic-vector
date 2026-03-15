@@ -928,10 +928,22 @@ request组成，都放在这里面，然后各种异常回调，相应处理，�
 文档修改完成之后理清楚思路之后再去修改代码。
 
 
+#### 补充修改
 
+第一，convertor应该方法名包含什么to什么比如你写的
+```kotlin
+    fun toEntity(session: UserSessionModel): UserEntity
+    fun toModel(entity: UserEntity): UserSessionModel
+```
+改为
+```kotlin
+    fun model2Entity(session: UserSessionModel): UserEntity
+    fun entity2Model(entity: UserEntity): UserSessionModel
+```
+其他的也要按照我说的修改，第二不要写那么复杂，什么又是UserDomainConvertor又是UserDomainConvertorImpl
+都写成object类，参考我的MessageConvertor
 
-
-
+然后更新设计文档
 
 
 

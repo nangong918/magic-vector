@@ -46,7 +46,7 @@ class CreateAgentVm(
 
     //---------------------Network---------------------
 
-    val api = MainApplication.getApiRequestImplInstance()
+    val api = MainApplication.getRemoteApiSource()
 
     // 创建Agent
     fun doCreateAgent(context: Context, callback: SyncRequestCallback){

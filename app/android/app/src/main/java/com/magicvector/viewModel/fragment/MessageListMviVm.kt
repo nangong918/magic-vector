@@ -11,7 +11,7 @@ import com.data.domain.constant.BaseConstant
 import com.magicvector.domain.dto.http.response.AgentLastChatListResponse
 import com.magicvector.domain.dto.http.response.AgentListResponse
 import com.magicvector.MainApplication
-import com.magicvector.convertor.MessageConvertor
+import com.magicvector.domain.convertor.MessageConvertor
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.channels.Channel
@@ -146,7 +146,7 @@ class MessageListMviVm : ViewModel() {
 
     private suspend fun requestAgentList(userId: String): BaseResponse<AgentListResponse> {
         return suspendCoroutine { continuation ->
-            MainApplication.getApiRequestImplInstance().getAgentList(
+            MainApplication.getRemoteApiSource().getAgentList(
                 userId,
                 object : OnSuccessCallback<BaseResponse<AgentListResponse>> {
                     override fun onResponse(response: BaseResponse<AgentListResponse>?) {
@@ -168,7 +168,7 @@ class MessageListMviVm : ViewModel() {
 
     private suspend fun requestLastAgentChatList(userId: String): BaseResponse<AgentLastChatListResponse> {
         return suspendCoroutine { continuation ->
-            MainApplication.getApiRequestImplInstance().getLastAgentChatList(
+            MainApplication.getRemoteApiSource().getLastAgentChatList(
                 userId,
                 object : OnSuccessCallback<BaseResponse<AgentLastChatListResponse>> {
                     override fun onResponse(response: BaseResponse<AgentLastChatListResponse>?) {

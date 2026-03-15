@@ -9,7 +9,7 @@ import com.magicvector.domain.dto.http.response.VideoPlayUrlResponse
 import com.magicvector.MainApplication
 
 class MineVideoManager {
-    private val api = MainApplication.getApiRequestImplInstance()
+    private val api = MainApplication.getRemoteApiSource()
 
     fun fetchCloudRecordList(
         userId: String,

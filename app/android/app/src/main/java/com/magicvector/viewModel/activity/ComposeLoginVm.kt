@@ -21,7 +21,7 @@ import kotlinx.coroutines.launch
 
 class ComposeLoginVm : ViewModel() {
     companion object {
-        private val api = MainApplication.getApiRequestImplInstance()
+        private val remoteApiSource = MainApplication.getRemoteApiSource()
         private val userManager = MainApplication.getUserManager()
     }
 
@@ -103,7 +103,7 @@ class ComposeLoginVm : ViewModel() {
             account = state.account.trim()
             password = passwordToSave
         }
-        api.login(
+        remoteApiSource.login(
             request = request,
             onSuccessCallback = object : OnSuccessCallback<BaseResponse<UserAuthResponse>> {
                 override fun onResponse(response: BaseResponse<UserAuthResponse>?) {

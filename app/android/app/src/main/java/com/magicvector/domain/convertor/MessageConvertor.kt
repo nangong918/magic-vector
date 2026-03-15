@@ -1,4 +1,4 @@
-package com.magicvector.convertor
+package com.magicvector.domain.convertor
 
 import com.data.domain.ao.agent.AgentChatAo
 import com.data.domain.ao.message.MessageContactItemAo
