@@ -16,6 +16,7 @@ import com.magicvector.utils.activity.BaseComponentActivity
 import com.magicvector.viewModel.activity.LoginEffect
 import com.magicvector.viewModel.activity.LoginIntent
 import com.magicvector.viewModel.activity.ComposeLoginVm
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 class ComposeLoginActivity : BaseComponentActivity() {
@@ -44,7 +45,8 @@ class ComposeLoginActivity : BaseComponentActivity() {
     }
 
     private fun observeEffect() {
-        lifecycleScope.launch {
+        // 在ui线程执行ui操作，避免出现io线程绘制ui的错误
+        lifecycleScope.launch(Dispatchers.Main) {
             repeatOnLifecycle(androidx.lifecycle.Lifecycle.State.STARTED) {
                 vm.effect.collect { effect ->
                     when (effect) {

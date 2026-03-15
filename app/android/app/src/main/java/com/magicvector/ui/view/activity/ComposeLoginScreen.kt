@@ -27,6 +27,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.magicvector.ui.theme.MagicVectorTheme
 import com.magicvector.viewModel.activity.LoginState
 import com.magicvector.domain.model.UserSessionModel
@@ -42,6 +43,7 @@ fun ComposeLoginScreen(
     onSubmit: () -> Unit,
     onGoRegister: () -> Unit
 ) {
+    // 这种小ui状态值没必要存储到vm，直接用remember
     var accountMenuExpanded by remember { mutableStateOf(false) }
     Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
         Column(
@@ -52,8 +54,8 @@ fun ComposeLoginScreen(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            Text(text = "登录")
-            Spacer(modifier = Modifier.height(16.dp))
+            Text(text = "登录", fontSize = 20.sp)
+            Spacer(modifier = Modifier.height(24.dp))
 
             ExposedDropdownMenuBox(
                 expanded = accountMenuExpanded && savedAccounts.isNotEmpty(),

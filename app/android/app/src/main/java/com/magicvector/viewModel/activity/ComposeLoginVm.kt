@@ -4,8 +4,10 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.magicvector.domain.dto.http.request.UserLoginRequest
 import com.magicvector.MainApplication
+import com.magicvector.domain.dto.http.response.UserAuthResponse
 import com.magicvector.domain.exception.NetworkBusinessException
 import com.magicvector.domain.model.UserSessionModel
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -14,6 +16,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class ComposeLoginVm : ViewModel() {
     companion object {
@@ -71,16 +74,21 @@ class ComposeLoginVm : ViewModel() {
     }
 
     private fun loadSavedAccounts() {
+        // 默认在主线程
         viewModelScope.launch {
-            val sessions = userManager.getAllUsers()
+            // 加载数据在 IO 线程
+            val sessions = withContext(Dispatchers.IO) {
+                userManager.getAllUsers()
+            }
+
+            // 更新 UI 状态 - 已经在主线程
             _dataState.update { it.copy(savedUserSessions = sessions) }
-            val first = sessions.firstOrNull()
-            if (first != null) {
+
+            sessions.firstOrNull()?.let { first ->
                 _uiState.update { current ->
-                    // 初始化时仅把缓存值映射到可编辑输入框，不改变 dataState
                     current.copy(
-                        account = if (current.account.isBlank()) first.account else current.account,
-                        password = if (current.password.isBlank()) first.password else current.password
+                        account = current.account.ifBlank { first.account },
+                        password = current.password.ifBlank { first.password }
                     )
                 }
             }
@@ -114,7 +122,7 @@ class ComposeLoginVm : ViewModel() {
     }
 
     private fun handleLoginResponse(
-        auth: com.magicvector.domain.dto.http.response.UserAuthResponse,
+        auth: UserAuthResponse,
         loginPassword: String
     ) {
         if (auth.userId == null || auth.userId <= 0L) {
@@ -149,6 +157,7 @@ class ComposeLoginVm : ViewModel() {
     }
 
     private fun sendEffect(effect: LoginEffect) {
+        // 保证effect都是在main线程被处理
         viewModelScope.launch {
             _effect.send(effect)
         }

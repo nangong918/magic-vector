@@ -4,6 +4,8 @@ import android.content.Context
 import com.magicvector.dataSource.local.UserLocalSource
 import com.magicvector.domain.convertor.UserConvertor
 import com.magicvector.domain.model.UserSessionModel
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 /**
  * UserManager 负责用户会话持久化。
@@ -16,7 +18,7 @@ class UserManager private constructor(
     @Volatile
     private var currentUserSessionCache: UserSessionModel? = null
 
-    suspend fun saveCurrentUser(session: UserSessionModel) {
+    suspend fun saveCurrentUser(session: UserSessionModel) = withContext(Dispatchers.IO) {
         val loginAt = System.currentTimeMillis()
         val currentSession = session.copy(
             isCurrent = true,
@@ -33,23 +35,24 @@ class UserManager private constructor(
         }
     }
 
-    suspend fun getCurrentUser(): UserSessionModel? {
+    suspend fun getCurrentUser(): UserSessionModel? = withContext(Dispatchers.IO) {
         val cached = currentUserSessionCache
         if (cached != null && cached.accessToken.isNotBlank()) {
-            return cached
+            return@withContext cached
         }
         val current = userLocalSource.getCurrentUser { entity ->
             currentUserSessionCache = entity?.let { UserConvertor.entity2Model(it) }
         }?.let { UserConvertor.entity2Model(it) }
-        return current
+        return@withContext current
     }
 
-    suspend fun getAllUsers(): List<UserSessionModel> {
+    suspend fun getAllUsers(): List<UserSessionModel> = withContext(Dispatchers.IO) {
         val entities = userLocalSource.getAllUsers { }
-        return entities.map { UserConvertor.entity2Model(it) }
+        val models = entities.map { UserConvertor.entity2Model(it) }
+        return@withContext models
     }
 
-    suspend fun clearCurrentUser() {
+    suspend fun clearCurrentUser() = withContext(Dispatchers.IO) {
         userLocalSource.clearCurrentUser { _ ->
             currentUserSessionCache = null
         }

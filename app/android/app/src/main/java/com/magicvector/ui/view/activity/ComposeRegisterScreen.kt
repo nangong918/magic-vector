@@ -29,6 +29,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.magicvector.ui.theme.MagicVectorTheme
 import com.magicvector.viewModel.activity.RegisterState
@@ -52,7 +53,7 @@ fun ComposeRegisterScreen(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            Text(text = "注册")
+            Text(text = "注册", fontSize = 20.sp)
             Spacer(modifier = Modifier.height(16.dp))
 
             AvatarPicker(
@@ -138,7 +139,7 @@ private fun AvatarPicker(
             contentDescription = "avatar",
             modifier = Modifier
                 .height(80.dp)
-                .fillMaxWidth()
+                .width(80.dp)
                 .clip(CircleShape)
                 .clickable { onSelectAvatar() },
             contentScale = ContentScale.Crop

@@ -991,9 +991,13 @@ RemoteApiSource的getLastChat这个方法，我看了一下吗还是使用把res
 
 
 
-
-
-
+### 代码审核完成与笔记录入
+我现在审核完成代码了。
+我发现了一些问题：
+1. datasource的操作很明显都是耗时操作，所以其suspend函数需要指定为IO（这部分代码可能你还需要改）[dataSource](app/android/app/src/main/java/com/magicvector/dataSource)
+   并将规则记录到[AndroidDesignDocument.md](app/android/docs/AndroidDesignDocument.md)
+2. 给登录和注册的甘特图进行更新，因为现在甘特图不仅要写功能的线程甘特图了，还需要写不同操作具体在kotlin的哪个协程中执行比如IO或者Main
+   然后查询kotlin中协程有多少种协程状态，比如IO，Main等，然后结合计算机理论：《操作系统》种的线程状态去分析各种操作应该放在哪种协程状态种。然后写入规则中。[AndroidDesignDocument.md](app/android/docs/AndroidDesignDocument.md)
 
 
 

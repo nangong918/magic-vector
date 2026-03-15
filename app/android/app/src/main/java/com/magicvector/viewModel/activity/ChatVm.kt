@@ -16,6 +16,7 @@ import android.text.TextWatcher
 import android.util.Log
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.annotation.RequiresPermission
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.MutableLiveData
@@ -138,6 +139,7 @@ class ChatVm(
         realtimeChatController = null
     }
 
+    @RequiresPermission(Manifest.permission.RECORD_AUDIO)
     fun initResource(
         activity: FragmentActivity,
         ao : MessageContactItemAo?,
