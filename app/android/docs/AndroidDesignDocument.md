@@ -529,7 +529,7 @@ sequenceDiagram
 ##### 登录鉴权甘特图
 ```mermaid
 gantt
-    title Android 登录请求线程甘特图
+    title Android 登录请求线程与协程甘特图
     dateFormat  X
     axisFormat %L ms
     section Main线程
@@ -540,6 +540,12 @@ gantt
     接收响应并解析 DTO            :i2, 43, 12
     section 本地持久化
     保存会话到 Room               :d1, 55, 10
+    section 协程调度器
+    Dispatchers.Main (UI交互)     :c1, 0, 8
+    Dispatchers.Main (状态更新)    :c2, 65, 12
+    Dispatchers.IO (网络请求)      :c3, 8, 35
+    Dispatchers.IO (响应解析)      :c4, 43, 12
+    Dispatchers.IO (数据库保存)    :c5, 55, 10
 ```
 
 #### 注册 UI 设计
@@ -709,7 +715,7 @@ sequenceDiagram
 ##### 注册鉴权甘特图
 ```mermaid
 gantt
-    title Android 注册请求线程甘特图
+    title Android 注册请求线程与协程甘特图
     dateFormat  X
     axisFormat %L ms
     section Main线程
@@ -721,6 +727,13 @@ gantt
     响应解析与错误映射              :i2, 80, 10
     section 本地持久化
     保存会话到 Room               :d1, 85, 8
+    section 协程调度器
+    Dispatchers.Main (表单交互)     :c1, 0, 20
+    Dispatchers.Main (权限处理)     :c2, 20, 25
+    Dispatchers.Main (状态更新)     :c3, 90, 15
+    Dispatchers.IO (网络请求)       :c4, 45, 35
+    Dispatchers.IO (响应解析)       :c5, 80, 10
+    Dispatchers.IO (数据库保存)     :c6, 85, 8
 ```
 
 ### Agent 模块（Main 内联弹层）

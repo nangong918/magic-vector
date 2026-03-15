@@ -4,6 +4,8 @@ import android.content.Context
 import com.magicvector.dataSource.local.db.VectorDatabase
 import com.magicvector.domain.entity.UserEntity
 import com.magicvector.repository.dao.UserDao
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 class UserLocalSource private constructor(
     context: Context
@@ -13,7 +15,7 @@ class UserLocalSource private constructor(
     suspend fun saveCurrentUser(
         userEntity: UserEntity,
         handleSaveCurrentUser: (UserEntity?) -> Unit
-    ) {
+    ) = withContext(Dispatchers.IO) {
         userDao.clearCurrentFlag()
         userDao.upsert(userEntity)
         handleSaveCurrentUser(userEntity)
@@ -21,27 +23,27 @@ class UserLocalSource private constructor(
 
     suspend fun getCurrentUser(
         handleCurrentUser: (UserEntity?) -> Unit
-    ): UserEntity? {
+    ): UserEntity? = withContext(Dispatchers.IO) {
         val current = userDao.getCurrent()
         handleCurrentUser(current)
-        return current
+        current
     }
 
     suspend fun getAllUsers(
         handleAllUsers: (List<UserEntity>) -> Unit
-    ): List<UserEntity> {
+    ): List<UserEntity> = withContext(Dispatchers.IO) {
         val users = userDao.getAll()
         handleAllUsers(users)
-        return users
+        users
     }
 
     suspend fun clearCurrentUser(
         handleClearCurrentUser: (UserEntity?) -> Unit
-    ) {
+    ) = withContext(Dispatchers.IO) {
         val current = userDao.getCurrent()
         if (current == null) {
             handleClearCurrentUser(null)
-            return
+            return@withContext
         }
         val cleared = current.copy(
             accessToken = "",

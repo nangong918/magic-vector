@@ -30,6 +30,8 @@ import com.magicvector.domain.dto.http.response.VideoUploadInitResponse
 import com.magicvector.domain.exception.NetworkBusinessException
 import com.magicvector.domain.exception.NetworkParamIllegalException
 import com.magicvector.repository.api.ApiRequest
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import okhttp3.MultipartBody
 import okhttp3.RequestBody
 
@@ -40,12 +42,12 @@ class RemoteApiSource(
     private suspend fun <T> requestData(
         apiCall: suspend () -> BaseResponse<T>,
         emptyDataMessage: String = "响应数据为空"
-    ): T {
+    ): T = withContext(Dispatchers.IO) {
         val response = apiCall()
         if (BaseConstant.NetworkCode.SUCCESS_CODE != response.code) {
             throw NetworkBusinessException(response.code, response.message)
         }
-        return response.data ?: throw NetworkBusinessException(response.code, emptyDataMessage)
+        response.data ?: throw NetworkBusinessException(response.code, emptyDataMessage)
     }
 
     suspend fun verifyAccessToken(

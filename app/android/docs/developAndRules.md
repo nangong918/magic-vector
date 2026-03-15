@@ -83,6 +83,37 @@
   * 继承结构化并发的取消能力，页面销毁时自动取消请求，降低资源泄漏风险。
   * 错误语义统一（异常流），减少“成功回调/失败回调”分叉逻辑，提升可维护性和可测试性。
 
+
+### 协程调度器使用规则
+
+#### Kotlin 协程调度器类型
+Kotlin 协程提供以下主要调度器，它们分别对应不同的线程池和使用场景：
+1. **Dispatchers.Main**：Android 主线程/UI 线程，仅用于 UI 操作和轻量级任务
+2. **Dispatchers.IO**：IO 优化线程池，适用于网络请求、数据库操作、文件读写等耗时 IO 操作
+3. **Dispatchers.Default**：CPU 密集型任务专用线程池，适用于复杂计算、JSON 解析等任务
+4. **Dispatchers.Unconfined**：不限制线程，在当前调用线程执行（一般不推荐使用）
+
+#### 与操作系统线程状态的对应关系
+基于《操作系统》课程中学习的线程状态理论，不同调度器的任务对应不同的线程状态：
+- **Main 调度器**：任务始终处于 Main 线程的就绪/运行状态，涉及 UI 更新操作
+- **IO 调度器**：任务执行过程中会频繁在 `运行→阻塞（等待 IO）→就绪` 之间切换
+- **Default 调度器**：任务主要处于 `运行→就绪` 状态，较少阻塞
+
+#### 操作与调度器映射规则
+1. **DataSource 层（Remote/Local）的所有 suspend 函数**：必须显式使用 `withContext(Dispatchers.IO)` 包裹，因为：
+  - 网络请求（Retrofit）属于 IO 阻塞操作
+  - 数据库操作（Room）属于 IO 阻塞操作
+  - 文件读写属于 IO 阻塞操作
+
+2. **ViewModel/Manager 层**：
+  - 状态更新、UI 相关逻辑使用 Main 调度器
+  - 调用 DataSource 层的 suspend 函数不需要显式切换（DataSource 内部已处理）
+
+3. **UI 层**：
+  - Compose 组合函数和 UI 操作必须在 Main 调度器执行
+
+
+
 ## 文档
 * 你写的功能和模块，统一写入 [AndroidDesignDocument.md](AndroidDesignDocument.md) 的对应模块章节。
 * 若涉及数据库（Room/MySQL）调整，设计文档必须记录：表设计、字段变更、变更原因，并附数据库设计图（Mermaid ER/类图）。
