@@ -29,13 +29,13 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.magicvector.ui.theme.MagicVectorTheme
 import com.magicvector.viewModel.activity.LoginState
-import com.magicvector.manager.user.UserSession
+import com.magicvector.domain.model.UserSessionModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ComposeLoginScreen(
     state: LoginState,
-    savedAccounts: List<UserSession>,
+    savedAccounts: List<UserSessionModel>,
     onAccountChange: (String) -> Unit,
     onPasswordChange: (String) -> Unit,
     onSelectSavedAccount: (String) -> Unit,

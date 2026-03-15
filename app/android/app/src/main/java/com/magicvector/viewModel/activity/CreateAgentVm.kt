@@ -9,8 +9,8 @@ import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.ViewModel
-import com.core.appcore.api.handler.SyncRequestCallback
-import com.core.appcore.utils.AppResponseUtil
+import com.magicvector.repository.api.handler.SyncRequestCallback
+import com.magicvector.repository.api.utils.AppResponseUtil
 import com.core.baseutil.file.FileUtil
 import com.core.baseutil.network.BaseResponse
 import com.core.baseutil.network.OnSuccessCallback

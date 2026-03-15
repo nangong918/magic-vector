@@ -12,8 +12,8 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.application
 import androidx.lifecycle.viewModelScope
-import com.core.appcore.api.handler.SyncRequestCallback
-import com.core.appcore.utils.AppResponseUtil
+import com.magicvector.repository.api.handler.SyncRequestCallback
+import com.magicvector.repository.api.utils.AppResponseUtil
 import com.core.baseutil.file.FileUtil
 import com.core.baseutil.network.BaseResponse
 import com.core.baseutil.network.OnSuccessCallback

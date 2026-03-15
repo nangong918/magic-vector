@@ -5,7 +5,8 @@ import com.core.baseutil.network.OnSuccessCallback
 import com.core.baseutil.network.OnThrowableCallback
 import com.data.domain.dto.response.ControlAgentLogResponse
 import com.magicvector.MainApplication
-import com.magicvector.manager.db.VectorDatabase
+import com.magicvector.dataSource.local.db.VectorDatabase
+import com.magicvector.domain.entity.ControlAgentLogEntity
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch

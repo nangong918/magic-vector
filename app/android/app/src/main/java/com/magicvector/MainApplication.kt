@@ -1,10 +1,10 @@
 package com.magicvector
 
 import android.app.Application
-import com.core.appcore.api.ApiRequest
-import com.core.appcore.api.ApiRequestProvider
+import com.magicvector.repository.api.ApiRequest
+import com.magicvector.repository.api.config.ApiRequestProvider
 import com.core.baseutil.image.ImageManager
-import com.data.dao.api.ApiRequestImpl
+import com.magicvector.repository.api.ApiRequestImpl
 import com.data.domain.ao.mixLLM.McpSwitch
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder

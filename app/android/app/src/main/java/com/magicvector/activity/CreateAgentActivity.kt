@@ -2,7 +2,7 @@ package com.magicvector.activity
 
 import android.content.Intent
 import android.os.Bundle
-import com.core.appcore.api.handler.SyncRequestCallback
+import com.magicvector.repository.api.handler.SyncRequestCallback
 import com.core.baseutil.network.networkLoad.NetworkLoadUtils
 import com.core.baseutil.ui.ToastUtils
 import com.data.domain.constant.BaseConstant

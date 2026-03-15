@@ -9,7 +9,7 @@ import com.data.domain.constant.BaseConstant
 import com.data.domain.dto.request.UserLoginRequest
 import com.data.domain.dto.response.UserAuthResponse
 import com.magicvector.MainApplication
-import com.magicvector.manager.user.UserSession
+import com.magicvector.domain.model.UserSessionModel
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -140,7 +140,7 @@ class ComposeLoginVm : ViewModel() {
 
         viewModelScope.launch {
             userManager.saveCurrentUser(
-                UserSession(
+                UserSessionModel(
                     userId = auth.userId ?: 0L,
                     account = auth.account.orEmpty(),
                     name = auth.name.orEmpty(),
@@ -195,7 +195,7 @@ data class LoginDataState(
     // 登录后的访问令牌
     val accessToken: String = "",
     // 本地会话缓存（数据库加载），用于账号下拉与密码自动回填
-    val savedUserSessions: List<UserSession> = emptyList()
+    val savedUserSessions: List<UserSessionModel> = emptyList()
 )
 
 sealed class LoginEffect {

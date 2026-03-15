@@ -9,7 +9,7 @@ import android.util.Log
 import androidx.annotation.RequiresPermission
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.MutableLiveData
-import com.core.appcore.api.ApiUrlConfig
+import com.magicvector.repository.api.config.ApiUrlConfig
 import com.data.domain.ao.message.MessageContactItemAo
 import com.data.domain.ao.mixLLM.McpSwitch
 import com.data.domain.ao.mixLLM.MixLLMEvent

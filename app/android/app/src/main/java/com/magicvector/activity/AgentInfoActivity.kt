@@ -3,7 +3,7 @@ package com.magicvector.activity
 import android.os.Bundle
 import android.text.TextUtils
 import android.util.Log
-import com.core.appcore.api.handler.SyncRequestCallback
+import com.magicvector.repository.api.handler.SyncRequestCallback
 import com.core.baseutil.network.networkLoad.NetworkLoadUtils
 import com.core.baseutil.ui.ToastUtils
 import com.data.domain.constant.BaseConstant

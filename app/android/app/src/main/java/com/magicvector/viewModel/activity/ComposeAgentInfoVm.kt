@@ -6,8 +6,8 @@ import android.util.Log
 import androidx.compose.runtime.Stable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.core.appcore.api.handler.SyncRequestCallback
-import com.core.appcore.utils.AppResponseUtil
+import com.magicvector.repository.api.handler.SyncRequestCallback
+import com.magicvector.repository.api.utils.AppResponseUtil
 import com.core.baseutil.network.BaseResponse
 import com.core.baseutil.network.OnSuccessCallback
 import com.core.baseutil.network.OnThrowableCallback

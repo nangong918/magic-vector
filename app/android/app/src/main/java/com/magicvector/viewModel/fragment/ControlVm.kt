@@ -5,7 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.data.domain.dto.request.ControlCommandRequest
 import com.magicvector.MainApplication
 import com.magicvector.manager.control.ControlCommandController
-import com.magicvector.manager.control.ControlAgentLogEntity
+import com.magicvector.domain.entity.ControlAgentLogEntity
 import com.magicvector.manager.control.ControlWsState
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel

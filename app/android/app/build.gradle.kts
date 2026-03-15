@@ -186,7 +186,6 @@ dependencies {
     implementation(project(":core:baseutil"))
     implementation(project(":data:domain"))
     implementation(project(":core:appcore"))
-    implementation(project(":data:dao"))
     implementation(project(":view:appview"))
 
     // vad库

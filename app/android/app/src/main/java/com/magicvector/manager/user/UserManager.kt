@@ -1,7 +1,10 @@
 package com.magicvector.manager.user
 
 import android.content.Context
-import com.magicvector.manager.db.VectorDatabase
+import com.magicvector.repository.dao.UserDao
+import com.magicvector.domain.entity.UserEntity
+import com.magicvector.domain.model.UserSessionModel
+import com.magicvector.dataSource.local.db.VectorDatabase
 
 /**
  * UserManager 负责用户会话持久化。
@@ -12,9 +15,9 @@ class UserManager private constructor(
 ) {
     private val userDao: UserDao = VectorDatabase.getInstance(context).userDao()
     @Volatile
-    private var currentUserSessionCache: UserSession? = null
+    private var currentUserSessionCache: UserSessionModel? = null
 
-    suspend fun saveCurrentUser(session: UserSession) {
+    suspend fun saveCurrentUser(session: UserSessionModel) {
         val loginAt = System.currentTimeMillis()
         userDao.clearCurrentFlag()
         userDao.upsert(
@@ -35,7 +38,7 @@ class UserManager private constructor(
         )
     }
 
-    suspend fun getCurrentUser(): UserSession? {
+    suspend fun getCurrentUser(): UserSessionModel? {
         val cached = currentUserSessionCache
         if (cached != null && cached.accessToken.isNotBlank()) {
             return cached
@@ -45,7 +48,7 @@ class UserManager private constructor(
         return current
     }
 
-    suspend fun getAllUsers(): List<UserSession> {
+    suspend fun getAllUsers(): List<UserSessionModel> {
         return userDao.getAll().map { it.toSession() }
     }
 
@@ -60,8 +63,8 @@ class UserManager private constructor(
         currentUserSessionCache = null
     }
 
-    private fun UserEntity.toSession(): UserSession {
-        return UserSession(
+    private fun UserEntity.toSession(): UserSessionModel {
+        return UserSessionModel(
             userId = userId,
             account = account,
             name = name,

@@ -20,8 +20,8 @@ import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.application
-import com.core.appcore.api.handler.SyncRequestCallback
-import com.core.appcore.utils.AppResponseUtil
+import com.magicvector.repository.api.handler.SyncRequestCallback
+import com.magicvector.repository.api.utils.AppResponseUtil
 import com.core.baseutil.cache.HttpRequestManager
 import com.core.baseutil.network.BaseResponse
 import com.core.baseutil.network.OnSuccessCallback

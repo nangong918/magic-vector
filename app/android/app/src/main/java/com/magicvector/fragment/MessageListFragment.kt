@@ -8,13 +8,12 @@ import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import com.core.appcore.api.handler.SyncRequestCallback
+import com.magicvector.repository.api.handler.SyncRequestCallback
 import com.core.baseutil.network.networkLoad.NetworkLoadUtils
 import com.data.domain.OnPositionItemClick
 import com.data.domain.fragmentActivity.intentAo.ChatIntentAo
 import com.magicvector.MainApplication
 import com.magicvector.activity.ComposeAgentChatActivity
-import com.magicvector.activity.MainActivity
 import com.magicvector.callback.OnCreateAgentCallback
 import com.magicvector.databinding.FragmentMessageListBinding
 import com.magicvector.utils.BaseAppCompatVmFragment

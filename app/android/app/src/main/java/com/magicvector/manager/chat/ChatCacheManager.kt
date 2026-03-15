@@ -1,7 +1,9 @@
 package com.magicvector.manager.chat
 
 import android.content.Context
-import com.magicvector.manager.db.VectorDatabase
+import com.magicvector.dataSource.local.db.VectorDatabase
+import com.magicvector.domain.entity.AgentCacheEntity
+import com.magicvector.domain.entity.ChatMessageEntity
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 

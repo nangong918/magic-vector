@@ -48,21 +48,21 @@
 }
 
 # 保留 ApiRequestProvider 类及其伴生对象（Kotlin 伴生对象需特殊处理）
--keep class com.core.appcore.api.ApiRequestProvider { *; }
--keep class com.core.appcore.api.ApiRequestProvider$Companion { *; }
+-keep class com.magicvector.repository.api.config.ApiRequestProvider { *; }
+-keep class com.magicvector.repository.api.config.ApiRequestProvider$Companion { *; }
 
 # 保留 ApiRequest 相关类（假设你的网络请求接口/实例是 ApiRequest）
 # 若 ApiRequest 是 Retrofit 接口，需保留其方法签名；若为普通类，保留所有成员
--keep class com.core.appcore.api.ApiRequestProvider { *; }
+-keep class com.magicvector.repository.api.config.ApiRequestProvider { *; }
 -keep class com.magicvector.MainApplication { *; }
--keep class com.core.appcore.api.ApiRequest { *; }
+-keep class com.magicvector.repository.api.ApiRequest { *; }
 # 若 ApiRequest 是接口，需额外保留接口方法（避免方法名被混淆）
--keep interface com.core.appcore.api.ApiRequest {
+-keep interface com.magicvector.repository.api.ApiRequest {
     *;
 }
 
 # 保留 Retrofit 接口及其方法（关键！避免方法签名被混淆）
--keep public interface com.core.appcore.api.ApiRequest {
+-keep public interface com.magicvector.repository.api.ApiRequest {
     *;
 }
 # 保留 Retrofit 相关类的泛型信息（避免类型擦除导致的转换异常）

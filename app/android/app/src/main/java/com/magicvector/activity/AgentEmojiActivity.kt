@@ -12,7 +12,7 @@ import android.view.WindowManager
 import androidx.annotation.RequiresPermission
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.lifecycleScope
-import com.core.appcore.api.handler.SyncRequestCallback
+import com.magicvector.repository.api.handler.SyncRequestCallback
 import com.core.baseutil.network.networkLoad.NetworkLoadUtils
 import com.core.baseutil.permissions.GainPermissionCallback
 import com.core.baseutil.permissions.PermissionUtil

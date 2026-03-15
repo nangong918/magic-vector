@@ -10,8 +10,8 @@ import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.application
-import com.core.appcore.api.handler.SyncRequestCallback
-import com.core.appcore.utils.AppResponseUtil
+import com.magicvector.repository.api.handler.SyncRequestCallback
+import com.magicvector.repository.api.utils.AppResponseUtil
 import com.core.baseutil.file.FileUtil
 import com.core.baseutil.network.BaseResponse
 import com.core.baseutil.network.OnSuccessCallback
@@ -19,7 +19,6 @@ import com.core.baseutil.network.OnThrowableCallback
 import com.data.domain.constant.chat.RealtimeRequestDataTypeEnum
 import com.magicvector.MainApplication
 import com.magicvector.manager.RealtimeChatController
-import com.magicvector.manager.vl.UdpVisionManager
 import com.magicvector.service.ChatService
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
