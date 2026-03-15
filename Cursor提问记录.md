@@ -784,3 +784,178 @@ dataState内是允许放一些Entity，Module聚合一个整体的DataState的�
 大概就是把setupFullScreen()的逻辑封装在BaseComponentActivity中，并且onResume()默认直接调用这个方法，
 然后把其他的composeActivity切换为继承这个BaseComponentActivity，就实现了代码复用
 不准删我任何注释！！！
+
+
+
+### 重构handler以及写
+
+现在需要你修改一下android的设计文档[AndroidDesignDocument.md](app/android/docs/AndroidDesignDocument.md)
+我决定修改一下架构：
+[domain](app/android/app/src/main/java/com/magicvector/domain)
+domain中存放数据结构，
+[dto](app/android/app/src/main/java/com/magicvector/domain/dto)
+内部放传输按数据类型。
+[entity](app/android/app/src/main/java/com/magicvector/domain/entity)
+内部存放数据库类型
+[model](app/android/app/src/main/java/com/magicvector/domain/model)
+内部存放业务类型
+[convertor](app/android/app/src/main/java/com/magicvector/domain/convertor)
+这里面是数据类型转换工具
+dto，entity，model之间的数据转换需要用convertor
+
+
+[repository](app/android/app/src/main/java/com/magicvector/repository)
+这个存放数据源接口：
+[api](app/android/app/src/main/java/com/magicvector/repository/api)
+这里面是网络层接口：
+其中[ApiRequest.kt](app/android/app/src/main/java/com/magicvector/repository/api/ApiRequest.kt)
+这个Retrofit接口
+[dao](app/android/app/src/main/java/com/magicvector/repository/dao)
+这里面放的是数据库的接口
+
+[dataSource](app/android/app/src/main/java/com/magicvector/dataSource)
+这是数据源层，跟repository的区别是里面会包含业务逻辑
+我打个比方，看到StartVm的这个代码：
+```kotlin
+    private suspend fun verifyAccessToken(accessToken: String): Boolean {
+  // suspend的定义，线程可以不用等待，可以先去运行其他代码
+  // 挂起点1：调用 suspend 函数 getCurrentUser()
+  // 协程挂起，直到数据库返回结果，线程不阻塞
+  val localUser = userManager.getCurrentUser()
+
+  // 只有挂起点1完成，才会执行到这里
+  // suspendCoroutine 是一个 suspend 函数，调用它的瞬间，当前协程就会主动挂起，需要continuation.resume()恢复
+  return suspendCoroutine { continuation ->
+    if (localUser == null || localUser.userId <= 0L) {
+      continuation.resume(false)
+      return@suspendCoroutine
+    }
+    val request = UserTokenVerifyRequest().apply {
+      this.userId = localUser.userId
+      this.accessToken = accessToken
+    }
+    api.verifyAccessToken(
+      request = request,
+      onSuccessCallback = object : OnSuccessCallback<BaseResponse<UserTokenVerifyResponse>> {
+        override fun onResponse(response: BaseResponse<UserTokenVerifyResponse>?) {
+          val isSuccessCode = response?.code == BaseConstant.NetworkCode.SUCCESS_CODE
+          val isValid = response?.data?.valid == true
+          // 网络请求发出后，suspendCoroutine 代码块执行完毕，但协程仍处于挂起状态
+          // 直到回调里调用 continuation.resume()，协程才恢复
+          continuation.resume(isSuccessCode && isValid)
+        }
+      },
+      throwableCallback = object : OnThrowableCallback {
+        override fun callback(throwable: Throwable?) {
+          // 网络请求发出后，suspendCoroutine 代码块执行完毕，但协程仍处于挂起状态
+          // 直到回调里调用 continuation.resume()，协程才恢复
+          continuation.resume(false)
+        }
+      }
+    )
+  }
+}
+```
+我现在的计划是：
+在dataSource创建object，
+然后里面有个方法就是verifyAccessToken，入参是accessToken: String和处理方法，叫做handleVerifyAccessToken
+这个方法应该从vm中获取，因为对数据结构的处理应该在vm。
+然后比如
+val localUser = userManager.getCurrentUser()数据获取
+参数校验
+request组成，都放在这里面，然后各种异常回调，相应处理，以及协程处理都交给handleVerifyAccessToken
+相当于是我抽象出来请求，因为请求大部分数据是一样的，各个vm只是做不同相应而已，所以没必要重复在多个vm中写请求。
+并且这样做我还能取消[ApiRequestImpl.kt](app/android/app/src/main/java/com/magicvector/repository/api/ApiRequestImpl.kt)
+这是一个无意义的类，所以你现在需要实现我的设想。并将你能修改的请求都改成我希望的样子。
+放在[remote](app/android/app/src/main/java/com/magicvector/dataSource/remote)
+类名就叫做RemoteApiSource
+
+然后就是数据库的重复业务封装，
+比如说`UserManager`你看到这个方法：
+```kotlin
+    suspend fun saveCurrentUser(session: UserSessionModel) {
+        val loginAt = System.currentTimeMillis()
+        userDao.clearCurrentFlag()
+        userDao.upsert(
+            UserEntity(
+                userId = session.userId,
+                account = session.account,
+                name = session.name,
+                avatarUrl = session.avatarUrl,
+                accessToken = session.accessToken,
+                password = session.password,
+                isCurrent = true,
+                lastLoginAt = loginAt
+            )
+        )
+        currentUserSessionCache = session.copy(
+            isCurrent = true,
+            lastLoginAt = loginAt
+        )
+    }
+```
+很明显，第一UserSessionModel转为UserEntity需要按照我说的规则用convertor去实现，
+第二saveCurrentUser这个方法应该封装到
+[local](app/android/app/src/main/java/com/magicvector/dataSource/local)
+中的object类总，然后提供数据结果回调，传入一个方法，这个方法的入参是数据库操作结果（如果是void就传入null）以及需要的数据
+比如这里需要的就是currentUserSessionCache的更新，
+那么就应该给回调UserEntity，这个userEntity的数据应该copy：
+```kotlin
+  currentUserSessionCache = session.copy(
+      isCurrent = true,
+      lastLoginAt = loginAt
+  )
+```
+这个copy属于具体的manager业务所以定义应该定义在manager中。
+再比如说：
+```kotlin
+    suspend fun getCurrentUser(): UserSessionModel? {
+        val cached = currentUserSessionCache
+        if (cached != null && cached.accessToken.isNotBlank()) {
+            return cached
+        }
+        val current = userDao.getCurrent()?.toSession()
+        currentUserSessionCache = current
+        return current
+    }
+```
+这个因为manager需要的是UserSessionModel，所以应该在local的UserLocalSource
+然后获取userEntity的方法应该在里面完成，然后转为UserSessionModel是用convertor也在里面完成，
+然后回调方法，回调`UserSessionModel`，然后再在manager中使用业务逻辑
+比如先判断当前是否为空，不为空就return cached，为空才调用UserLocalSource然后回调currentUserSessionCache = current
+
+总之就是Manager不持有Dao，Vm也不持有api，现在修改整个架构的文档，
+文档修改完成之后理清楚思路之后再去修改代码。
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
