@@ -181,7 +181,8 @@ public class AgentController {
     private Long parseLong(String value) {
         try {
             return Long.parseLong(value);
-        } catch (Exception ignore) {
+        } catch (Exception e) {
+            log.error("参数转换错误", e);
             return null;
         }
     }

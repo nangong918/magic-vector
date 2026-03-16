@@ -5,9 +5,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.data.domain.constant.BaseConstant
 import com.magicvector.MainApplication
+import com.magicvector.domain.dto.http.response.UserTokenVerifyResponse
 import com.magicvector.domain.exception.NetworkBusinessException
-import com.magicvector.domain.exception.NetworkException
-import com.magicvector.domain.exception.NetworkParamIllegalException
 import com.magicvector.domain.model.UserSessionModel
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
@@ -87,10 +86,23 @@ class StartVm : ViewModel() {
         }
 
         // 2. 验证Token（异常直接外抛到VM层处理）
-        val isValid = verifyAccessToken(localUser.accessToken)
+        try {
+            val response = remoteApiSource.verifyAccessToken(localUser.accessToken)
+            return handleVerifyAccessToken(response, localUser)
+        } catch (e: NetworkBusinessException) {
+            Log.e(TAG, "verifyAccessToken 业务异常: ", e)
+            val toastMsg = e.msg ?: "服务器验证失败，请稍后重试"
+            sendEffect(StartEffect.ShowToast(toastMsg))
+        } catch (e: Throwable) {
+            Log.e(TAG, "verifyAccessToken 系统异常: ", e)
+            sendEffect(StartEffect.ShowToast("系统异常"))
+        }
+        return StartEffect.NavigateToLogin
+    }
 
-        // 3. 根据验证结果返回对应Effect
-        return if (isValid) {
+    private suspend fun handleVerifyAccessToken(response: UserTokenVerifyResponse, localUser: UserSessionModel): StartEffect {
+        // 根据验证结果返回对应Effect
+        return if (response.valid?: false) {
             // Token有效 → 更新登录状态，返回主页
             updateUserLoginState(localUser)
             StartEffect.NavigateToMain
@@ -98,27 +110,6 @@ class StartVm : ViewModel() {
             // Token无效 → 清空状态，返回登录页
             clearUserState()
             StartEffect.NavigateToLogin
-        }
-    }
-
-    /**
-     * 验证 access_token (采用suspend可以取消各种回调)
-     * @param accessToken       access_token
-     * @return true: 验证成功
-     */
-    private suspend fun verifyAccessToken(accessToken: String): Boolean {
-        return try {
-            val response = remoteApiSource.verifyAccessToken(accessToken)
-            response.valid
-        } catch (e: NetworkBusinessException) {
-            Log.e(TAG, "verifyAccessToken 业务异常: ", e)
-            val toastMsg = e.msg ?: "服务器验证失败，请稍后重试"
-            sendEffect(StartEffect.ShowToast(toastMsg))
-            false
-        } catch (e: Throwable) {
-            Log.e(TAG, "verifyAccessToken 系统异常: ", e)
-            sendEffect(StartEffect.ShowToast("系统异常"))
-            false
         }
     }
 

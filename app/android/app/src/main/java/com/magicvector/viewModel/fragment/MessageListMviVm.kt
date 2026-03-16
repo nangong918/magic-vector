@@ -4,14 +4,11 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.data.domain.ao.message.MessageContactItemAo
-import com.magicvector.domain.dto.http.response.AgentLastChatListResponse
-import com.magicvector.domain.dto.http.response.AgentListResponse
 import com.magicvector.MainApplication
 import com.magicvector.domain.convertor.MessageConvertor
+import com.magicvector.domain.exception.NetworkBusinessException
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.async
 import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -19,12 +16,14 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.supervisorScope
 import kotlinx.coroutines.withContext
 
 class MessageListMviVm : ViewModel() {
 
     companion object {
         val TAG: String = MessageListMviVm::class.java.name
+        val api = MainApplication.getApiRequestImplInstance()
     }
 
     private val _uiState = MutableStateFlow(MessageListState())
@@ -101,28 +100,6 @@ class MessageListMviVm : ViewModel() {
         refreshMessages(showLoading = _uiState.value.messages.isEmpty())
     }
 
-    private suspend fun syncAgentAndMessageState() {
-        try {
-            val userId = resolveUserId()
-            if (userId.isBlank()) {
-                handleError("用户未登录")
-                return
-            }
-            val (agentListResp, chatListResp) = withContext(Dispatchers.IO) {
-                coroutineScope {
-                    val agentListDeferred = async { requestAgentList(userId) }
-                    val chatListDeferred = async { requestLastAgentChatList(userId) }
-                    agentListDeferred.await() to chatListDeferred.await()
-                }
-            }
-            handleAgentAndChatResponse(agentListResp, chatListResp)
-        } catch (e: Exception) {
-            handleError(e.message ?: "网络请求失败")
-        } finally {
-            _uiState.update { it.copy(isLoading = false, isRefreshing = false) }
-        }
-    }
-
     private suspend fun resolveUserId(): String {
         val cached = MainApplication.getUserId()
         if (cached.isNotBlank()) {
@@ -137,40 +114,93 @@ class MessageListMviVm : ViewModel() {
         return ""
     }
 
-    private suspend fun requestAgentList(userId: String): AgentListResponse {
-        return MainApplication.getRemoteApiSource().getAgentList(userId)
-    }
-
-    private suspend fun requestLastAgentChatList(userId: String): AgentLastChatListResponse {
-        return MainApplication.getRemoteApiSource().getLastAgentChatList(userId)
-    }
-
-    private fun handleAgentAndChatResponse(
-        agentListResponse: AgentListResponse,
-        chatListResponse: AgentLastChatListResponse
-    ) {
-        val hasAgent = (agentListResponse.agentAos?.size ?: 0) > 0
-        val chatData = chatListResponse
-        val messages = chatData?.agentChatAos.orEmpty()
-        val messageContactItemAos = MessageConvertor.agentChatAos2MessageContactItemAos(messages)
-        if (chatData != null) {
-            MainApplication.getMessageListManager().setAgentChatAos(chatData)
-        } else {
-            MainApplication.getMessageListManager().clear()
+    private suspend fun syncAgentAndMessageState() {
+        val userId = resolveUserId()
+        if (userId.isBlank()) {
+            handleError("用户未登录")
+            _uiState.update { it.copy(isLoading = false, isRefreshing = false) }
+            return
         }
+
+        supervisorScope {
+            launch(Dispatchers.IO) { fetchAndHandleAgentList(userId) }  // 如果需要IO线程，在这里指定
+            launch(Dispatchers.IO) { fetchAndHandleChatList(userId) }   // 如果需要IO线程，在这里指定
+        }
+
         _uiState.update {
-            val hasMessage = messages.isNotEmpty()
             it.copy(
-                isFirstOpen = false,
-                error = null,
-                messages = messageContactItemAos,
-                messageCount = messages.size,
-                agentCount = agentListResponse.agentAos?.size ?: 0,
-                hasAgent = hasAgent,
-                hasMessage = hasMessage,
-                uiMode = deriveUiMode(hasAgent, hasMessage)
+                isLoading = false,
+                isRefreshing = false,
+                uiMode = deriveUiMode(it.hasAgent, it.hasMessage)
             )
         }
+    }
+
+    private suspend fun fetchAndHandleAgentList(userId: String) {
+        runCatching { api.getAgentList(userId) }
+            .onSuccess { response ->
+                val hasAgent = (response.agentAos?.size ?: 0) > 0
+                _uiState.update {
+                    it.copy(
+                        agentCount = response.agentAos?.size ?: 0,
+                        hasAgent = hasAgent,
+                        error = null
+                    )
+                }
+            }
+            .onFailure { exception ->
+                Log.e(TAG, "获取Agent列表失败", exception)
+                when (exception) {
+                    is NetworkBusinessException -> {
+                        exception.message?.let {
+                            handleError(it)
+                        }
+                    }
+                }
+                _uiState.update {
+                    it.copy(
+                        error = "获取Agent列表失败: ${exception.message}",
+                        hasAgent = false,
+                        agentCount = 0
+                    )
+                }
+            }
+    }
+
+    private suspend fun fetchAndHandleChatList(userId: String) {
+        runCatching { api.getLastAgentChatList(userId) }
+            .onSuccess { response ->
+                val messages = response.agentChatAos.orEmpty()
+                val messageContactItemAos = MessageConvertor.agentChatAos2MessageContactItemAos(messages)
+                MainApplication.getMessageListManager().setAgentChatAos(response)
+
+                _uiState.update {
+                    it.copy(
+                        messages = messageContactItemAos,
+                        messageCount = messages.size,
+                        hasMessage = messages.isNotEmpty(),
+                        error = null
+                    )
+                }
+            }
+            .onFailure { exception ->
+                Log.e(TAG, "获取Chat列表失败", exception)
+                when (exception) {
+                    is NetworkBusinessException -> {
+                        exception.message?.let {
+                            handleError(it)
+                        }
+                    }
+                }
+                _uiState.update {
+                    it.copy(
+                        error = "获取消息列表失败: ${exception.message}",
+                        messages = emptyList(),
+                        messageCount = 0,
+                        hasMessage = false
+                    )
+                }
+            }
     }
 
     private fun handleError(error: String) {
