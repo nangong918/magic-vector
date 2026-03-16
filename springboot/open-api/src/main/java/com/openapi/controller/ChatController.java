@@ -48,7 +48,11 @@ public class ChatController {
         if (!StringUtils.hasText(agentId)){
             return BaseResponse.LogBackError(CommonExceptions.PARAM_ERROR);
         }
-        val chatMessageDos = chatMessageService.getLast10Messages(agentId);
+        Long agentIdLong = parseLong(agentId);
+        if (agentIdLong == null) {
+            return BaseResponse.LogBackError(CommonExceptions.PARAM_ERROR);
+        }
+        val chatMessageDos = chatMessageService.getLast10Messages(agentIdLong);
         ChatMessageResponse response = new ChatMessageResponse();
         response.setChatMessages(chatMessageDos);
 
@@ -67,6 +71,10 @@ public class ChatController {
         if (!StringUtils.hasText(agentId)){
             return BaseResponse.LogBackError(CommonExceptions.PARAM_ERROR);
         }
+        Long agentIdLong = parseLong(agentId);
+        if (agentIdLong == null) {
+            return BaseResponse.LogBackError(CommonExceptions.PARAM_ERROR);
+        }
 
         LocalDateTime time;
         try {
@@ -83,7 +91,7 @@ public class ChatController {
             limit = ModelConstant.LIMIT_FETCH_CHAT_HISTORY_LENGTH;
         }
 
-        val chatMessageDos = chatMessageService.getMessagesByAgentIdDeadlineLimit(agentId, time, limit);
+        val chatMessageDos = chatMessageService.getMessagesByAgentIdDeadlineLimit(agentIdLong, time, limit);
         ChatMessageResponse response = new ChatMessageResponse();
         response.setChatMessages(chatMessageDos);
 
@@ -95,7 +103,8 @@ public class ChatController {
             @Valid @RequestBody ChatByAnchorRequest request
     ) {
         Integer limit = request.getLimit();
-        if (!StringUtils.hasText(request.getAgentId()) || request.getAnchorTimestamp() == null
+        Long agentIdLong = parseLong(request.getAgentId());
+        if (agentIdLong == null || request.getAnchorTimestamp() == null
                 || request.getBefore() == null || limit == null || limit <= 0) {
             return BaseResponse.LogBackError(CommonExceptions.PARAM_ERROR);
         }
@@ -103,15 +112,15 @@ public class ChatController {
             limit = ModelConstant.LIMIT_FETCH_CHAT_HISTORY_LENGTH;
         }
         List<com.openapi.domain.Do.ChatMessageDo> chatMessageDos;
-        if (Boolean.TRUE.equals(request.getBefore())) {
+        if (request.getBefore()) {
             chatMessageDos = chatMessageService.getMessagesBeforeAnchorLimit(
-                    request.getAgentId(),
+                    agentIdLong,
                     request.getAnchorTimestamp(),
                     limit
             );
         } else {
             chatMessageDos = chatMessageService.getMessagesAfterAnchorLimit(
-                    request.getAgentId(),
+                    agentIdLong,
                     request.getAnchorTimestamp(),
                     limit
             );
@@ -162,6 +171,14 @@ public class ChatController {
         }
 
         return BaseResponse.getResponseEntitySuccess("上传成功");
+    }
+
+    private Long parseLong(String value) {
+        try {
+            return Long.parseLong(value);
+        } catch (Exception ignore) {
+            return null;
+        }
     }
 
 }

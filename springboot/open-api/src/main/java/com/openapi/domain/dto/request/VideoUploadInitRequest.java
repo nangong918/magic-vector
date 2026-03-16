@@ -6,8 +6,8 @@ import lombok.Data;
 
 @Data
 public class VideoUploadInitRequest {
-    @NotBlank(message = "userId不能为空")
-    private String userId;
+    @NotNull(message = "userId不能为空")
+    private Long userId;
     @NotBlank(message = "fileName不能为空")
     private String fileName;
     @NotNull(message = "fileSize不能为空")

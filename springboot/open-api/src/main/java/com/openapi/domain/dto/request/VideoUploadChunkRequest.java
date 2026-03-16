@@ -9,8 +9,8 @@ import lombok.Data;
 public class VideoUploadChunkRequest {
     @NotBlank(message = "uploadId不能为空")
     private String uploadId;
-    @NotBlank(message = "userId不能为空")
-    private String userId;
+    @NotNull(message = "userId不能为空")
+    private Long userId;
     @NotNull(message = "chunkIndex不能为空")
     @Min(value = 0, message = "chunkIndex必须>=0")
     private Integer chunkIndex;

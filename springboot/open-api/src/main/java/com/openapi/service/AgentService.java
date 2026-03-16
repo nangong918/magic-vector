@@ -13,25 +13,25 @@ import java.util.List;
  * @date 2025/9/29 16:26
  */
 public interface AgentService {
-    AgentAo createAgent(@Nullable MultipartFile avatar, @NotNull String userId, @NotNull String name, @NotNull String description);
+    AgentAo createAgent(@Nullable MultipartFile avatar, @NotNull Long userId, @NotNull String name, @NotNull String description);
 
     AgentAo updateAgent(
             @Nullable MultipartFile avatar,
-            @NotNull String agentId,
-            @NotNull String userId,
+            @NotNull Long agentId,
+            @NotNull Long userId,
             @NotNull String name,
             @NotNull String description
     );
 
-    boolean deleteAgent(@NotNull String agentId, @NotNull String userId);
+    boolean deleteAgent(@NotNull Long agentId, @NotNull Long userId);
 
-    AgentAo getAgentById(String id);
+    AgentAo getAgentById(Long id);
 
-    @NotNull List<AgentAo> getAgentsByIds(List<String> ids);
+    @NotNull List<AgentAo> getAgentsByIds(List<Long> ids);
 
-    @NotNull List<String> getUserAgents(String userId);
+    @NotNull List<Long> getUserAgents(Long userId);
 
-    @NotNull List<AgentAo> getUserAgentsAo(String userId);
+    @NotNull List<AgentAo> getUserAgentsAo(Long userId);
 
-    @NotNull List<AgentChatAo> getLastAgentChatList(@NotNull String userId);
+    @NotNull List<AgentChatAo> getLastAgentChatList(@NotNull Long userId);
 }

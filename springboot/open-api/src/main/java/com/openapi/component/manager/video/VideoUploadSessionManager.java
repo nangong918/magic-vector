@@ -12,7 +12,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public class VideoUploadSessionManager {
     private final Map<String, UploadSession> sessionMap = new ConcurrentHashMap<>();
 
-    public UploadSession createSession(String userId, String fileName, Long fileSize, Integer chunkSize) {
+    public UploadSession createSession(Long userId, String fileName, Long fileSize, Integer chunkSize) {
         String uploadId = UUID.randomUUID().toString().replace("-", "");
         File tempFile = new File(System.getProperty("java.io.tmpdir"), "video-upload-" + uploadId + ".tmp");
         UploadSession session = new UploadSession();
@@ -38,7 +38,7 @@ public class VideoUploadSessionManager {
     @Data
     public static class UploadSession {
         private String uploadId;
-        private String userId;
+        private Long userId;
         private String fileName;
         private Long fileSize;
         private Integer chunkSize;

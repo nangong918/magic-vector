@@ -57,12 +57,16 @@ public class AgentController {
         if (!StringUtils.hasText(description)){
             return BaseResponse.LogBackError(CommonExceptions.PARAM_ERROR);
         }
-        if (!userService.checkUserExistById(Long.parseLong(userId))){
+        Long userIdLong = parseLong(userId);
+        if (userIdLong == null) {
+            return BaseResponse.LogBackError(CommonExceptions.PARAM_ERROR);
+        }
+        if (!userService.checkUserExistById(userIdLong)){
             log.warn("用户:{} 不存在", userId);
             return BaseResponse.LogBackError(UserExceptions.USER_NOT_EXIST);
         }
 
-        AgentAo agentAo = agentService.createAgent(avatar, userId, name, description);
+        AgentAo agentAo = agentService.createAgent(avatar, userIdLong, name, description);
 
         AgentResponse response = new AgentResponse();
         response.setAgentAo(agentAo);
@@ -82,7 +86,12 @@ public class AgentController {
                 || !StringUtils.hasText(name) || !StringUtils.hasText(description)) {
             return BaseResponse.LogBackError(CommonExceptions.PARAM_ERROR);
         }
-        AgentAo agentAo = agentService.updateAgent(avatar, agentId, userId, name, description);
+        Long agentIdLong = parseLong(agentId);
+        Long userIdLong = parseLong(userId);
+        if (agentIdLong == null || userIdLong == null) {
+            return BaseResponse.LogBackError(CommonExceptions.PARAM_ERROR);
+        }
+        AgentAo agentAo = agentService.updateAgent(avatar, agentIdLong, userIdLong, name, description);
         if (agentAo == null) {
             return BaseResponse.LogBackError(CommonExceptions.PARAM_ERROR);
         }
@@ -95,7 +104,12 @@ public class AgentController {
     public BaseResponse<AgentResponse> deleteAgent(
             @Valid @RequestBody AgentDeleteRequest request
     ) {
-        boolean deleted = agentService.deleteAgent(request.getAgentId(), request.getUserId());
+        Long agentIdLong = parseLong(request.getAgentId());
+        Long userIdLong = parseLong(request.getUserId());
+        if (agentIdLong == null || userIdLong == null) {
+            return BaseResponse.LogBackError(CommonExceptions.PARAM_ERROR);
+        }
+        boolean deleted = agentService.deleteAgent(agentIdLong, userIdLong);
         if (!deleted) {
             return BaseResponse.LogBackError(CommonExceptions.PARAM_ERROR);
         }
@@ -112,7 +126,11 @@ public class AgentController {
         if (!StringUtils.hasText(agentId)){
             return BaseResponse.LogBackError(CommonExceptions.PARAM_ERROR);
         }
-        AgentAo agentAo = agentService.getAgentById(agentId);
+        Long agentIdLong = parseLong(agentId);
+        if (agentIdLong == null) {
+            return BaseResponse.LogBackError(CommonExceptions.PARAM_ERROR);
+        }
+        AgentAo agentAo = agentService.getAgentById(agentIdLong);
         AgentResponse response = new AgentResponse();
         response.setAgentAo(agentAo);
         return BaseResponse.getResponseEntitySuccess(response);
@@ -124,11 +142,15 @@ public class AgentController {
             @RequestParam("userId") String userId
     ){
         // 参数校验
-        if (!userService.checkUserExistById(Long.parseLong(userId))){
+        Long userIdLong = parseLong(userId);
+        if (userIdLong == null) {
+            return BaseResponse.LogBackError(CommonExceptions.PARAM_ERROR);
+        }
+        if (!userService.checkUserExistById(userIdLong)){
             return BaseResponse.LogBackError(UserExceptions.USER_NOT_EXIST);
         }
 
-        List<AgentAo> agentAos = agentService.getUserAgentsAo(userId);
+        List<AgentAo> agentAos = agentService.getUserAgentsAo(userIdLong);
         AgentListResponse response = new AgentListResponse();
         response.setAgentAos(agentAos);
         return BaseResponse.getResponseEntitySuccess(response);
@@ -140,16 +162,28 @@ public class AgentController {
             @RequestParam("userId") String userId
     ){
         // 参数校验
-        if (!userService.checkUserExistById(Long.parseLong(userId))){
+        Long userIdLong = parseLong(userId);
+        if (userIdLong == null) {
+            return BaseResponse.LogBackError(CommonExceptions.PARAM_ERROR);
+        }
+        if (!userService.checkUserExistById(userIdLong)){
             return BaseResponse.LogBackError(UserExceptions.USER_NOT_EXIST);
         }
 
-        List<AgentChatAo> agentChatAos = agentService.getLastAgentChatList(userId);
+        List<AgentChatAo> agentChatAos = agentService.getLastAgentChatList(userIdLong);
 
         AgentLastChatListResponse response = new AgentLastChatListResponse();
         response.setAgentChatAos(agentChatAos);
 
         return BaseResponse.getResponseEntitySuccess(response);
+    }
+
+    private Long parseLong(String value) {
+        try {
+            return Long.parseLong(value);
+        } catch (Exception ignore) {
+            return null;
+        }
     }
 
 }

@@ -18,9 +18,9 @@ public interface VideoService {
 
     VideoUploadCompleteResponse completeUpload(VideoUploadCompleteRequest request);
 
-    VideoCloudListResponse getCloudList(String userId, Integer page, Integer size);
+    VideoCloudListResponse getCloudList(Long userId, Integer page, Integer size);
 
-    VideoPlayUrlResponse getPlayUrl(String videoId);
+    VideoPlayUrlResponse getPlayUrl(Long videoId);
 
-    VideoDownloadUrlResponse getDownloadUrl(String videoId);
+    VideoDownloadUrlResponse getDownloadUrl(Long videoId);
 }

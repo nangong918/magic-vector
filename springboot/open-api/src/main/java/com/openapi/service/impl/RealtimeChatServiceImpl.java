@@ -97,7 +97,7 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
         if (!userService.checkUserExistById(Long.parseLong(chatContextManager.userId))){
             throw new AppException(UserExceptions.USER_NOT_EXIST);
         }
-        AgentAo agentAo = agentService.getAgentById(chatContextManager.agentId);
+        AgentAo agentAo = agentService.getAgentById(Long.valueOf(chatContextManager.agentId));
         if (agentAo == null || agentAo.getAgentId() == null){
             throw new AppException(AgentExceptions.AGENT_NOT_EXIST);
         }
@@ -119,7 +119,7 @@ public class RealtimeChatServiceImpl implements RealtimeChatService {
                 .build();
 
         // 预先加载10条历史聊天记录
-        List<ChatMessageDo> chatMessageDos = chatMessageService.getLast10Messages(chatContextManager.agentId);
+        List<ChatMessageDo> chatMessageDos = chatMessageService.getLast10Messages(Long.valueOf(chatContextManager.agentId));
         // 将历史消息添加到ChatMemory中
         if (!chatMessageDos.isEmpty()) {
 

@@ -20,18 +20,18 @@ public interface ChatMessageMapper {
     Integer insertBatch(@Param("list") List<ChatMessageDo> chatMessageDos);
 
     /// 删
-    Integer delete(String id);
+    Integer delete(Long id);
 
-    Integer deleteBatch(@Param("list") List<String> ids);
+    Integer deleteBatch(@Param("list") List<Long> ids);
 
-    Integer deleteByAgentId(String agentId);
+    Integer deleteByAgentId(Long agentId);
 
-    Integer deleteByAgentIdBatch(@Param("list") List<String> agentIds);
+    Integer deleteByAgentIdBatch(@Param("list") List<Long> agentIds);
 
     /// 查
-    ChatMessageDo getById(String id);
+    ChatMessageDo getById(Long id);
 
-    List<ChatMessageDo> getByIds(@Param("list") List<String> ids);
+    List<ChatMessageDo> getByIds(@Param("list") List<Long> ids);
 
     /**
      * 获取指定时间之前的指定数量消息
@@ -41,28 +41,28 @@ public interface ChatMessageMapper {
      * @return               消息
      */
     List<ChatMessageDo> getMessagesByAgentIdDeadlineLimit(
-                @Param("agentId") String agentId,
+                @Param("agentId") Long agentId,
                 @Param("deadline")LocalDateTime deadline,
                 @Param("limit") Integer limit
     );
 
     List<ChatMessageDo> getMessagesBeforeAnchorLimit(
-            @Param("agentId") String agentId,
+            @Param("agentId") Long agentId,
             @Param("anchorTimestamp") Long anchorTimestamp,
             @Param("limit") Integer limit
     );
 
     List<ChatMessageDo> getMessagesAfterAnchorLimit(
-            @Param("agentId") String agentId,
+            @Param("agentId") Long agentId,
             @Param("anchorTimestamp") Long anchorTimestamp,
             @Param("limit") Integer limit
     );
 
     List<ChatMessageDo> getMessageByAgentIds(
-            @Param("agentIds") List<String> agentIds,
+            @Param("agentIds") List<Long> agentIds,
             @Param("deadline")LocalDateTime deadline,
             @Param("limit") Integer limit
     );
 
-    List<ChatMessageDo> getAllMessagesByAgentId(String agentId);
+    List<ChatMessageDo> getAllMessagesByAgentId(Long agentId);
 }

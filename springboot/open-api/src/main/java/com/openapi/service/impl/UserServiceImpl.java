@@ -1,6 +1,7 @@
 package com.openapi.service.impl;
 
-import com.minio.domain.ao.SuccessFile;
+import com.minio.domain.dto.BatchUploadResult;
+import com.minio.domain.dto.UploadItemResult;
 import com.minio.service.OssService;
 import com.openapi.config.UserConfig;
 import com.openapi.converter.UserConverter;
@@ -55,15 +56,16 @@ public class UserServiceImpl implements UserService {
         userDo.setPassword(password);
         if (avatar != null) {
             val files = List.of(avatar);
-            val result = ossService.uploadFiles(
+            BatchUploadResult result = ossService.uploadFiles(
                     files,
-                    String.valueOf(userDo.getId()),
+                    userDo.getId(),
                     userConfig.getBucketName()
             );
-            String ossId = Optional.ofNullable(result.getSuccessFiles())
+            Long ossId = Optional.ofNullable(result.getItems())
                     .filter(list -> !list.isEmpty())
                     .map(List::getFirst)
-                    .map(SuccessFile::getFileId)
+                    .filter(UploadItemResult::isSuccess)
+                    .map(UploadItemResult::getFileId)
                     .orElse(null);
             userDo.setOssId(ossId);
         }

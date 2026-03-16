@@ -26,7 +26,7 @@
         from
         <include refid="table"/>
         where user_id = #{userId}
-        <if test="agentId != null and agentId != ''">
+        <if test="agentId != null">
             and agent_id = #{agentId}
         </if>
         order by log_time desc, id desc

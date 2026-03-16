@@ -1,6 +1,7 @@
 package com.openapi.service.impl;
 
-import com.minio.domain.ao.SuccessFile;
+import com.minio.domain.dto.BatchUploadResult;
+import com.minio.domain.dto.UploadItemResult;
 import com.minio.service.OssService;
 import com.openapi.config.AgentConfig;
 import com.openapi.converter.AgentConverter;
@@ -19,7 +20,6 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
-import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDateTime;
@@ -40,7 +40,7 @@ public class AgentServiceImpl implements AgentService {
     private final ChatMessageService chatMessageService;
 
     @Override
-    public AgentAo createAgent(@Nullable MultipartFile avatar, @NotNull String userId, @NotNull String name, @NotNull String description) {
+    public AgentAo createAgent(@Nullable MultipartFile avatar, @NotNull Long userId, @NotNull String name, @NotNull String description) {
         AgentDo agentDo = new AgentDo();
         agentDo.setName(name);
         agentDo.setUserId(userId);
@@ -52,15 +52,16 @@ public class AgentServiceImpl implements AgentService {
         }
 
         val files = List.of(avatar);
-        val result = ossService.uploadFiles(
+        BatchUploadResult result = ossService.uploadFiles(
                 files,
                 agentDo.getId(),
                 agentConfig.getBucketName()
         );
-        String ossId = Optional.ofNullable(result.getSuccessFiles())
+        Long ossId = Optional.ofNullable(result.getItems())
                         .filter(list -> !list.isEmpty())
                         .map(List::getFirst)
-                        .map(SuccessFile::getFileId)
+                        .filter(UploadItemResult::isSuccess)
+                        .map(UploadItemResult::getFileId)
                         .orElse(null);
         agentDo.setOssId(ossId);
         agentMapper.insert(agentDo);
@@ -82,8 +83,8 @@ public class AgentServiceImpl implements AgentService {
     @Override
     public AgentAo updateAgent(
             @Nullable MultipartFile avatar,
-            @NotNull String agentId,
-            @NotNull String userId,
+            @NotNull Long agentId,
+            @NotNull Long userId,
             @NotNull String name,
             @NotNull String description
     ) {
@@ -101,15 +102,16 @@ public class AgentServiceImpl implements AgentService {
         if (avatar != null) {
             // TODO MinIO 配置未完成时允许 avatar 为空；完成后可补充上传失败重试策略。
             val files = List.of(avatar);
-            val result = ossService.uploadFiles(
+            BatchUploadResult result = ossService.uploadFiles(
                     files,
                     exist.getId(),
                     agentConfig.getBucketName()
             );
-            String newOssId = Optional.ofNullable(result.getSuccessFiles())
+            Long newOssId = Optional.ofNullable(result.getItems())
                     .filter(list -> !list.isEmpty())
                     .map(List::getFirst)
-                    .map(SuccessFile::getFileId)
+                    .filter(UploadItemResult::isSuccess)
+                    .map(UploadItemResult::getFileId)
                     .orElse(exist.getOssId());
             exist.setOssId(newOssId);
         }
@@ -119,7 +121,7 @@ public class AgentServiceImpl implements AgentService {
     }
 
     @Override
-    public boolean deleteAgent(@NotNull String agentId, @NotNull String userId) {
+    public boolean deleteAgent(@NotNull Long agentId, @NotNull Long userId) {
         AgentDo exist = agentMapper.selectById(agentId);
         if (exist == null || exist.getId() == null) {
             return false;
@@ -131,14 +133,14 @@ public class AgentServiceImpl implements AgentService {
     }
 
     @Override
-    public AgentAo getAgentById(String id) {
+    public AgentAo getAgentById(Long id) {
         AgentDo agentDo = agentMapper.selectById(id);
         return buildAgentAoWithAvatar(agentDo);
     }
 
     @NotNull
     @Override
-    public List<AgentAo> getAgentsByIds(List<String> ids){
+    public List<AgentAo> getAgentsByIds(List<Long> ids){
         if (CollectionUtils.isEmpty(ids)){
             return new ArrayList<>();
         }
@@ -146,7 +148,7 @@ public class AgentServiceImpl implements AgentService {
         if (CollectionUtils.isEmpty(agentDos)){
             return new ArrayList<>();
         }
-        List<String> fileIds = agentDos.stream().map(AgentDo::getOssId).toList();
+        List<Long> fileIds = agentDos.stream().map(AgentDo::getOssId).toList();
         List<String> avatarUrls = ossService.getFileUrlsByFileIds(fileIds);
 
         assert avatarUrls.size() == agentDos.size();
@@ -159,9 +161,9 @@ public class AgentServiceImpl implements AgentService {
 
     @NotNull
     @Override
-    public List<String> getUserAgents(String userId){
-        List<String> agentIds = new ArrayList<>();
-        if (!StringUtils.hasText(userId)){
+    public List<Long> getUserAgents(Long userId){
+        List<Long> agentIds = new ArrayList<>();
+        if (userId == null){
             return agentIds;
         }
         agentIds = agentMapper.selectAllByUserId(userId);
@@ -170,8 +172,8 @@ public class AgentServiceImpl implements AgentService {
 
     @NotNull
     @Override
-    public List<AgentAo> getUserAgentsAo(String userId){
-        List<String> agentIds =getUserAgents(userId);
+    public List<AgentAo> getUserAgentsAo(Long userId){
+        List<Long> agentIds =getUserAgents(userId);
         if (agentIds.isEmpty()){
             return new ArrayList<>();
         }
@@ -201,8 +203,8 @@ public class AgentServiceImpl implements AgentService {
      */
     @NotNull
     @Override
-    public List<AgentChatAo> getLastAgentChatList(@NotNull String userId){
-        List<String> agentIds = getUserAgents(userId);
+    public List<AgentChatAo> getLastAgentChatList(@NotNull Long userId){
+        List<Long> agentIds = getUserAgents(userId);
         if (agentIds.isEmpty()){
             return new ArrayList<>();
         }
@@ -230,9 +232,10 @@ public class AgentServiceImpl implements AgentService {
                 if (messageDo.isEmpty()) {
                     continue;
                 }
-                if (agentChatAo.getAgentAo().getAgentId().equals(
-                        messageDo.getFirst().getAgentId()
-                )) {
+                String messageAgentId = messageDo.getFirst().getAgentId() == null
+                        ? null
+                        : String.valueOf(messageDo.getFirst().getAgentId());
+                if (agentChatAo.getAgentAo().getAgentId().equals(messageAgentId)) {
                     agentChatAo.setLastChatMessages(messageDo);
 
                     // 获取最后时间

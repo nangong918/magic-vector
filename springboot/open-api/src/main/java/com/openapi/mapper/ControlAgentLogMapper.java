@@ -11,8 +11,8 @@ public interface ControlAgentLogMapper {
     Integer insert(ControlAgentLogDo logDo);
 
     List<ControlAgentLogDo> queryByUserAgentPage(
-            @Param("userId") String userId,
-            @Param("agentId") String agentId,
+            @Param("userId") Long userId,
+            @Param("agentId") Long agentId,
             @Param("offset") Integer offset,
             @Param("size") Integer size
     );

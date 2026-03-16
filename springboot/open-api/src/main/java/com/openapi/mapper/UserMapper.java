@@ -31,7 +31,7 @@ public interface UserMapper {
     // 修改头像
     Integer updateAvatarById(
             @Param("id") Long id,
-            @Param("ossId") String ossId
+            @Param("ossId") Long ossId
     );
 
     /// 查

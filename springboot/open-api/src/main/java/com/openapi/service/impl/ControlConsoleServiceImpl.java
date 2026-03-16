@@ -55,8 +55,8 @@ public class ControlConsoleServiceImpl implements ControlConsoleService {
         response.setMessage(forwarded ? "dispatched by control ws" : "rk is offline, command queued TODO");
         String agentId = parseAgentId(request.getPayloadJson(), request.getDeviceId());
         controlAgentLogService.saveControlLog(
-                request.getUserId(),
-                agentId,
+                parseLong(request.getUserId()),
+                parseLong(agentId),
                 wsPayload,
                 System.currentTimeMillis()
         );
@@ -90,8 +90,8 @@ public class ControlConsoleServiceImpl implements ControlConsoleService {
                 controlSessionManager.updateRkAgentMode(deviceId, payload.getOrDefault("rkAgentMode", "TODO_RK_AGENT"));
             }
             controlAgentLogService.saveControlLog(
-                    payload.getOrDefault("userId", "0"),
-                    payload.getOrDefault("agentId", deviceId),
+                    parseLong(payload.getOrDefault("userId", "0")),
+                    parseLong(payload.getOrDefault("agentId", deviceId)),
                     JSON.toJSONString(payload),
                     System.currentTimeMillis()
             );
@@ -118,5 +118,13 @@ public class ControlConsoleServiceImpl implements ControlConsoleService {
         } catch (Exception ignore) {
         }
         return fallback;
+    }
+
+    private Long parseLong(String value) {
+        try {
+            return Long.parseLong(value);
+        } catch (Exception ignore) {
+            return null;
+        }
     }
 }

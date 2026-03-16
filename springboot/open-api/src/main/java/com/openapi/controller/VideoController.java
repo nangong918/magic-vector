@@ -49,9 +49,13 @@ public class VideoController {
         if (!StringUtils.hasText(uploadId) || !StringUtils.hasText(userId)) {
             return BaseResponse.LogBackError(CommonExceptions.PARAM_ERROR);
         }
+        Long userIdLong = parseLong(userId);
+        if (userIdLong == null) {
+            return BaseResponse.LogBackError(CommonExceptions.PARAM_ERROR);
+        }
         VideoUploadChunkRequest request = new VideoUploadChunkRequest();
         request.setUploadId(uploadId);
-        request.setUserId(userId);
+        request.setUserId(userIdLong);
         request.setChunkIndex(chunkIndex);
         request.setOffset(offset);
         return BaseResponse.getResponseEntitySuccess(videoService.uploadChunk(request, chunkFile));
@@ -70,20 +74,40 @@ public class VideoController {
             @RequestParam(value = "page", required = false) Integer page,
             @RequestParam(value = "size", required = false) Integer size
     ) {
-        return BaseResponse.getResponseEntitySuccess(videoService.getCloudList(userId, page, size));
+        Long userIdLong = parseLong(userId);
+        if (userIdLong == null) {
+            return BaseResponse.LogBackError(CommonExceptions.PARAM_ERROR);
+        }
+        return BaseResponse.getResponseEntitySuccess(videoService.getCloudList(userIdLong, page, size));
     }
 
     @GetMapping("/cloud/play-url")
     public BaseResponse<VideoPlayUrlResponse> getCloudPlayUrl(
             @RequestParam("videoId") String videoId
     ) {
-        return BaseResponse.getResponseEntitySuccess(videoService.getPlayUrl(videoId));
+        Long videoIdLong = parseLong(videoId);
+        if (videoIdLong == null) {
+            return BaseResponse.LogBackError(CommonExceptions.PARAM_ERROR);
+        }
+        return BaseResponse.getResponseEntitySuccess(videoService.getPlayUrl(videoIdLong));
     }
 
     @GetMapping("/cloud/download-url")
     public BaseResponse<VideoDownloadUrlResponse> getCloudDownloadUrl(
             @RequestParam("videoId") String videoId
     ) {
-        return BaseResponse.getResponseEntitySuccess(videoService.getDownloadUrl(videoId));
+        Long videoIdLong = parseLong(videoId);
+        if (videoIdLong == null) {
+            return BaseResponse.LogBackError(CommonExceptions.PARAM_ERROR);
+        }
+        return BaseResponse.getResponseEntitySuccess(videoService.getDownloadUrl(videoIdLong));
+    }
+
+    private Long parseLong(String value) {
+        try {
+            return Long.parseLong(value);
+        } catch (Exception ignore) {
+            return null;
+        }
     }
 }

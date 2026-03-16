@@ -13,31 +13,31 @@ import java.util.List;
  */
 public interface ChatMessageService {
 
-    Long insertOne(@NotNull String agentId, @NotNull String message, boolean isUser, String userId);
+    Long insertOne(@NotNull Long agentId, @NotNull String message, boolean isUser, Long userId);
 
     Long insertOne(@NotNull ChatMessageDo chatMessageDo);
 
     List<ChatMessageDo> getMessagesByAgentIdDeadlineLimit(
-            @NotNull String agentId,
+            @NotNull Long agentId,
             @NotNull LocalDateTime deadline,
             @NotNull Integer limit
     );
 
     List<ChatMessageDo> getMessagesBeforeAnchorLimit(
-            @NotNull String agentId,
+            @NotNull Long agentId,
             @NotNull Long anchorTimestamp,
             @NotNull Integer limit
     );
 
     List<ChatMessageDo> getMessagesAfterAnchorLimit(
-            @NotNull String agentId,
+            @NotNull Long agentId,
             @NotNull Long anchorTimestamp,
             @NotNull Integer limit
     );
 
     @NotNull
     @Cacheable(value = "agentMessages", key = "#agentId")
-    List<ChatMessageDo> getLast10Messages(@NotNull String agentId);
+    List<ChatMessageDo> getLast10Messages(@NotNull Long agentId);
 
-    @NotNull List<List<ChatMessageDo>> getLast10MessagesByAgentIds(@NotNull List<String> agentIds);
+    @NotNull List<List<ChatMessageDo>> getLast10MessagesByAgentIds(@NotNull List<Long> agentIds);
 }

@@ -10,10 +10,10 @@ import org.springframework.data.annotation.Id;
 @Data
 public class AgentDo {
     @Id
-    private String id = String.valueOf(IdUtil.getSnowflake().nextId());
+    private Long id = IdUtil.getSnowflake().nextId();
     private String name;
     private String description;
-    private String userId;
+    private Long userId;
     @Nullable
-    private String ossId;
+    private Long ossId;
 }

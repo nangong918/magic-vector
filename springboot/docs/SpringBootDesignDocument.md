@@ -1,6 +1,122 @@
 **SpringBootDesignDocument**
 ====
 
+
+## ID 类型边界规范（2026-03 重构）
+
+### 设计目标
+* HTTP 传输层统一使用 `String` 表达主键（避免不同端对 64 位整数解析差异）。
+* SpringBoot 内部（Controller 转换后、Service、Mapper、Do）统一使用 `Long`。
+* 禁止在 Service/Mapper/Do 内保留 DB 主键 `String` 类型。
+
+### 边界规则
+* **Controller 入参**：`@RequestParam/@RequestBody` 可接收 `String userId/agentId/videoId/...`。
+* **Controller 立即转换**：统一 `parseLong`，失败即返回 `C_10001` 参数错误。
+* **Service/Mapper/Do**：统一 `Long` 类型，不再做字符串转数值。
+* **Controller 出参**：可继续返回 `String`（兼容旧端）或返回 `Long`；本期保持现有对外契约不破坏。
+
+### 受影响数据链路
+* Agent：`agent.id/user_id`
+* ChatMessage：`chat_message.id/agent_id/user_id`
+* ControlAgentLog：`agent_log.id/user_id/agent_id`
+* VideoRecord：`video_record.id/user_id`
+* Oss：`oss.id` 及引用字段 `oss_id`
+
+
+## OSS 存储模块重构（minio-starter v2）
+
+### 重构目标
+* 删除旧 `ao` 多层结果对象，改为精简、可批量、可幂等的统一接口。
+* 保留并复用 `MinioConfig`、`MinioUtils`；其他旧实现全部重构。
+* 支持上传 `MultipartFile`（图片/语音/mp4 等）并获取访问 URL。
+* 支持批量上传结果回执（成功/失败逐条返回）。
+* 支持分页查询用户文件（时间/大小排序，offset/size）。
+* 支持上传幂等（已传文件直接命中，不重复写对象）。
+
+### 数据模型设计
+本期采用**单表增强**而不是新增 `user_oss`：
+* 当前业务是“一个对象归属一个用户”，无多对多共享需求。
+* 用单表可减少一次 join，简化写路径和查询路径。
+* 如后续出现“共享文件/协作空间”再拆 `oss + user_oss`。
+
+建议 `oss` 增强字段：
+* `id BIGINT PK`
+* `user_id BIGINT NOT NULL`
+* `bucket_name VARCHAR(64) NOT NULL`
+* `object_name VARCHAR(512) NOT NULL`（MinIO 对象键）
+* `origin_file_name VARCHAR(255) NOT NULL`
+* `content_type VARCHAR(128) NULL`
+* `file_size BIGINT NOT NULL`
+* `idempotent_key VARCHAR(128) NOT NULL`（唯一）
+* `created_at BIGINT NOT NULL`
+* `updated_at BIGINT NOT NULL`
+
+索引建议：
+* `uk_idempotent_key(idempotent_key)`：幂等唯一键
+* `idx_user_created(user_id, created_at desc)`
+* `idx_user_size(user_id, file_size desc)`
+
+### 幂等策略
+* 客户端可传 `idempotentKey`；未传时服务端生成。
+* 生成规则（默认）：`sha256(userId + "_" + originFileName + "_" + fileSize)`。
+* 若命中同 `idempotent_key`：不重复上传 MinIO，直接返回已有文件记录（标记 `duplicated=true`）。
+* 说明：你提到的 `userId_文件名` 可工作，但重名覆盖风险高；本设计加上 `fileSize` 并建议后续可升级为内容 hash（更稳）。
+
+### 接口能力（服务层）
+* `uploadMultipartFiles(userId, bucketName, files, options)`：批量上传，逐条结果返回。
+* `listUserFiles(userId, sortBy, order, offset, size)`：分页查询。
+* `getFileUrlsByIds(fileIds)`：批量取 URL（顺序对齐输入）。
+* `deleteFileById(fileId)`：删除对象与记录。
+
+### URL 获取与网关策略
+* 默认返回 MinIO 预签名 URL（`MinioUtils.getPresignedObjectUrl`）。
+* 保留已有 gateway 代理注释与配置，不删除历史可行实现。
+* TODO：项目复杂化后接入 SpringGateway/Nginx 反代，统一外网域名与鉴权。
+
+### 批量上传回执模型（精简版）
+* `BatchUploadResult`
+  * `successCount`
+  * `failCount`
+  * `items: List<UploadItemResult>`
+* `UploadItemResult`
+  * `originFileName`
+  * `success`
+  * `duplicated`
+  * `fileId`
+  * `url`
+  * `message`
+
+### 云端视频分页查询
+* 统一走 `listUserFiles(userId, sortBy, order, offset, size)`。
+* `sortBy` 支持：`createdAt`、`fileSize`。
+* Android 0~20/21~40 场景直接映射 `offset/size`。
+
+### m3u8 / FFmpeg 方案（本期 TODO）
+* 当前先支持 mp4 原文件上传和 URL 下发。
+* TODO 异步转码流程：
+  1. 上传完成写 `oss` 记录，状态 `UPLOADED`
+  2. 投递异步任务（线程池/队列）
+  3. `ffmpeg` 从本地临时文件或对象存储下载源文件
+  4. 执行转码命令，输出 `index.m3u8 + ts 分片`
+  5. 回传 MinIO，更新状态为 `TRANSCODED`
+* 常用命令示例：
+```bash
+ffmpeg -i input.mp4 \
+  -codec: copy \
+  -start_number 0 \
+  -hls_time 6 \
+  -hls_list_size 0 \
+  -f hls index.m3u8
+```
+* 兼容性更高（重编码）示例：
+```bash
+ffmpeg -i input.mp4 \
+  -c:v libx264 -c:a aac \
+  -hls_time 6 -hls_playlist_type vod \
+  -hls_segment_filename "seg_%05d.ts" \
+  index.m3u8
+```
+
 ## 文档目标
 
 本文件用于描述 SpringBoot 服务端的模块化架构设计，不使用时间线日志体例。

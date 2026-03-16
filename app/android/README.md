@@ -7,7 +7,7 @@
 
 ## 基本框架
 
-[todo.md](../todo.md)
+[todo.md](../../todo.md)
 
 设计模式选用：MVC？MVP，MVVM？MVI？
 目前选用的框架是MVVM

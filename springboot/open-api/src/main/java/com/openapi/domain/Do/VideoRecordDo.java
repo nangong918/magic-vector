@@ -7,7 +7,7 @@ import org.springframework.data.annotation.Id;
 public class VideoRecordDo {
     @Id
     private Long id;
-    private String userId;
+    private Long userId;
     private String objectName;
     private String hlsObjectName;
     private String status;

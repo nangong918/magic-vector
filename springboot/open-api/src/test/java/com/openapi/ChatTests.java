@@ -348,7 +348,7 @@ public class ChatTests {
 
     @Test
     public void chatRealtimeContextTest(){
-        final String agentId = "1979114877567455232";
+        final Long agentId = 1979114877567455232L;
         AgentAo agentAo = agentService.getAgentById(agentId);
         if (agentAo == null || agentAo.getAgentId() == null){
             throw new AppException(AgentExceptions.AGENT_NOT_EXIST);
@@ -381,7 +381,7 @@ public class ChatTests {
 
             List<Message> historyMessages = chatMessageConverter.chatMessageDoListToMessageList(sortedMessages);
             for (Message message : historyMessages) {
-                chatMemory.add(agentId, message);
+                chatMemory.add(String.valueOf(agentId), message);
             }
         }
 

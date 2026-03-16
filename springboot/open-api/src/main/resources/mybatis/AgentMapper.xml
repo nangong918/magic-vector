@@ -117,11 +117,11 @@
             </foreach>
         </if>
     </select>
-    <select id="selectAllIds" resultType="java.lang.String">
+    <select id="selectAllIds" resultType="java.lang.Long">
         select id from
         <include refid="table"/>
     </select>
-    <select id="selectAllByUserId" resultType="java.lang.String">
+    <select id="selectAllByUserId" resultType="java.lang.Long">
         select id from
         <include refid="table"/>
         where user_id = #{userId}

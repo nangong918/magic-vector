@@ -19,9 +19,9 @@ public interface AgentMapper {
     Integer insertBatch(@Param("list") List<AgentDo> agentDos);
 
     /// 删
-    Integer deleteById(String id);
+    Integer deleteById(Long id);
 
-    Integer deleteByIds(@Param("list") List<String> ids);
+    Integer deleteByIds(@Param("list") List<Long> ids);
 
     /// 改
     Integer update(AgentDo agentDo);
@@ -29,12 +29,12 @@ public interface AgentMapper {
     Integer updateBatch(@Param("list") List<AgentDo> agentDos);
 
     /// 查
-    AgentDo selectById(String id);
+    AgentDo selectById(Long id);
 
-    List<AgentDo> selectByIds(@Param("list") List<String> ids);
+    List<AgentDo> selectByIds(@Param("list") List<Long> ids);
 
-    List<String> selectAllIds();
+    List<Long> selectAllIds();
 
-    List<String> selectAllByUserId(String userId);
+    List<Long> selectAllByUserId(Long userId);
 
 }

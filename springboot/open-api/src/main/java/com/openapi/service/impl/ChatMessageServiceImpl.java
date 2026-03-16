@@ -33,7 +33,7 @@ public class ChatMessageServiceImpl implements ChatMessageService {
      * @return 消息Id
      */
     @Override
-    public Long insertOne(@NotNull String agentId, @NotNull String message, boolean isUser, String userId) {
+    public Long insertOne(@NotNull Long agentId, @NotNull String message, boolean isUser, Long userId) {
         ChatMessageDo chatMessageDo = new ChatMessageDo();
         chatMessageDo.setAgentId(agentId);
         chatMessageDo.setContent(message);
@@ -59,7 +59,7 @@ public class ChatMessageServiceImpl implements ChatMessageService {
      */
     @Override
     public List<ChatMessageDo> getMessagesByAgentIdDeadlineLimit(
-            @NotNull String agentId,
+            @NotNull Long agentId,
             @NotNull LocalDateTime deadline,
             @NotNull Integer limit
     ){
@@ -68,7 +68,7 @@ public class ChatMessageServiceImpl implements ChatMessageService {
 
     @Override
     public List<ChatMessageDo> getMessagesBeforeAnchorLimit(
-            @NotNull String agentId,
+            @NotNull Long agentId,
             @NotNull Long anchorTimestamp,
             @NotNull Integer limit
     ) {
@@ -77,7 +77,7 @@ public class ChatMessageServiceImpl implements ChatMessageService {
 
     @Override
     public List<ChatMessageDo> getMessagesAfterAnchorLimit(
-            @NotNull String agentId,
+            @NotNull Long agentId,
             @NotNull Long anchorTimestamp,
             @NotNull Integer limit
     ) {
@@ -92,7 +92,7 @@ public class ChatMessageServiceImpl implements ChatMessageService {
     @Cacheable(value = "agentMessages", key = "#agentId")
     @NotNull
     @Override
-    public List<ChatMessageDo> getLast10Messages(@NotNull String agentId){
+    public List<ChatMessageDo> getLast10Messages(@NotNull Long agentId){
         return chatMessageMapper.getMessagesByAgentIdDeadlineLimit(agentId, LocalDateTime.now(), ModelConstant.MEMORY_CONTEXT_LENGTH);
     }
 
@@ -103,7 +103,7 @@ public class ChatMessageServiceImpl implements ChatMessageService {
      */
     @NotNull
     @Override
-    public List<List<ChatMessageDo>> getLast10MessagesByAgentIds(@NotNull List<String> agentIds){
+    public List<List<ChatMessageDo>> getLast10MessagesByAgentIds(@NotNull List<Long> agentIds){
         if (agentIds.isEmpty()){
             return new ArrayList<>();
         }
@@ -114,7 +114,7 @@ public class ChatMessageServiceImpl implements ChatMessageService {
         }
 
         List<List<ChatMessageDo>> chatMessageDosList = new ArrayList<>();
-        for (String agentId : agentIds) {
+        for (Long agentId : agentIds) {
             chatMessageDosList.add(
                     chatMessageDos.stream()
                             .filter(chatMessageDo -> chatMessageDo.getAgentId().equals(agentId))

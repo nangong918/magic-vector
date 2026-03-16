@@ -12,10 +12,10 @@ public interface VideoRecordMapper {
 
     Integer update(VideoRecordDo videoRecordDo);
 
-    VideoRecordDo getById(@Param("id") String id);
+    VideoRecordDo getById(@Param("id") Long id);
 
     List<VideoRecordDo> queryByUserId(
-            @Param("userId") String userId,
+            @Param("userId") Long userId,
             @Param("offset") Integer offset,
             @Param("size") Integer size
     );

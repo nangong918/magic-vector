@@ -18,7 +18,7 @@ public class MapperTests {
 
     @Test
     public void userExistTest(){
-        log.info("用户: {}, 是否存在：{}", "test_user", userMapper.selectById("test_user"));
-        log.info("用户: {}, 是否存在：{}", "test_user", userService.checkUserExistById("test_user"));
+        log.info("用户: {}, 是否存在：{}", "test_user", userMapper.selectById(123L));
+        log.info("用户: {}, 是否存在：{}", "test_user", userService.checkUserExistById(345L));
     }
 }

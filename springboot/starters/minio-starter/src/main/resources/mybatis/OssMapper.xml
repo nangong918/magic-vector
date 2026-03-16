@@ -8,7 +8,7 @@
     </sql>
 
     <sql id="columns">
-        id, bucket_name, object_name
+        id, user_id, bucket_name, object_name, origin_file_name, content_type, file_size, idempotent_key, created_at, updated_at
     </sql>
 
     <insert id="insert">
@@ -18,80 +18,9 @@
         <include refid="columns"/>
         )
         values(
-        #{id}, #{bucketName}, #{objectName}
+        #{id}, #{userId}, #{bucketName}, #{objectName}, #{originFileName}, #{contentType}, #{fileSize}, #{idempotentKey}, #{createdAt}, #{updatedAt}
         )
     </insert>
-    <insert id="insertBatch">
-        <if test="list != null and list.size() > 0">
-            insert into
-            <include refid="table"/>
-            (
-            <include refid="columns"/>
-            )
-            values
-            <foreach item="item" index="index" collection="list" separator="," open="(" close=")">
-                (
-                #{item.id}, #{item.bucketName}, #{item.objectName}
-                )
-            </foreach>
-        </if>
-    </insert>
-
-    <update id="update">
-        update
-        <include refid="table"/>
-        set
-        <if test="id != null">
-            id = #{id},
-        </if>
-        <if test="bucketName != null">
-            bucket_name = #{bucketName},
-        </if>
-        <if test="objectName != null">
-            object_name = #{objectName},
-        </if>
-        where id = #{id}
-    </update>
-    <update id="updateBatch">
-        <if test="list != null and list.size() > 0">
-            <foreach collection="list" item="ossDo" separator=";">
-                update
-                <include refid="table"/>
-                set
-                <if test="ossDo.id != null">
-                    id = #{ossDo.id},
-                </if>
-                <if test="ossDo.bucketName != null">
-                    bucket_name = #{ossDo.bucketName},
-                </if>
-                <if test="ossDo.objectName != null">
-                    object_name = #{ossDo.objectName},
-                </if>
-                where id = #{ossDo.id}
-            </foreach>
-        </if>
-    </update>
-
-    <delete id="delete">
-        delete from
-        <include refid="table"/>
-        where id = #{id}
-    </delete>
-    <delete id="deleteByObjectNameAndBucketName">
-        delete from
-        <include refid="table"/>
-        where object_name = #{objectName} and bucket_name = #{bucketName}
-    </delete>
-    <delete id="deleteBatch">
-        <if test="list != null and list.size() > 0">
-            delete from
-            <include refid="table"/>
-            where id in
-            <foreach item="item" index="index" collection="list" separator="," open="(" close=")">
-                #{item}
-            </foreach>
-        </if>
-    </delete>
 
     <select id="getById" resultType="com.minio.domain.Do.OssDo">
         select
@@ -100,13 +29,7 @@
         <include refid="table"/>
         where id = #{id}
     </select>
-    <select id="getByObjectNameAndBucketName" resultType="com.minio.domain.Do.OssDo">
-        select
-        <include refid="columns"/>
-        from
-        <include refid="table"/>
-        where object_name = #{objectName} and bucket_name = #{bucketName}
-    </select>
+
     <select id="getByIds" resultType="com.minio.domain.Do.OssDo">
         <if test="list != null and list.size() > 0">
             select
@@ -119,4 +42,38 @@
             </foreach>
         </if>
     </select>
+
+    <select id="getByIdempotentKey" resultType="com.minio.domain.Do.OssDo">
+        select
+        <include refid="columns"/>
+        from
+        <include refid="table"/>
+        where idempotent_key = #{idempotentKey}
+    </select>
+
+    <select id="queryByUserIdOrderByCreatedAt" resultType="com.minio.domain.Do.OssDo">
+        select
+        <include refid="columns"/>
+        from
+        <include refid="table"/>
+        where user_id = #{userId}
+        order by created_at desc, id desc
+        limit #{offset}, #{size}
+    </select>
+
+    <select id="queryByUserIdOrderByFileSize" resultType="com.minio.domain.Do.OssDo">
+        select
+        <include refid="columns"/>
+        from
+        <include refid="table"/>
+        where user_id = #{userId}
+        order by file_size desc, id desc
+        limit #{offset}, #{size}
+    </select>
+
+    <delete id="deleteById">
+        delete from
+        <include refid="table"/>
+        where id = #{id}
+    </delete>
 </mapper>

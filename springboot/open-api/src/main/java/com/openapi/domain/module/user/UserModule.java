@@ -11,5 +11,5 @@ public class UserModule {
     private Long userId;
     private String account;
     private String name;
-    private String avatarOssId;
+    private Long avatarOssId;
 }

@@ -7,8 +7,8 @@ import org.springframework.data.annotation.Id;
 public class ControlAgentLogDo {
     @Id
     private Long id;
-    private String userId;
-    private String agentId;
+    private Long userId;
+    private Long agentId;
     private Long logTime;
     private String logContent;
 }

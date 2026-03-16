@@ -1,8 +1,9 @@
 package com.openapi.service.impl;
 
 import cn.hutool.core.util.IdUtil;
-import com.minio.domain.ao.FileOptionResult;
-import com.minio.service.MinioService;
+import com.minio.domain.dto.BatchUploadResult;
+import com.minio.domain.dto.UploadItemResult;
+import com.minio.service.OssService;
 import com.minio.utils.MinioUtils;
 import com.openapi.component.manager.video.VideoUploadSessionManager;
 import com.openapi.domain.Do.VideoRecordDo;
@@ -36,7 +37,7 @@ public class VideoServiceImpl implements VideoService {
 
     private final VideoUploadSessionManager sessionManager;
     private final VideoRecordMapper videoRecordMapper;
-    private final MinioService minioService;
+    private final OssService ossService;
     private final MinioUtils minioUtils;
 
     @Override
@@ -66,7 +67,7 @@ public class VideoServiceImpl implements VideoService {
             response.setUploadedOffset(0L);
             return response;
         }
-        if (!StringUtils.hasText(session.getUserId()) || !session.getUserId().equals(request.getUserId())) {
+        if (session.getUserId() == null || !session.getUserId().equals(request.getUserId())) {
             response.setAccepted(Boolean.FALSE);
             response.setMessage("session user mismatch");
             response.setUploadedOffset(session.getUploadedOffset());
@@ -106,10 +107,13 @@ public class VideoServiceImpl implements VideoService {
         }
         try {
             File tempFile = session.getTempFile();
-            FileOptionResult uploadResult = minioService.uploadFiles(List.of(tempFile), VIDEO_BUCKET);
-            String objectName = uploadResult.getSuccessFiles() == null || uploadResult.getSuccessFiles().isEmpty()
+            BatchUploadResult uploadResult = ossService.uploadLocalFiles(List.of(tempFile), session.getUserId(), VIDEO_BUCKET);
+            UploadItemResult first = uploadResult.getItems() == null || uploadResult.getItems().isEmpty()
+                    ? null
+                    : uploadResult.getItems().get(0);
+            String objectName = first == null || !first.isSuccess()
                     ? ""
-                    : uploadResult.getSuccessFiles().get(0).getObjectName();
+                    : resolveObjectName(first.getFileId());
 
             VideoRecordDo record = new VideoRecordDo();
             record.setId(IdUtil.getSnowflakeNextId());
@@ -141,7 +145,7 @@ public class VideoServiceImpl implements VideoService {
     }
 
     @Override
-    public VideoCloudListResponse getCloudList(String userId, Integer page, Integer size) {
+    public VideoCloudListResponse getCloudList(Long userId, Integer page, Integer size) {
         int fixedPage = page == null || page <= 0 ? 1 : page;
         int fixedSize = size == null || size <= 0 ? 20 : Math.min(size, 100);
         int offset = (fixedPage - 1) * fixedSize;
@@ -163,7 +167,7 @@ public class VideoServiceImpl implements VideoService {
     }
 
     @Override
-    public VideoPlayUrlResponse getPlayUrl(String videoId) {
+    public VideoPlayUrlResponse getPlayUrl(Long videoId) {
         VideoPlayUrlResponse response = new VideoPlayUrlResponse();
         VideoRecordDo record = videoRecordMapper.getById(videoId);
         if (record == null) {
@@ -179,7 +183,7 @@ public class VideoServiceImpl implements VideoService {
     }
 
     @Override
-    public VideoDownloadUrlResponse getDownloadUrl(String videoId) {
+    public VideoDownloadUrlResponse getDownloadUrl(Long videoId) {
         VideoDownloadUrlResponse response = new VideoDownloadUrlResponse();
         VideoRecordDo record = videoRecordMapper.getById(videoId);
         if (record == null) {
@@ -201,5 +205,13 @@ public class VideoServiceImpl implements VideoService {
             log.warn("[video] presigned url failed, object={}", objectName, e);
             return "";
         }
+    }
+
+    private String resolveObjectName(Long fileId) {
+        if (fileId == null) {
+            return "";
+        }
+        var ossDo = ossService.getFileInfoByFileId(fileId);
+        return ossDo == null || ossDo.getObjectName() == null ? "" : ossDo.getObjectName();
     }
 }

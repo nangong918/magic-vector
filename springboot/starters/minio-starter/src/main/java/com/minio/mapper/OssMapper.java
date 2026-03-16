@@ -13,36 +13,25 @@ import java.util.List;
 @Mapper
 public interface OssMapper {
 
-    /// 增
-    // 单个增
-    Long insert(OssDo ossDo);
-    // 批量增
-    List<Long> insertBatch(@Param("list") List<OssDo> ossDos);
+    Integer insert(OssDo ossDo);
 
-    /// 删
-    // 删
-    void delete(String id);
-    // 根据 fileStorageName + bucketName 删除
-    void deleteByObjectNameAndBucketName(
-            @Param("objectName")String objectName,
-            @Param("bucketName")String bucketName
+    OssDo getById(Long id);
+
+    List<OssDo> getByIds(@Param("list") List<Long> ids);
+
+    OssDo getByIdempotentKey(@Param("idempotentKey") String idempotentKey);
+
+    List<OssDo> queryByUserIdOrderByCreatedAt(
+            @Param("userId") Long userId,
+            @Param("offset") Integer offset,
+            @Param("size") Integer size
     );
-    // 批量删
-    void deleteBatch(@Param("list") List<String> ids);
 
-    /// 改
-    // 单个改
-    void update(OssDo ossDo);
-    // 批量改
-    void updateBatch(@Param("list") List<OssDo> ossDos);
-
-    /// 查
-    // 根据id 查询
-    OssDo getById(String id);
-    // 根据fileStorageName + bucketName查询
-    OssDo getByObjectNameAndBucketName(
-            @Param("objectName")String objectName,
-            @Param("bucketName")String bucketName
+    List<OssDo> queryByUserIdOrderByFileSize(
+            @Param("userId") Long userId,
+            @Param("offset") Integer offset,
+            @Param("size") Integer size
     );
-    List<OssDo> getByIds(@Param("list") List<String> ids);
+
+    Integer deleteById(Long id);
 }

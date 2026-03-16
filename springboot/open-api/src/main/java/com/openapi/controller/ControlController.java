@@ -58,7 +58,20 @@ public class ControlController {
         if (!StringUtils.hasText(userId)) {
             return BaseResponse.LogBackError(CommonExceptions.PARAM_ERROR);
         }
-        ControlAgentLogResponse response = controlAgentLogService.queryLogs(userId, agentId, page, size);
+        Long userIdLong = parseLong(userId);
+        Long agentIdLong = StringUtils.hasText(agentId) ? parseLong(agentId) : null;
+        if (userIdLong == null || (StringUtils.hasText(agentId) && agentIdLong == null)) {
+            return BaseResponse.LogBackError(CommonExceptions.PARAM_ERROR);
+        }
+        ControlAgentLogResponse response = controlAgentLogService.queryLogs(userIdLong, agentIdLong, page, size);
         return BaseResponse.getResponseEntitySuccess(response);
+    }
+
+    private Long parseLong(String value) {
+        try {
+            return Long.parseLong(value);
+        } catch (Exception ignore) {
+            return null;
+        }
     }
 }

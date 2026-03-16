@@ -34,8 +34,8 @@ public interface ChatMessageConverter {
         ChatMessageDo chatMessageDo = new ChatMessageDo();
 
         chatMessageDo.setId( response.getMessageId() );
-        chatMessageDo.setAgentId( response.getAgentId() );
-        chatMessageDo.setUserId( response.getUserId() );
+        chatMessageDo.setAgentId(Long.valueOf(response.getAgentId()));
+        chatMessageDo.setUserId(Long.valueOf(response.getUserId()));
         chatMessageDo.setContent( response.getContent() );
         chatMessageDo.setChatTimestamp( response.getTimestamp() );
         chatMessageDo.setRole( response.getRole() );
