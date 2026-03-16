@@ -17,7 +17,6 @@ import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.supervisorScope
-import kotlinx.coroutines.withContext
 
 class MessageListMviVm : ViewModel() {
 
@@ -258,8 +257,6 @@ sealed class MessageListEffect {
     data object OpenCreateAgent : MessageListEffect()
     data class OpenAgentEditor(val agentId: String) : MessageListEffect()
     data class NavigateToChat(val ao: MessageContactItemAo) : MessageListEffect()
-    data object NavigateToChatActivity : MessageListEffect()
     data class ShowToast(val message: String) : MessageListEffect()
-    data object RefreshNetworkData : MessageListEffect()
     data object RequestAudioPermission : MessageListEffect()
 }

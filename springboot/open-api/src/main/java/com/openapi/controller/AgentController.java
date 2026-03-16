@@ -142,7 +142,9 @@ public class AgentController {
             @RequestParam("userId") String userId
     ){
         // 参数校验
+        log.info("getAgentList userId: {}", userId);
         Long userIdLong = parseLong(userId);
+        log.info("getAgentList userIdLong: {}", userIdLong);
         if (userIdLong == null) {
             return BaseResponse.LogBackError(CommonExceptions.PARAM_ERROR);
         }
@@ -162,7 +164,9 @@ public class AgentController {
             @RequestParam("userId") String userId
     ){
         // 参数校验
+        log.info("getLastAgentChatList userId: {}", userId);
         Long userIdLong = parseLong(userId);
+        log.info("getLastAgentChatList userIdLong: {}", userIdLong);
         if (userIdLong == null) {
             return BaseResponse.LogBackError(CommonExceptions.PARAM_ERROR);
         }

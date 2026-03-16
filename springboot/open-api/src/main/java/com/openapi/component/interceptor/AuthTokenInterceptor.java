@@ -10,6 +10,7 @@ import com.openapi.service.AuthTokenService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import org.jetbrains.annotations.NotNull;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import org.springframework.web.servlet.HandlerInterceptor;
@@ -22,18 +23,18 @@ public class AuthTokenInterceptor implements HandlerInterceptor {
     private final AuthRouteProperties authRouteProperties;
 
     @Override
-    public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
+    public boolean preHandle(HttpServletRequest request, @NotNull HttpServletResponse response, @NotNull Object handler) throws Exception {
         String accessToken = request.getHeader(authRouteProperties.getAccessTokenHeader());
         String userIdStr = request.getHeader(authRouteProperties.getUserIdHeader());
         if (!StringUtils.hasText(accessToken) || !StringUtils.hasText(userIdStr)) {
-            writeError(response, CommonExceptions.PARAM_ERROR);
+            writeError(response, UserExceptions.NO_TOKEN_FORBIDDEN_CALL_API);
             return false;
         }
-        Long userId;
+        long userId;
         try {
             userId = Long.parseLong(userIdStr);
         } catch (NumberFormatException e) {
-            writeError(response, CommonExceptions.PARAM_ERROR);
+            writeError(response, UserExceptions.USER_NOT_EXIST);
             return false;
         }
         if (!authTokenService.verifyAccessToken(userId, accessToken)) {

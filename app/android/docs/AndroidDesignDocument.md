@@ -129,6 +129,24 @@ classDiagram
 * **Repository Pattern（接口隔离）**：`ApiRequest`/`Dao` 仅提供数据访问契约，减少上层对底层实现耦合。
 * **Structured Concurrency（结构化并发）**：ViewModel 统一 `viewModelScope`，Manager 统一 `CoroutineScope`，生命周期内自动取消。
 
+#### Token 校验拦截器设计（新增）
+* **功能职责**：为需要Token验证的API请求自动添加`user_id`和`access_token`请求头。
+* **需要Token验证的API路由**：
+  * `/agent/**`
+  * `/chat/**`
+  * `/control/**`
+  * `/video/**`
+  * `/user/password/update`
+* **无需Token验证的API路由**：
+  * `/user/login`
+  * `/user/register`
+  * `/user/token/verify`
+  * `/test/**`
+  * `/error`
+* **实现方式**：通过OkHttp Interceptor实现，从`UserManager`获取当前用户会话信息，自动添加请求头。
+
+TODO：token过期直接退出到登录页面
+
 #### DataSource-Repository-Caller 类图（静态 UML）
 ```mermaid
 classDiagram

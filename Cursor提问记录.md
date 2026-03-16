@@ -1063,6 +1063,18 @@ RemoteApiSource的getLastChat这个方法，我看了一下吗还是使用把res
 
 
 
+### Token验证
 
-
-
+你现在查看一下[application.yml](springboot/open-api/src/main/resources/application.yml)
+这里面包含Token校验的路由，
+然后我没加就出现了禁止调用api：
+```shell
+获取Agent列表失败
+com.magicvector.domain.exception.NetworkBusinessException: 业务异常: code=U_10005, msg=无Token禁止调用API
+at com.magicvector.dataSource.remote.RemoteApiSource$requestData$2.invokeSuspend(RemoteApiSource.kt:48)
+```
+现在需要解决这个问题：
+1. 阅读application的哪些api需要token验证
+2. [AndroidDesignDocument.md](app/android/docs/AndroidDesignDocument.md)这是Android设计文档，你先检查里面有没有token校验的设计，没有就加上设计
+   思考如何加上。
+3. 修改Android代码

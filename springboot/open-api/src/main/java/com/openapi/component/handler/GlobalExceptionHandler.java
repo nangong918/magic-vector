@@ -5,6 +5,7 @@ import com.openapi.domain.constant.error.CommonExceptions;
 import com.openapi.domain.dto.BaseResponse;
 import com.openapi.domain.exception.AppException;
 import jakarta.validation.ConstraintViolationException;
+import org.springframework.context.support.DefaultMessageSourceResolvable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -32,7 +33,7 @@ public class GlobalExceptionHandler {
     public ResponseEntity<BaseResponse<Object>> handleValidationExceptions(MethodArgumentNotValidException ex) {
         String message = ex.getBindingResult().getFieldErrors().stream()
                 .findFirst()
-                .map(it -> it.getDefaultMessage())
+                .map(DefaultMessageSourceResolvable::getDefaultMessage)
                 .orElse(CommonExceptions.PARAM_ERROR.getMessage());
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                 .body(BaseResponse.LogBackError(CommonExceptions.PARAM_ERROR.getCode(), message));

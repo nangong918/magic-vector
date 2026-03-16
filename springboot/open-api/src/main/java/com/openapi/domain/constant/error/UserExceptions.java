@@ -18,6 +18,8 @@ public enum UserExceptions implements ExceptionEnums {
     ACCOUNT_OR_PASSWORD_ERROR("U_10003", "账号或密码错误"),
     // Token无效
     ACCESS_TOKEN_INVALID("U_10004", "access_token无效"),
+    // 无Token禁止调用API
+    NO_TOKEN_FORBIDDEN_CALL_API("U_10005", "无Token禁止调用API"),
     ;
 
     private final String code;

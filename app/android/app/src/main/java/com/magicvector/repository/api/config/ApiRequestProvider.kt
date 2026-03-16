@@ -33,7 +33,7 @@ class ApiRequestProvider : BaseApiRequestProvider() {
                 // 超时拦截器
                 add(TimeoutInterceptor())
                 // 认证拦截器
-//                add(ApiRequestProvider.getAuthInterceptor(null))
+                add(AuthInterceptor())
                 // 日志拦截器
                 add(LoggingInterceptor(true))
             }
