@@ -30,6 +30,7 @@ import com.magicvector.domain.dto.http.response.VideoUploadInitResponse
 import com.magicvector.domain.exception.NetworkBusinessException
 import com.magicvector.domain.exception.NetworkParamIllegalException
 import com.magicvector.repository.api.ApiRequest
+import com.magicvector.utils.auth.AuthTokenHandler
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.MultipartBody
@@ -45,6 +46,9 @@ class RemoteApiSource(
     ): T = withContext(Dispatchers.IO) {
         val response = apiCall()
         if (BaseConstant.NetworkCode.SUCCESS_CODE != response.code) {
+            if (AuthTokenHandler.isTokenExpiredCode(response.code?: "")) {
+                AuthTokenHandler.handleTokenExpired(MainApplication.getApp())
+            }
             throw NetworkBusinessException(response.code, response.message)
         }
         response.data ?: throw NetworkBusinessException(response.code, emptyDataMessage)
