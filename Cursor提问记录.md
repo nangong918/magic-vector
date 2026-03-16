@@ -616,7 +616,7 @@ Setting的业务逻辑暂时就那两个很简单，我都懒得绘制任何功�
 
 ### Fix
 
-你修复的bug要写入到[CursorBug日志.md](CursorBug日志.md)
+你修复的bug要写入到[CursorBug日志.md](CursorBugLog.md)
 
 #### 1. 打开页面无法创建Agent
 你看[MainDesignDocument.md](MainDesignDocument.md)里面包含Android设计文档，
@@ -744,7 +744,7 @@ Setting的业务逻辑暂时就那两个很简单，我都懒得绘制任何功�
 再新增加账号的密码存储功能，也就是说你现在想需要修改Android的数据库设计，
 数据库要新增密码字段。这个密码只有登录成功才存储。下拉选择任何账号的时候如果这个账号存储了密码，那么自动填充。
 
-修复bug的记录要存储在[CursorBug日志.md](CursorBug日志.md)
+修复bug的记录要存储在[CursorBug日志.md](CursorBugLog.md)
 
 
 
@@ -1002,8 +1002,53 @@ RemoteApiSource的getLastChat这个方法，我看了一下吗还是使用把res
 
 
 
+### 修复Agent请求Bug
 
+我的Android路径是[app](app/android/app)
+我的springBoot路径是[open-api](springboot/open-api)
 
+我遇到一个问题，我发现是因为参数类型不配导致的，就是我之前设计的Do非常不合理，虽然数据库我已经修改了，
+但是我的实体类型忘记修改了。问题如下：
 
+`http://192.168.1.2:48888/agent/getList?userId=2032466744930009088`
+这是我的请求
+响应是：
+```json
+{
+  "code": "C_10001",
+  "message": "参数错误、不全"
+}
+```
+其实就是id应该是Long类型但是我给的是String类型。
+对了我说的是SpringBoot内部的Id，关于http传输必须使用String，因为考虑到不同的设备解析long类型的问题，
+有些设备32位可能解析不了long所以我在传输的时候必须是String然后在代码内部转为Long。
+
+现在你需要看哪些Do类型的Id还是String，然后全链路改到http的String转为long之前都应该改为Long。
+然后对应的Do，Mapper，Service都需要进行对应的修改。
+我要补充说的就是，有一点是Oss这个文件存储，这是我之前设计的，我感觉非常的冗余，
+你现在重新设计并将其设计加入到[SpringBootDesignDocument.md](springboot/docs/SpringBootDesignDocument.md)设计文档中。
+然后oss相关的代码在[minio](springboot/starters/minio-starter/src/main/java/com/minio)
+
+其中[MinioConfig.java](springboot/starters/minio-starter/src/main/java/com/minio/config/MinioConfig.java)
+这个是配置文件，
+[MinioUtils.java](springboot/starters/minio-starter/src/main/java/com/minio/utils/MinioUtils.java)
+这个是工具类。
+我现在的需求有：
+* 存储MultiPartFile文件、图片等资源；获取这个资源的url（可能还需要springgateway反向代理，我以前实现并成功过，但是目前的项目暂时比较简单就注释掉了。你可以写todo，暂时不用反向代理，然后我之前的注释不要删毕竟成功过了）
+  所以你要想办法通过什么方式来获取到这个资源，比如用户的头像，用户发的语音文件，用户上传的mp4视频文件等。可能要设计索引和数据库，如果不需要跟我说明原因，
+  如果需要就设计，当然我现在有一套代码，你可以看看是否合理。
+* 批量插入添加文件资源：例如user上传了很多mp4和图片资源，我有个表是user_oss，里面记录文件和user的关系以及文件索引。然后批量插入oss然后记录到这个表中。
+* 批量查询文件资源：就比如我现在打开app的云端视频页面，就会请求user按照时间或者大小排序的n~n+m个文件url比如0~20，21~40这种。
+* 文件幂等性，你设计一个方法来实现上传过的文件能查出来，我初步构想是`userId_文件名`
+* 支持对m3u8的传输或者将mp4转为m3u8，这个可能涉及FFmpeg，你可以只写todo，但是你要查询FFmpeg把mp4转为m3u8的实现方案，然后记录到设计文档。
+* 之前说到了文件幂等性，就必须有批量插入文件哪些成功了哪些失败了都要能响应给前端，所以我之前设计了[ao](springboot/starters/minio-starter/src/main/java/com/minio/domain/ao)
+  这一系列的Ao，但是我感觉太复杂了，没有意义，现在你可重构。
+
+关于重构oss：你可以只保留[MinioConfig.java](springboot/starters/minio-starter/src/main/java/com/minio/config/MinioConfig.java)和
+[MinioUtils.java](springboot/starters/minio-starter/src/main/java/com/minio/utils/MinioUtils.java)其他不用然后全部设计。
+没必要参考我之前设计的，我觉得还怪冗余的。
+
+设计完成写设计文档，然后文档设计完成之后才开始写代码。
+所以你现在两个任务，`重构id:string->long实现bug修复`，`重构oss`。
 
 
