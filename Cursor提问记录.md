@@ -1052,3 +1052,17 @@ RemoteApiSource的getLastChat这个方法，我看了一下吗还是使用把res
 所以你现在两个任务，`重构id:string->long实现bug修复`，`重构oss`。
 
 
+#### 补充
+我刚刚审核了一下代码，提出几点问题
+* 我看你重构了oss逻辑，还设计了oss的实体类型，但是我没看到你修改数据库啊？[magic_vector.sql](springboot/db/magic_vector.sql)
+  这里的设计需要修改，并且你怎么没有修改设计文档[SpringBootDesignDocument.md](springboot/docs/SpringBootDesignDocument.md)
+* 第二我认为你写的设计文档不合格，你不能作为日志写在设计文档顶部，你完全没有读懂设计文档。
+  你应该在下面新增一个模块叫做oss，然后里面协商你是怎么设计oss系统的，给出uml的类图，各个功能的活动图。
+* 第三我喊你写针对minio中的mp4文件通过ffmpeg转为m3u8的方案你怎么没给我，我都没喊你写代码，
+  你起码在设计文档的oss设计中给出方案吧，这个方案需要你去查阅资料并总结，最好给出我能参考的方案资料链接。最好还要Android如何播放m3u8的方案和资料链接，这个写在Android设计文档中。
+
+
+
+
+
+

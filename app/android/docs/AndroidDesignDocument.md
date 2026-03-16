@@ -1256,6 +1256,42 @@ gantt
   * 本地视频播放（MP4）
   * 本地视频上传云端（支持断点续传、下载）
 
+#### m3u8 播放方案（新增）
+* 播放内核：采用 `androidx.media3 ExoPlayer`，统一支持 m3u8（HLS）和本地 mp4。
+* 播放流程：
+  1. 页面请求 `GET /video/cloud/play-url` 获取 m3u8 地址（预签名 URL 或网关 URL）。
+  2. 使用 `MediaItem.fromUri(playUrl)` 构建媒体源并 `player.prepare()`。
+  3. 监听 `Player.Listener`，根据 `STATE_BUFFERING/STATE_READY/STATE_ENDED` 更新 UI。
+  4. 播放失败时按错误类型重试（网络超时可指数退避重试，鉴权失败直接刷新 URL）。
+* URL 过期策略：
+  * 如果返回的是短时预签名 URL，播放失败且错误为 403/401 时，先重新请求播放地址再恢复播放。
+  * 预留 TODO：接入网关后改为稳定播放 URL，减少频繁换签。
+* 缓冲与体验策略：
+  * 默认允许首屏缓冲后起播，弱网情况下优先保证连续播放而不是强实时。
+  * 列表页仅预加载封面和元数据，不预拉视频流，避免占用带宽。
+
+#### m3u8 播放活动图（新增）
+```mermaid
+flowchart TD
+    A[进入云视频页面] --> B[请求 /video/cloud/play-url]
+    B --> C{返回 URL 成功?}
+    C -- 否 --> D[提示获取播放地址失败]
+    C -- 是 --> E[ExoPlayer setMediaItem + prepare]
+    E --> F{播放器状态}
+    F -- BUFFERING --> G[显示缓冲态]
+    F -- READY --> H[开始播放]
+    F -- ENDED --> I[显示播放完成]
+    F -- ERROR --> J{鉴权过期?}
+    J -- 是 --> K[重新请求 play-url 并重试]
+    J -- 否 --> L[提示播放失败并允许手动重试]
+```
+
+#### m3u8 播放参考资料（新增）
+* [Android Media3 ExoPlayer HLS](https://developer.android.com/media/media3/exoplayer/hls)
+* [ExoPlayer HlsMediaSource.Factory](https://developer.android.com/reference/androidx/media3/exoplayer/hls/HlsMediaSource.Factory)
+* [ExoPlayer Player.Listener](https://developer.android.com/reference/androidx/media3/common/Player.Listener)
+* [RFC 8216 HTTP Live Streaming](https://datatracker.ietf.org/doc/html/rfc8216)
+
 #### UI/交互设计
 * Mine 首页只保留导航入口，不承载 Setting/Video 业务面板。
 * `ComposeMineSettingActivity` 承载 Setting 业务，页面 MVI 由 `ComposeMineSettingVm` 管理。
