@@ -1,16 +1,14 @@
 package com.magicvector.viewModel.activity
 
 import android.content.ComponentName
-import android.content.Context
 import android.content.Context.BIND_AUTO_CREATE
 import android.content.Intent
 import android.content.ServiceConnection
 import android.graphics.Bitmap
 import android.util.Log
 import androidx.compose.runtime.Stable
-import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.MutableLiveData
-import androidx.lifecycle.application
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.core.baseutil.file.FileUtil
 import com.data.domain.constant.BaseConstant
@@ -41,11 +39,12 @@ import okhttp3.RequestBody
 import java.io.File
 import java.lang.ref.WeakReference
 
-class ComposeAgentEmojiVm : AndroidViewModel(application = MainApplication.getApp()) {
+class ComposeAgentEmojiVm : ViewModel() {
 
     companion object {
         val TAG: String = ComposeAgentEmojiVm::class.java.name
         private val api = MainApplication.getRemoteApiSource()
+        private val application = MainApplication.getApp()
         private const val EYE_RESET_DELAY_MS = 2000L
     }
 

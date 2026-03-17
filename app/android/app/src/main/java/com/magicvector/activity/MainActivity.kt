@@ -8,7 +8,6 @@ import android.content.ServiceConnection
 import android.os.Bundle
 import android.os.IBinder
 import android.util.Log
-import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
@@ -124,7 +123,7 @@ class MainActivity : BaseComponentActivity() {
 
     private fun openChatPage(ao: MessageContactItemAo) {
         val intentAo = ChatIntentAo().apply { this.ao = ao }
-        val intent = Intent(this, ComposeChatActivity::class.java).apply {
+        val intent = Intent(this, ComposeAgentChatActivity::class.java).apply {
             putExtra(ChatIntentAo::class.simpleName, intentAo)
         }
         startActivity(intent)
