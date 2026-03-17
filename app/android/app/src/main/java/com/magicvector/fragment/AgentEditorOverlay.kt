@@ -24,6 +24,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.magicvector.viewModel.activity.AgentEditorMode
 import com.magicvector.viewModel.activity.AgentEditorState
@@ -106,5 +107,134 @@ fun AgentEditorOverlay(
                 CircularProgressIndicator()
             }
         }
+    }
+}
+
+
+
+
+@Preview(showBackground = true, showSystemUi = true)
+@Composable
+fun PreviewAgentEditorOverlayCreateMode() {
+    // 创建创建模式的示例状态
+    val sampleState = AgentEditorState(
+        isVisible = true,
+        mode = AgentEditorMode.CREATE,
+        name = "客服助手",
+        description = "你是一个友好的客服助手，负责解答用户关于我们产品的咨询。",
+        isLoading = false,
+        isSubmitting = false
+    )
+
+    // 使用 MaterialTheme 包装以确保正确样式
+    MaterialTheme {
+        AgentEditorOverlay(
+            state = sampleState,
+            onNameChange = {},
+            onDescriptionChange = {},
+            onSubmit = {},
+            onDelete = {},
+            onClose = {}
+        )
+    }
+}
+
+@Preview(showBackground = true, showSystemUi = true)
+@Composable
+fun PreviewAgentEditorOverlayEditMode() {
+    // 创建编辑模式的示例状态
+    val sampleState = AgentEditorState(
+        isVisible = true,
+        mode = AgentEditorMode.EDIT,
+        name = "技术支持助手",
+        description = "你是一个专业的技术支持专家，帮助用户解决技术问题。",
+        isLoading = false,
+        isSubmitting = false
+    )
+
+    MaterialTheme {
+        AgentEditorOverlay(
+            state = sampleState,
+            onNameChange = {},
+            onDescriptionChange = {},
+            onSubmit = {},
+            onDelete = {},
+            onClose = {}
+        )
+    }
+}
+
+@Preview(showBackground = true, showSystemUi = true)
+@Composable
+fun PreviewAgentEditorOverlayLoadingState() {
+    // 创建加载中的示例状态
+    val sampleState = AgentEditorState(
+        isVisible = true,
+        mode = AgentEditorMode.CREATE,
+        name = "正在加载的Agent",
+        description = "这是一个正在加载的示例描述",
+        isLoading = true,
+        isSubmitting = false
+    )
+
+    MaterialTheme {
+        AgentEditorOverlay(
+            state = sampleState,
+            onNameChange = {},
+            onDescriptionChange = {},
+            onSubmit = {},
+            onDelete = {},
+            onClose = {}
+        )
+    }
+}
+
+@Preview(showBackground = true, showSystemUi = true)
+@Composable
+fun PreviewAgentEditorOverlaySubmittingState() {
+    // 创建提交中的示例状态
+    val sampleState = AgentEditorState(
+        isVisible = true,
+        mode = AgentEditorMode.CREATE,
+        name = "提交中的Agent",
+        description = "这是一个正在提交的示例描述",
+        isLoading = false,
+        isSubmitting = true
+    )
+
+    MaterialTheme {
+        AgentEditorOverlay(
+            state = sampleState,
+            onNameChange = {},
+            onDescriptionChange = {},
+            onSubmit = {},
+            onDelete = {},
+            onClose = {}
+        )
+    }
+}
+
+@Preview(showBackground = true, showSystemUi = true)
+@Composable
+fun PreviewAgentEditorOverlayHiddenState() {
+    // 创建隐藏状态的示例
+    val sampleState = AgentEditorState(
+        isVisible = false,
+        mode = AgentEditorMode.CREATE,
+        name = "",
+        description = "",
+        isLoading = false,
+        isSubmitting = false
+    )
+
+    MaterialTheme {
+        AgentEditorOverlay(
+            state = sampleState,
+            onNameChange = {},
+            onDescriptionChange = {},
+            onSubmit = {},
+            onDelete = {},
+            onClose = {}
+        )
     }
 }

@@ -116,7 +116,7 @@ private fun HeaderProfile(userName: String) {
             }
             Column {
                 Text(text = "UserAccount", style = MaterialTheme.typography.titleLarge)
-                Text(text = if (userName.isBlank()) "Guest" else userName)
+                Text(text = userName.ifBlank { "Guest" })
             }
         }
     }

@@ -65,6 +65,7 @@ fun MainActivityScreen(
 ) {
     val backgroundColor = remember { Color(0xFFF6F7F8) }
     var refreshToken by remember { mutableLongStateOf(0L) }
+    // rememberUpdatedState: 副作用中安全使用最新回调
     val latestCreate = rememberUpdatedState(onCreateAgent)
     val latestEditor = rememberUpdatedState(onOpenAgentEditor)
     val networkState by networkStateFlow.collectAsState()

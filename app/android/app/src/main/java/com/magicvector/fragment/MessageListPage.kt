@@ -1,5 +1,6 @@
 package com.magicvector.fragment
 
+import android.annotation.SuppressLint
 import android.widget.Toast
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -54,11 +55,6 @@ fun MessageListScreen(
         viewModel.processIntent(MessageListIntent.Initialize)
     }
 
-    println("xxx::UI状态更新 - uiMode: ${state.uiMode}, messages.size: ${state.messages.size}, hasMessage: ${state.hasMessage}")
-    if (state.messages.isNotEmpty()) {
-        println("xxx::第一条消息: ${state.messages.first().vo.name}")
-    }
-
     LaunchedEffect(refreshToken) {
         if (refreshToken > 0L) {
             viewModel.processIntent(MessageListIntent.Refresh)
@@ -79,7 +75,6 @@ fun MessageListScreen(
                 is MessageListEffect.OpenAgentEditor -> {
                     onOpenAgentEditor(effect.agentId)
                 }
-                // 其他 effect 由父页面处理
                 else -> {}
             }
         }
@@ -92,7 +87,6 @@ fun MessageListScreen(
         modifier = modifier.fillMaxSize()
     ) {
         Box(modifier = Modifier.fillMaxSize()) {
-            println("xxx::MessageListUiMode: ${state.uiMode}")
             when (state.uiMode) {
                 MessageListUiMode.NO_AGENT -> {
                     EmptyStateView(
@@ -169,6 +163,7 @@ fun MessageListContent(
 }
 
 // 空状态组件
+@SuppressLint("ResourceType")
 @Composable
 fun EmptyStateView(
     modifier: Modifier = Modifier,
@@ -218,6 +213,7 @@ fun NoMessageStateView(
 }
 
 // 创建Agent的FAB
+@SuppressLint("ResourceType")
 @Composable
 fun CreateAgentFloatingButton(
     onClick: () -> Unit,

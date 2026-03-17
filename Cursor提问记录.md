@@ -1152,16 +1152,40 @@ Shutting down VM
 修复这个bug并记录到[CursorBugLog.md](CursorBugLog.md)
 
 
+### Agent模块人工审核代码
+
+MainActivity √
+MainVm √
+MainActivityScreen √
+MessageListScreen √
+MessageListContent √
+MessageListItem
+ChatService √
+ChatIntentAo
+NetworkManager √
+RealtimeChatController
+MessageListMviVm √
+AgentEditorOverlay √
+AgentEmojiFragment
+AgentTextChatFragment
+
+todo：修改view展示数据结构
+
+我审核了一版本的Agent模块人工审核代码
+
+问题：
+* ChatService：我希望在[MessageListPage.kt](app/android/app/src/main/java/com/magicvector/fragment/MessageListPage.kt)
+  这个页面的顶部加上一个圆和一个text，这个ui状态值保存在其vm中。灰色是`未绑定service`或`未连接ws`，具体原因需要写在text，红色是异常，就写`异常`就行。绿色是`已绑定service并链接ws`，这个绑定状态也应该从activity交给vm的dataState。
+* MainVm的MVI设计：MainVm没有设计effect，不符合mvi设计模式，是不是应该重新设计一下；我记得我设计文档写过，跟ui相关的才写到uiState，否则就写入dataState，
+  很明显MainVm你没创建dataState而且`isChatServiceBound`明显属于MainVm的dataState因为MainActivity不绘制，但是属于MessageListMviVm的uiState因为其需要绘制。
+* AgentListEvent与AgentsManager和Effect事件：我感觉AgentListEvent属于effect，然后当前的AgentList应该存储在AgentsManager中，因为你想象一下，如果现在页面在其他的页面，MainActivity已经未存活了，
+  那岂不是收不到ws的消息了？所以消息应该交给任何AgentList操作应该直接交给AgentsManager，然后AgentsManager使用SharedFlow的effect事件总线通知MainVm，当然vm初次创建也要主动去获取AgentsManager的数据。
+* MainActivityScreen问题：refreshToken是根据网络状态决定是否需要获取刷新UI的，这个我觉得应该存储在MineVm
+* MessageListScreen订阅副作用应该取消else -> {}，而是全部处理，else不安全。；顶部应该提示长安messageListItem编辑
+* MessageListMviVm的MVI：你这个也没设计dataState；比如hasAgent和hasMessage都是服务uiMode的
 
 
-
-
-
-
-
-
-
-
-
+你修改完成上述问题都要将他们在[AndroidDesignDocument.md](app/android/docs/AndroidDesignDocument.md)
+中找到合适的位置并理解，写入。
 
 

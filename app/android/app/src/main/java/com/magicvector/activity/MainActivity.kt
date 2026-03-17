@@ -1,5 +1,7 @@
 package com.magicvector.activity
 
+import android.Manifest
+import android.annotation.SuppressLint
 import android.app.ActivityManager
 import android.content.ComponentName
 import android.content.Context
@@ -11,6 +13,7 @@ import android.util.Log
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
+import androidx.annotation.RequiresPermission
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import com.data.domain.ao.message.MessageContactItemAo
@@ -32,6 +35,7 @@ class MainActivity : BaseComponentActivity() {
 
     private val vm: MainVm by viewModels { ApiViewModelFactory() }
 
+    @RequiresPermission(Manifest.permission.RECORD_AUDIO)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -69,6 +73,7 @@ class MainActivity : BaseComponentActivity() {
     private var isBound = false
 
     private val serviceConnection = object : ServiceConnection {
+        @RequiresPermission(Manifest.permission.RECORD_AUDIO)
         override fun onServiceConnected(
             name: ComponentName?,
             service: IBinder?
@@ -81,6 +86,7 @@ class MainActivity : BaseComponentActivity() {
             vm.processIntent(MainIntent.ChatServiceBound(handler))
         }
 
+        @RequiresPermission(Manifest.permission.RECORD_AUDIO)
         override fun onServiceDisconnected(name: ComponentName?) {
             vm.processIntent(MainIntent.ChatServiceUnbound)
             isBound = false
@@ -110,6 +116,7 @@ class MainActivity : BaseComponentActivity() {
             .any { it.service.className == serviceClass.name }
     }
 
+    @RequiresPermission(Manifest.permission.RECORD_AUDIO)
     private fun unbindAndStopChatService() {
         if (isBound) {
             unbindService(serviceConnection)
@@ -156,6 +163,7 @@ class MainActivity : BaseComponentActivity() {
 
     //------------------------lifecycle------------------------
 
+    @SuppressLint("MissingPermission")
     override fun onDestroy() {
         super.onDestroy()
         unbindAndStopChatService()

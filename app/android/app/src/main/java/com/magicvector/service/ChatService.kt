@@ -32,6 +32,7 @@ class ChatService : Service() {
         realtimeChatController = RealtimeChatController()
     }
 
+    @Synchronized
     private fun getChatHandler(): RealtimeChatController {
         if (realtimeChatController == null) {
             realtimeChatController = RealtimeChatController()

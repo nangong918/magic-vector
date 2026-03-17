@@ -1,5 +1,7 @@
 package com.magicvector.viewModel.activity
 
+import android.Manifest
+import androidx.annotation.RequiresPermission
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.magicvector.domain.dto.http.request.AgentDeleteRequest
@@ -21,11 +23,12 @@ import kotlinx.coroutines.launch
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.RequestBody.Companion.toRequestBody
 
-// todo 1.界定effect和intent 2.确认intent再去调用effect是否多余行为
+
 class MainVm : ViewModel() {
 
     companion object {
         val TAG: String = MainVm::class.java.name
+        private val api = MainApplication.getRemoteApiSource()
     }
 
     // 保留对外控制器引用，避免影响其他页面后续接入。
@@ -39,10 +42,10 @@ class MainVm : ViewModel() {
     private val _uiState = MutableStateFlow(MainState())
     val uiState: StateFlow<MainState> = _uiState.asStateFlow()
 
-    private val api = MainApplication.getRemoteApiSource()
     private val _agentListEvent = MutableSharedFlow<AgentListEvent>(extraBufferCapacity = 16)
     val agentListEvent: SharedFlow<AgentListEvent> = _agentListEvent.asSharedFlow()
 
+    @RequiresPermission(Manifest.permission.RECORD_AUDIO)
     fun processIntent(intent: MainIntent) {
         when (intent) {
             is MainIntent.Initialize -> {
