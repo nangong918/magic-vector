@@ -1078,3 +1078,47 @@ at com.magicvector.dataSource.remote.RemoteApiSource$requestData$2.invokeSuspend
 2. [AndroidDesignDocument.md](app/android/docs/AndroidDesignDocument.md)这是Android设计文档，你先检查里面有没有token校验的设计，没有就加上设计
    思考如何加上。
 3. 修改Android代码
+
+
+
+### Bug修复：创建Agent之后主页面收到了后端的响应，但是主页没有更新
+
+
+
+我创建完Agent之后收到了响应体。我觉得可以排除SpringBoot的原因，就是Android没有做好。
+GET请求`http://192.168.1.2:48888/agent/getLastAgentChatList?userId=2032466744930009088`
+```shell
+<---- ResponseBody: 
+{
+  "code": "200",
+  "data": {
+    "agentChatAos": [
+      {
+        "agentAo": {
+          "agentVo": {
+            "name": "我的小狗",
+            "description": "你是我的一只可爱的小狗狗，要听主人的话哦~"
+          },
+          "agentId": "2033707657987682305",
+          "userId": "2032466744930009088"
+        },
+        "lastChatTime": 0.0,
+        "lastChatMessages": [],
+        "unreadCount": 0.0
+      }
+    ]
+  }
+}
+```
+收到响应体之后[MessageListPage.kt](app/android/app/src/main/java/com/magicvector/fragment/MessageListPage.kt)
+这个页面并没有立刻更新UI页面从创建变为List展示已有的AgentItems。
+需要你排查这个bug，
+修复代码完成之后请更新[CursorBugLog.md](CursorBugLog.md)
+然后在设计文档[AndroidDesignDocument.md](app/android/docs/AndroidDesignDocument.md)中
+找到你修改的部分，然后如果过涉及到的话在你涉及到的模块中进行修改
+
+
+
+
+
+
