@@ -6,6 +6,7 @@ import android.os.Bundle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
+import androidx.annotation.RequiresPermission
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -46,6 +47,7 @@ class ComposeChatActivity : FragmentActivity() {
     private val callPermissionUtils = ComposePermissionUtils()
     private val videoPermissionUtils = ComposePermissionUtils()
 
+    @RequiresPermission(Manifest.permission.RECORD_AUDIO)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         callPermissionUtils.registerPermissionLauncher(
@@ -71,6 +73,7 @@ class ComposeChatActivity : FragmentActivity() {
         vm.processIntent(ChatIntent.Initialize(intent, this))
     }
 
+    @RequiresPermission(Manifest.permission.RECORD_AUDIO)
     override fun onResume() {
         super.onResume()
         vm.processIntent(ChatIntent.Resume)

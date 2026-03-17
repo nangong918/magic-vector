@@ -1135,3 +1135,33 @@ MainActivity的三个FragmentComposeView页面都需要将vm交给MainVm
 然后在设计文档[AndroidDesignDocument.md](app/android/docs/AndroidDesignDocument.md)中
 
 
+### 点击选择选择Agent闪退
+
+[app](app/android/app)
+这是我app的代码
+我现在选择agent先要进入chat页面，闪退了：
+```shell
+Shutting down VM
+2026-03-17 05:26:07.683  4024-4024  AndroidRuntime          com.magicvector                      E  FATAL EXCEPTION: main
+                                                                                                    Process: com.magicvector, PID: 4024
+                                                                                                    java.lang.RuntimeException: Unable to start activity ComponentInfo{com.magicvector/com.magicvector.activity.ComposeChatActivity}: java.lang.RuntimeException: Cannot create an instance of class com.magicvector.viewModel.activity.ComposeChatVm
+            Caused by: java.lang.RuntimeException: Cannot create an instance of class com.magicvector.viewModel.activity.ComposeChatVm
+                at com.magicvector.activity.ComposeChatActivity.getVm(ComposeChatActivity.kt:45)
+                                                                                                    	at com.magicvector.activity.ComposeChatActivity.onCreate(ComposeChatActivity.kt:71)                                                                                    	                                                                                        	
+```
+修复这个bug并记录到[CursorBugLog.md](CursorBugLog.md)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -11,10 +11,9 @@ import android.util.Log
 import androidx.annotation.RequiresPermission
 import androidx.compose.runtime.Stable
 import androidx.fragment.app.FragmentActivity
-import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.Observer
-import androidx.lifecycle.application
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.data.domain.ao.message.MessageContactItemAo
 import com.data.domain.constant.VadChatState
@@ -43,19 +42,20 @@ import kotlinx.coroutines.launch
 import java.lang.ref.WeakReference
 import java.util.concurrent.atomic.AtomicBoolean
 
-open class ComposeChatVm : AndroidViewModel(application = MainApplication.getApp()) {
+class ComposeChatVm : ViewModel() {
 
     companion object {
         val TAG: String = ComposeChatVm::class.java.name
+        val application = MainApplication.getApp()
     }
 
     // MVI State: Compose UI 渲染状态
     private val _uiState = MutableStateFlow(ChatState())
-    open val uiState: StateFlow<ChatState> = _uiState.asStateFlow()
+    val uiState: StateFlow<ChatState> = _uiState.asStateFlow()
 
     // MVI Effect: 一次性事件（权限/跳转/Toast）
     private val _effect = Channel<ChatEffect>(Channel.BUFFERED)
-    open val effect: Flow<ChatEffect> = _effect.receiveAsFlow()
+    val effect: Flow<ChatEffect> = _effect.receiveAsFlow()
 
     private val chatAAo = ChatAAo()
     private var messageAo: MessageContactItemAo? = null
@@ -124,7 +124,7 @@ open class ComposeChatVm : AndroidViewModel(application = MainApplication.getApp
     }
 
     @RequiresPermission(Manifest.permission.RECORD_AUDIO)
-    open fun processIntent(intent: ChatIntent) {
+    fun processIntent(intent: ChatIntent) {
         when (intent) {
             is ChatIntent.Initialize -> initialize(intent.intent, intent.activity)
             ChatIntent.Resume -> realtimeChatController?.setCurrentVADStateChange(onVadChatStateChange)
