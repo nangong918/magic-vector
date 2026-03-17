@@ -40,7 +40,7 @@ import com.view.appview.R
 @Composable
 fun MineScreen(
     modifier: Modifier = Modifier,
-    viewModel: MineVm = MineVm()
+    viewModel: MineVm
 ) {
     val context = LocalContext.current
     val state by viewModel.uiState.collectAsState()

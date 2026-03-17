@@ -45,6 +45,9 @@ class MainActivity : BaseComponentActivity() {
                 val state by vm.uiState.collectAsState()
                 MainActivityScreen(
                     state = state,
+                    messageListVm = vm.messageListVm,
+                    controlVm = vm.controlVm,
+                    mineVm = vm.mineVm,
                     onSelectTab = { vm.processIntent(MainIntent.SelectTab(it)) },
                     onCreateAgent = { vm.processIntent(MainIntent.OpenCreateAgent) },
                     onOpenAgentEditor = { vm.processIntent(MainIntent.OpenEditAgent(it)) },

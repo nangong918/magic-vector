@@ -8,6 +8,7 @@ import com.magicvector.MainApplication
 import com.magicvector.domain.convertor.MessageConvertor
 import com.magicvector.domain.exception.NetworkBusinessException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -122,11 +123,24 @@ class MessageListMviVm : ViewModel() {
         }
 
         supervisorScope {
-            launch(Dispatchers.IO) { fetchAndHandleAgentList(userId) }  // 如果需要IO线程，在这里指定
-            launch(Dispatchers.IO) { fetchAndHandleChatList(userId) }   // 如果需要IO线程，在这里指定
+            // 使用 async 等待结果
+            val agentDeferred = async(Dispatchers.IO) {
+                fetchAndHandleAgentList(userId)
+                // 返回是否成功
+                _uiState.value.error == null
+            }
+            val chatDeferred = async(Dispatchers.IO) {
+                fetchAndHandleChatList(userId)
+                _uiState.value.error == null
+            }
+
+            // 等待两个请求都完成
+            agentDeferred.await()
+            chatDeferred.await()
         }
 
         _uiState.update {
+            println("xxx::hasAgent=${it.hasAgent}, hasMessage=${it.hasMessage}, uiMode=${deriveUiMode(it.hasAgent, it.hasMessage)}")
             it.copy(
                 isLoading = false,
                 isRefreshing = false,

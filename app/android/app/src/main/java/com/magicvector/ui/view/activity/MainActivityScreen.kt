@@ -36,6 +36,9 @@ import com.magicvector.manager.network.NetworkState
 import com.magicvector.ui.theme.MagicVectorTheme
 import com.magicvector.viewModel.activity.AgentListEvent
 import com.magicvector.viewModel.activity.MainState
+import com.magicvector.viewModel.fragment.ControlVm
+import com.magicvector.viewModel.fragment.MessageListMviVm
+import com.magicvector.viewModel.fragment.MineVm
 import com.view.appview.MainSelectItemEnum
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -45,6 +48,9 @@ import kotlinx.coroutines.flow.StateFlow
 @Composable
 fun MainActivityScreen(
     state: MainState,
+    messageListVm: MessageListMviVm,
+    controlVm: ControlVm,
+    mineVm: MineVm,
     onSelectTab: (MainSelectItemEnum) -> Unit,
     onCreateAgent: () -> Unit,
     onOpenAgentEditor: (String) -> Unit,
@@ -124,14 +130,15 @@ fun MainActivityScreen(
             )
             when (state.currentSelected) {
                 MainSelectItemEnum.HOME -> MessageListScreen(
+                    viewModel = messageListVm,
                     isServiceBound = state.isChatServiceBound,
                     onCreateAgentClick = { latestCreate.value.invoke() },
                     refreshToken = refreshToken,
                     onOpenChat = onOpenChat,
                     onOpenAgentEditor = { latestEditor.value.invoke(it) }
                 )
-                MainSelectItemEnum.MEDIA -> ControlScreen()
-                MainSelectItemEnum.MINE -> MineScreen()
+                MainSelectItemEnum.MEDIA -> ControlScreen(viewModel = controlVm)
+                MainSelectItemEnum.MINE -> MineScreen(viewModel = mineVm)
             }
         }
 
@@ -152,6 +159,9 @@ private fun MainActivityScreenPreview() {
     MagicVectorTheme {
         MainActivityScreen(
             state = MainState(currentSelected = MainSelectItemEnum.HOME, isChatServiceBound = true),
+            messageListVm = MessageListMviVm(),
+            controlVm = ControlVm(),
+            mineVm = MineVm(),
             onSelectTab = {},
             onCreateAgent = {},
             onOpenAgentEditor = {},

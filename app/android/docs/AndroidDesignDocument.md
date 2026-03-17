@@ -761,6 +761,7 @@ gantt
 * 创建/查看/修改/删除 Agent 统一采用 Main 页面内全屏组合函数弹层（放大进入、缩小退出）。
 * Agent 列表点击跳转 `ComposeChatActivity`；列表长按进入 Agent 编辑弹层。
 * 状态同步采用 `StateFlow + SharedFlow`，`eventBus` 仅作为兜底。
+* `MainVm` 统一持有 `MessageListMviVm/ControlVm/MineVm`，`Composable` 只接收注入 VM，不在函数默认参数中创建 VM，避免重组导致状态容器更换。
 
 #### Agent UI 设计
 
@@ -818,15 +819,19 @@ classDiagram
       +processIntent(intent)
       +syncAgentAndMessageState()
     }
+    class ControlVm
+    class MineVm
     class AgentEditorOverlay
     class MainState
     class AgentEditorState
     class MessageListUiMode
 
     MainActivity --> MainVm
-    MainActivity --> MessageListMviVm
     MainActivity --> AgentEditorOverlay
     MainVm --> MainState
+    MainVm --> MessageListMviVm
+    MainVm --> ControlVm
+    MainVm --> MineVm
     MainState --> AgentEditorState
     MessageListMviVm --> MessageListUiMode
 ```
@@ -843,6 +848,7 @@ flowchart LR
     Chat[ComposeChatActivity]
     UI --> VM
     UI --> List
+    VM --> ListVm
     List --> ListVm
     ListVm --> UI
     UI -->|Create/Edit/Delete Intent| VM

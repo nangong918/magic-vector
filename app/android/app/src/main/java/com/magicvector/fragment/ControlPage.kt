@@ -54,7 +54,7 @@ import kotlin.math.roundToInt
 @Composable
 fun ControlScreen(
     modifier: Modifier = Modifier,
-    viewModel: ControlVm = ControlVm()
+    viewModel: ControlVm
 ) {
     val context = LocalContext.current
     val state by viewModel.uiState.collectAsState()

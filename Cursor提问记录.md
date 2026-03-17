@@ -1083,10 +1083,10 @@ at com.magicvector.dataSource.remote.RemoteApiSource$requestData$2.invokeSuspend
 
 ### Bug修复：创建Agent之后主页面收到了后端的响应，但是主页没有更新
 
-
+Android代码在[android](app/android)
 
 我创建完Agent之后收到了响应体。我觉得可以排除SpringBoot的原因，就是Android没有做好。
-GET请求`http://192.168.1.2:48888/agent/getLastAgentChatList?userId=2032466744930009088`
+GET请求`/agent/getLastAgentChatList?userId=2032466744930009088`
 ```shell
 <---- ResponseBody: 
 {
@@ -1118,7 +1118,20 @@ GET请求`http://192.168.1.2:48888/agent/getLastAgentChatList?userId=20324667449
 找到你修改的部分，然后如果过涉及到的话在你涉及到的模块中进行修改
 
 
+### Bug修复：创建Agent之后主页面没有更新
 
-
+我添加了一些日志，在接受响应和UI更新的时候，日志是这样的：
+```shell
+775 xxx::UI状态更新 - uiMode: NO_AGENT, messages.size: 0, hasMessage: false
+777 xxx::MessageListUiMode: NO_AGENT
+799 xxx::hasAgent=true, hasMessage=true, uiMode=HAS_MESSAGE
+799 xxx::hasAgent=true, hasMessage=true, uiMode=HAS_MESSAGE
+```
+是我错误的代码架构，我不应该在Fragment下的ComposeView去每次创建vm这样数据就丢失了，
+我现在的想法是让所有调用composeView的activity去持有composeview的vm（不使用remember，感觉rm不能处理复杂业务，而且业务冗余在view中了）
+大概是这样的，composeView的vm从函数入参给如，然后activity的vm内部持有各个子view的vm。
+MainActivity的三个FragmentComposeView页面都需要将vm交给MainVm
+修复代码完成之后请更新[CursorBugLog.md](CursorBugLog.md)
+然后在设计文档[AndroidDesignDocument.md](app/android/docs/AndroidDesignDocument.md)中
 
 

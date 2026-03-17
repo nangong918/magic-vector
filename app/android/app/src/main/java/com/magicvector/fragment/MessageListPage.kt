@@ -39,7 +39,7 @@ import com.magicvector.viewModel.fragment.MessageListEffect
 fun MessageListScreen(
     modifier: Modifier = Modifier,
     isServiceBound: Boolean,
-    viewModel: MessageListMviVm = MessageListMviVm(),
+    viewModel: MessageListMviVm,
     onCreateAgentClick: () -> Unit = {},
     refreshToken: Long = 0L,
     onOpenChat: (MessageContactItemAo) -> Unit = {},
@@ -52,6 +52,11 @@ fun MessageListScreen(
     // 初始化
     LaunchedEffect(Unit) {
         viewModel.processIntent(MessageListIntent.Initialize)
+    }
+
+    println("xxx::UI状态更新 - uiMode: ${state.uiMode}, messages.size: ${state.messages.size}, hasMessage: ${state.hasMessage}")
+    if (state.messages.isNotEmpty()) {
+        println("xxx::第一条消息: ${state.messages.first().vo.name}")
     }
 
     LaunchedEffect(refreshToken) {
@@ -87,6 +92,7 @@ fun MessageListScreen(
         modifier = modifier.fillMaxSize()
     ) {
         Box(modifier = Modifier.fillMaxSize()) {
+            println("xxx::MessageListUiMode: ${state.uiMode}")
             when (state.uiMode) {
                 MessageListUiMode.NO_AGENT -> {
                     EmptyStateView(
@@ -271,6 +277,12 @@ private fun MessageListWith10ItemsPreview() {
             )
         }
     }
+}
+
+@Preview(showBackground = true, heightDp = 800)
+@Composable
+private fun MessageListWith0ItemsPreview() {
+    NoMessageStateView()
 }
 
 

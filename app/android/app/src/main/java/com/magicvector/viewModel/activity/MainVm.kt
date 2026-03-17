@@ -6,6 +6,9 @@ import com.magicvector.domain.dto.http.request.AgentDeleteRequest
 import com.magicvector.MainApplication
 import com.magicvector.domain.exception.NetworkBusinessException
 import com.magicvector.manager.RealtimeChatController
+import com.magicvector.viewModel.fragment.ControlVm
+import com.magicvector.viewModel.fragment.MessageListMviVm
+import com.magicvector.viewModel.fragment.MineVm
 import com.view.appview.MainSelectItemEnum
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -27,6 +30,10 @@ class MainVm : ViewModel() {
 
     // 保留对外控制器引用，避免影响其他页面后续接入。
     var realtimeChatController: RealtimeChatController? = null
+    // MainVm 统一持有各 Tab 子 VM，避免 Composable 重建时状态丢失。
+    val messageListVm: MessageListMviVm = MessageListMviVm()
+    val controlVm: ControlVm = ControlVm()
+    val mineVm: MineVm = MineVm()
 
     // StateFlow (UI State) 存储 UI 状态
     private val _uiState = MutableStateFlow(MainState())
