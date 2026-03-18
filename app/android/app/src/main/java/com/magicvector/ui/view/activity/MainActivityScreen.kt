@@ -69,6 +69,7 @@ fun MainActivityScreen(
         MainApplication.getNetworkManager().state
     }
     val networkState by networkStateFlow.collectAsState()
+    // messageList的网络状态
     LaunchedEffect(dataState.isChatServiceBound, networkState.isWsConnected) {
         messageListVm.processIntent(
             com.magicvector.viewModel.fragment.MessageListIntent.UpdateConnectionState(

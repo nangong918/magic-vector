@@ -20,7 +20,6 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import com.data.domain.ao.message.MessageContactItemAo
 import com.data.domain.fragmentActivity.intentAo.ChatIntentAo
-import com.magicvector.MainApplication
 import com.magicvector.service.ChatService
 import com.magicvector.ui.theme.MagicVectorTheme
 import com.magicvector.viewModel.activity.MainEffect
@@ -82,7 +81,6 @@ class MainActivity : BaseComponentActivity() {
     //------------------------Service------------------------
 
     private var chatService: ChatService? = null
-    private var isBound = false
 
     private val serviceConnection = object : ServiceConnection {
         @RequiresPermission(Manifest.permission.RECORD_AUDIO)
@@ -92,7 +90,6 @@ class MainActivity : BaseComponentActivity() {
         ) {
             val binder = service as ChatService.ChatServiceBinder
             chatService = binder.getService()
-            isBound = true
 
             val handler = binder.getChatMessageHandler()
             vm.processIntent(MainIntent.ChatServiceBound(handler))
@@ -101,7 +98,6 @@ class MainActivity : BaseComponentActivity() {
         @RequiresPermission(Manifest.permission.RECORD_AUDIO)
         override fun onServiceDisconnected(name: ComponentName?) {
             vm.processIntent(MainIntent.ChatServiceUnbound)
-            isBound = false
             chatService = null
         }
     }
@@ -130,12 +126,11 @@ class MainActivity : BaseComponentActivity() {
 
     @RequiresPermission(Manifest.permission.RECORD_AUDIO)
     private fun unbindAndStopChatService() {
-        if (isBound) {
+        if (vm.dataState.value.isChatServiceBound) {
             unbindService(serviceConnection)
         }
         val intent = Intent(this, ChatService::class.java)
         stopService(intent)
-        isBound = false
         chatService = null
         vm.processIntent(MainIntent.ChatServiceUnbound)
     }

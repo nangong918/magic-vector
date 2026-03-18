@@ -232,6 +232,7 @@ class MainVm : ViewModel() {
         }
     }
 
+    // 从manager获取数据
     private fun syncAgentsDataFromManager() {
         val list = agentsManager.agentList.value
         _dataState.update {
