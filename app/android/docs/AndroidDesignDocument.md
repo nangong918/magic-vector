@@ -764,6 +764,8 @@ gantt
 * Agent 列表点击跳转 `ComposeChatActivity`；列表长按进入 Agent 编辑弹层。
 * Agent 列表数据统一由 `AgentsManager` 持有（Application 级），避免 `MainActivity` 生命周期导致事件丢失。
 * Agent 列表变更事件通过 `AgentsManager.effect(SharedFlow)` 广播，`MainVm` 只负责订阅并同步自身 `dataState`。
+* `MessageListMviVm` 首次初始化才允许在线全量 HTTP；后续仅在 `NetworkManager` 通知网络恢复、用户手动下拉刷新、或 Agent 增删改成功后才重新请求。
+* Main Tab 在页面来回切换时，只从 `AgentsManager + MessageListController` 读取内存缓存刷新 UI，不重复发起 HTTP。
 * `MainVm` 统一持有 `MessageListMviVm/ControlVm/MineVm`，`Composable` 只接收注入 VM，不在函数默认参数中创建 VM，避免重组导致状态容器更换。
 
 #### Agent UI 设计
@@ -941,6 +943,7 @@ gantt
 * Emoji 页（左页）合并 `voice_agent_page.dart` 的状态球语义与 `ComposeAgentEmojiActivity` 的视觉风格（黑底双眼），状态球颜色与缩放由 VAD/WS 状态驱动。
 * Text 页（右页）复用 `ComposeChatActivity` 的文本输入/语音按压交互，继续走 `RealtimeChatController -> ChatController -> ChatCacheManager`。
 * 单 Agent 聊天记录同样受 `NetworkManager` 统一管理：首次在线走 HTTP 全量 + Room，同步后由 WS 增量写入；离线直接读 Room；网络恢复后重新 HTTP 全量拉取并覆盖同步。
+* 同一个 Agent Chat 在页面重复打开且网络未经历离线恢复时，优先读取 `ChatMapController` 中已有 `ChatController` 内存缓存，不重复做 HTTP 全量请求。
 * 两个 Fragment 均采用 MVI：`AgentEmojiFragmentVm`、`AgentTextChatFragmentVm`，Activity 级编排采用 `ComposeAgentChatVm`。
 
 #### UI/交互设计

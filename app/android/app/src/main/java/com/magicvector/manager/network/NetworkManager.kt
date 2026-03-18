@@ -81,8 +81,7 @@ class NetworkManager(context: Context) {
     }
 
     fun refreshNetworkState(): NetworkState {
-        val latest = _state.value.copy(isNetworkOnline = isOnline())
-        _state.value = latest
+        val latest = updateNetworkOnlineState(isOnline())
         return latest
     }
 
@@ -111,6 +110,21 @@ class NetworkManager(context: Context) {
         }
     }
 
+    private fun updateNetworkOnlineState(online: Boolean): NetworkState {
+        val current = _state.value
+        val nextRecoveryToken = if (!current.isNetworkOnline && online) {
+            current.recoveryToken + 1
+        } else {
+            current.recoveryToken
+        }
+        val latest = current.copy(
+            isNetworkOnline = online,
+            recoveryToken = nextRecoveryToken
+        )
+        _state.value = latest
+        return latest
+    }
+
     private fun isOnline(): Boolean {
         val network = connectivityManager.activeNetwork ?: return false
         val capabilities = connectivityManager.getNetworkCapabilities(network) ?: return false
@@ -120,7 +134,8 @@ class NetworkManager(context: Context) {
 
 data class NetworkState(
     val isNetworkOnline: Boolean,
-    val isWsConnected: Boolean
+    val isWsConnected: Boolean,
+    val recoveryToken: Long = 0L
 ) {
     val isOnlineAndWsReady: Boolean
         get() = isNetworkOnline && isWsConnected

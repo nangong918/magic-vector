@@ -255,6 +255,7 @@ class ComposeAgentChatVm : ViewModel() {
     private suspend fun syncConversationHistory(showLoading: Boolean) {
         val ao = messageAo ?: return
         val agentId = ao.contactId ?: return
+        val controller = MainApplication.getChatMapManager().getChatManager(agentId)
         if (showLoading) {
             _uiState.update { it.copy(isLoading = true) }
         }
@@ -264,11 +265,15 @@ class ComposeAgentChatVm : ViewModel() {
                 loadConversationFromRoom()
                 return
             }
+            if (!controller.shouldRemoteSync(latestNetworkState.recoveryToken)) {
+                syncConversationMessagesToUi()
+                return
+            }
             val chatMessages = MainApplication.getRemoteApiSource().getLastChat(agentId).chatMessages.orEmpty()
             MainApplication.getChatCacheManager().upsertRemoteMessages(chatMessages)
-            val controller = MainApplication.getChatMapManager().getChatManager(agentId)
             controller.clear()
             controller.setResponsesToViews(chatMessages)
+            controller.markRemoteSyncCompleted(latestNetworkState.recoveryToken)
             syncConversationMessagesToUi()
         } catch (e: Exception) {
             Log.e(TAG, "syncConversationHistory: remote failed", e)

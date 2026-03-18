@@ -75,13 +75,21 @@ class MessageListMviVm : ViewModel() {
                     isWsConnected = latestNetworkState.isWsConnected
                 )
             }
-            resolveUserId().toLongOrNull()?.let { userId ->
-                if (userId > 0L) {
-                    applyCachedSnapshot(userId)
-                }
+            val userId = resolveUserId().toLongOrNull() ?: return@launch
+            if (userId <= 0L) {
+                return@launch
             }
-            // 初始化刷新状态：一开始就有网络、一开始就没网络
-            refreshMessages(showLoading = _uiState.value.messages.isEmpty())
+            if (_dataState.value.hasInitialized) {
+                applyManagerSnapshot(userId)
+                return@launch
+            }
+            _dataState.update { it.copy(hasInitialized = true) }
+            val hasManagerCache = applyManagerSnapshot(userId)
+            if (latestNetworkState.isNetworkOnline) {
+                refreshMessages(showLoading = !hasManagerCache && _uiState.value.messages.isEmpty())
+            } else {
+                finishSync(hasException = false)
+            }
         }
     }
 
@@ -237,6 +245,21 @@ class MessageListMviVm : ViewModel() {
         return snapshot.agents.isNotEmpty() || snapshot.messageItems.isNotEmpty()
     }
 
+    private suspend fun applyManagerSnapshot(userId: Long): Boolean {
+        val agents = MainApplication.getAgentsManager().agentList.value
+        val messages = MainApplication.getMessageListManager().messageContactItemAos.toList()
+            .sortedByDescending { it.timestamp }
+        if (agents.isNotEmpty() || messages.isNotEmpty()) {
+            applyUiSnapshot(
+                agentCount = agents.size,
+                messages = messages,
+                error = null
+            )
+            return true
+        }
+        return applyCachedSnapshot(userId)
+    }
+
     private fun applyUiSnapshot(
         agentCount: Int,
         messages: List<MessageContactItemAo>,
@@ -318,6 +341,7 @@ data class MessageListDataState(
     val isServiceBound: Boolean = false,
     val isNetworkOnline: Boolean = true,
     val isWsConnected: Boolean = false,
+    val hasInitialized: Boolean = false,
     val hasException: Boolean = false,
     val hasAgent: Boolean = false,
     val hasMessage: Boolean = false

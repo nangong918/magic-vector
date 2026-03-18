@@ -37,6 +37,7 @@ class ChatController(val agentId: String) {
     private val needUpdateQueue: ArrayDeque<UpdateRecyclerViewItem> = ArrayDeque()
     // 以 messageId 作为索引，避免 O(n) 全量遍历查重
     private val messageIdIndex: MutableMap<String, ChatItemAo> = mutableMapOf()
+    private var lastRemoteSyncRecoveryToken: Long = -1L
 
     fun getNeedUpdateList(): List<UpdateRecyclerViewItem>{
         return lock.withLock {
@@ -51,6 +52,22 @@ class ChatController(val agentId: String) {
     // 私有保护，避免外部添加导致ids和views不统一
     fun getViewChatMessageList(): MutableList<ChatItemAo> {
         return lock.withLock { viewChatMessageList.toMutableList() }
+    }
+
+    fun hasCachedMessages(): Boolean {
+        return lock.withLock { viewChatMessageList.isNotEmpty() }
+    }
+
+    fun shouldRemoteSync(currentRecoveryToken: Long): Boolean {
+        return lock.withLock {
+            viewChatMessageList.isEmpty() || lastRemoteSyncRecoveryToken != currentRecoveryToken
+        }
+    }
+
+    fun markRemoteSyncCompleted(currentRecoveryToken: Long) {
+        lock.withLock {
+            lastRemoteSyncRecoveryToken = currentRecoveryToken
+        }
     }
 
     fun getMessageSnapshot(messageId: String?): ChatItemAo? {
