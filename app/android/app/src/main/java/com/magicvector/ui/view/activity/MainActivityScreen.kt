@@ -22,10 +22,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import com.data.domain.ao.message.MessageContactItemAo
+import com.magicvector.MainApplication
 import com.magicvector.fragment.AgentEditorOverlay
 import com.magicvector.fragment.ControlScreen
 import com.magicvector.fragment.MessageListScreen
@@ -40,7 +42,6 @@ import com.magicvector.viewModel.fragment.MessageListMviVm
 import com.magicvector.viewModel.fragment.MineVm
 import com.view.appview.MainSelectItemEnum
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
 
 @Composable
 fun MainActivityScreen(
@@ -58,12 +59,16 @@ fun MainActivityScreen(
     onEditorDescriptionChange: (String) -> Unit,
     onEditorSubmit: () -> Unit,
     onEditorDelete: () -> Unit,
-    networkStateFlow: StateFlow<NetworkState>,
 ) {
     val backgroundColor = remember { Color(0xFFF6F7F8) }
     // rememberUpdatedState: 副作用中安全使用最新回调
     val latestCreate = rememberUpdatedState(onCreateAgent)
     val latestEditor = rememberUpdatedState(onOpenAgentEditor)
+    val networkStateFlow = if (LocalInspectionMode.current) {
+        remember { MutableStateFlow(NetworkState(isNetworkOnline = true, isWsConnected = false)) }
+    } else {
+        MainApplication.getNetworkManager().state
+    }
     val networkState by networkStateFlow.collectAsState()
     val mineDataState by mineVm.dataState.collectAsState()
 
@@ -176,8 +181,7 @@ private fun MainActivityScreenPreview() {
             onEditorNameChange = {},
             onEditorDescriptionChange = {},
             onEditorSubmit = {},
-            onEditorDelete = {},
-            networkStateFlow = MutableStateFlow(NetworkState(isNetworkOnline = true, isWsConnected = false))
+            onEditorDelete = {}
         )
     }
 }

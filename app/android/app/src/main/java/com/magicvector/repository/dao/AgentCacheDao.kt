@@ -17,6 +17,9 @@ interface AgentCacheDao {
     @Query("SELECT * FROM agent_cache WHERE user_id = :userId ORDER BY updated_at DESC")
     suspend fun queryByUser(userId: Long): List<AgentCacheEntity>
 
+    @Query("DELETE FROM agent_cache WHERE user_id = :userId")
+    suspend fun deleteByUserId(userId: Long)
+
     @Query("DELETE FROM agent_cache WHERE agent_id = :agentId")
     suspend fun deleteByAgentId(agentId: Long)
 }

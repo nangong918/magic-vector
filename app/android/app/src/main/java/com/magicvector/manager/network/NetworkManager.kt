@@ -31,10 +31,10 @@ class NetworkManager(context: Context) {
 
     private val receiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
-            val online = isOnline()
-            _state.value = _state.value.copy(isNetworkOnline = online)
-            if (online && !_state.value.isWsConnected) {
-                triggerWsReconnect()
+            val latestState = refreshNetworkState()
+            // 只有在有网络的情况下才能执行ws断开重连
+            if (latestState.isNetworkOnline && !latestState.isWsConnected) {
+                requestWsReconnectIfNeeded()
             }
         }
     }
@@ -62,10 +62,12 @@ class NetworkManager(context: Context) {
         _state.value = _state.value.copy(isWsConnected = true)
     }
 
-    fun onWebSocketDisconnected() {
+    fun onWebSocketDisconnected(shouldReconnect: Boolean = true) {
         _state.value = _state.value.copy(isWsConnected = false)
-        if (_state.value.isNetworkOnline) {
-            triggerWsReconnect()
+        if (shouldReconnect) {
+            requestWsReconnectIfNeeded()
+        } else {
+            reconnecting.set(false)
         }
     }
 
@@ -75,6 +77,22 @@ class NetworkManager(context: Context) {
 
     fun unbindWsReconnectAction() {
         wsReconnectAction = null
+        reconnecting.set(false)
+    }
+
+    fun refreshNetworkState(): NetworkState {
+        val latest = _state.value.copy(isNetworkOnline = isOnline())
+        _state.value = latest
+        return latest
+    }
+
+    fun requestWsReconnectIfNeeded() {
+        val latest = refreshNetworkState()
+        if (!latest.isNetworkOnline || latest.isWsConnected) {
+            reconnecting.set(false)
+            return
+        }
+        triggerWsReconnect()
     }
 
     private fun triggerWsReconnect() {

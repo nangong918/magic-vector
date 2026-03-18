@@ -65,7 +65,6 @@ fun MessageListScreen(
     LaunchedEffect(refreshToken) {
         if (refreshToken > 0L) {
             viewModel.processIntent(MessageListIntent.Refresh)
-            viewModel.initNetworkRequest()
         }
     }
 
@@ -151,6 +150,7 @@ private fun MessageServiceStatusView(
 ) {
     val (statusColor, statusText) = when {
         state.hasException -> Color(0xFFD32F2F) to "异常"
+        !state.isNetworkOnline -> Color(0xFF9E9E9E) to "当前离线"
         !state.isServiceBound -> Color(0xFF9E9E9E) to "未绑定service"
         !state.isWsConnected -> Color(0xFF9E9E9E) to "未连接ws"
         else -> Color(0xFF2E7D32) to "已绑定service并连接ws"

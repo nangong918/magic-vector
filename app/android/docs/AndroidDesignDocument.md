@@ -1658,18 +1658,182 @@ stateDiagram-v2
     Persisted --> Empty : logout/clearCurrentUser
 ```
 
+### 网络状态管理模块（NetworkManager）
+
+#### 功能职责
+* `NetworkManager` 作为 **Application级全局状态中心**，统一维护 `StateFlow<NetworkState>`，对外暴露 `isNetworkOnline` 与 `isWsConnected` 两个核心状态。
+* `isNetworkOnline` 来源于系统网络广播 + 主动查询 `ConnectivityManager`；用于决定当前数据源选择 `HTTP/WS` 还是 `Room`。
+* `isWsConnected` 来源于 `RealtimeChatController` 对 WS 生命周期的回调；用于驱动连接态显示和重连策略。
+* 当 `isNetworkOnline=false` 时，业务侧立即回退到 `Room`；当 `isNetworkOnline` 从 `false -> true` 恢复时，触发上层执行 **HTTP全量同步**，补偿断网期间 WS 丢失的数据。
+* WS 重连前必须先刷新并确认 `isNetworkOnline=true`；禁止在明确离线时盲目重连。
+
+#### 设计约束
+* `NetworkManager.state` 不通过 `MainActivity` 层层透传，任何需要网络/WS状态的 VM、Manager、Composable 直接订阅全局 `StateFlow`。
+* `NetworkManager` 同时支持 **主动读取当前状态** 与 **被动订阅状态变化**：启动初始化可直接读取 `state.value`，运行期依赖 `collect` 接收变化。
+* `NetworkManager` 只负责状态与重连触发条件，不负责具体 HTTP 同步业务；具体“全量拉取 + Room同步 + UI刷新”由上层 `ViewModel/Manager` 执行。
+
+#### UML静态图（类图）
+##### NetworkManager 类图
+```mermaid
+classDiagram
+    class NetworkManager {
+      -state: MutableStateFlow~NetworkState~
+      -wsReconnectAction: () -> Unit
+      +state: StateFlow~NetworkState~
+      +refreshNetworkState() NetworkState
+      +onWebSocketConnected()
+      +onWebSocketDisconnected(shouldReconnect)
+      +requestWsReconnectIfNeeded()
+      +bindWsReconnectAction(action)
+    }
+    class NetworkState {
+      +isNetworkOnline: Boolean
+      +isWsConnected: Boolean
+      +isOnlineAndWsReady: Boolean
+    }
+    class RealtimeChatController {
+      +ensureUserConnection(userId)
+      +reconnectUserConnectionIfNeeded()
+    }
+    class MessageListMviVm {
+      +observeNetworkState()
+    }
+    class MainVm
+    class MineVm
+
+    NetworkManager --> NetworkState
+    RealtimeChatController --> NetworkManager
+    MessageListMviVm --> NetworkManager
+    MainVm --> NetworkManager
+    MineVm --> NetworkManager
+```
+
+#### UML静态图（对象图）
+##### NetworkManager 运行期对象图
+```mermaid
+classDiagram
+    class networkMgr_1 {
+      state.isNetworkOnline = true
+      state.isWsConnected = false
+      reconnecting = true
+    }
+    class rtc_1 {
+      currentUserId = "1001"
+      currentAgentId = "2001"
+    }
+    class messageListVm_1 {
+      dataSource = ROOM
+    }
+    class mainVm_1 {
+      isChatServiceBound = true
+    }
+
+    networkMgr_1 --> rtc_1
+    networkMgr_1 --> messageListVm_1
+    networkMgr_1 --> mainVm_1
+```
+
+#### UML动态图（状态图）
+##### NetworkManager 状态图
+```mermaid
+stateDiagram-v2
+    [*] --> Offline
+    Offline --> NetOnline_WsDisconnected : 系统检测到互联网恢复
+    NetOnline_WsDisconnected --> NetOnline_WsConnecting : requestWsReconnectIfNeeded
+    NetOnline_WsConnecting --> NetOnline_WsConnected : onWebSocketConnected
+    NetOnline_WsConnecting --> NetOnline_WsDisconnected : 连接失败
+    NetOnline_WsConnected --> NetOnline_WsDisconnected : onClosed/onFailure
+    NetOnline_WsDisconnected --> Offline : 系统检测到网络断开
+    NetOnline_WsConnected --> Offline : 系统检测到网络断开
+```
+
+#### UML动态图（活动图）
+##### NetworkManager 活动图
+```mermaid
+flowchart TD
+    A[App启动或页面需要网络状态] --> B[主动读取 NetworkManager.state]
+    B --> C{isNetworkOnline?}
+    C -- 否 --> D[业务侧选择Room数据源]
+    C -- 是 --> E[允许HTTP请求与WS建连]
+    E --> F{isWsConnected?}
+    F -- 否 --> G[requestWsReconnectIfNeeded]
+    F -- 是 --> H[维持在线态]
+    H --> I{收到系统网络广播?}
+    D --> I
+    G --> I
+    I -- 网络恢复 --> J[刷新state.isNetworkOnline=true]
+    J --> K[触发上层HTTP全量同步]
+    I -- 网络断开 --> L[刷新state.isNetworkOnline=false]
+    L --> D
+```
+
+#### UML动态图（时序图）
+##### NetworkManager 时序图
+```mermaid
+sequenceDiagram
+    participant System as Android Connectivity
+    participant NM as NetworkManager
+    participant RTC as RealtimeChatController
+    participant VM as MessageListMviVm
+    participant Cache as ChatCacheManager
+    participant API as RemoteApiSource
+
+    System-->>NM: 网络广播(offline/online)
+    NM->>NM: refreshNetworkState()
+    alt 网络断开
+        NM-->>VM: state(isNetworkOnline=false)
+        VM->>Cache: queryHomeSnapshot()
+        Cache-->>VM: Room缓存
+    else 网络恢复
+        NM->>RTC: requestWsReconnectIfNeeded()
+        NM-->>VM: state(isNetworkOnline=true)
+        VM->>API: HTTP全量拉取 Agents + ChatList
+        VM->>Cache: syncHomeSnapshot(...)
+    end
+```
+
+#### UML动态图（通信图）
+##### NetworkManager 通信图
+```mermaid
+flowchart LR
+    System[ConnectivityManager/Broadcast] --> NM[NetworkManager]
+    NM --> RTC[RealtimeChatController]
+    NM --> ListVm[MessageListMviVm]
+    NM --> MainVm[MainVm]
+    ListVm --> Cache[ChatCacheManager]
+    ListVm --> Api[RemoteApiSource]
+```
+
+#### 功能线程甘特图
+##### NetworkManager 线程甘特图
+```mermaid
+gantt
+    title NetworkManager网络状态与重连线程甘特图
+    dateFormat  X
+    axisFormat %L ms
+    section 系统广播线程
+    接收网络变化广播                :s1, 0, 10
+    section Main线程
+    StateFlow分发到UI/VM            :m1, 10, 25
+    section IO线程
+    主动刷新网络能力                :i1, 10, 15
+    触发HTTP全量同步                :i2, 25, 60
+    section WS线程
+    WS重连尝试                      :w1, 15, 40
+```
+
 ### 聊天管理模块（ChatController + ChatMapController + ChatCacheManager）
 
 #### 功能职责
 * `RealtimeChatController` 升级为 **用户级常驻连接**：登录成功后建立 `userId` 维度 WS，不再在打开 Chat 时按 `agentId` 新建连接。
-* 聊天路由改为 `agentId` 作为 `channelId`：进入不同 Agent Chat 页面时发送 `BIND_CHANNEL` 切换路由。
+* 首页 `Agent列表` 与 `Chat摘要列表` 逻辑上拆分处理：`AgentsManager` 维护 Agent 集合，`MessageListController/ChatCacheManager` 维护最近消息摘要与消息缓存，避免把 Agent 与 ChatList 视为单一对象源。
+* **初始化 App / 首次进入首页**：先读取 `NetworkManager.state`；若 `isNetworkOnline=true`，执行 `GET /agent/getList + GET /agent/getLastAgentChatList` 的全量 HTTP 拉取，再同步写入 Room；若 `isNetworkOnline=false`，直接读取 Room。
+* **后续新消息** 主要由 WS 增量驱动：`RealtimeChatController -> ChatController -> ChatCacheManager(Room)`，并同步刷新会话摘要 UI。
+* **网络断开** 时，业务选择 `Room` 作为数据源；**网络恢复** 后重新执行 HTTP 全量查询，补偿断网期间 WS 丢失的 Agent/摘要/消息数据。
 * Android 侧使用 OkHttp `pingInterval` 框架心跳（20s）维持连接，不再发送应用层 `HEARTBEAT` 文本包。
-* `ChatMapController` 管理 `<agentId, ChatController>` 映射，支持按 Agent 隔离会话数据。
-* `ChatController` 维护单 Agent 有序消息列表，支持 HTTP 批量插入与 WS 单条/流式插入。
-* `ChatController` 使用 `messageId` 索引加速去重（O(1)），并限制内存消息上限，历史依赖 Room + 锚点分页回放。
-* `ChatCacheManager` 负责 Room 持久化与锚点查询，提供离线回放和重连补偿数据基础。
-* `NetworkManager` 负责在线/离线 + WebSocket 连接状态监听，触发首次/重连 HTTP 拉取策略。
-* `ChatMapController` 使用线程安全容器并设置 Controller 数量上限，降低长时运行内存泄漏风险。
+* `ChatMapController` 管理 `<agentId, ChatController>` 映射，支持按 Agent 隔离会话数据，并设置数量上限降低长时运行内存泄漏风险。
+* `ChatController` 使用 `messageId` 索引加速去重（O(1)），限制内存消息上限；历史依赖 Room + 锚点分页回放。
+* `ChatCacheManager` 负责 Agent缓存、首页摘要缓存、消息持久化与锚点查询，作为离线回放和重连补偿的数据底座。
 
 #### UML静态图（类图）
 ##### Chat 管理类图
@@ -1687,7 +1851,10 @@ classDiagram
       +getNeedUpdateList()
     }
     class ChatCacheManager {
+      +syncHomeSnapshot(userId, agents, agentChats)
+      +queryHomeSnapshot(userId)
       +upsertMessages(list)
+      +upsertRealtimeMessage(item)
       +queryBeforeAnchor(agentId, anchor, limit)
       +queryAfterAnchor(agentId, anchor, limit)
     }
@@ -1695,9 +1862,14 @@ classDiagram
       -currentUserId: String
       -currentAgentId: String
       +ensureUserConnection(userId)
+      +reconnectUserConnectionIfNeeded()
       +bindChannel(agentId)
     }
-    class NetworkManager
+    class NetworkManager {
+      +state: StateFlow~NetworkState~
+      +refreshNetworkState()
+      +requestWsReconnectIfNeeded()
+    }
     ChatMapController --> ChatController
     ChatController --> ChatCacheManager
     RealtimeChatController --> ChatMapController
@@ -1710,14 +1882,16 @@ classDiagram
 ```mermaid
 flowchart LR
     UI[MessageList/Chat UI] --> VM[MessageListMviVm/ComposeChatVm]
-    VM --> MapMgr[ChatMapController]
-    MapMgr --> Ctrl[ChatController]
+    VM --> NM[NetworkManager]
     VM --> Api[RemoteApiSource]
+    VM --> MapMgr[ChatMapController]
     VM --> Ws[RealtimeChatController]
+    MapMgr --> Ctrl[ChatController]
     Ctrl --> Cache[ChatCacheManager]
     Cache --> Room[(VectorDatabase)]
-    Api --> VM
-    Ws --> VM
+    Api --> Cache
+    Ws --> Ctrl
+    NM --> VM
 ```
 
 ##### WS 路由通信图（用户连接 + channel 路由）
@@ -1738,17 +1912,20 @@ flowchart LR
 ##### Chat 活动图（首次/重连/离线）
 ```mermaid
 flowchart TD
-    A[页面初始化] --> B{网络在线?}
-    B -- 是 --> C{首次或重连?}
-    C -- 是 --> D[HTTP拉取]
-    C -- 否 --> E[读取Room]
-    D --> F[写入Room]
-    F --> G[更新ChatController有序列表]
-    E --> G
-    B -- 否 --> E
+    A[页面初始化] --> B[主动读取 NetworkManager.state]
+    B --> C{isNetworkOnline?}
+    C -- 否 --> D[读取Room中的Agent缓存/摘要/消息]
+    C -- 是 --> E[HTTP全量查询 Agents + ChatList]
+    E --> F[比对并同步到Room]
+    F --> G[更新 AgentsManager + MessageListController + ChatController]
+    D --> G
     G --> H[渲染UI]
-    H --> I[接收WS消息]
-    I --> J[二分插入 + 增量刷新]
+    H --> I{收到WS消息?}
+    I -- 是 --> J[ChatController增量插入]
+    J --> K[ChatCacheManager同步到Room]
+    K --> L[刷新摘要和聊天UI]
+    I -- 否 --> M{收到网络恢复事件?}
+    M -- 是 --> E
 ```
 
 ##### Chat 对象图（运行期）
@@ -1764,11 +1941,12 @@ classDiagram
   }
 
   class ChatCacheManager {
-    Room数据库操作
+    AgentCache + ChatSummary + MessageCache
   }
 
   class NetworkManager {
-    网络 + WS状态监听
+    isNetworkOnline = false
+    isWsConnected = false
   }
 
   class RemoteApiSource {
@@ -1776,7 +1954,8 @@ classDiagram
   }
 
   class RealtimeChatController {
-    WebSocket连接状态
+    ws = disconnected
+    currentAgentId = "a_1001"
   }
 
   class ViewModel {
@@ -1807,31 +1986,36 @@ classDiagram
 ```mermaid
 stateDiagram-v2
     [*] --> Init
-    Init --> OnlineSync : 网络可用
-    Init --> OfflineRead : 网络不可用
-    OnlineSync --> WsStreaming : HTTP同步完成
-    WsStreaming --> Reconnect : WS断开
-    Reconnect --> OnlineSync : 重连成功
-    Reconnect --> OfflineRead : 重连失败
-    OfflineRead --> OnlineSync : 网络恢复
+    Init --> OfflineRoom : isNetworkOnline=false
+    Init --> OnlineHttpFullSync : isNetworkOnline=true
+    OfflineRoom --> OnlineHttpFullSync : 网络恢复
+    OnlineHttpFullSync --> WsStreaming : Room同步完成 + WS可用
+    OnlineHttpFullSync --> OnlineRoomFallback : HTTP失败但本地有缓存
+    WsStreaming --> OnlineRoomFallback : WS断开但网络仍在线
+    OnlineRoomFallback --> OnlineHttpFullSync : 触发HTTP重拉
+    WsStreaming --> OfflineRoom : 网络断开
 ```
 
 ##### WS 活动图（登录建连 + 路由切换 + 心跳）
 ```mermaid
 flowchart TD
     A[登录成功] --> B[ChatService绑定]
-    B --> C["ensureUserConnection(userId)"]
-    C --> D[WS onOpen]
-    D --> E["发送 CONNECT(userId)"]
-    E --> F{打开某个Agent Chat?}
-    F -- 是 --> G["发送 BIND_CHANNEL(agentId)"]
-    G --> H[收发该channel消息]
-    F -- 否 --> I[维持空闲长连接]
-    H --> J[OkHttp pingInterval心跳]
-    I --> J
-    J --> K{WS断开?}
-    K -- 是 --> L[NetworkManager触发重连]
-    L --> C
+    B --> C[NetworkManager主动读取当前网络态]
+    C --> D{isNetworkOnline?}
+    D -- 否 --> E[跳过建连, 首页/聊天走Room]
+    D -- 是 --> F["ensureUserConnection(userId)"]
+    F --> G[WS onOpen + CONNECT]
+    G --> H{打开某个Agent Chat?}
+    H -- 是 --> I["发送 BIND_CHANNEL(agentId)"]
+    I --> J[收发该channel消息]
+    H -- 否 --> K[维持空闲长连接]
+    J --> L[OkHttp pingInterval心跳]
+    K --> L
+    L --> M{onClosed/onFailure?}
+    M -- 是 --> N[NetworkManager刷新网络态]
+    N --> O{isNetworkOnline?}
+    O -- 是 --> P[触发WS重连 + HTTP全量补偿]
+    O -- 否 --> E
 ```
 
 ##### WS 时序图（Main + Chat + 后台更新）
@@ -1839,20 +2023,25 @@ flowchart TD
 sequenceDiagram
     participant Login as LoginVm
     participant Main as MainActivity/MainVm
+    participant NM as NetworkManager
     participant RTC as RealtimeChatController
     participant WS as SpringWS
     participant Chat as ComposeChatVm
     participant List as MessageListMviVm
+    participant Cache as ChatCacheManager
 
     Login->>Main: 登录成功导航
+    Main->>NM: refreshNetworkState()
     Main->>RTC: ensureUserConnection(userId)
     RTC->>WS: CONNECT(userId)
     Chat->>RTC: bindChannel(agentId=agent1)
     RTC->>WS: BIND_CHANNEL(agent1)
     Chat->>WS: USER_TEXT_MESSAGE
     WS-->>RTC: TEXT_CHAT_RESPONSE(agent1)
+    RTC->>Cache: upsertRealtimeMessage
     RTC-->>Chat: 更新当前聊天UI
-    RTC-->>List: SharedFlow刷新摘要/未读
+    RTC-->>List: 刷新摘要/未读
+    Note over NM,List: 若网络从 offline -> online，则 List 发起 HTTP 全量重拉
     Note over RTC,WS: OkHttp自动发送Ping/Pong
 ```
 
@@ -1872,6 +2061,7 @@ gantt
     section 数据线程
     ChatController插入去重       :c1, 25, 100
     Room增量持久化               :c2, 30, 90
+    HTTP重连补偿同步             :c3, 40, 80
     section 状态分发
     StateFlow/SharedFlow分发     :d1, 26, 95
 ```
@@ -1886,11 +2076,12 @@ gantt
 ```mermaid
 stateDiagram-v2
     [*] --> Offline
-    Offline --> NetOnline_WsConnecting : 网络恢复
+    Offline --> NetOnline_WsDisconnected : 网络恢复
+    NetOnline_WsDisconnected --> NetOnline_WsConnecting : requestWsReconnectIfNeeded
     NetOnline_WsConnecting --> NetOnline_WsReady : onOpen + CONNECT成功
     NetOnline_WsReady --> NetOnline_WsReady : Ping/Pong正常
     NetOnline_WsReady --> NetOnline_WsDisconnected : onClosed/onFailure
-    NetOnline_WsDisconnected --> NetOnline_WsConnecting : NetworkManager重连触发
+    NetOnline_WsDisconnected --> NetOnline_WsConnecting : 当前网络仍在线
     NetOnline_WsDisconnected --> Offline : 网络断开
     NetOnline_WsConnecting --> Offline : 网络断开
 ```

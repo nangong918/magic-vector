@@ -34,7 +34,11 @@ import com.magicvector.manager.ws.WsManager
 import com.magicvector.utils.chat.RealtimeChatWsClient
 import com.view.appview.recycler.RecyclerViewWhereNeedUpdate
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.launch
 import okhttp3.Response
 import okhttp3.WebSocket
 import okhttp3.WebSocketListener
@@ -61,6 +65,8 @@ class RealtimeChatController : IsAudioRecording{
     }
 
     //---------------------------Data---------------------------
+
+    private val cacheScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     /// 状态管理
     // 当前是否是表情页面
@@ -90,6 +96,7 @@ class RealtimeChatController : IsAudioRecording{
     var realtimeChatWsClient: RealtimeChatWsClient? = null // 长连接，可为null，允许销毁
     private var currentUserId: String? = null
     private var currentAgentId: String? = null
+    private val manualWsClosing = AtomicBoolean(false)
 
     private fun initRealtimeChatWsClient(): RealtimeChatWsClient {
         return realtimeChatWsClient ?: synchronized(this) {
@@ -111,7 +118,26 @@ class RealtimeChatController : IsAudioRecording{
         realtimeChatWsClient = initRealtimeChatWsClient()
         initAudioController()
         audioController?.initAudioRecorderAndPlayer()
+        if (!MainApplication.getNetworkManager().refreshNetworkState().isNetworkOnline) {
+            realtimeChatState.postValue(RealtimeChatState.Disconnected)
+            Log.i(TAG, "ensureUserConnection: network offline, skip ws connect")
+            return
+        }
         startRealtimeWs()
+    }
+
+    fun reconnectUserConnectionIfNeeded() {
+        val userId = currentUserId
+        if (userId.isNullOrBlank()) {
+            Log.w(TAG, "reconnectUserConnectionIfNeeded: userId is blank")
+            return
+        }
+        if (!MainApplication.getNetworkManager().refreshNetworkState().isNetworkOnline) {
+            Log.i(TAG, "reconnectUserConnectionIfNeeded: network offline")
+            return
+        }
+        realtimeChatWsClient = initRealtimeChatWsClient()
+        startRealtimeWs(forceReconnect = true)
     }
 
     fun bindChannel(agentId: String) {
@@ -130,11 +156,11 @@ class RealtimeChatController : IsAudioRecording{
         }
     }
 
-    private fun startRealtimeWs() {
-        if (realtimeChatState.value == RealtimeChatState.InitializedConnected ||
+    private fun startRealtimeWs(forceReconnect: Boolean = false) {
+        if (!forceReconnect && (realtimeChatState.value == RealtimeChatState.InitializedConnected ||
             realtimeChatState.value == RealtimeChatState.Receiving ||
             realtimeChatState.value == RealtimeChatState.RecordingAndSending
-        ) {
+        )) {
             realtimeChatWsClient?.let { client ->
                 currentUserId?.let { WsManager.sendConnectInfo(it, client) }
                 currentAgentId?.let { WsManager.sendBindChannelInfo(it, client) }
@@ -142,8 +168,8 @@ class RealtimeChatController : IsAudioRecording{
             return
         }
         realtimeChatWsClient?.let { client ->
-            client.start(
-                object : WebSocketListener() {
+            manualWsClosing.set(false)
+            val listener = object : WebSocketListener() {
                     override fun onClosed(
                         webSocket: WebSocket,
                         code: Int,
@@ -151,7 +177,8 @@ class RealtimeChatController : IsAudioRecording{
                     ) {
                         super.onClosed(webSocket, code, reason)
                         realtimeChatState.postValue(RealtimeChatState.Disconnected)
-                        MainApplication.getNetworkManager().onWebSocketDisconnected()
+                        val shouldReconnect = !manualWsClosing.getAndSet(false)
+                        MainApplication.getNetworkManager().onWebSocketDisconnected(shouldReconnect)
                         Log.i(TAG, "realtimeChatWsClient::onClosed")
                     }
 
@@ -172,7 +199,8 @@ class RealtimeChatController : IsAudioRecording{
                         super.onFailure(webSocket, t, response)
                         Log.e(TAG, "realtimeChatWsClient::onFailure: ${t.message}")
                         realtimeChatState.postValue(RealtimeChatState.Error(t.message ?: "-"))
-                        MainApplication.getNetworkManager().onWebSocketDisconnected()
+                        val shouldReconnect = !manualWsClosing.getAndSet(false)
+                        MainApplication.getNetworkManager().onWebSocketDisconnected(shouldReconnect)
                     }
 
                     override fun onMessage(webSocket: WebSocket, text: String) {
@@ -204,7 +232,11 @@ class RealtimeChatController : IsAudioRecording{
                         }
                     }
                 }
-            )
+            if (forceReconnect) {
+                client.reconnect(listener)
+            } else {
+                client.start(listener)
+            }
         } ?: run {
             Log.e(TAG, "startRealtimeWs::realtimeChatWsClient is null")
         }
@@ -299,6 +331,7 @@ class RealtimeChatController : IsAudioRecording{
                             chatControllerPointer = chatControllerPointer!!,
                             onReceiveAgentTextCallback = this.onReceiveAgentTextCallback
                         )
+                        syncWsMessageToLocalCache(data)
                         updateMessage()
                     }
                     else {
@@ -647,6 +680,38 @@ class RealtimeChatController : IsAudioRecording{
         }
     }
 
+    private fun syncWsMessageToLocalCache(message: String) {
+        val controller = chatControllerPointer ?: return
+        val response = runCatching {
+            GSON.fromJson(message, com.magicvector.domain.dto.ws.response.RealtimeChatTextResponse::class.java)
+        }.getOrElse {
+            Log.w(TAG, "syncWsMessageToLocalCache: parse failed", it)
+            return
+        }
+        val snapshot = controller.getMessageSnapshot(response.messageId)
+        val resolvedContent = snapshot?.vo?.content ?: response.content.orEmpty()
+        val resolvedChatTime = snapshot?.vo?.time ?: response.chatTime
+        val resolvedTimestamp = snapshot?.timestamp ?: response.timestamp
+        MainApplication.getMessageListManager().upsertLatestMessage(
+            agentId = response.agentId ?: return,
+            preview = resolvedContent,
+            timestamp = resolvedTimestamp ?: 0L,
+            chatTime = resolvedChatTime
+        )
+        cacheScope.launch {
+            runCatching {
+                MainApplication.getChatCacheManager().upsertRealtimeMessage(
+                    response = response,
+                    resolvedContent = resolvedContent,
+                    resolvedChatTime = resolvedChatTime,
+                    resolvedTimestamp = resolvedTimestamp
+                )
+            }.onFailure {
+                Log.w(TAG, "syncWsMessageToLocalCache: room upsert failed", it)
+            }
+        }
+    }
+
     //==========VL: UdpVisionManager
 
     // Udp vision
@@ -681,9 +746,10 @@ class RealtimeChatController : IsAudioRecording{
         realtimeChatWsClient?.let {
             // 考虑到已经关闭的情况
             try {
+                manualWsClosing.set(true)
                 it.close()
                 realtimeChatWsClient = null
-                MainApplication.getNetworkManager().onWebSocketDisconnected()
+                MainApplication.getNetworkManager().onWebSocketDisconnected(shouldReconnect = false)
             } catch (e: Exception){
                 Log.e(TAG, "releaseAllResource::realtimeChatWsClient error", e)
             }
@@ -705,6 +771,7 @@ class RealtimeChatController : IsAudioRecording{
     // 销毁
     fun destroy(){
         releaseAllResource()
+        cacheScope.cancel()
     }
 
 }

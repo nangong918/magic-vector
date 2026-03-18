@@ -73,8 +73,7 @@ class MainActivity : BaseComponentActivity() {
                     onEditorNameChange = { vm.processIntent(MainIntent.UpdateEditorName(it)) },
                     onEditorDescriptionChange = { vm.processIntent(MainIntent.UpdateEditorDescription(it)) },
                     onEditorSubmit = { vm.processIntent(MainIntent.SubmitAgentEditor) },
-                    onEditorDelete = { vm.processIntent(MainIntent.DeleteAgent) },
-                    networkStateFlow = MainApplication.getNetworkManager().state
+                    onEditorDelete = { vm.processIntent(MainIntent.DeleteAgent) }
                 )
             }
         }

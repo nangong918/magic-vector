@@ -19,7 +19,11 @@ abstract class AbstractWsClient(
         // 减小性能开销，不使用eventbus
     }
 
+    private val okHttpClient: OkHttpClient = OkHttpClient.Builder()
+        .pingInterval(20, TimeUnit.SECONDS)
+        .build()
     private lateinit var webSocket: WebSocket
+    private var lastListener: WebSocketListener? = null
 
     fun sendMessage(messageMap: Map<String, String>){
         val message = gson.toJson(messageMap)
@@ -41,17 +45,25 @@ abstract class AbstractWsClient(
     }
 
     fun start(listener: WebSocketListener){
-        val client = OkHttpClient.Builder()
-            .pingInterval(20, TimeUnit.SECONDS)
-            .build()
-
+        lastListener = listener
         val request = Request.Builder()
             .url(baseUrl)
             .build()
 
-        webSocket = client.newWebSocket(request, listener)
+        webSocket = okHttpClient.newWebSocket(request, listener)
         Log.d(TAG, "start::baseUrl: $baseUrl")
     }
+
+    fun reconnect(listener: WebSocketListener? = null) {
+        val actualListener = listener ?: lastListener ?: run {
+            Log.w(TAG, "reconnect::listener is null")
+            return
+        }
+        lastListener = actualListener
+        close()
+        start(actualListener)
+    }
+
     fun close(){
         if (::webSocket.isInitialized) {
             webSocket.close(1000, "Bye")

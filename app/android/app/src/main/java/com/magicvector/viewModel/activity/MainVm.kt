@@ -100,7 +100,7 @@ class MainVm : ViewModel() {
                 realtimeChatController = intent.handler
                 realtimeChatController?.ensureUserConnection(MainApplication.getUserId())
                 MainApplication.getNetworkManager().bindWsReconnectAction {
-                    realtimeChatController?.ensureUserConnection(MainApplication.getUserId())
+                    realtimeChatController?.reconnectUserConnectionIfNeeded()
                 }
                 _dataState.update { it.copy(isChatServiceBound = true) }
             }

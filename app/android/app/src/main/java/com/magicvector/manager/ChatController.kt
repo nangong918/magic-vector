@@ -53,6 +53,13 @@ class ChatController(val agentId: String) {
         return lock.withLock { viewChatMessageList.toMutableList() }
     }
 
+    fun getMessageSnapshot(messageId: String?): ChatItemAo? {
+        if (messageId.isNullOrBlank()) {
+            return null
+        }
+        return lock.withLock { messageIdIndex[messageId] }
+    }
+
     // response -> view
     fun setResponsesToViews(responses: List<ChatMessageDo>){
         lock.withLock {
