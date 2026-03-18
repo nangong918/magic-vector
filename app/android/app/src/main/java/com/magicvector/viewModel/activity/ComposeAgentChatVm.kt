@@ -27,6 +27,7 @@ import com.magicvector.MainApplication
 import com.magicvector.callback.OnReceiveAgentTextCallback
 import com.magicvector.callback.OnVadChatStateChange
 import com.magicvector.manager.RealtimeChatController
+import com.magicvector.manager.event.EventSourceType
 import com.magicvector.manager.network.NetworkState
 import com.magicvector.service.ChatService
 import com.magicvector.ui.view.chat.MessageItem
@@ -93,7 +94,7 @@ class ComposeAgentChatVm : ViewModel() {
     private val onReceiveAgentTextCallback = object : OnReceiveAgentTextCallback {
         override fun onText(text: String) {
             _uiState.update { it.copy(agentText = text) }
-            syncConversationMessagesToUi()
+            syncConversationMessagesToUi(EventSourceType.WS_REALTIME)
         }
     }
 
@@ -266,7 +267,7 @@ class ComposeAgentChatVm : ViewModel() {
                 return
             }
             if (!controller.shouldRemoteSync(latestNetworkState.recoveryToken)) {
-                syncConversationMessagesToUi()
+                syncConversationMessagesToUi(EventSourceType.MEMORY_CACHE)
                 return
             }
             val chatMessages = MainApplication.getRemoteApiSource().getLastChat(agentId).chatMessages.orEmpty()
@@ -274,7 +275,7 @@ class ComposeAgentChatVm : ViewModel() {
             controller.clear()
             controller.setResponsesToViews(chatMessages)
             controller.markRemoteSyncCompleted(latestNetworkState.recoveryToken)
-            syncConversationMessagesToUi()
+            syncConversationMessagesToUi(EventSourceType.HTTP_FULL)
         } catch (e: Exception) {
             Log.e(TAG, "syncConversationHistory: remote failed", e)
             loadConversationFromRoom()
@@ -305,17 +306,41 @@ class ComposeAgentChatVm : ViewModel() {
                 }
             }
         )
-        syncConversationMessagesToUi()
+        syncConversationMessagesToUi(EventSourceType.ROOM_FULL)
     }
 
-    private fun syncConversationMessagesToUi() {
+    private fun syncConversationMessagesToUi(source: EventSourceType) {
         val agentId = messageAo?.contactId ?: return
-        val items = MainApplication.getChatMapManager()
+        val controllerItems = MainApplication.getChatMapManager()
             .getChatManager(agentId)
             .getViewChatMessageList()
+        val summary = buildConversationSummary(agentId, controllerItems)
+        MainApplication.getChatEventManager().replaceConversation(
+            agentId = agentId,
+            messages = controllerItems,
+            summary = summary,
+            source = source
+        )
+        val items = controllerItems
             .sortedBy { it.timestamp }
             .map { it.toMessageItem() }
         sendEffect(AgentChatEffect.SyncTextMessages(items))
+    }
+
+    private fun buildConversationSummary(
+        agentId: String,
+        items: List<ChatItemAo>
+    ): MessageContactItemAo {
+        val latest = items.maxByOrNull { it.timestamp }
+        return MessageContactItemAo().apply {
+            contactId = agentId
+            timestamp = latest?.timestamp ?: 0L
+            vo.name = messageAo?.vo?.name.orEmpty()
+            vo.avatarUrl = messageAo?.vo?.avatarUrl
+            vo.setMessagePreview(latest?.vo?.content.orEmpty())
+            vo.time = latest?.vo?.time
+            vo.unreadCount = 0
+        }
     }
 
     private fun ChatItemAo.toMessageItem(): MessageItem {

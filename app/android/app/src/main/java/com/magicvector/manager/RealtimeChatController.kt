@@ -27,6 +27,7 @@ import com.magicvector.callback.OnReceiveAgentTextCallback
 import com.magicvector.manager.audio.AudioController
 import com.magicvector.manager.audio.AudioHandleCallback
 import com.magicvector.manager.audio.IsAudioRecording
+import com.magicvector.manager.event.EventSourceType
 import com.magicvector.manager.mcp.HandleSystemResponse
 import com.magicvector.manager.audio.vad.VadDetectionCallback
 import com.magicvector.manager.vl.UdpVisionManager
@@ -697,6 +698,20 @@ class RealtimeChatController : IsAudioRecording{
             preview = resolvedContent,
             timestamp = resolvedTimestamp ?: 0L,
             chatTime = resolvedChatTime
+        )
+        val summary = MainApplication.getMessageListManager().messageContactItemAos
+            .firstOrNull { it.contactId == response.agentId }
+        snapshot?.let {
+            MainApplication.getChatEventManager().appendRealtimeMessage(
+                agentId = response.agentId ?: return,
+                item = it,
+                summary = summary,
+                source = EventSourceType.WS_REALTIME
+            )
+        }
+        MainApplication.getChatEventManager().replaceSummaries(
+            MainApplication.getMessageListManager().messageContactItemAos.toList(),
+            EventSourceType.WS_REALTIME
         )
         cacheScope.launch {
             runCatching {

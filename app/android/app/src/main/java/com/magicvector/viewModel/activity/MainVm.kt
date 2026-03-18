@@ -8,6 +8,7 @@ import com.magicvector.domain.dto.http.request.AgentDeleteRequest
 import com.magicvector.MainApplication
 import com.magicvector.manager.RealtimeChatController
 import com.magicvector.manager.agent.AgentsEffect
+import com.magicvector.manager.event.EventSourceType
 import com.magicvector.viewModel.fragment.ControlVm
 import com.magicvector.viewModel.fragment.MessageListIntent
 import com.magicvector.viewModel.fragment.MessageListMviVm
@@ -166,7 +167,9 @@ class MainVm : ViewModel() {
                         description = description
                     )
                     _uiState.update { it.copy(agentEditor = AgentEditorState()) }
-                    agentsManager.upsertAgent(response.agentAo)
+                    response.agentAo?.let {
+                        MainApplication.getAgentEventManager().upsert(it, EventSourceType.USER_ACTION)
+                    }
                     messageListVm.processIntent(MessageListIntent.Refresh)
                 } catch (_: Throwable) {
                     _uiState.update { it.copy(agentEditor = it.agentEditor.copy(isSubmitting = false)) }
@@ -190,7 +193,9 @@ class MainVm : ViewModel() {
                     description = description
                 )
                 _uiState.update { it.copy(agentEditor = AgentEditorState()) }
-                agentsManager.upsertAgent(response.agentAo)
+                response.agentAo?.let {
+                    MainApplication.getAgentEventManager().upsert(it, EventSourceType.USER_ACTION)
+                }
                 messageListVm.processIntent(MessageListIntent.Refresh)
             } catch (_: Throwable) {
                 _uiState.update { it.copy(agentEditor = it.agentEditor.copy(isSubmitting = false)) }
@@ -211,7 +216,7 @@ class MainVm : ViewModel() {
             try {
                 api.deleteAgent(request)
                 _uiState.update { it.copy(agentEditor = AgentEditorState()) }
-                agentsManager.removeAgent(agentId)
+                MainApplication.getAgentEventManager().remove(agentId, EventSourceType.USER_ACTION)
                 messageListVm.processIntent(MessageListIntent.Refresh)
             } catch (_: Throwable) {
                 _uiState.update { it.copy(agentEditor = it.agentEditor.copy(isSubmitting = false)) }

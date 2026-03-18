@@ -7,6 +7,8 @@ import com.core.baseutil.image.ImageManager
 import com.data.domain.ao.mixLLM.McpSwitch
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
+import com.magicvector.dataSource.local.AgentLocalSource
+import com.magicvector.dataSource.local.ChatLocalSource
 import com.magicvector.dataSource.remote.RemoteApiSource
 import com.magicvector.manager.ChatMapController
 import com.magicvector.manager.MessageListController
@@ -14,6 +16,8 @@ import com.magicvector.manager.agent.AgentsManager
 import com.magicvector.manager.chat.ChatCacheManager
 import com.magicvector.manager.control.ControlAgentLogManager
 import com.magicvector.manager.control.ControlConsoleManager
+import com.magicvector.manager.event.agent.AgentEventManager
+import com.magicvector.manager.event.chat.ChatEventManager
 import com.magicvector.manager.network.NetworkManager
 import com.magicvector.manager.user.UserManager
 import com.magicvector.manager.yolo.VisionManager
@@ -122,6 +126,14 @@ class MainApplication : Application() {
             return agentsManager!!
         }
 
+        private var agentEventManager: AgentEventManager? = null
+        fun getAgentEventManager(): AgentEventManager {
+            if (agentEventManager == null) {
+                agentEventManager = AgentEventManager(getAgentsManager())
+            }
+            return agentEventManager!!
+        }
+
         // chatMapManager
         private var chatMapController: ChatMapController? = null
         fun getChatMapManager(): ChatMapController {
@@ -137,6 +149,30 @@ class MainApplication : Application() {
                 chatCacheManager = ChatCacheManager.getInstance(getApp())
             }
             return chatCacheManager!!
+        }
+
+        private var chatEventManager: ChatEventManager? = null
+        fun getChatEventManager(): ChatEventManager {
+            if (chatEventManager == null) {
+                chatEventManager = ChatEventManager()
+            }
+            return chatEventManager!!
+        }
+
+        private var agentLocalSource: AgentLocalSource? = null
+        fun getAgentLocalSource(): AgentLocalSource {
+            if (agentLocalSource == null) {
+                agentLocalSource = AgentLocalSource.getInstance(getApp())
+            }
+            return agentLocalSource!!
+        }
+
+        private var chatLocalSource: ChatLocalSource? = null
+        fun getChatLocalSource(): ChatLocalSource {
+            if (chatLocalSource == null) {
+                chatLocalSource = ChatLocalSource.getInstance(getApp())
+            }
+            return chatLocalSource!!
         }
 
         private var networkManager: NetworkManager? = null

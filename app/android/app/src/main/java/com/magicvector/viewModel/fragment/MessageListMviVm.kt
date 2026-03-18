@@ -9,6 +9,7 @@ import com.data.domain.ao.message.MessageContactItemAo
 import com.magicvector.MainApplication
 import com.magicvector.domain.convertor.MessageConvertor
 import com.magicvector.domain.exception.NetworkBusinessException
+import com.magicvector.manager.event.EventSourceType
 import com.magicvector.manager.network.NetworkState
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
@@ -223,7 +224,8 @@ class MessageListMviVm : ViewModel() {
             agents = snapshot.agents,
             agentChats = snapshot.agentChats
         )
-        MainApplication.getAgentsManager().setAgents(snapshot.agents)
+        MainApplication.getAgentEventManager().replaceAll(snapshot.agents, EventSourceType.HTTP_FULL)
+        MainApplication.getChatEventManager().replaceSummaries(messageItems, EventSourceType.HTTP_FULL)
         MainApplication.getMessageListManager().setMessageContactItemAos(messageItems)
         // ui更新
         applyUiSnapshot(
@@ -235,7 +237,8 @@ class MessageListMviVm : ViewModel() {
 
     private suspend fun applyCachedSnapshot(userId: Long): Boolean {
         val snapshot = MainApplication.getChatCacheManager().queryHomeSnapshot(userId)
-        MainApplication.getAgentsManager().setAgents(snapshot.agents)
+        MainApplication.getAgentEventManager().replaceAll(snapshot.agents, EventSourceType.ROOM_FULL)
+        MainApplication.getChatEventManager().replaceSummaries(snapshot.messageItems, EventSourceType.ROOM_FULL)
         MainApplication.getMessageListManager().setMessageContactItemAos(snapshot.messageItems)
         applyUiSnapshot(
             agentCount = snapshot.agents.size,
@@ -246,8 +249,18 @@ class MessageListMviVm : ViewModel() {
     }
 
     private suspend fun applyManagerSnapshot(userId: Long): Boolean {
-        val agents = MainApplication.getAgentsManager().agentList.value
-        val messages = MainApplication.getMessageListManager().messageContactItemAos.toList()
+        val eventAgents = MainApplication.getAgentEventManager().items.value
+        val eventMessages = MainApplication.getChatEventManager().getSummaries()
+        val agents = if (eventAgents.isNotEmpty()) {
+            eventAgents
+        } else {
+            MainApplication.getAgentsManager().agentList.value
+        }
+        val messages = if (eventMessages.isNotEmpty()) {
+            eventMessages
+        } else {
+            MainApplication.getMessageListManager().messageContactItemAos.toList()
+        }
             .sortedByDescending { it.timestamp }
         if (agents.isNotEmpty() || messages.isNotEmpty()) {
             applyUiSnapshot(

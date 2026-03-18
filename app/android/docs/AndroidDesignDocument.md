@@ -13,7 +13,7 @@
 * **状态管理层（MVI）**：负责处理 Intent、维护状态、发出 Effect。
   * `StartVm`、`ComposeLoginVm`、`ComposeRegisterVm`、`MainVm`、`MessageListMviVm`、`ControlVm`、`MineVm`、`ComposeChatVm`、`ComposeAgentChatVm`、`AgentEmojiFragmentVm`、`AgentTextChatFragmentVm`
 * **业务与会话层（Manager/Controller）**：封装业务规则与状态编排，不直接持有 DAO 与 Retrofit。
-* `UserManager`、`AgentsManager`、`ChatMapController`、`ChatController`、`ChatCacheManager`、`ControlCommandController`、`ControlConsoleManager`、`NetworkManager(全局/Application级)`
+* `UserManager`、`AgentsManager(Store)`、`ChatMapController`、`ChatController(Store)`、`AgentEventManager`、`ChatEventManager`、`ControlCommandController`、`ControlConsoleManager`、`NetworkManager(全局/Application级)`
 * **数据源层（DataSource）**：承接可复用数据流程（参数校验、请求拼装、统一响应校验），向上暴露 `suspend` 结果与异常语义。
   * `remote/RemoteApiSource`：远程请求流程封装（基于 `repository/api/ApiRequest`）
   * `local/UserLocalSource`：本地数据流程封装（基于 `repository/dao/UserDao`）
@@ -120,7 +120,7 @@ classDiagram
 
 #### 职责规划
 * [`dataSource/remote/RemoteApiSource.kt`](../app/src/main/java/com/magicvector/dataSource/remote/RemoteApiSource.kt)：统一远程请求流程模板（参数校验、DTO拼装、业务码校验、异常语义），对上只暴露 `suspend`。
-* [`dataSource/local/*LocalSource`](../app/src/main/java/com/magicvector/dataSource/local)：统一本地数据流程模板（参数约束、DAO调用、事务边界、返回语义），对上暴露 `suspend`。
+* [`dataSource/local/*LocalSource`](../app/src/main/java/com/magicvector/dataSource/local)：统一本地数据流程模板（参数约束、DAO调用、事务边界、返回语义），对上暴露 `suspend`。当前规划拆分为 `UserLocalSource`、`AgentLocalSource`、`ChatLocalSource`；迁移期 `ChatCacheManager` 仅作为兼容 facade 转调 LocalSource。
 * [`repository`](../app/src/main/java/com/magicvector/repository)：仅保留“访问接口定义”，不承载业务分支与状态编排。
 * `ViewModel/Manager`：作为调用端，负责 `try-catch + state/effect`；不再依赖回调接口。
 
@@ -1863,18 +1863,179 @@ gantt
     WS重连尝试                      :w1, 15, 40
 ```
 
-### 聊天管理模块（ChatController + ChatMapController + ChatCacheManager）
+### 事件分发模块（AbstractEventManager + AgentEventManager + ChatEventManager）
+
+#### 功能职责
+* `AbstractEventManager` 作为统一抽象基类，维护一个唯一 `List` 状态、一个事件流以及串行 reducer 锁。
+* `AgentEventManager` 统一接收 Agent 的 4 类数据源：用户主动操作、HTTP全量、Room全量、兼容层内存缓存；统一归并后再分发给页面与兼容 Store。
+* `ChatEventManager` 统一接收 Chat 的 4 类数据源：用户主动操作、HTTP全量/分页、WS实时消息、Room全量/分页；内部按 `agentId` 维护会话状态并同步首页摘要。
+* 所有生产者都只向 EventManager 提交数据，不直接跨页面写多个 UI/VM，避免“多处各自查询、多处各自 setState”导致的不一致。
+* 当前 Android 端不引入额外消息队列，采用 `ReentrantLock + StateFlow/SharedFlow` 即可满足吞吐；需要严格保证 HTTP 全量与 WS 实时消息的 merge 顺序由 EventManager 统一裁决。
+
+#### 设计约束
+* `AgentsManager` 与 `ChatController` 在迁移期退化为兼容 Store，不再作为唯一事实源；唯一事实源迁移到 `AgentEventManager.items` 与 `ChatEventManager.items`。
+* `ChatCacheManager` 在迁移期保留为 facade，内部转调 `AgentLocalSource/ChatLocalSource`；长期目标是移除。
+* `MessageListPage` 与 `ComposeAgentChatActivity` 均视为 Chat 事件消费者；`MainVm` 与 Agent 编辑链路视为 Agent 事件消费者。
+
+#### UML静态图（类图）
+##### EventManager 类图
+```mermaid
+classDiagram
+    class AbstractEventManager~TItem TEvent~ {
+      -items: MutableStateFlow~List~
+      -events: MutableSharedFlow~TEvent~
+      -reducerLock: ReentrantLock
+      +items: StateFlow~List~
+      +events: SharedFlow~TEvent~
+      #replaceAllInternal(list,event)
+      #upsertTopInternal(item,matcher,event)
+      #insertHistoryOrderedInternal(list,comparator,duplicate,event)
+      #removeInternal(matcher,event)
+    }
+    class AgentEventManager {
+      +replaceAll(list,source)
+      +upsert(agent,source)
+      +remove(agentId,source)
+    }
+    class ChatEventManager {
+      +replaceConversation(agentId,messages,summary,source)
+      +insertHistoryPage(agentId,messages,source)
+      +appendRealtimeMessage(agentId,item,summary,source)
+      +replaceSummaries(list,source)
+    }
+    class AgentLocalSource
+    class ChatLocalSource
+    class AgentsManager
+    class ChatController
+
+    AbstractEventManager <|-- AgentEventManager
+    AbstractEventManager <|-- ChatEventManager
+    AgentEventManager --> AgentsManager
+    ChatEventManager --> ChatController
+    AgentEventManager --> AgentLocalSource
+    ChatEventManager --> ChatLocalSource
+```
+
+#### UML静态图（对象图）
+##### EventManager 运行期对象图
+```mermaid
+classDiagram
+    class agentEventMgr_1 {
+      items = 8_agents
+      lastSource = HTTP_FULL
+    }
+    class chatEventMgr_1 {
+      sessions = 3
+      latestSource = WS_REALTIME
+    }
+    class session_agent_1001 {
+      agentId = "1001"
+      messages = 50
+      summaryPreview = "你好"
+    }
+    class listVm_1 {
+      consumer = message_list
+    }
+    class chatVm_1 {
+      consumer = compose_agent_chat
+    }
+
+    chatEventMgr_1 --> session_agent_1001
+    agentEventMgr_1 --> listVm_1
+    chatEventMgr_1 --> listVm_1
+    chatEventMgr_1 --> chatVm_1
+```
+
+#### UML动态图（状态图）
+##### EventManager 状态图
+```mermaid
+stateDiagram-v2
+    [*] --> Idle
+    Idle --> Reducing : 收到新事件
+    Reducing --> Emitting : 唯一List完成归并
+    Emitting --> Idle : StateFlow/SharedFlow分发完成
+```
+
+#### UML动态图（活动图）
+##### 多生产者到单管理者活动图
+```mermaid
+flowchart TD
+    A[用户主动操作] --> E[EventManager]
+    B[HTTP全量或分页] --> E
+    C[WS实时消息] --> E
+    D[Room全量或分页] --> E
+    E --> F[加锁进入reducer]
+    F --> G[更新唯一List]
+    G --> H[更新兼容Store]
+    H --> I[StateFlow/SharedFlow分发]
+    I --> J[MessageListPage]
+    I --> K[ComposeAgentChatActivity]
+```
+
+#### UML动态图（时序图）
+##### EventManager 时序图
+```mermaid
+sequenceDiagram
+    participant Producer as RemoteApiSource_or_WS_or_UI
+    participant EventMgr as ChatEventManager
+    participant Local as ChatLocalSource
+    participant Store as ChatController
+    participant Consumer as ComposeAgentChatVm_or_MessageListMviVm
+
+    Producer->>EventMgr: submit(event)
+    EventMgr->>EventMgr: lock + merge unique list
+    EventMgr->>Local: optional persist/query
+    EventMgr->>Store: sync compatibility store
+    EventMgr-->>Consumer: StateFlow/SharedFlow emit
+```
+
+#### UML动态图（通信图）
+##### EventManager 通信图
+```mermaid
+flowchart LR
+    UI[Activity_Fragment_VM] --> EventMgr[AgentEventManager_ChatEventManager]
+    API[RemoteApiSource] --> EventMgr
+    WS[RealtimeChatController] --> EventMgr
+    Local[AgentLocalSource_ChatLocalSource] --> EventMgr
+    EventMgr --> Store[AgentsManager_ChatController]
+    EventMgr --> Consumer[MessageListPage_ComposeAgentChatActivity]
+```
+
+#### 功能线程甘特图
+##### EventManager 线程甘特图
+```mermaid
+gantt
+    title EventManager归并与分发线程甘特图
+    dateFormat  X
+    axisFormat %L ms
+    section Producer线程
+    用户操作_HTTP_WS_Room输入           :p1, 0, 20
+    section Reducer线程
+    加锁归并唯一List                    :r1, 20, 25
+    section IO线程
+    可选本地持久化或查询                :i1, 25, 35
+    section Main线程
+    Flow分发到页面                      :m1, 45, 20
+```
+
+#### 迁移顺序
+* 第一步：补 `AgentLocalSource`、`ChatLocalSource` 与 `AbstractEventManager/AgentEventManager/ChatEventManager` 骨架。
+* 第二步：`ChatCacheManager` 退化为兼容 facade，内部只负责转调 LocalSource。
+* 第三步：`MainVm`、`MessageListMviVm`、`ComposeAgentChatVm` 等生产者逐步改为先提交 EventManager，再由兼容 Store 保持现有页面可用。
+* 第四步：待页面消费者稳定切到 EventManager 后，删除 `ChatCacheManager` 和跨页面直写旧 Store 的路径。
+
+### 聊天管理模块（ChatController + ChatMapController + ChatCacheManager 兼容层）
 
 #### 功能职责
 * `RealtimeChatController` 升级为 **用户级常驻连接**：登录成功后建立 `userId` 维度 WS，不再在打开 Chat 时按 `agentId` 新建连接。
-* 首页 `Agent列表` 与 `Chat摘要列表` 逻辑上拆分处理：`AgentsManager` 维护 Agent 集合，`MessageListController/ChatCacheManager` 维护最近消息摘要与消息缓存，避免把 Agent 与 ChatList 视为单一对象源。
+* 首页 `Agent列表` 与 `Chat摘要列表` 逻辑上拆分处理：迁移后由 `AgentEventManager` 与 `ChatEventManager` 维护唯一事实源；当前兼容期仍同步 `AgentsManager`、`MessageListController`、`ChatController`。
 * **初始化 App / 首次进入首页**：先读取 `NetworkManager.state`；若 `isNetworkOnline=true`，执行 `GET /agent/getList + GET /agent/getLastAgentChatList` 的全量 HTTP 拉取，再同步写入 Room；若 `isNetworkOnline=false`，直接读取 Room。
-* **后续新消息** 主要由 WS 增量驱动：`RealtimeChatController -> ChatController -> ChatCacheManager(Room)`，并同步刷新会话摘要 UI。
+* **后续新消息** 主要由 WS 增量驱动：`RealtimeChatController -> ChatEventManager -> ChatController/LocalSource`，并同步刷新会话摘要 UI。
 * **网络断开** 时，业务选择 `Room` 作为数据源；**网络恢复** 后重新执行 HTTP 全量查询，补偿断网期间 WS 丢失的 Agent/摘要/消息数据。
 * Android 侧使用 OkHttp `pingInterval` 框架心跳（20s）维持连接，不再发送应用层 `HEARTBEAT` 文本包。
 * `ChatMapController` 管理 `<agentId, ChatController>` 映射，支持按 Agent 隔离会话数据，并设置数量上限降低长时运行内存泄漏风险。
 * `ChatController` 使用 `messageId` 索引加速去重（O(1)），限制内存消息上限；历史依赖 Room + 锚点分页回放。
-* `ChatCacheManager` 负责 Agent缓存、首页摘要缓存、消息持久化与锚点查询，作为离线回放和重连补偿的数据底座。
+* `ChatCacheManager` 在迁移期作为兼容 facade，内部转调 `AgentLocalSource + ChatLocalSource`；长期目标由 LocalSource + EventManager 替代。
 
 #### UML静态图（类图）
 ##### Chat 管理类图
