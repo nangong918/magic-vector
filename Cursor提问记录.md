@@ -1239,3 +1239,88 @@ AgentChatUiState你是不是忘记添加isLoading和对应的ui了
 顺便一说，你检查一下chat页面打开是不是每次都是Http全量请求？这是不对的，只有初次打开和断网之后再次打开才是全量http请求。
 其他时候都是调用Manager缓存数据。
 顺便一说检查这个页面切换的获取数据有没有写在设计文档，没写就补上。
+
+
+
+### Agent人审第二版
+
+MainActivity √
+MainVm √
+MainActivityScreen √
+ChatService √
+RealtimeChatController
+MessageListMviVm √
+AgentsManager
+ChatCacheManager
+
+
+todo：
+* ChatCacheManager和AgentsManager应该合并
+  * ChatCacheManager主要负责Agent和ChatMessage的存储
+  * AgentsManager负责Agent更变事件的消息分发
+  * MainVm的`syncAgentsDataFromManager`需要修改
+* MessageListMviVm的initNetworkRequest()为什么废弃了
+* 重新定义数据结构：AgentAo，AgentChatAo
+* RealtimeChatController重构：
+  * 取消currentIsEmoji
+  * 取消isChatCalling
+  * 取消recyclerViewWhereNeedUpdate
+  * 重构vad参考flutter
+  * 取消onReceiveAgentTextCallback，改为事件驱动
+  * 取消LiveData管理状态值`RealtimeChatState`，重新设计场景的聊天状态
+  * 流程梳理：
+    * Awake -> STT + VAD -> Stream(LM + TTS + Command) -> MCP/GPIO
+  * 模块规范化：
+    * 语音唤醒Manager
+    * Ws长连接Manager
+    * Emoji表情Manager
+    * VAD语音停顿Manager
+    * YOLOv8识别Manager
+    * UDP视频发送Manager
+
+
+### 重构AgentsManager，ChatCacheManager
+
+我原先为了处理`Agent`的变化事件创建了`AgentsManager`，
+为了处理`Message`的缓存，创建了`ChatCacheManager`。
+我发现设计并不完美。
+
+#### 数据库LocalSource
+取消：`ChatCacheManager`，我认为数据库在Dao层之上的业务数据应该放在[local](app/android/app/src/main/java/com/magicvector/dataSource/local)
+并且应该拆分`Agent`和`Chat`
+
+#### 事件分发EventManager
+根据我的思考，数据源一共有：
+  1. 用户主动操作：如增删改查Agent；发送Message
+     本地的数据更新之后需要同步到其他页面比如说Chat页面发送消息。那么MessageList的最新一条也要更新。
+     再比如说用户在编辑Agent页面修改了Agent的名称，那么MessageList页面的Agent名称也需要同步。
+  2. Http全量请求（一般最新50条）、Http分页请求（根据某个时间戳的前或后的n条数据；用于已经请求了50条消息，但是用户还要上拉聊天记录翻阅以前的消息）
+  3. Ws长连接消息
+  4. 断网情况下调用Room本地持久化数据。分为`全量Room查询`，`分页Room查询`
+
+我认为需要创建`AbstractEventManager`抽象工厂和`AgentEventManager`和`ChatEventManager`
+逻辑需要参考现有的`AgentsManager`
+内部会维护一个唯一的List
+逻辑：所有的数据更新都要提交给`EventsManager`包括我上面提到的4中数据源，然后`EventsManager`分发给所有订阅者。
+这样就避免了重复的查询与数据不统一的问题。
+* `用户主动操作`是实时操作，直接添加List最上层到`EventsManager`并分发。数据源：（Activity、Fragment、View）及其Vm
+* `Http全量请求`是最新数据，直接清空List，然后将全量请求放在List中。`EventsManager`并分发。数据源RemoteApiSource
+* `Http分页请求`是历史数据，List可视为有序的，用二分插入将消息一条一条的插入到List中。`EventsManager`并分发。数据源RemoteApiSource（中的分页接口）
+* `Ws长连接消息`是实时最新的，直接添加List最上层到`EventsManager`并分发。数据源：RealtimeChatController
+* `无网络；有内存缓存数据`：用户上滑获取更多历史消息则用当前内存缓存的末尾时间戳进行room分页查询，并EventManager分发。数据源：LocalSource
+* `无网络；无内存缓存数据`：直接room全量查询。`EventsManager`并分发。数据源：LocalSource（中的分页接口）
+
+Agent消息订阅：MessageListPage
+Chat消息订阅：MessageListPage（Agent最新消息变化之后，Item的最新消息view要变化，并且要消息提示显示几条消息未读），ComposeAgentChatActivity
+
+所以需要根据上述需求进行设计，做这些主要是为了保证多数据源（生产者）都交给一个管理者，并同步给多个消费者。记得加同步锁，并分析同步会不会导致消息堆积，是否需要消息队列（我觉得Android这种级别的不需要吧）。
+设计完成记得更新设计文档[AndroidDesignDocument.md](app/android/docs/AndroidDesignDocument.md)
+
+
+
+
+
+
+
+
+
