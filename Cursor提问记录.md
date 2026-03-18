@@ -1183,7 +1183,8 @@ todo：修改view展示数据结构
 * MainActivityScreen问题：refreshToken是根据网络状态决定是否需要获取刷新UI的，这个我觉得应该存储在MineVm
 * MessageListScreen订阅副作用应该取消else -> {}，而是全部处理，else不安全。；顶部应该提示长安messageListItem编辑
 * MessageListMviVm的MVI：你这个也没设计dataState；比如hasAgent和hasMessage都是服务uiMode的
-
+* 断网存储和获取逻辑：
+* 排查问题：为什么主页面下拉刷新view一直在执行
 
 你修改完成上述问题都要将他们在[AndroidDesignDocument.md](app/android/docs/AndroidDesignDocument.md)
 中找到合适的位置并理解，写入。

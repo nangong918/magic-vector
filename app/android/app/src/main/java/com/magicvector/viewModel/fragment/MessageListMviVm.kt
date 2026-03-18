@@ -28,6 +28,8 @@ class MessageListMviVm : ViewModel() {
 
     private val _uiState = MutableStateFlow(MessageListState())
     val uiState: StateFlow<MessageListState> = _uiState.asStateFlow()
+    private val _dataState = MutableStateFlow(MessageListDataState())
+    val dataState: StateFlow<MessageListDataState> = _dataState.asStateFlow()
 
     private val _effect = Channel<MessageListEffect>(Channel.BUFFERED)
     val effect: Flow<MessageListEffect> = _effect.receiveAsFlow()
@@ -39,6 +41,14 @@ class MessageListMviVm : ViewModel() {
             is MessageListIntent.EditAgent -> onEditAgent(intent.position)
             MessageListIntent.CreateAgent -> sendEffect(MessageListEffect.OpenCreateAgent)
             MessageListIntent.Refresh -> refreshMessages()
+            is MessageListIntent.UpdateConnectionState -> {
+                _dataState.update {
+                    it.copy(
+                        isServiceBound = intent.isServiceBound,
+                        isWsConnected = intent.isWsConnected
+                    )
+                }
+            }
             is MessageListIntent.AgentCreated -> {
                 if (intent.created) {
                     refreshMessages()
@@ -55,13 +65,15 @@ class MessageListMviVm : ViewModel() {
 
     private fun loadCachedMessages() {
         val cachedMessages = MainApplication.getMessageListManager().messageContactItemAos
+        _dataState.update { it.copy(hasMessage = cachedMessages.isNotEmpty()) }
         _uiState.update {
-            val hasMessage = cachedMessages.isNotEmpty()
             it.copy(
                 messages = cachedMessages.toList(),
                 messageCount = cachedMessages.size,
-                hasMessage = hasMessage,
-                uiMode = deriveUiMode(it.hasAgent, hasMessage)
+                uiMode = deriveUiMode(
+                    hasAgent = _dataState.value.hasAgent,
+                    hasMessage = _dataState.value.hasMessage
+                )
             )
         }
     }
@@ -140,23 +152,28 @@ class MessageListMviVm : ViewModel() {
         }
 
         _uiState.update {
-            println("xxx::hasAgent=${it.hasAgent}, hasMessage=${it.hasMessage}, uiMode=${deriveUiMode(it.hasAgent, it.hasMessage)}")
             it.copy(
                 isLoading = false,
                 isRefreshing = false,
-                uiMode = deriveUiMode(it.hasAgent, it.hasMessage)
+                uiMode = deriveUiMode(
+                    hasAgent = _dataState.value.hasAgent,
+                    hasMessage = _dataState.value.hasMessage
+                )
             )
         }
+        _dataState.update { it.copy(hasException = _uiState.value.error != null) }
     }
 
     private suspend fun fetchAndHandleAgentList(userId: String) {
         runCatching { api.getAgentList(userId) }
             .onSuccess { response ->
-                val hasAgent = (response.agentAos?.size ?: 0) > 0
+                val agents = response.agentAos.orEmpty()
+                MainApplication.getAgentsManager().setAgents(agents)
+                val hasAgent = agents.isNotEmpty()
+                _dataState.update { it.copy(hasAgent = hasAgent) }
                 _uiState.update {
                     it.copy(
-                        agentCount = response.agentAos?.size ?: 0,
-                        hasAgent = hasAgent,
+                        agentCount = agents.size,
                         error = null
                     )
                 }
@@ -173,10 +190,10 @@ class MessageListMviVm : ViewModel() {
                 _uiState.update {
                     it.copy(
                         error = "获取Agent列表失败: ${exception.message}",
-                        hasAgent = false,
                         agentCount = 0
                     )
                 }
+                _dataState.update { it.copy(hasAgent = false) }
             }
     }
 
@@ -191,10 +208,10 @@ class MessageListMviVm : ViewModel() {
                     it.copy(
                         messages = messageContactItemAos,
                         messageCount = messages.size,
-                        hasMessage = messages.isNotEmpty(),
                         error = null
                     )
                 }
+                _dataState.update { it.copy(hasMessage = messages.isNotEmpty()) }
             }
             .onFailure { exception ->
                 Log.e(TAG, "获取Chat列表失败", exception)
@@ -209,15 +226,16 @@ class MessageListMviVm : ViewModel() {
                     it.copy(
                         error = "获取消息列表失败: ${exception.message}",
                         messages = emptyList(),
-                        messageCount = 0,
-                        hasMessage = false
+                        messageCount = 0
                     )
                 }
+                _dataState.update { it.copy(hasMessage = false) }
             }
     }
 
     private fun handleError(error: String) {
         Log.e(TAG, "handleError: $error")
+        _dataState.update { it.copy(hasException = true) }
         _uiState.update {
             it.copy(
                 isLoading = false,
@@ -243,9 +261,21 @@ sealed class MessageListIntent {
     data class EditAgent(val position: Int) : MessageListIntent()
     data object CreateAgent : MessageListIntent()
     data object Refresh : MessageListIntent()
+    data class UpdateConnectionState(
+        val isServiceBound: Boolean,
+        val isWsConnected: Boolean
+    ) : MessageListIntent()
     data class AgentCreated(val created: Boolean) : MessageListIntent()
     data object StartChat : MessageListIntent()
 }
+
+data class MessageListDataState(
+    val isServiceBound: Boolean = false,
+    val isWsConnected: Boolean = false,
+    val hasException: Boolean = false,
+    val hasAgent: Boolean = false,
+    val hasMessage: Boolean = false
+)
 
 data class MessageListState(
     val isLoading: Boolean = false,
@@ -253,8 +283,6 @@ data class MessageListState(
     val messages: List<MessageContactItemAo> = emptyList(),
     val messageCount: Int = 0,
     val agentCount: Int = 0,
-    val hasAgent: Boolean = false,
-    val hasMessage: Boolean = false,
     val uiMode: MessageListUiMode = MessageListUiMode.NO_AGENT,
     val error: String? = null,
     val isFirstOpen: Boolean = true,

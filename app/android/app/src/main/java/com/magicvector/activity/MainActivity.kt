@@ -10,10 +10,12 @@ import android.content.ServiceConnection
 import android.os.Bundle
 import android.os.IBinder
 import android.util.Log
+import android.widget.Toast
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.annotation.RequiresPermission
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import com.data.domain.ao.message.MessageContactItemAo
@@ -21,6 +23,7 @@ import com.data.domain.fragmentActivity.intentAo.ChatIntentAo
 import com.magicvector.MainApplication
 import com.magicvector.service.ChatService
 import com.magicvector.ui.theme.MagicVectorTheme
+import com.magicvector.viewModel.activity.MainEffect
 import com.magicvector.viewModel.activity.MainIntent
 import com.magicvector.viewModel.activity.MainVm
 import com.magicvector.viewModel.base.ApiViewModelFactory
@@ -46,8 +49,19 @@ class MainActivity : BaseComponentActivity() {
         setContent {
             MagicVectorTheme {
                 val state by vm.uiState.collectAsState()
+                val dataState by vm.dataState.collectAsState()
+                LaunchedEffect(Unit) {
+                    vm.effect.collect { effect ->
+                        when (effect) {
+                            is MainEffect.ShowToast -> {
+                                Toast.makeText(this@MainActivity, effect.message, Toast.LENGTH_SHORT).show()
+                            }
+                        }
+                    }
+                }
                 MainActivityScreen(
                     state = state,
+                    dataState = dataState,
                     messageListVm = vm.messageListVm,
                     controlVm = vm.controlVm,
                     mineVm = vm.mineVm,
@@ -60,7 +74,6 @@ class MainActivity : BaseComponentActivity() {
                     onEditorDescriptionChange = { vm.processIntent(MainIntent.UpdateEditorDescription(it)) },
                     onEditorSubmit = { vm.processIntent(MainIntent.SubmitAgentEditor) },
                     onEditorDelete = { vm.processIntent(MainIntent.DeleteAgent) },
-                    agentListEventFlow = vm.agentListEvent,
                     networkStateFlow = MainApplication.getNetworkManager().state
                 )
             }

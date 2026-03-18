@@ -6,18 +6,18 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.magicvector.domain.dto.http.request.AgentDeleteRequest
 import com.magicvector.MainApplication
-import com.magicvector.domain.exception.NetworkBusinessException
 import com.magicvector.manager.RealtimeChatController
+import com.magicvector.manager.agent.AgentsEffect
 import com.magicvector.viewModel.fragment.ControlVm
 import com.magicvector.viewModel.fragment.MessageListMviVm
 import com.magicvector.viewModel.fragment.MineVm
 import com.view.appview.MainSelectItemEnum
-import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
@@ -41,9 +41,16 @@ class MainVm : ViewModel() {
     // StateFlow (UI State) 存储 UI 状态
     private val _uiState = MutableStateFlow(MainState())
     val uiState: StateFlow<MainState> = _uiState.asStateFlow()
+    private val _dataState = MutableStateFlow(MainDataState())
+    val dataState: StateFlow<MainDataState> = _dataState.asStateFlow()
+    private val _effect = Channel<MainEffect>(Channel.BUFFERED)
+    val effect: Flow<MainEffect> = _effect.receiveAsFlow()
+    private val agentsManager = MainApplication.getAgentsManager()
 
-    private val _agentListEvent = MutableSharedFlow<AgentListEvent>(extraBufferCapacity = 16)
-    val agentListEvent: SharedFlow<AgentListEvent> = _agentListEvent.asSharedFlow()
+    init {
+        syncAgentsDataFromManager()
+        observeAgentsEffect()
+    }
 
     @RequiresPermission(Manifest.permission.RECORD_AUDIO)
     fun processIntent(intent: MainIntent) {
@@ -54,6 +61,7 @@ class MainVm : ViewModel() {
                         currentSelected = intent.selected
                     )
                 }
+                syncAgentsDataFromManager()
             }
 
             is MainIntent.SelectTab -> {
@@ -94,13 +102,13 @@ class MainVm : ViewModel() {
                 MainApplication.getNetworkManager().bindWsReconnectAction {
                     realtimeChatController?.ensureUserConnection(MainApplication.getUserId())
                 }
-                _uiState.update { it.copy(isChatServiceBound = true) }
+                _dataState.update { it.copy(isChatServiceBound = true) }
             }
 
             MainIntent.ChatServiceUnbound -> {
                 MainApplication.getNetworkManager().unbindWsReconnectAction()
                 realtimeChatController = null
-                _uiState.update { it.copy(isChatServiceBound = false) }
+                _dataState.update { it.copy(isChatServiceBound = false) }
             }
         }
     }
@@ -131,6 +139,7 @@ class MainVm : ViewModel() {
                 }
             } catch (_: Throwable) {
                 _uiState.update { it.copy(agentEditor = AgentEditorState()) }
+                sendEffect(MainEffect.ShowToast("获取 Agent 详情失败"))
             }
         }
     }
@@ -138,6 +147,7 @@ class MainVm : ViewModel() {
     private fun submitAgentEditor() {
         val editor = _uiState.value.agentEditor
         if (editor.name.isBlank() || editor.description.isBlank()) {
+            sendEffect(MainEffect.ShowToast("名称和描述不能为空"))
             return
         }
         _uiState.update { it.copy(agentEditor = it.agentEditor.copy(isSubmitting = true)) }
@@ -155,15 +165,17 @@ class MainVm : ViewModel() {
                         description = description
                     )
                     _uiState.update { it.copy(agentEditor = AgentEditorState()) }
-                    _agentListEvent.emit(AgentListEvent.Created(response.agentAo?.agentId.orEmpty()))
+                    agentsManager.upsertAgent(response.agentAo)
                 } catch (_: Throwable) {
                     _uiState.update { it.copy(agentEditor = it.agentEditor.copy(isSubmitting = false)) }
+                    sendEffect(MainEffect.ShowToast("创建 Agent 失败"))
                 }
             }
             return
         }
         val agentId = editor.agentId?.toRequestBody(plain) ?: run {
             _uiState.update { it.copy(agentEditor = it.agentEditor.copy(isSubmitting = false)) }
+            sendEffect(MainEffect.ShowToast("缺少 AgentId"))
             return
         }
         viewModelScope.launch {
@@ -176,9 +188,10 @@ class MainVm : ViewModel() {
                     description = description
                 )
                 _uiState.update { it.copy(agentEditor = AgentEditorState()) }
-                _agentListEvent.emit(AgentListEvent.Updated(response.agentAo?.agentId.orEmpty()))
+                agentsManager.upsertAgent(response.agentAo)
             } catch (_: Throwable) {
                 _uiState.update { it.copy(agentEditor = it.agentEditor.copy(isSubmitting = false)) }
+                sendEffect(MainEffect.ShowToast("更新 Agent 失败"))
             }
         }
     }
@@ -195,10 +208,39 @@ class MainVm : ViewModel() {
             try {
                 api.deleteAgent(request)
                 _uiState.update { it.copy(agentEditor = AgentEditorState()) }
-                _agentListEvent.emit(AgentListEvent.Deleted(agentId))
+                agentsManager.removeAgent(agentId)
             } catch (_: Throwable) {
                 _uiState.update { it.copy(agentEditor = it.agentEditor.copy(isSubmitting = false)) }
+                sendEffect(MainEffect.ShowToast("删除 Agent 失败"))
             }
+        }
+    }
+
+    private fun observeAgentsEffect() {
+        viewModelScope.launch {
+            agentsManager.effect.collect { effect ->
+                when (effect) {
+                    AgentsEffect.AgentListChanged -> {
+                        syncAgentsDataFromManager()
+                    }
+                }
+            }
+        }
+    }
+
+    private fun syncAgentsDataFromManager() {
+        val list = agentsManager.agentList.value
+        _dataState.update {
+            it.copy(
+                agentCount = list.size,
+                agentListVersion = System.currentTimeMillis()
+            )
+        }
+    }
+
+    private fun sendEffect(effect: MainEffect) {
+        viewModelScope.launch {
+            _effect.send(effect)
         }
     }
 }
@@ -239,8 +281,13 @@ sealed class MainIntent {
 
 data class MainState(
     val currentSelected: MainSelectItemEnum = MainSelectItemEnum.HOME,
-    val isChatServiceBound: Boolean = false,
     val agentEditor: AgentEditorState = AgentEditorState()
+)
+
+data class MainDataState(
+    val isChatServiceBound: Boolean = false,
+    val agentCount: Int = 0,
+    val agentListVersion: Long = 0L
 )
 
 enum class AgentEditorMode {
@@ -258,8 +305,6 @@ data class AgentEditorState(
     val isSubmitting: Boolean = false
 )
 
-sealed class AgentListEvent {
-    data class Created(val agentId: String) : AgentListEvent()
-    data class Updated(val agentId: String) : AgentListEvent()
-    data class Deleted(val agentId: String) : AgentListEvent()
+sealed class MainEffect {
+    data class ShowToast(val message: String) : MainEffect()
 }

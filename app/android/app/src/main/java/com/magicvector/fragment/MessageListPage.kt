@@ -2,10 +2,13 @@ package com.magicvector.fragment
 
 import android.annotation.SuppressLint
 import android.widget.Toast
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -13,11 +16,14 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.*
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
@@ -28,6 +34,7 @@ import androidx.compose.ui.unit.sp
 import com.data.domain.ao.message.MessageContactItemAo
 import com.data.domain.vo.message.MessageContactItemVo
 import com.magicvector.viewModel.fragment.MessageListIntent
+import com.magicvector.viewModel.fragment.MessageListDataState
 import com.magicvector.viewModel.fragment.MessageListMviVm
 import com.magicvector.viewModel.fragment.MessageListState
 import com.magicvector.viewModel.fragment.MessageListUiMode
@@ -39,7 +46,6 @@ import com.magicvector.viewModel.fragment.MessageListEffect
 @Composable
 fun MessageListScreen(
     modifier: Modifier = Modifier,
-    isServiceBound: Boolean,
     viewModel: MessageListMviVm,
     onCreateAgentClick: () -> Unit = {},
     refreshToken: Long = 0L,
@@ -48,6 +54,7 @@ fun MessageListScreen(
 ) {
     val context = LocalContext.current
     val state by viewModel.uiState.collectAsState()
+    val dataState by viewModel.dataState.collectAsState()
     val listState = rememberLazyListState()
 
     // 初始化
@@ -87,26 +94,40 @@ fun MessageListScreen(
         modifier = modifier.fillMaxSize()
     ) {
         Box(modifier = Modifier.fillMaxSize()) {
-            when (state.uiMode) {
-                MessageListUiMode.NO_AGENT -> {
-                    EmptyStateView(
-                        onCreateAgentClick = onCreateAgentClick
-                    )
-                }
-                MessageListUiMode.HAS_AGENT_NO_MESSAGE -> {
-                    NoMessageStateView()
-                }
-                MessageListUiMode.HAS_MESSAGE -> {
-                    MessageListContent(
-                        state = state,
-                        listState = listState,
-                        onItemClick = { position ->
-                            viewModel.processIntent(MessageListIntent.SelectMessage(position))
-                        },
-                        onItemLongClick = { position ->
-                            viewModel.processIntent(MessageListIntent.EditAgent(position))
+            Column(modifier = Modifier.fillMaxSize()) {
+                MessageServiceStatusView(
+                    state = dataState,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 12.dp)
+                )
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f)
+                ) {
+                    when (state.uiMode) {
+                        MessageListUiMode.NO_AGENT -> {
+                            EmptyStateView(
+                                onCreateAgentClick = onCreateAgentClick
+                            )
                         }
-                    )
+                        MessageListUiMode.HAS_AGENT_NO_MESSAGE -> {
+                            NoMessageStateView()
+                        }
+                        MessageListUiMode.HAS_MESSAGE -> {
+                            MessageListContent(
+                                state = state,
+                                listState = listState,
+                                onItemClick = { position ->
+                                    viewModel.processIntent(MessageListIntent.SelectMessage(position))
+                                },
+                                onItemLongClick = { position ->
+                                    viewModel.processIntent(MessageListIntent.EditAgent(position))
+                                }
+                            )
+                        }
+                    }
                 }
             }
 
@@ -120,6 +141,29 @@ fun MessageListScreen(
             // 顶层加载遮罩，完全由 uiState.isLoading 控制
             NetworkLoadingOverlay(isLoading = state.isLoading)
         }
+    }
+}
+
+@Composable
+private fun MessageServiceStatusView(
+    state: MessageListDataState,
+    modifier: Modifier = Modifier
+) {
+    val (statusColor, statusText) = when {
+        state.hasException -> Color(0xFFD32F2F) to "异常"
+        !state.isServiceBound -> Color(0xFF9E9E9E) to "未绑定service"
+        !state.isWsConnected -> Color(0xFF9E9E9E) to "未连接ws"
+        else -> Color(0xFF2E7D32) to "已绑定service并连接ws"
+    }
+    Row(modifier = modifier, verticalAlignment = Alignment.CenterVertically) {
+        Box(
+            modifier = Modifier
+                .size(10.dp)
+                .clip(CircleShape)
+                .background(statusColor)
+        )
+        Spacer(modifier = Modifier.size(8.dp))
+        Text(text = statusText, color = statusColor, fontSize = 14.sp)
     }
 }
 

@@ -10,6 +10,7 @@ import com.google.gson.GsonBuilder
 import com.magicvector.dataSource.remote.RemoteApiSource
 import com.magicvector.manager.ChatMapController
 import com.magicvector.manager.MessageListController
+import com.magicvector.manager.agent.AgentsManager
 import com.magicvector.manager.chat.ChatCacheManager
 import com.magicvector.manager.control.ControlAgentLogManager
 import com.magicvector.manager.control.ControlConsoleManager
@@ -111,6 +112,14 @@ class MainApplication : Application() {
         private val messageListController = MessageListController()
         fun getMessageListManager(): MessageListController {
             return messageListController
+        }
+
+        private var agentsManager: AgentsManager? = null
+        fun getAgentsManager(): AgentsManager {
+            if (agentsManager == null) {
+                agentsManager = AgentsManager()
+            }
+            return agentsManager!!
         }
 
         // chatMapManager

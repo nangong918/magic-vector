@@ -18,10 +18,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
@@ -34,20 +32,20 @@ import com.magicvector.fragment.MessageListScreen
 import com.magicvector.fragment.MineScreen
 import com.magicvector.manager.network.NetworkState
 import com.magicvector.ui.theme.MagicVectorTheme
-import com.magicvector.viewModel.activity.AgentListEvent
+import com.magicvector.viewModel.activity.MainDataState
 import com.magicvector.viewModel.activity.MainState
 import com.magicvector.viewModel.fragment.ControlVm
+import com.magicvector.viewModel.fragment.MineIntent
 import com.magicvector.viewModel.fragment.MessageListMviVm
 import com.magicvector.viewModel.fragment.MineVm
 import com.view.appview.MainSelectItemEnum
-import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 
 @Composable
 fun MainActivityScreen(
     state: MainState,
+    dataState: MainDataState,
     messageListVm: MessageListMviVm,
     controlVm: ControlVm,
     mineVm: MineVm,
@@ -60,25 +58,32 @@ fun MainActivityScreen(
     onEditorDescriptionChange: (String) -> Unit,
     onEditorSubmit: () -> Unit,
     onEditorDelete: () -> Unit,
-    agentListEventFlow: SharedFlow<AgentListEvent>,
     networkStateFlow: StateFlow<NetworkState>,
 ) {
     val backgroundColor = remember { Color(0xFFF6F7F8) }
-    var refreshToken by remember { mutableLongStateOf(0L) }
     // rememberUpdatedState: 副作用中安全使用最新回调
     val latestCreate = rememberUpdatedState(onCreateAgent)
     val latestEditor = rememberUpdatedState(onOpenAgentEditor)
     val networkState by networkStateFlow.collectAsState()
+    val mineDataState by mineVm.dataState.collectAsState()
 
-    LaunchedEffect(agentListEventFlow) {
-        agentListEventFlow.collect {
-            refreshToken = System.currentTimeMillis()
+    LaunchedEffect(dataState.agentListVersion) {
+        if (dataState.agentListVersion > 0L) {
+            mineVm.processIntent(MineIntent.NotifyHomeRefresh)
         }
     }
     LaunchedEffect(networkState.isNetworkOnline, networkState.isWsConnected) {
         if (networkState.isNetworkOnline) {
-            refreshToken = System.currentTimeMillis()
+            mineVm.processIntent(MineIntent.NotifyHomeRefresh)
         }
+    }
+    LaunchedEffect(dataState.isChatServiceBound, networkState.isWsConnected) {
+        messageListVm.processIntent(
+            com.magicvector.viewModel.fragment.MessageListIntent.UpdateConnectionState(
+                isServiceBound = dataState.isChatServiceBound,
+                isWsConnected = networkState.isWsConnected
+            )
+        )
     }
 
     Scaffold(
@@ -132,9 +137,8 @@ fun MainActivityScreen(
             when (state.currentSelected) {
                 MainSelectItemEnum.HOME -> MessageListScreen(
                     viewModel = messageListVm,
-                    isServiceBound = state.isChatServiceBound,
                     onCreateAgentClick = { latestCreate.value.invoke() },
-                    refreshToken = refreshToken,
+                    refreshToken = mineDataState.homeRefreshToken,
                     onOpenChat = onOpenChat,
                     onOpenAgentEditor = { latestEditor.value.invoke(it) }
                 )
@@ -159,7 +163,8 @@ fun MainActivityScreen(
 private fun MainActivityScreenPreview() {
     MagicVectorTheme {
         MainActivityScreen(
-            state = MainState(currentSelected = MainSelectItemEnum.HOME, isChatServiceBound = true),
+            state = MainState(currentSelected = MainSelectItemEnum.HOME),
+            dataState = MainDataState(isChatServiceBound = true),
             messageListVm = MessageListMviVm(),
             controlVm = ControlVm(),
             mineVm = MineVm(),
@@ -172,7 +177,6 @@ private fun MainActivityScreenPreview() {
             onEditorDescriptionChange = {},
             onEditorSubmit = {},
             onEditorDelete = {},
-            agentListEventFlow = MutableSharedFlow(),
             networkStateFlow = MutableStateFlow(NetworkState(isNetworkOnline = true, isWsConnected = false))
         )
     }

@@ -13,7 +13,7 @@
 * **状态管理层（MVI）**：负责处理 Intent、维护状态、发出 Effect。
   * `StartVm`、`ComposeLoginVm`、`ComposeRegisterVm`、`MainVm`、`MessageListMviVm`、`ControlVm`、`MineVm`、`ComposeChatVm`、`ComposeAgentChatVm`、`AgentEmojiFragmentVm`、`AgentTextChatFragmentVm`
 * **业务与会话层（Manager/Controller）**：封装业务规则与状态编排，不直接持有 DAO 与 Retrofit。
-* `UserManager`、`ChatMapController`、`ChatController`、`ChatCacheManager`、`ControlCommandController`、`ControlConsoleManager`、`NetworkManager(全局/Application级)`
+* `UserManager`、`AgentsManager`、`ChatMapController`、`ChatController`、`ChatCacheManager`、`ControlCommandController`、`ControlConsoleManager`、`NetworkManager(全局/Application级)`
 * **数据源层（DataSource）**：承接可复用数据流程（参数校验、请求拼装、统一响应校验），向上暴露 `suspend` 结果与异常语义。
   * `remote/RemoteApiSource`：远程请求流程封装（基于 `repository/api/ApiRequest`）
   * `local/UserLocalSource`：本地数据流程封装（基于 `repository/dao/UserDao`）
@@ -234,6 +234,8 @@ stateDiagram-v2
 * 用户输入只修改 `uiState`（例如登录页账号/密码输入），不直接修改 `dataState` 缓存。
 * 当用户执行“下拉选择本地账号”等动作时，允许将 `dataState` 中缓存值回填到 `uiState`。
 * `accessToken/userId` 等不可见鉴权数据禁止放在 `uiState`。
+* `MainVm` 中 `isChatServiceBound` 归属于 `dataState`（不直接绘制）；需要绘制连接状态的页面（如 `MessageListScreen`）由页面级 VM 的状态驱动 UI。
+* `MessageListMviVm` 中 `hasAgent/hasMessage` 归属于 `dataState`（业务中间态）；`uiState` 仅保留渲染字段（如 `uiMode/messages/loading`）。
 
 ```mermaid
 classDiagram
@@ -760,17 +762,23 @@ gantt
 * Agent 页无数据时显示中心创建按钮；有数据时显示 Agent 列表。
 * 创建/查看/修改/删除 Agent 统一采用 Main 页面内全屏组合函数弹层（放大进入、缩小退出）。
 * Agent 列表点击跳转 `ComposeChatActivity`；列表长按进入 Agent 编辑弹层。
-* 状态同步采用 `StateFlow + SharedFlow`，`eventBus` 仅作为兜底。
+* Agent 列表数据统一由 `AgentsManager` 持有（Application 级），避免 `MainActivity` 生命周期导致事件丢失。
+* Agent 列表变更事件通过 `AgentsManager.effect(SharedFlow)` 广播，`MainVm` 只负责订阅并同步自身 `dataState`。
 * `MainVm` 统一持有 `MessageListMviVm/ControlVm/MineVm`，`Composable` 只接收注入 VM，不在函数默认参数中创建 VM，避免重组导致状态容器更换。
 
 #### Agent UI 设计
 
 ##### Agent 列表页面（MessageListScreen）
 **布局结构**：
-- 状态机由 `hasAgent` 与 `hasMessage` 两个值共同驱动。
+- 状态机由 `MessageListMviVm.dataState.hasAgent` 与 `MessageListMviVm.dataState.hasMessage` 两个值共同驱动。
 - `!hasAgent`：中心空状态 + `创建Agent` 主按钮（无 FAB）
 - `hasAgent && !hasMessage`：中心提示“当前暂无消息” + 右下创建 FAB
 - `hasAgent && hasMessage`：Agent 列表 + 右下创建 FAB
+- 顶部显示连接状态（圆点 + 文案）：
+  - 灰色：`未绑定service` 或 `未连接ws`
+  - 红色：`异常`
+  - 绿色：`已绑定service并连接ws`
+  - 状态来源：`MessageListMviVm.dataState`
 
 **交互设计**：
 - 点击创建：打开 `AgentEditorOverlay`（创建模式）
@@ -799,7 +807,7 @@ stateDiagram-v2
 - 编辑模式下显示删除按钮
 
 **交互设计**：
-- 创建成功、更新成功、删除成功均通过 `SharedFlow<AgentListEvent>` 刷新列表
+- 创建成功、更新成功、删除成功直接写入 `AgentsManager`（`upsert/remove`），由 `AgentsManager.effect` 触发主页面刷新链路
 - 关闭或提交后弹层退出，不依赖 Activity Result
 
 #### UML静态图（类图）
@@ -808,12 +816,17 @@ stateDiagram-v2
 classDiagram
     class MainActivity {
       +collect(MainState)
-      +collect(AgentListEvent)
+      +collect(MainDataState)
     }
     class MainVm {
       -uiState: StateFlow~MainState~
-      -agentListEvent: SharedFlow~AgentListEvent~
+      -dataState: StateFlow~MainDataState~
+      -effect: Flow~MainEffect~
       +processIntent(intent)
+    }
+    class AgentsManager {
+      -agentList: StateFlow~List~AgentAo~~
+      -effect: SharedFlow~AgentsEffect~
     }
     class MessageListMviVm {
       +processIntent(intent)
@@ -823,12 +836,15 @@ classDiagram
     class MineVm
     class AgentEditorOverlay
     class MainState
+    class MainDataState
     class AgentEditorState
     class MessageListUiMode
 
     MainActivity --> MainVm
     MainActivity --> AgentEditorOverlay
     MainVm --> MainState
+    MainVm --> MainDataState
+    MainVm --> AgentsManager
     MainVm --> MessageListMviVm
     MainVm --> ControlVm
     MainVm --> MineVm
@@ -843,18 +859,22 @@ flowchart LR
     UI[MainActivity]
     List[MessageListScreen]
     VM[MainVm]
+    AM[AgentsManager]
     ListVm[MessageListMviVm]
     Api[RemoteApiSource]
     Chat[ComposeChatActivity]
     UI --> VM
     UI --> List
+    UI --> AM
     VM --> ListVm
+    VM --> AM
     List --> ListVm
     ListVm --> UI
     UI -->|Create/Edit/Delete Intent| VM
     VM --> Api
     Api --> VM
-    VM -->|SharedFlow AgentListEvent| UI
+    VM -->|upsert/remove| AM
+    AM -->|SharedFlow AgentsEffect| VM
     List -->|Click item| Chat
 ```
 
@@ -874,9 +894,11 @@ flowchart TD
     H -- 长按 --> J[打开编辑弹层]
     G --> K[提交创建]
     J --> L[保存或删除]
-    K --> M[发出AgentListEvent]
+    K --> M[写入AgentsManager]
     L --> M
-    M --> N[刷新Agent+最近消息摘要]
+    M --> N[AgentsManager发出AgentListChanged]
+    N --> O[MainVm同步dataState.agentListVersion]
+    O --> P[MainActivityScreen触发列表刷新]
 ```
 
 ##### Agent 页面时序图
@@ -884,13 +906,16 @@ flowchart TD
 sequenceDiagram
     participant Main as MainActivity
     participant VM as MainVm
+    participant AM as AgentsManager
     participant Api as RemoteApiSource
     participant ListVm as MessageListMviVm
     Main->>VM: OpenCreateAgent/OpenEditAgent
     VM->>Api: create/update/deleteAgent
     Api-->>VM: AgentResponse
-    VM-->>Main: AgentListEvent
-    Main->>ListVm: Refresh
+    VM->>AM: upsert/remove
+    AM-->>VM: AgentsEffect.AgentListChanged
+    VM-->>Main: MainDataState.agentListVersion++
+    Main->>ListVm: Refresh(token变化)
     ListVm-->>Main: 新列表状态
 ```
 
@@ -1279,6 +1304,7 @@ gantt
   * 云上录播记录播放（服务端 MinIO 视频源转 m3u8，Android 播放）
   * 本地视频播放（MP4）
   * 本地视频上传云端（支持断点续传、下载）
+* `MineVm.dataState` 额外承载首页刷新令牌 `homeRefreshToken`：由主页面网络恢复/Agent列表变更时更新，作为 `MessageListScreen.refreshToken` 的统一来源，`MainActivityScreen` 不再持有本地刷新 token。
 
 #### m3u8 播放方案（新增）
 * 播放内核：采用 `androidx.media3 ExoPlayer`，统一支持 m3u8（HLS）和本地 mp4。
