@@ -1183,10 +1183,49 @@ todo：修改view展示数据结构
 * MainActivityScreen问题：refreshToken是根据网络状态决定是否需要获取刷新UI的，这个我觉得应该存储在MineVm
 * MessageListScreen订阅副作用应该取消else -> {}，而是全部处理，else不安全。；顶部应该提示长安messageListItem编辑
 * MessageListMviVm的MVI：你这个也没设计dataState；比如hasAgent和hasMessage都是服务uiMode的
-* 断网存储和获取逻辑：
-* 排查问题：为什么主页面下拉刷新view一直在执行
+
 
 你修改完成上述问题都要将他们在[AndroidDesignDocument.md](app/android/docs/AndroidDesignDocument.md)
 中找到合适的位置并理解，写入。
+
+
+#### 补充
+
+* 断网存储和获取逻辑：
+  我发现你没有做Agent的断网和存储逻辑，你先看下我的设计文档[AndroidDesignDocument.md](app/android/docs/AndroidDesignDocument.md)
+  我记得我设计了Agent缓存的manager，这个好像存在,ChatCacheManager你看看这个，这个我是实现的逻辑好像是把agent和chatList视为一体了。逻辑是这样的： 
+  1. 初始化App的时候全量Agents的Http查询。并且比对同步到room数据库。
+  2. 后续消息都由ws来添加。并且比对同步到room数据库。
+  3. 没有网络的时候应该使用room数据库的数据。
+  4. 网络重连的时候需要http全量查询（因为断开ws期间可能能大量数据丢失）然后同步ui和room。
+
+你看看我设计文档有没有相关设计图比如状态图，类图，通信图，活动图，甘特图，时序图等。如果有就按照你写道代码修改，如果没有你就补上。
+
+
+
+#### 补充修改
+
+1. NetworkManager中有两个值；isNetworkOnline是监听系统广播得到的当前手机是否联网了，isWsConnected是监听当前app是否ws长连接了。
+   我认为ws断开重连操作只有在app广播这个手机已经接入互联网再执行。
+2. 我认为NetworkManager的StateFlow<NetworkState>很重要，应该是全局级别的，不应该只交给MainActivity，
+   这个stateFlow取消值传递给mainactivity，改为需要其的地方订阅它的消息。类似于effect了，相当于是全局事件。
+3. 然后RealtimeChatController是管理realtimeChatWsClient的，而realtimeChatWsClient负责管理ws的消息发送、接受、心跳、异常和重连。
+   那么你现在检查是否有恰当的重连机制，以及重连机制像我之前说的一样isNetworkOnline的时候才去重连。
+4. 关于是否使用room的本地数据是取决于NetworkManager网络状态事件的isNetworkOnline，如何被通知到离线，数据源就应选择room。
+   NetworkManager的状态值是能主动获取的，也能事件通知的，就比如初始化app获取如果是没有互联网就直接启用room而不会等待其通知没有网络。
+5. 你现在需要看我大概的设计文档以及看缺少什么补充上去。
+   包括这个逻辑：
+   ```text
+   1. 初始化App的时候全量Agents的Http查询。并且比对同步到room数据库。
+   2. 后续消息都由ws来添加。并且比对同步到room数据库。
+   3. 没有网络的时候应该使用room数据库的数据。
+   4. 网络重连的时候需要http全量查询（因为断开ws期间可能能大量数据丢失）然后同步ui和room。
+   ```
+   上述逻辑我比较关心数据选用和数据流所以重点绘制：在线、离线等各种情况的活动图，状态图，甘特图，通信图，时序图。
+   还有各个manager的更新，比如我看就缺少networkManager的设计。manager我比较关心功能所以重点绘制类图，对象图。
+   设计文档要梳理清楚查漏补缺，而不是喊你理解的情况下直接写在末尾。
+
+* 排查问题：为什么主页面下拉刷新view一直在执行
+
 
 
