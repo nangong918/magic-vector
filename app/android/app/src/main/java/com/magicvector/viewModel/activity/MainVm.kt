@@ -9,6 +9,7 @@ import com.magicvector.MainApplication
 import com.magicvector.manager.RealtimeChatController
 import com.magicvector.manager.agent.AgentsEffect
 import com.magicvector.viewModel.fragment.ControlVm
+import com.magicvector.viewModel.fragment.MessageListIntent
 import com.magicvector.viewModel.fragment.MessageListMviVm
 import com.magicvector.viewModel.fragment.MineVm
 import com.view.appview.MainSelectItemEnum
@@ -166,6 +167,7 @@ class MainVm : ViewModel() {
                     )
                     _uiState.update { it.copy(agentEditor = AgentEditorState()) }
                     agentsManager.upsertAgent(response.agentAo)
+                    messageListVm.processIntent(MessageListIntent.Refresh)
                 } catch (_: Throwable) {
                     _uiState.update { it.copy(agentEditor = it.agentEditor.copy(isSubmitting = false)) }
                     sendEffect(MainEffect.ShowToast("创建 Agent 失败"))
@@ -189,6 +191,7 @@ class MainVm : ViewModel() {
                 )
                 _uiState.update { it.copy(agentEditor = AgentEditorState()) }
                 agentsManager.upsertAgent(response.agentAo)
+                messageListVm.processIntent(MessageListIntent.Refresh)
             } catch (_: Throwable) {
                 _uiState.update { it.copy(agentEditor = it.agentEditor.copy(isSubmitting = false)) }
                 sendEffect(MainEffect.ShowToast("更新 Agent 失败"))
@@ -209,6 +212,7 @@ class MainVm : ViewModel() {
                 api.deleteAgent(request)
                 _uiState.update { it.copy(agentEditor = AgentEditorState()) }
                 agentsManager.removeAgent(agentId)
+                messageListVm.processIntent(MessageListIntent.Refresh)
             } catch (_: Throwable) {
                 _uiState.update { it.copy(agentEditor = it.agentEditor.copy(isSubmitting = false)) }
                 sendEffect(MainEffect.ShowToast("删除 Agent 失败"))

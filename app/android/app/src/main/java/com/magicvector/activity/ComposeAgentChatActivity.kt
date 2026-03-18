@@ -120,8 +120,8 @@ class ComposeAgentChatActivity : FragmentActivity() {
                             ToastUtils.showToastActivity(this@ComposeAgentChatActivity, getString(effect.messageRes))
                         }
 
-                        is AgentChatEffect.OnReceiveAgentText -> {
-                            textVm.processIntent(AgentTextChatFragmentIntent.ReceiveAgentText(effect.text))
+                        is AgentChatEffect.SyncTextMessages -> {
+                            textVm.processIntent(AgentTextChatFragmentIntent.SyncMessages(effect.messages))
                         }
                     }
                 }

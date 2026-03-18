@@ -1225,7 +1225,13 @@ todo：修改view展示数据结构
    还有各个manager的更新，比如我看就缺少networkManager的设计。manager我比较关心功能所以重点绘制类图，对象图。
    设计文档要梳理清楚查漏补缺，而不是喊你理解的情况下直接写在末尾。
 
-* 排查问题：为什么主页面下拉刷新view一直在执行
+#### 补充2
+1. 你有没有发现chatActivity的聊天记录也应该被网络状态管理，也是一样的初次全量+roo缓存，后续ws+roo缓存，断网room，重连http全量+room缓存。然后也是记录到刚刚的设计文档
+2. 排查问题：为什么主页面下拉刷新view一直在执行？并且我发现我一直在进行大量的下拉刷新请求？修复然后记录到C:\CodeLearning\magic-vector\CursorBugLog.md
 
+#### 补充3
+AgentChatUiState你是不是忘记添加isLoading和对应的ui了
 
-
+#### 补充4
+我记得我的设计是有缓存的，为什么现在每次点开MessageList页面会重新刷新，我记得我设计的是只有断网才刷新。
+如果是其他fragment切换到这个

@@ -15,7 +15,9 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.data.domain.Do.ChatMessageDo
 import com.data.domain.ao.message.MessageContactItemAo
+import com.data.domain.ao.chat.ChatItemAo
 import com.data.domain.constant.VadChatState
 import com.data.domain.constant.chat.RealtimeRequestDataTypeEnum
 import com.data.domain.fragmentActivity.aao.ChatAAo
@@ -25,11 +27,14 @@ import com.magicvector.MainApplication
 import com.magicvector.callback.OnReceiveAgentTextCallback
 import com.magicvector.callback.OnVadChatStateChange
 import com.magicvector.manager.RealtimeChatController
+import com.magicvector.manager.network.NetworkState
 import com.magicvector.service.ChatService
+import com.magicvector.ui.view.chat.MessageItem
 import com.view.appview.R
 import com.view.appview.recycler.RecyclerViewWhereNeedUpdate
 import com.view.appview.recycler.UpdateRecyclerViewItem
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
@@ -69,6 +74,7 @@ class ComposeAgentChatVm : ViewModel() {
 
     private var observedRealtimeController: RealtimeChatController? = null
     private var onBoundChatService: Runnable? = null
+    private var lastObservedNetworkState: NetworkState = MainApplication.getNetworkManager().state.value
 
     private val realtimeStateObserver = Observer<RealtimeChatState> { state ->
         val enableSend = when (state) {
@@ -87,7 +93,7 @@ class ComposeAgentChatVm : ViewModel() {
     private val onReceiveAgentTextCallback = object : OnReceiveAgentTextCallback {
         override fun onText(text: String) {
             _uiState.update { it.copy(agentText = text) }
-            sendEffect(AgentChatEffect.OnReceiveAgentText(text))
+            syncConversationMessagesToUi()
         }
     }
 
@@ -138,6 +144,10 @@ class ComposeAgentChatVm : ViewModel() {
             chatServiceBinder = null
             realtimeChatController = null
         }
+    }
+
+    init {
+        observeNetworkState()
     }
 
     @RequiresPermission(Manifest.permission.RECORD_AUDIO)
@@ -199,11 +209,16 @@ class ComposeAgentChatVm : ViewModel() {
         }
 
         try {
+            _uiState.update { it.copy(isLoading = true) }
             realtimeChatController?.initResource(
                 chatActivity = activity,
                 ao = ao,
                 chatAAo = chatAAo,
-                initNetworkRunnable = { Job() } ,
+                initNetworkRunnable = {
+                    viewModelScope.launch {
+                        syncConversationHistory(showLoading = true)
+                    }
+                } ,
                 whereNeedUpdate = object : RecyclerViewWhereNeedUpdate {
                     override fun whereNeedUpdate(updateInfos: List<UpdateRecyclerViewItem>) {
                     }
@@ -215,6 +230,102 @@ class ComposeAgentChatVm : ViewModel() {
             Log.e(TAG, "ComposeAgentChatActivity::initResource失败", e)
             sendEffect(AgentChatEffect.ShowToastRes(R.string.init_agent_failed))
             sendEffect(AgentChatEffect.Finish)
+        } finally {
+            _uiState.update { it.copy(isLoading = false) }
+        }
+    }
+
+    private fun observeNetworkState() {
+        viewModelScope.launch {
+            MainApplication.getNetworkManager().state.collect { networkState ->
+                val previous = lastObservedNetworkState
+                lastObservedNetworkState = networkState
+                if (messageAo?.contactId.isNullOrBlank()) {
+                    return@collect
+                }
+                if (!previous.isNetworkOnline && networkState.isNetworkOnline) {
+                    syncConversationHistory(showLoading = false)
+                } else if (previous.isNetworkOnline && !networkState.isNetworkOnline) {
+                    loadConversationFromRoom()
+                }
+            }
+        }
+    }
+
+    private suspend fun syncConversationHistory(showLoading: Boolean) {
+        val ao = messageAo ?: return
+        val agentId = ao.contactId ?: return
+        if (showLoading) {
+            _uiState.update { it.copy(isLoading = true) }
+        }
+        try {
+            val latestNetworkState = MainApplication.getNetworkManager().refreshNetworkState()
+            if (!latestNetworkState.isNetworkOnline) {
+                loadConversationFromRoom()
+                return
+            }
+            val chatMessages = MainApplication.getRemoteApiSource().getLastChat(agentId).chatMessages.orEmpty()
+            MainApplication.getChatCacheManager().upsertRemoteMessages(chatMessages)
+            val controller = MainApplication.getChatMapManager().getChatManager(agentId)
+            controller.clear()
+            controller.setResponsesToViews(chatMessages)
+            syncConversationMessagesToUi()
+        } catch (e: Exception) {
+            Log.e(TAG, "syncConversationHistory: remote failed", e)
+            loadConversationFromRoom()
+            sendEffect(AgentChatEffect.ShowToast("聊天记录同步失败，已回退到本地缓存"))
+        } finally {
+            if (showLoading) {
+                _uiState.update { it.copy(isLoading = false) }
+            }
+        }
+    }
+
+    private suspend fun loadConversationFromRoom() {
+        val agentId = messageAo?.contactId ?: return
+        val parsedAgentId = agentId.toLongOrNull() ?: return
+        val cachedMessages = MainApplication.getChatCacheManager().queryLastMessages(parsedAgentId, 100)
+        val controller = MainApplication.getChatMapManager().getChatManager(agentId)
+        controller.clear()
+        controller.setResponsesToViews(
+            cachedMessages.map { entity ->
+                ChatMessageDo().apply {
+                    id = entity.id.toString()
+                    this.agentId = entity.agentId.toString()
+                    userId = entity.userId.toString()
+                    content = entity.content
+                    chatTime = entity.chatTime
+                    chatTimestamp = entity.chatTimestamp
+                    role = entity.role
+                }
+            }
+        )
+        syncConversationMessagesToUi()
+    }
+
+    private fun syncConversationMessagesToUi() {
+        val agentId = messageAo?.contactId ?: return
+        val items = MainApplication.getChatMapManager()
+            .getChatManager(agentId)
+            .getViewChatMessageList()
+            .sortedBy { it.timestamp }
+            .map { it.toMessageItem() }
+        sendEffect(AgentChatEffect.SyncTextMessages(items))
+    }
+
+    private fun ChatItemAo.toMessageItem(): MessageItem {
+        return if (vo.viewType == 0) {
+            MessageItem.Received(
+                id = messageId.orEmpty(),
+                messageText = vo.content,
+                chatTime = vo.time.orEmpty()
+            )
+        } else {
+            MessageItem.Sent(
+                id = messageId.orEmpty(),
+                messageText = vo.content,
+                timeText = vo.time.orEmpty()
+            )
         }
     }
 
@@ -334,6 +445,8 @@ data class AgentChatUiState(
     val title: String = "",
     /** 顶部头像 */
     val avatarUrl: String? = null,
+    /** 页面级加载态。 */
+    val isLoading: Boolean = false,
     /** 发送区可用态 */
     val isEnableSend: Boolean = false,
     /** ChatService 绑定状态 */
@@ -403,5 +516,5 @@ sealed class AgentChatEffect {
     data object RequestRecordPermission : AgentChatEffect()
     data class ShowToast(val message: String) : AgentChatEffect()
     data class ShowToastRes(val messageRes: Int) : AgentChatEffect()
-    data class OnReceiveAgentText(val text: String) : AgentChatEffect()
+    data class SyncTextMessages(val messages: List<MessageItem>) : AgentChatEffect()
 }

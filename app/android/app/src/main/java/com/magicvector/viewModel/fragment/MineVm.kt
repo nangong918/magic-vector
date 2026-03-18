@@ -20,10 +20,6 @@ class MineVm : ViewModel() {
     /** MVI: Mine 首页 UI 状态。 */
     private val _uiState = MutableStateFlow(MineState())
     val uiState: StateFlow<MineState> = _uiState.asStateFlow()
-    /** MVI: Mine 首页业务数据状态。 */
-    private val _dataState = MutableStateFlow(MineDataState())
-    val dataState: StateFlow<MineDataState> = _dataState.asStateFlow()
-
     /** MVI: 一次性副作用（页面跳转）。 */
     private val _effect = Channel<MineEffect>(Channel.BUFFERED)
     val effect = _effect.receiveAsFlow()
@@ -31,9 +27,6 @@ class MineVm : ViewModel() {
     fun processIntent(intent: MineIntent) {
         when (intent) {
             MineIntent.Initialize -> initialize()
-            MineIntent.NotifyHomeRefresh -> {
-                _dataState.value = _dataState.value.copy(homeRefreshToken = System.currentTimeMillis())
-            }
             MineIntent.OpenSettingPage -> sendEffect(MineEffect.NavigateToSetting)
             MineIntent.OpenVideoPage -> sendEffect(MineEffect.NavigateToVideo)
             MineIntent.TestButtonClick -> sendEffect(MineEffect.NavigateToActivity(ComposeTestActivity::class.java.name))
@@ -61,7 +54,6 @@ class MineVm : ViewModel() {
 /** Mine 首页 Intent。 */
 sealed class MineIntent {
     data object Initialize : MineIntent()
-    data object NotifyHomeRefresh : MineIntent()
     data object OpenSettingPage : MineIntent()
     data object OpenVideoPage : MineIntent()
     data object TestButtonClick : MineIntent()
@@ -71,10 +63,6 @@ sealed class MineIntent {
 data class MineState(
     /** 展示用用户名。 */
     val userName: String = ""
-)
-
-data class MineDataState(
-    val homeRefreshToken: Long = 0L
 )
 
 /** Mine 首页副作用。 */

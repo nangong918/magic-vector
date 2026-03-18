@@ -34,6 +34,13 @@ class ChatCacheManager private constructor(context: Context) {
         }
     }
 
+    suspend fun upsertRemoteMessages(list: List<ChatMessageDo>) = withContext(Dispatchers.IO) {
+        val entities = list.mapNotNull { it.toChatMessageEntity() }
+        if (entities.isNotEmpty()) {
+            chatDao.upsertBatch(entities)
+        }
+    }
+
     suspend fun queryLastMessages(agentId: Long, limit: Int): List<ChatMessageEntity> = withContext(Dispatchers.IO) {
         chatDao.queryLastByAgent(agentId, limit)
     }

@@ -107,13 +107,12 @@ object WsManager {
             throw IllegalArgumentException("role is null or invalid")
         }
 
-        response.content?.let {
-            onReceiveAgentTextCallback?.onText(it)
-            Log.i(TAG, "handleTextMessage::content: $it")
-        }
-
         try {
             chatControllerPointer.setWsToViews(response)
+            response.content?.let {
+                onReceiveAgentTextCallback?.onText(it)
+                Log.i(TAG, "handleTextMessage::content: $it")
+            }
         } catch (e: Exception){
             Log.e(TAG, "handleTextMessage::error: $message", e)
         }

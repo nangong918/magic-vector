@@ -41,6 +41,13 @@ fun AgentTextChatFragment(
         sendMessageState.isEnableSend = uiState.isEnableSend
     }
 
+    LaunchedEffect(uiState.messages) {
+        chatState.replaceMessages(uiState.messages)
+        if (uiState.messages.isNotEmpty()) {
+            chatState.scrollToBottomImmediate(coroutineScope)
+        }
+    }
+
     LaunchedEffect(vm) {
         vm.effect.collect { effect ->
             when (effect) {

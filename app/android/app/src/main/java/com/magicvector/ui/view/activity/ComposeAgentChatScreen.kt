@@ -30,6 +30,7 @@ import androidx.compose.ui.unit.dp
 import com.magicvector.fragment.AgentEmojiFragment
 import com.magicvector.fragment.AgentTextChatFragment
 import com.magicvector.ui.theme.MagicVectorTheme
+import com.magicvector.ui.view.NetworkLoadingOverlay
 import com.magicvector.viewModel.activity.AgentChatUiState
 import com.magicvector.viewModel.fragment.AgentEmojiFragmentVm
 import com.magicvector.viewModel.fragment.AgentTextChatFragmentVm
@@ -63,48 +64,51 @@ fun ComposeAgentChatScreen(
         onPageChanged(pagerState.currentPage)
     }
 
-    Scaffold(
-        modifier = Modifier.fillMaxSize(),
-        topBar = {
-            ChatToolbar(
-                title = uiState.title,
-                onBackClick = onBackClick
-            )
-        }
-    ) { innerPadding ->
-        Column(
-            modifier = Modifier
-                .padding(innerPadding)
-                .fillMaxSize()
-        ) {
-            PagerDots(
-                currentPage = pagerState.currentPage,
+    Box(modifier = Modifier.fillMaxSize()) {
+        Scaffold(
+            modifier = Modifier.fillMaxSize(),
+            topBar = {
+                ChatToolbar(
+                    title = uiState.title,
+                    onBackClick = onBackClick
+                )
+            }
+        ) { innerPadding ->
+            Column(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 10.dp, bottom = 8.dp)
-            )
+                    .padding(innerPadding)
+                    .fillMaxSize()
+            ) {
+                PagerDots(
+                    currentPage = pagerState.currentPage,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 10.dp, bottom = 8.dp)
+                )
 
-            HorizontalPager(
-                state = pagerState,
-                modifier = Modifier.fillMaxSize()
-            ) { page ->
-                when (page) {
-                    0 -> AgentEmojiFragment(
-                        vm = emojiVm,
-                        onToggleMic = onToggleMic,
-                        onRequestWakeUp = onRequestWakeUp,
-                        onEndVoiceMode = onEndVoiceMode
-                    )
+                HorizontalPager(
+                    state = pagerState,
+                    modifier = Modifier.fillMaxSize()
+                ) { page ->
+                    when (page) {
+                        0 -> AgentEmojiFragment(
+                            vm = emojiVm,
+                            onToggleMic = onToggleMic,
+                            onRequestWakeUp = onRequestWakeUp,
+                            onEndVoiceMode = onEndVoiceMode
+                        )
 
-                    else -> AgentTextChatFragment(
-                        vm = textVm,
-                        onSendTextToAgent = onSendTextToAgent,
-                        onSwitchToEmojiPage = onSwitchToEmojiPage,
-                        onAudioTouch = onAudioTouch
-                    )
+                        else -> AgentTextChatFragment(
+                            vm = textVm,
+                            onSendTextToAgent = onSendTextToAgent,
+                            onSwitchToEmojiPage = onSwitchToEmojiPage,
+                            onAudioTouch = onAudioTouch
+                        )
+                    }
                 }
             }
         }
+        NetworkLoadingOverlay(isLoading = uiState.isLoading)
     }
 }
 

@@ -117,6 +117,11 @@ class ChatListState {
         }
     }
 
+    fun replaceMessages(newMessages: List<MessageItem>) {
+        messages.clear()
+        messages.addAll(newMessages)
+    }
+
     // 更新单条消息
     fun updateMessage(messageId: String, update: (MessageItem) -> MessageItem) {
         val index = messages.indexOfFirst {

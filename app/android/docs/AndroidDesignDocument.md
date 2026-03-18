@@ -940,6 +940,7 @@ gantt
 * 单 Activity 双页面：`ComposeAgentChatActivity` 内以横向滑动切换 `AgentEmojiFragment` 与 `AgentTextChatFragment`。
 * Emoji 页（左页）合并 `voice_agent_page.dart` 的状态球语义与 `ComposeAgentEmojiActivity` 的视觉风格（黑底双眼），状态球颜色与缩放由 VAD/WS 状态驱动。
 * Text 页（右页）复用 `ComposeChatActivity` 的文本输入/语音按压交互，继续走 `RealtimeChatController -> ChatController -> ChatCacheManager`。
+* 单 Agent 聊天记录同样受 `NetworkManager` 统一管理：首次在线走 HTTP 全量 + Room，同步后由 WS 增量写入；离线直接读 Room；网络恢复后重新 HTTP 全量拉取并覆盖同步。
 * 两个 Fragment 均采用 MVI：`AgentEmojiFragmentVm`、`AgentTextChatFragmentVm`，Activity 级编排采用 `ComposeAgentChatVm`。
 
 #### UI/交互设计
@@ -964,6 +965,8 @@ classDiagram
     class ComposeAgentChatVm {
       +processIntent(intent)
       +initResource(activity)
+      +syncConversationHistory()
+      +loadConversationFromRoom()
       +sendTextMessage(msg)
       +startSendVoice(scope)
       +toggleMicState()
@@ -976,6 +979,7 @@ classDiagram
     class ChatController
     class ChatCacheManager
     class ChatService
+    class NetworkManager
 
     ComposeAgentChatActivity --> ComposeAgentChatVm
     ComposeAgentChatActivity --> AgentEmojiFragment
@@ -984,6 +988,7 @@ classDiagram
     AgentTextChatFragment --> AgentTextChatFragmentVm
     ComposeAgentChatVm --> ChatService
     ComposeAgentChatVm --> RealtimeChatController
+    ComposeAgentChatVm --> NetworkManager
     RealtimeChatController --> ChatController
     ChatController --> ChatCacheManager
 ```
@@ -1004,6 +1009,7 @@ classDiagram
     }
     class textVm_1 {
       isEnableSend = true
+      messages = 24
     }
     class rtc_1 {
       userId = "u1001"
@@ -1011,6 +1017,7 @@ classDiagram
     }
     class chatCtrl_a2001 {
       pendingUpdate = 3
+      cacheSource = ROOM
     }
 
     activity_1 --> vm_1
@@ -1023,36 +1030,47 @@ classDiagram
 #### UML动态图（状态图）
 ```mermaid
 stateDiagram-v2
-    [*] --> Disconnected
-    Disconnected --> Ready : ws connected + vad silent
+    [*] --> Init
+    Init --> OfflineHistory : isNetworkOnline=false
+    Init --> OnlineFullSync : isNetworkOnline=true
+    OnlineFullSync --> Ready : HTTP同步完成 + ws connected + vad silent
+    OfflineHistory --> Ready : 网络恢复并完成HTTP补偿
     Ready --> UserSpeaking : vad startSpeech
     UserSpeaking --> AgentReplying : start_tts
     AgentReplying --> Ready : stop_tts
-    Ready --> Error : ws error / vad error
+    Ready --> OfflineHistory : 网络断开, 改读Room
     UserSpeaking --> Error : stt/transport error
     AgentReplying --> Error : tts/transport error
-    Error --> Disconnected : reset / reconnect
+    Error --> OfflineHistory : 回退Room
 ```
 
 #### UML动态图（活动图）
 ```mermaid
 flowchart TD
     A[进入 ComposeAgentChatActivity] --> B[绑定 ChatService]
-    B --> C[初始化 RealtimeChatController]
-    C --> D{当前页}
-    D -- Emoji页 --> E[展示黑底双眼 + 状态球]
-    D -- Text页 --> F[展示消息列表 + 输入栏]
-    E --> G{用户操作}
-    G -- 唤醒/开麦 --> H[请求录音权限并启动VAD]
-    H --> I[状态球弹性放大]
-    F --> J{输入类型}
-    J -- 文本 --> K[USER_TEXT_MESSAGE]
-    J -- 按压语音 --> L[START/STOP_AUDIO_RECORD + AUDIO_CHUNK]
-    K --> M[WS回包 TEXT_CHAT_RESPONSE]
-    L --> M
-    M --> N[ChatController 增量插入]
-    N --> O[ChatCacheManager 持久化]
-    O --> P[UI 增量刷新]
+    B --> C[初始化 RealtimeChatController + 订阅NetworkManager.state]
+    C --> D{isNetworkOnline?}
+    D -- 否 --> E[从Room加载当前Agent聊天记录]
+    D -- 是 --> F[HTTP全量拉取 getLastChat]
+    F --> G[同步写入Room]
+    G --> H[更新ChatController与Text UI]
+    E --> H
+    H --> I{当前页}
+    I -- Emoji页 --> J[展示黑底双眼 + 状态球]
+    I -- Text页 --> K[展示消息列表 + 输入栏]
+    J --> L{用户操作}
+    L -- 唤醒/开麦 --> M[请求录音权限并启动VAD]
+    M --> N[状态球弹性放大]
+    K --> O{输入类型}
+    O -- 文本 --> P[USER_TEXT_MESSAGE]
+    O -- 按压语音 --> Q[START/STOP_AUDIO_RECORD + AUDIO_CHUNK]
+    P --> R[WS回包 TEXT_CHAT_RESPONSE]
+    Q --> R
+    R --> S[ChatController 增量插入]
+    S --> T[ChatCacheManager 持久化]
+    T --> U[Text UI 增量刷新]
+    U --> V{网络恢复?}
+    V -- 是 --> F
 ```
 
 #### UML动态图（时序图）
@@ -1061,6 +1079,8 @@ sequenceDiagram
     participant UI as ComposeAgentChatActivity
     participant VM as ComposeAgentChatVm
     participant FragVm as AgentTextChatFragmentVm
+    participant Net as NetworkManager
+    participant Api as RemoteApiSource
     participant RTC as RealtimeChatController
     participant CC as ChatController
     participant Cache as ChatCacheManager
@@ -1068,14 +1088,27 @@ sequenceDiagram
 
     UI->>VM: Initialize(intent, activity)
     VM->>RTC: initResource(...)
+    VM->>Net: refreshNetworkState()
+    alt 在线
+        VM->>Api: GET /chat/getLastChat(agentId)
+        Api-->>VM: ChatMessageResponse
+        VM->>Cache: upsertRemoteMessages
+        VM->>CC: setResponsesToViews(list)
+        VM-->>FragVm: SyncMessages(history)
+    else 离线
+        VM->>Cache: queryLastMessages(agentId)
+        Cache-->>VM: Room历史消息
+        VM->>CC: setResponsesToViews(list)
+        VM-->>FragVm: SyncMessages(history)
+    end
     UI->>FragVm: UserSendText("你好")
     FragVm-->>VM: ForwardSendText
     VM->>RTC: send USER_TEXT_MESSAGE
     RTC->>WS: websocket send
     WS-->>RTC: TEXT_CHAT_RESPONSE(fragment)
     RTC->>CC: setWsToViews/insert message
-    CC->>Cache: upsertBatch
-    CC-->>UI: update list/effect
+    CC->>Cache: upsertRealtimeMessage
+    CC-->>UI: SyncMessages(latest)
 ```
 
 #### UML动态图（通信图）
@@ -1084,6 +1117,8 @@ flowchart LR
     AC[ComposeAgentChatActivity] --> VM[ComposeAgentChatVm]
     VM --> EFVM[AgentEmojiFragmentVm]
     VM --> TFVM[AgentTextChatFragmentVm]
+    VM --> NM[NetworkManager]
+    VM --> API[RemoteApiSource]
     VM --> RTC[RealtimeChatController]
     RTC --> WS[RealtimeChatWsClient]
     RTC --> CC[ChatController]
@@ -1104,12 +1139,15 @@ gantt
     section WebSocket线程
     发送文本/音频消息               :w1, 30, 110
     接收TEXT_CHAT_RESPONSE/TTS事件  :w2, 45, 110
+    section HTTP线程
+    首次/重连后全量拉取聊天记录     :h1, 5, 60
     section 音频线程
     AudioRecord/VAD检测             :a1, 35, 95
     AudioTrack播放                  :a2, 70, 80
     section 数据线程
     ChatController去重插入          :d1, 50, 90
     Room持久化                      :d2, 58, 80
+    Room离线读取                    :d3, 5, 35
 ```
 
 #### 设计模式
@@ -1304,7 +1342,7 @@ gantt
   * 云上录播记录播放（服务端 MinIO 视频源转 m3u8，Android 播放）
   * 本地视频播放（MP4）
   * 本地视频上传云端（支持断点续传、下载）
-* `MineVm.dataState` 额外承载首页刷新令牌 `homeRefreshToken`：由主页面网络恢复/Agent列表变更时更新，作为 `MessageListScreen.refreshToken` 的统一来源，`MainActivityScreen` 不再持有本地刷新 token。
+* 首页刷新不再通过 `MineVm.homeRefreshToken` 中转，避免 `agentListVersion/networkState -> refreshToken -> Refresh` 的自循环；首页网络恢复与离线回退统一由 `MessageListMviVm` 直接订阅 `NetworkManager.state` 处理。
 
 #### m3u8 播放方案（新增）
 * 播放内核：采用 `androidx.media3 ExoPlayer`，统一支持 m3u8（HLS）和本地 mp4。

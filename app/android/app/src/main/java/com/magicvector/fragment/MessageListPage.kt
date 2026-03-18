@@ -48,7 +48,6 @@ fun MessageListScreen(
     modifier: Modifier = Modifier,
     viewModel: MessageListMviVm,
     onCreateAgentClick: () -> Unit = {},
-    refreshToken: Long = 0L,
     onOpenChat: (MessageContactItemAo) -> Unit = {},
     onOpenAgentEditor: (String) -> Unit = {}
 ) {
@@ -60,12 +59,6 @@ fun MessageListScreen(
     // 初始化
     LaunchedEffect(Unit) {
         viewModel.processIntent(MessageListIntent.Initialize)
-    }
-
-    LaunchedEffect(refreshToken) {
-        if (refreshToken > 0L) {
-            viewModel.processIntent(MessageListIntent.Refresh)
-        }
     }
 
     // 观察 Effect

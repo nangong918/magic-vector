@@ -31,6 +31,9 @@ class AgentTextChatFragmentVm : ViewModel() {
             is AgentTextChatFragmentIntent.SyncSendEnable -> {
                 _uiState.update { it.copy(isEnableSend = intent.enable) }
             }
+            is AgentTextChatFragmentIntent.SyncMessages -> {
+                _uiState.update { it.copy(messages = intent.messages) }
+            }
             is AgentTextChatFragmentIntent.UserSendText -> {
                 val message = intent.message.trim()
                 if (message.isEmpty()) return
@@ -79,7 +82,9 @@ class AgentTextChatFragmentVm : ViewModel() {
 @Stable
 data class AgentTextChatFragmentState(
     /** 输入与按钮可用态。 */
-    val isEnableSend: Boolean = false
+    val isEnableSend: Boolean = false,
+    /** 当前聊天记录快照。 */
+    val messages: List<MessageItem> = emptyList()
 )
 
 sealed class AgentTextChatFragmentIntent {
@@ -88,6 +93,9 @@ sealed class AgentTextChatFragmentIntent {
 
     /** 用户发送文本。 */
     data class UserSendText(val message: String) : AgentTextChatFragmentIntent()
+
+    /** 同步历史记录和当前会话快照。 */
+    data class SyncMessages(val messages: List<MessageItem>) : AgentTextChatFragmentIntent()
 
     /** 收到 Agent 文本。 */
     data class ReceiveAgentText(val text: String) : AgentTextChatFragmentIntent()

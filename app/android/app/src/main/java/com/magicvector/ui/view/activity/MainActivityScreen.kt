@@ -37,7 +37,6 @@ import com.magicvector.ui.theme.MagicVectorTheme
 import com.magicvector.viewModel.activity.MainDataState
 import com.magicvector.viewModel.activity.MainState
 import com.magicvector.viewModel.fragment.ControlVm
-import com.magicvector.viewModel.fragment.MineIntent
 import com.magicvector.viewModel.fragment.MessageListMviVm
 import com.magicvector.viewModel.fragment.MineVm
 import com.view.appview.MainSelectItemEnum
@@ -70,18 +69,6 @@ fun MainActivityScreen(
         MainApplication.getNetworkManager().state
     }
     val networkState by networkStateFlow.collectAsState()
-    val mineDataState by mineVm.dataState.collectAsState()
-
-    LaunchedEffect(dataState.agentListVersion) {
-        if (dataState.agentListVersion > 0L) {
-            mineVm.processIntent(MineIntent.NotifyHomeRefresh)
-        }
-    }
-    LaunchedEffect(networkState.isNetworkOnline, networkState.isWsConnected) {
-        if (networkState.isNetworkOnline) {
-            mineVm.processIntent(MineIntent.NotifyHomeRefresh)
-        }
-    }
     LaunchedEffect(dataState.isChatServiceBound, networkState.isWsConnected) {
         messageListVm.processIntent(
             com.magicvector.viewModel.fragment.MessageListIntent.UpdateConnectionState(
@@ -143,7 +130,6 @@ fun MainActivityScreen(
                 MainSelectItemEnum.HOME -> MessageListScreen(
                     viewModel = messageListVm,
                     onCreateAgentClick = { latestCreate.value.invoke() },
-                    refreshToken = mineDataState.homeRefreshToken,
                     onOpenChat = onOpenChat,
                     onOpenAgentEditor = { latestEditor.value.invoke(it) }
                 )
