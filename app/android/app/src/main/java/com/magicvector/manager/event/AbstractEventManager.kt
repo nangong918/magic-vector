@@ -1,5 +1,6 @@
 package com.magicvector.manager.event
 
+import com.magicvector.domain.event.EventSource
 import com.magicvector.utils.sort.SortItem
 import com.magicvector.utils.sort.SortMode
 import com.magicvector.utils.sort.SortUtil
@@ -28,7 +29,7 @@ import kotlinx.coroutines.flow.asStateFlow
  * @param TEvent 事件类型
  * @param defaultSortMode 默认排序模式（默认时间降序：新到旧）
  */
-abstract class AbstractEventManager<TItem : SortItem, TEvent : Any>(
+abstract class AbstractEventManager<TItem : SortItem, TEvent : EventSource>(
     private val defaultSortMode: SortMode = SortMode.LONG_DESC,
     replay: Int = 1,
     extraBufferCapacity: Int = 64
