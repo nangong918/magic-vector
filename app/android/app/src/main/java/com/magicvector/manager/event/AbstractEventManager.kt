@@ -75,77 +75,38 @@ abstract class AbstractEventManager<TItem : SortItem, TEvent : Any>(
     }
 
     /**
-     * 置顶插入/更新（用于用户主动操作、Ws新消息）
+     * 置顶插入（用于用户主动操作、Ws新消息）
      * 对应需求1、4
+     * 假设：items本身是有序的（如按时间倒序），直接插入到列表顶部
      *
-     * @param item 待插入/更新的项
-     * @param matcher 匹配规则（默认基于uid）
+     * @param items 待插入的项列表（本身有序）
      * @param event 变更事件
-     * @param sortAfterInsert 插入后是否重新排序
-     * @param mode 排序模式（当sortAfterInsert=true时使用）
-     * @param longSelector LONG排序时使用的字段选择器
      */
-    protected fun upsertTop(
-        item: TItem,
-        matcher: (TItem) -> Boolean = { it.getUid() == item.getUid() },
-        event: TEvent,
-        sortAfterInsert: Boolean = false,
-        mode: SortMode = defaultSortMode,
-        longSelector: (TItem) -> Long = { it.getTimestamp() }): List<TItem> = reducerLock.withLock {
+    protected fun prependTop(
+        items: List<TItem>,
+        event: TEvent
+    ): List<TItem> = reducerLock.withLock {
         val next = _items.value.toMutableList()
-        val index = next.indexOfFirst(matcher)
-
-        if (index >= 0) {
-            // 更新已存在的项
-            next[index] = item
-        } else {
-            // 插入新项到顶部
-            next.add(0, item)
-        }
-
-        if (sortAfterInsert) {
-            // 使用 SortUtil 的 insertOrdered 方法重新排序
-            // 传入 emptyList() 因为 item 已经添加过了
-            SortUtil.insertOrdered(emptyList(), next, mode, longSelector)
-        }
-
+        // 在顶部插入所有项（保持items本身的顺序）
+        next.addAll(0, items)
         _items.value = next
         emitEvent(event)
         _items.value
     }
 
     /**
-     * 置底插入（扩展功能，用于特殊场景）
+     * 置底插入 - 用于发送新消息等场景
+     * 假设：调用时列表已经是有序的，新消息直接追加到底部
      *
-     * @param item 待插入/更新的项
-     * @param matcher 匹配规则（默认基于uid）
+     * @param items 待插入的项列表
      * @param event 变更事件
-     * @param sortAfterInsert 插入后是否重新排序
-     * @param mode 排序模式（当sortAfterInsert=true时使用）
-     * @param longSelector LONG排序时使用的字段选择器
      */
-    protected fun upsertBottom(
-        item: TItem,
-        matcher: (TItem) -> Boolean = { it.getUid() == item.getUid() },
-        event: TEvent,
-        sortAfterInsert: Boolean = false,
-        mode: SortMode = defaultSortMode,
-        longSelector: (TItem) -> Long = { it.getTimestamp() }
+    protected fun appendBottom(
+        items: List<TItem>,
+        event: TEvent
     ): List<TItem> = reducerLock.withLock {
         val next = _items.value.toMutableList()
-        val index = next.indexOfFirst(matcher)
-
-        if (index >= 0) {
-            next[index] = item  // 更新
-        } else {
-            next.add(item)      // 插入底部
-        }
-
-        if (sortAfterInsert) {
-            // ✅ 直接使用 SortUtil 的 insertOrdered 方法
-            SortUtil.insertOrdered(emptyList(), next, mode, longSelector)
-        }
-
+        next.addAll(items)  // 直接追加到底部，不查重，不排序
         _items.value = next
         emitEvent(event)
         _items.value
@@ -196,9 +157,10 @@ abstract class AbstractEventManager<TItem : SortItem, TEvent : Any>(
     }
 
     /**
-     * 更新匹配的项
+     * 更新指定 uid 的项
+     * 因为 uid 是唯一的，所以这是精确更新
      *
-     * @param matcher 匹配规则
+     * @param uid 要更新的项的唯一标识
      * @param updater 更新函数
      * @param event 变更事件
      * @param resort 更新后是否重新排序
@@ -206,8 +168,8 @@ abstract class AbstractEventManager<TItem : SortItem, TEvent : Any>(
      * @param longSelector LONG排序时使用的字段选择器
      * @return true 表示有项被更新
      */
-    protected fun update(
-        matcher: (TItem) -> Boolean,
+    protected fun updateByUid(
+        uid: Long,
         updater: (TItem) -> TItem,
         event: TEvent,
         resort: Boolean = false,
@@ -215,37 +177,54 @@ abstract class AbstractEventManager<TItem : SortItem, TEvent : Any>(
         longSelector: (TItem) -> Long = { it.getTimestamp() }
     ): Boolean = reducerLock.withLock {
         val next = _items.value.toMutableList()
-        var updated = false
+        val index = next.indexOfFirst { it.getUid() == uid }
+
+        if (index >= 0) {
+            next[index] = updater(next[index])
+
+            if (resort) {
+                SortUtil.insertOrdered(emptyList(), next, mode, longSelector)
+            }
+
+            _items.value = next
+            emitEvent(event)
+            true
+        } else {
+            false
+        }
+    }
+
+    /**
+     * 批量更新 - 基于 uid 映射
+     */
+    protected fun updateBatchByUid(
+        updates: Map<Long, (TItem) -> TItem>,
+        event: TEvent,
+        resort: Boolean = false,
+        mode: SortMode = defaultSortMode,
+        longSelector: (TItem) -> Long = { it.getTimestamp() }
+    ): Int = reducerLock.withLock {
+        val next = _items.value.toMutableList()
+        var updateCount = 0
 
         next.indices.forEach { index ->
-            if (matcher(next[index])) {
+            val uid = next[index].getUid()
+            updates[uid]?.let { updater ->
                 next[index] = updater(next[index])
-                updated = true
+                updateCount++
             }
         }
 
-        if (updated) {
-            if (resort) {
-                // 使用 SortUtil 的 insertOrdered 方法重新排序
-                SortUtil.insertOrdered(emptyList(), next, mode, longSelector)
-            }
+        if (updateCount > 0 && resort) {
+            SortUtil.insertOrdered(emptyList(), next, mode, longSelector)
+        }
+
+        if (updateCount > 0) {
             _items.value = next
             emitEvent(event)
         }
 
-        updated
-    }
-
-    /**
-     * 批量更新（支持复杂操作）
-     */
-    protected fun batchUpdate(
-        builder: (List<TItem>) -> List<TItem>,
-        event: TEvent
-    ): List<TItem> = reducerLock.withLock {
-        _items.value = builder(_items.value)
-        emitEvent(event)
-        _items.value
+        updateCount
     }
 
     /**
