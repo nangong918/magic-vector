@@ -26,7 +26,7 @@ import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
-import com.data.domain.ao.message.MessageContactItemAo
+import com.magicvector.domain.model.message.MessageContactItemModel
 import com.magicvector.MainApplication
 import com.magicvector.fragment.AgentEditorOverlay
 import com.magicvector.fragment.ControlScreen
@@ -52,7 +52,7 @@ fun MainActivityScreen(
     onSelectTab: (MainSelectItemEnum) -> Unit,
     onCreateAgent: () -> Unit,
     onOpenAgentEditor: (String) -> Unit,
-    onOpenChat: (MessageContactItemAo) -> Unit,
+    onOpenChat: (MessageContactItemModel) -> Unit,
     onEditorClose: () -> Unit,
     onEditorNameChange: (String) -> Unit,
     onEditorDescriptionChange: (String) -> Unit,

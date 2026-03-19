@@ -1,6 +1,6 @@
 package com.magicvector.domain.dto.http.response;
 
-import com.data.domain.ao.agent.AgentAo;
+import com.magicvector.domain.model.agent.AgentModel;
 
 
 /**
@@ -8,5 +8,5 @@ import com.data.domain.ao.agent.AgentAo;
  * @date 2025/9/29 13:37
  */
 public class AgentResponse {
-    public AgentAo agentAo;
+    public AgentModel agentModel;
 }

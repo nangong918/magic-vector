@@ -1,9 +1,9 @@
-package com.data.domain.ao.message
+package com.magicvector.domain.model.message
 
 import com.data.domain.vo.message.MessageContactItemVo
 import java.io.Serializable
 
-class MessageContactItemAo : Serializable {
+class MessageContactItemModel : Serializable {
 
     // view
     // 单个联系人Vo信息
@@ -14,7 +14,7 @@ class MessageContactItemAo : Serializable {
     var contactId: String? = null
     var timestamp: Long = 0L // long 用于排序 不是用于显示时间
 
-    fun setByThat(that : MessageContactItemAo) {
+    fun setByThat(that : MessageContactItemModel) {
         this.vo.setByThat(that.vo)
         this.contactId = that.contactId
         this.timestamp = that.timestamp

@@ -1,6 +1,5 @@
 package com.magicvector.viewModel.activity
 
-import android.content.Context
 import android.graphics.Bitmap
 import android.net.Uri
 import android.util.Log
@@ -192,10 +191,10 @@ class ComposeCreateAgentVm() : ViewModel() {
                     name = nameBody,
                     description = descriptionBody
                 )
-                if (response.agentAo?.agentId != null) {
+                if (response.agentModel?.agentId != null) {
                     _uiState.update { it.copy(isCreateSuccess = false) }
                     sendEffect(CreateAgentEffect.ShowToast(appContext.getString(com.view.appview.R.string.create_success)))
-                    sendEffect(CreateAgentEffect.AgentCreated(response.agentAo?.agentId.orEmpty()))
+                    sendEffect(CreateAgentEffect.AgentCreated(response.agentModel?.agentId.orEmpty()))
                 }
             } catch (e: NetworkBusinessException) {
                 Log.e(TAG, "Create agent business failed", e)

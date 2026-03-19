@@ -28,7 +28,7 @@ import com.core.baseutil.permissions.GainPermissionCallback
 import com.core.baseutil.permissions.PermissionUtil
 import com.core.baseutil.photo.SelectPhotoUtil
 import com.core.baseutil.ui.ToastUtils
-import com.data.domain.ao.message.MessageContactItemAo
+import com.magicvector.domain.model.message.MessageContactItemModel
 import com.data.domain.constant.BaseConstant
 import com.data.domain.constant.chat.RealtimeRequestDataTypeEnum
 import com.data.domain.fragmentActivity.aao.ChatAAo
@@ -142,7 +142,7 @@ class ChatVm(
     @RequiresPermission(Manifest.permission.RECORD_AUDIO)
     fun initResource(
         activity: FragmentActivity,
-        ao : MessageContactItemAo?,
+        ao : MessageContactItemModel?,
         whereNeedUpdate: RecyclerViewWhereNeedUpdate,
         onReceiveAgentTextCallback: OnReceiveAgentTextCallback,
         onVadChatStateChange: OnVadChatStateChange
@@ -174,7 +174,7 @@ class ChatVm(
     //---------------------------AAo Ld---------------------------
 
     val aao = ChatAAo()
-    var messageAo: MessageContactItemAo? = null
+    var messageAo: MessageContactItemModel? = null
 
     lateinit var adapter : ChatMessageAdapter
 
@@ -208,9 +208,9 @@ class ChatVm(
 
     // chatHistory First
     private suspend fun fetchLastChat() {
-        if (realtimeChatController?.messageContactItemAo != null) {
+        if (realtimeChatController?.messageContactItemModel != null) {
             val response = MainApplication.getRemoteApiSource().getLastChat(
-                realtimeChatController?.messageContactItemAo!!.contactId!!
+                realtimeChatController?.messageContactItemModel!!.contactId!!
             )
             applyChatHistory(response)
         }
@@ -222,9 +222,9 @@ class ChatVm(
 
     // 特定时间段的chat history todo: 上拉上滑获取之前的chat History
     suspend fun fetchTimeLimitChat(deadline: String) {
-        if (realtimeChatController?.messageContactItemAo != null){
+        if (realtimeChatController?.messageContactItemModel != null){
             val response = MainApplication.getRemoteApiSource().getTimeLimitChat(
-                realtimeChatController?.messageContactItemAo!!.contactId!!,
+                realtimeChatController?.messageContactItemModel!!.contactId!!,
                 deadline,
                 BaseConstant.Constant.CHAT_HISTORY_LIMIT_COUNT
             )
@@ -354,7 +354,7 @@ class ChatVm(
         val callAo = CallAo()
         callAo.agentName = aao.nameLd.value
         callAo.agentAvatar = aao.avatarUrlLd.value
-        callAo.agentId = realtimeChatController?.messageContactItemAo?.contactId?:""
+        callAo.agentId = realtimeChatController?.messageContactItemModel?.contactId?:""
 
         callAo.onMuteClickRunnable = onMuteClickRunnable
         callAo.onCallEndClickRunnable = onCallEndClickRunnable

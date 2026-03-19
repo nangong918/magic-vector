@@ -4,12 +4,12 @@ import android.view.LayoutInflater
 import android.view.ViewGroup
 import androidx.recyclerview.widget.RecyclerView
 import com.data.domain.OnPositionItemClick
-import com.data.domain.ao.message.MessageContactItemAo
+import com.data.domain.ao.message.MessageContactItemModel
 import com.view.appview.databinding.ViewMessageCardItemBinding
 import java.util.Optional
 
 class MessageContactAdapter(
-    private val messageContactItemAosPointer: MutableList<MessageContactItemAo>,
+    private val messageContactItemAosPointer: MutableList<MessageContactItemModel>,
     private val onPositionItemClick : OnPositionItemClick
 ) : RecyclerView.Adapter<MessageCardItemViewHolder>(){
     override fun onCreateViewHolder(

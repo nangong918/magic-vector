@@ -50,7 +50,7 @@ open class MessageListVm(
 
     fun initAdapter(onPositionItemClick : OnPositionItemClick){
         adapter = MessageContactAdapter(
-            MainApplication.getMessageListManager().messageContactItemAos,
+            MainApplication.getMessageListManager().messageContactItemModels,
             onPositionItemClick
         )
     }
@@ -66,7 +66,7 @@ open class MessageListVm(
         else {
             Log.i(TAG, "initNetworkRequest: 不是第一次打开")
             NetworkLoadUtils.dismissDialogSafety(context)
-            val messageContactItemAos = MainApplication.getMessageListManager().messageContactItemAos
+            val messageContactItemAos = MainApplication.getMessageListManager().messageContactItemModels
             fao.messageContactCountLd.postValue(messageContactItemAos.size)
         }
     }
@@ -81,7 +81,7 @@ open class MessageListVm(
         if (response != null){
             MainApplication.getMessageListManager().setAgentChatAos(response)
             fao.messageContactCountLd.postValue(
-                MainApplication.getMessageListManager().messageContactItemAos.size
+                MainApplication.getMessageListManager().messageContactItemModels.size
             )
         }
         else {

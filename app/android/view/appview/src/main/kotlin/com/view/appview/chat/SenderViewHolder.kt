@@ -3,7 +3,7 @@ package com.view.appview.chat
 import android.view.View
 import androidx.recyclerview.widget.RecyclerView
 import com.core.baseutil.image.ImageLoadUtil
-import com.data.domain.ao.chat.ChatItemAo
+import com.data.domain.ao.chat.ChatItemModel
 import com.data.domain.constant.chat.MessageTypeEnum
 import com.view.appview.databinding.ViewSendMessageItemBinding
 
@@ -19,7 +19,7 @@ class SenderViewHolder : RecyclerView.ViewHolder{
 
     private val binding: ViewSendMessageItemBinding
 
-    fun bindAo(ao : ChatItemAo){
+    fun bindAo(ao : ChatItemModel){
         binding.tvMessage.text = ao.vo.content
         binding.tvTime.text = ao.vo.time?:"-"
 

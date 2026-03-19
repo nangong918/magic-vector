@@ -23,8 +23,8 @@ import com.data.domain.constant.BaseConstant
 import com.data.domain.constant.test.RealtimeDataTypeEnum
 import com.magicvector.domain.dto.ws.request.RealtimeChatConnectRequest
 import com.magicvector.domain.dto.ws.response.RealtimeChatTextResponse
-import com.data.domain.event.WebSocketMessageEvent
-import com.data.domain.event.WebsocketEventTypeEnum
+import com.magicvector.domain.event.WebSocketMessageEvent
+import com.magicvector.domain.event.WebsocketEventTypeEnum
 import com.data.domain.vo.test.AudioRecordPlayState
 import com.data.domain.vo.test.ChatState
 import com.data.domain.vo.test.RealtimeChatState

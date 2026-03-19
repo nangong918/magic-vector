@@ -1,4 +1,4 @@
-package com.data.domain.event
+package com.magicvector.domain.event
 
 import java.io.Serializable
 

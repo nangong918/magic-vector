@@ -1,4 +1,4 @@
-package com.data.domain.event
+package com.magicvector.domain.event
 
 
 enum class WebsocketEventTypeEnum(val code: Int, val desc: String){

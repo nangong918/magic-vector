@@ -1,41 +1,41 @@
 package com.magicvector.domain.convertor
 
-import com.data.domain.ao.agent.AgentChatAo
-import com.data.domain.ao.message.MessageContactItemAo
+import com.magicvector.domain.model.agent.AgentChatModel
+import com.magicvector.domain.model.message.MessageContactItemModel
 import com.data.domain.vo.message.MessageContactItemVo
 
 object MessageConvertor {
 
-    fun agentChatAo2MessageContactItemAo(agentChatAo: AgentChatAo) : MessageContactItemAo {
-        val messageContactItemAo = MessageContactItemAo()
-        messageContactItemAo.vo = MessageContactItemVo()
-        agentChatAo.agentAo?.let {
+    fun agentChatAo2MessageContactItemAo(agentChatModel: AgentChatModel) : MessageContactItemModel {
+        val messageContactItemModel = MessageContactItemModel()
+        messageContactItemModel.vo = MessageContactItemVo()
+        agentChatModel.agentModel?.let {
             // vo
             it.agentVo?.let { vo ->
-                messageContactItemAo.vo.avatarUrl = vo.avatarUrl
-                messageContactItemAo.vo.name = vo.name
+                messageContactItemModel.vo.avatarUrl = vo.avatarUrl
+                messageContactItemModel.vo.name = vo.name
             }
-            messageContactItemAo.vo.unreadCount = agentChatAo.unreadCount
+            messageContactItemModel.vo.unreadCount = agentChatModel.unreadCount
 
 
             // ao
-            messageContactItemAo.timestamp = agentChatAo.lastChatTime
-            messageContactItemAo.contactId = it.agentId
+            messageContactItemModel.timestamp = agentChatModel.lastChatTime
+            messageContactItemModel.contactId = it.agentId
         }
-        agentChatAo.lastChatMessages?.let {
+        agentChatModel.lastChatMessages?.let {
             if (it.isNotEmpty()) {
-                agentChatAo.lastChatMessages[0].let { messageDo ->
-                    messageContactItemAo.vo.setMessagePreview(messageDo.content)
-                    messageContactItemAo.vo.time = messageDo.chatTime
+                agentChatModel.lastChatMessages[0].let { messageDo ->
+                    messageContactItemModel.vo.setMessagePreview(messageDo.content)
+                    messageContactItemModel.vo.time = messageDo.chatTime
                 }
             }
         }
 
-        return messageContactItemAo
+        return messageContactItemModel
     }
 
-    fun agentChatAos2MessageContactItemAos(agentChatAos: List<AgentChatAo>) : List<MessageContactItemAo> {
-        return agentChatAos.map { agentChatAo ->
+    fun agentChatAos2MessageContactItemAos(agentChatModels: List<AgentChatModel>) : List<MessageContactItemModel> {
+        return agentChatModels.map { agentChatAo ->
             agentChatAo2MessageContactItemAo(agentChatAo)
         }
     }

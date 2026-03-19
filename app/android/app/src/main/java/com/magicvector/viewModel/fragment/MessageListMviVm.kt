@@ -3,9 +3,9 @@ package com.magicvector.viewModel.fragment
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.data.domain.ao.agent.AgentAo
-import com.data.domain.ao.agent.AgentChatAo
-import com.data.domain.ao.message.MessageContactItemAo
+import com.magicvector.domain.model.agent.AgentModel
+import com.magicvector.domain.model.agent.AgentChatModel
+import com.magicvector.domain.model.message.MessageContactItemModel
 import com.magicvector.MainApplication
 import com.magicvector.domain.convertor.MessageConvertor
 import com.magicvector.domain.exception.NetworkBusinessException
@@ -187,8 +187,8 @@ class MessageListMviVm : ViewModel() {
         // 有网络：全量请求
         runCatching {
             supervisorScope {
-                val agentDeferred = async(Dispatchers.IO) { api.getAgentList(userId).agentAos.orEmpty() }
-                val chatDeferred = async(Dispatchers.IO) { api.getLastAgentChatList(userId).agentChatAos.orEmpty() }
+                val agentDeferred = async(Dispatchers.IO) { api.getAgentList(userId).agentModels.orEmpty() }
+                val chatDeferred = async(Dispatchers.IO) { api.getLastAgentChatList(userId).agentChatModels.orEmpty() }
                 OnlineHomeSnapshot(
                     agents = agentDeferred.await(),
                     agentChats = chatDeferred.await()
@@ -259,7 +259,7 @@ class MessageListMviVm : ViewModel() {
         val messages = if (eventMessages.isNotEmpty()) {
             eventMessages
         } else {
-            MainApplication.getMessageListManager().messageContactItemAos.toList()
+            MainApplication.getMessageListManager().messageContactItemModels.toList()
         }
             .sortedByDescending { it.timestamp }
         if (agents.isNotEmpty() || messages.isNotEmpty()) {
@@ -275,7 +275,7 @@ class MessageListMviVm : ViewModel() {
 
     private fun applyUiSnapshot(
         agentCount: Int,
-        messages: List<MessageContactItemAo>,
+        messages: List<MessageContactItemModel>,
         error: String?
     ) {
         val hasAgent = agentCount > 0
@@ -363,7 +363,7 @@ data class MessageListDataState(
 data class MessageListState(
     val isLoading: Boolean = false,
     val isRefreshing: Boolean = false,
-    val messages: List<MessageContactItemAo> = emptyList(),
+    val messages: List<MessageContactItemModel> = emptyList(),
     val messageCount: Int = 0,
     val agentCount: Int = 0,
     val uiMode: MessageListUiMode = MessageListUiMode.NO_AGENT,
@@ -381,12 +381,12 @@ enum class MessageListUiMode {
 sealed class MessageListEffect {
     data object OpenCreateAgent : MessageListEffect()
     data class OpenAgentEditor(val agentId: String) : MessageListEffect()
-    data class NavigateToChat(val ao: MessageContactItemAo) : MessageListEffect()
+    data class NavigateToChat(val ao: MessageContactItemModel) : MessageListEffect()
     data class ShowToast(val message: String) : MessageListEffect()
     data object RequestAudioPermission : MessageListEffect()
 }
 
 private data class OnlineHomeSnapshot(
-    val agents: List<AgentAo>,
-    val agentChats: List<AgentChatAo>
+    val agents: List<AgentModel>,
+    val agentChats: List<AgentChatModel>
 )

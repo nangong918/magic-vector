@@ -15,7 +15,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import com.core.baseutil.permissions.GainPermissionCallback
 import com.core.baseutil.permissions.PermissionUtil
 import com.core.baseutil.ui.ToastUtils
-import com.data.domain.ao.message.MessageContactItemAo
+import com.magicvector.domain.model.message.MessageContactItemModel
 import com.data.domain.constant.VadChatState
 import com.data.domain.fragmentActivity.intentAo.ChatIntentAo
 import com.data.domain.vo.test.RealtimeChatState
@@ -60,7 +60,7 @@ class ChatActivity : BaseAppCompatVmActivity<ActivityChatBinding, ChatVm>(
 
         val intent = intent
 
-        var ao : MessageContactItemAo? = null
+        var ao : MessageContactItemModel? = null
         try {
             val intentAo = intent.getSerializableExtra(ChatIntentAo::class.simpleName) as ChatIntentAo
             ao = intentAo.ao
@@ -271,11 +271,11 @@ class ChatActivity : BaseAppCompatVmActivity<ActivityChatBinding, ChatVm>(
                 ),
                 object : GainPermissionCallback{
                     override fun allGranted() {
-                        if (vm.realtimeChatController?.messageContactItemAo != null){
+                        if (vm.realtimeChatController?.messageContactItemModel != null){
                             // 跳转页面
                             val intent = Intent(this@ChatActivity, AgentEmojiActivity::class.java)
-                            intent.putExtra("agentId", vm.realtimeChatController?.messageContactItemAo?.contactId?: "")
-                            intent.putExtra("agentName", vm.realtimeChatController?.messageContactItemAo?.vo?.name?: "")
+                            intent.putExtra("agentId", vm.realtimeChatController?.messageContactItemModel?.contactId?: "")
+                            intent.putExtra("agentName", vm.realtimeChatController?.messageContactItemModel?.vo?.name?: "")
                             startActivity(intent)
                         }
                         else {

@@ -4,14 +4,14 @@ import android.annotation.SuppressLint
 import android.view.LayoutInflater
 import android.view.ViewGroup
 import androidx.recyclerview.widget.RecyclerView
-import com.data.domain.ao.chat.ChatItemAo
+import com.data.domain.ao.chat.ChatItemModel
 import com.data.domain.constant.chat.SendMessageTypeEnum
 import com.view.appview.databinding.ViewReceivedMessageItemBinding
 import com.view.appview.databinding.ViewSendMessageItemBinding
 import java.util.Optional
 
 class ChatMessageAdapter(
-    private val chatMessageItemAosPointer: MutableList<ChatItemAo>,
+    private val chatMessageItemAosPointer: MutableList<ChatItemModel>,
     private val onChatMessageClick : OnChatMessageClick
 ) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
 
@@ -62,7 +62,7 @@ class ChatMessageAdapter(
         if (position >= chatMessageItemAosPointer.size){
             return
         }
-        val ao: ChatItemAo = chatMessageItemAosPointer[position]
+        val ao: ChatItemModel = chatMessageItemAosPointer[position]
         when(ao.vo.viewType){
             SendMessageTypeEnum.VIEW_TYPE_USER.value -> {
                 (holder as SenderViewHolder).bindAo(ao)

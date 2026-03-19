@@ -4,8 +4,8 @@ import android.text.TextUtils
 import android.util.Log
 //import com.core.baseutil.date.DateUtils
 import com.core.baseutil.sort.SortUtil
-import com.data.domain.Do.ChatMessageDo
-import com.data.domain.ao.chat.ChatItemAo
+import com.data.domain.Do.ChatMessageEntity
+import com.magicvector.domain.model.chat.ChatItemModel
 import com.data.domain.constant.chat.MessageTypeEnum
 import com.magicvector.domain.dto.ws.response.RealtimeChatTextResponse
 import com.view.appview.recycler.UpdateRecyclerViewItem
@@ -36,7 +36,7 @@ class ChatController(val agentId: String) {
     private val lock = ReentrantLock()
     private val needUpdateQueue: ArrayDeque<UpdateRecyclerViewItem> = ArrayDeque()
     // 以 messageId 作为索引，避免 O(n) 全量遍历查重
-    private val messageIdIndex: MutableMap<String, ChatItemAo> = mutableMapOf()
+    private val messageIdIndex: MutableMap<String, ChatItemModel> = mutableMapOf()
     private var lastRemoteSyncRecoveryToken: Long = -1L
 
     fun getNeedUpdateList(): List<UpdateRecyclerViewItem>{
@@ -48,9 +48,9 @@ class ChatController(val agentId: String) {
     }
 
     // view
-    private val viewChatMessageList: MutableList<ChatItemAo> = mutableListOf()
+    private val viewChatMessageList: MutableList<ChatItemModel> = mutableListOf()
     // 私有保护，避免外部添加导致ids和views不统一
-    fun getViewChatMessageList(): MutableList<ChatItemAo> {
+    fun getViewChatMessageList(): MutableList<ChatItemModel> {
         return lock.withLock { viewChatMessageList.toMutableList() }
     }
 
@@ -70,7 +70,7 @@ class ChatController(val agentId: String) {
         }
     }
 
-    fun getMessageSnapshot(messageId: String?): ChatItemAo? {
+    fun getMessageSnapshot(messageId: String?): ChatItemModel? {
         if (messageId.isNullOrBlank()) {
             return null
         }
@@ -78,7 +78,7 @@ class ChatController(val agentId: String) {
     }
 
     // response -> view
-    fun setResponsesToViews(responses: List<ChatMessageDo>){
+    fun setResponsesToViews(responses: List<ChatMessageEntity>){
         lock.withLock {
         if (responses.isEmpty()){
             Log.d(TAG, "response为空")
@@ -127,8 +127,8 @@ class ChatController(val agentId: String) {
         }
     }
 
-    private fun responseToView(response: ChatMessageDo): ChatItemAo{
-        val ao = ChatItemAo()
+    private fun responseToView(response: ChatMessageEntity): ChatItemModel{
+        val ao = ChatItemModel()
         // view
         // todo 暂时不支持发送图片
 //        ao.vo.imgUrl = response.imgUrl
@@ -193,8 +193,8 @@ class ChatController(val agentId: String) {
         }
     }
 
-    private fun wsToView(ws: RealtimeChatTextResponse): ChatItemAo{
-        val ao = ChatItemAo()
+    private fun wsToView(ws: RealtimeChatTextResponse): ChatItemModel{
+        val ao = ChatItemModel()
         // view
         // todo 暂时不支持发送图片
 //        ao.vo.imgUrl = ""
@@ -220,7 +220,7 @@ class ChatController(val agentId: String) {
         return ao
     }
 
-    private fun wsToExistView(ws: RealtimeChatTextResponse, ao: ChatItemAo){
+    private fun wsToExistView(ws: RealtimeChatTextResponse, ao: ChatItemModel){
         // view
         // todo 暂时不支持发送图片
 //        ao.vo.imgUrl = ""

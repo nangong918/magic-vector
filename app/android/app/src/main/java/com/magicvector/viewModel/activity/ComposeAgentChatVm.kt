@@ -15,9 +15,9 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.data.domain.Do.ChatMessageDo
-import com.data.domain.ao.message.MessageContactItemAo
-import com.data.domain.ao.chat.ChatItemAo
+import com.data.domain.Do.ChatMessageEntity
+import com.magicvector.domain.model.message.MessageContactItemModel
+import com.magicvector.domain.model.chat.ChatItemModel
 import com.data.domain.constant.VadChatState
 import com.data.domain.constant.chat.RealtimeRequestDataTypeEnum
 import com.data.domain.fragmentActivity.aao.ChatAAo
@@ -35,8 +35,6 @@ import com.view.appview.R
 import com.view.appview.recycler.RecyclerViewWhereNeedUpdate
 import com.view.appview.recycler.UpdateRecyclerViewItem
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -64,7 +62,7 @@ class ComposeAgentChatVm : ViewModel() {
     val effect: Flow<AgentChatEffect> = _effect.receiveAsFlow()
 
     private val chatAAo = ChatAAo()
-    private var messageAo: MessageContactItemAo? = null
+    private var messageAo: MessageContactItemModel? = null
     private val isCalling = AtomicBoolean(false)
 
     private var chatServiceBinder: ChatService.ChatServiceBinder? = null
@@ -295,7 +293,7 @@ class ComposeAgentChatVm : ViewModel() {
         controller.clear()
         controller.setResponsesToViews(
             cachedMessages.map { entity ->
-                ChatMessageDo().apply {
+                ChatMessageEntity().apply {
                     id = entity.id.toString()
                     this.agentId = entity.agentId.toString()
                     userId = entity.userId.toString()
@@ -329,10 +327,10 @@ class ComposeAgentChatVm : ViewModel() {
 
     private fun buildConversationSummary(
         agentId: String,
-        items: List<ChatItemAo>
-    ): MessageContactItemAo {
+        items: List<ChatItemModel>
+    ): MessageContactItemModel {
         val latest = items.maxByOrNull { it.timestamp }
-        return MessageContactItemAo().apply {
+        return MessageContactItemModel().apply {
             contactId = agentId
             timestamp = latest?.timestamp ?: 0L
             vo.name = messageAo?.vo?.name.orEmpty()
@@ -343,7 +341,7 @@ class ComposeAgentChatVm : ViewModel() {
         }
     }
 
-    private fun ChatItemAo.toMessageItem(): MessageItem {
+    private fun ChatItemModel.toMessageItem(): MessageItem {
         return if (vo.viewType == 0) {
             MessageItem.Received(
                 id = messageId.orEmpty(),

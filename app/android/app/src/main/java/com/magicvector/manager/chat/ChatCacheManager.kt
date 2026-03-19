@@ -1,10 +1,10 @@
 package com.magicvector.manager.chat
 
 import android.content.Context
-import com.data.domain.Do.ChatMessageDo
-import com.data.domain.ao.agent.AgentAo
-import com.data.domain.ao.agent.AgentChatAo
-import com.data.domain.ao.message.MessageContactItemAo
+import com.data.domain.Do.ChatMessageEntity
+import com.magicvector.domain.model.agent.AgentModel
+import com.magicvector.domain.model.agent.AgentChatModel
+import com.magicvector.domain.model.message.MessageContactItemModel
 import com.data.domain.vo.agent.AgentVo
 import com.magicvector.dataSource.local.AgentLocalSource
 import com.magicvector.dataSource.local.ChatLocalSource
@@ -30,7 +30,7 @@ class ChatCacheManager private constructor(context: Context) {
         chatLocalSource.upsertMessages(list)
     }
 
-    suspend fun upsertRemoteMessages(list: List<ChatMessageDo>) = withContext(Dispatchers.IO) {
+    suspend fun upsertRemoteMessages(list: List<ChatMessageEntity>) = withContext(Dispatchers.IO) {
         val entities = list.mapNotNull { it.toChatMessageEntity() }
         chatLocalSource.upsertMessages(entities)
     }
@@ -51,8 +51,8 @@ class ChatCacheManager private constructor(context: Context) {
 
     suspend fun syncHomeSnapshot(
         userId: Long,
-        agents: List<AgentAo>,
-        agentChats: List<AgentChatAo>
+        agents: List<AgentModel>,
+        agentChats: List<AgentChatModel>
     ) = withContext(Dispatchers.IO) {
         val agentEntities = agents.mapNotNull { it.toAgentCacheEntity() }
         val chatEntities = agentChats.flatMap { agentChat ->
@@ -92,7 +92,7 @@ class ChatCacheManager private constructor(context: Context) {
         chatLocalSource.appendRealtimeMessage(entity)
     }
 
-    private fun AgentAo.toAgentCacheEntity(): AgentCacheEntity? {
+    private fun AgentModel.toAgentCacheEntity(): AgentCacheEntity? {
         val parsedAgentId = agentId?.toLongOrNull() ?: return null
         val parsedUserId = userId?.toLongOrNull() ?: return null
         return AgentCacheEntity(
@@ -106,8 +106,8 @@ class ChatCacheManager private constructor(context: Context) {
         )
     }
 
-    private fun AgentCacheEntity.toAgentAo(): AgentAo {
-        return AgentAo().also { agent ->
+    private fun AgentCacheEntity.toAgentAo(): AgentModel {
+        return AgentModel().also { agent ->
             agent.agentId = agentId.toString()
             agent.userId = userId.toString()
             agent.agentVo = AgentVo().also { vo ->
@@ -118,8 +118,8 @@ class ChatCacheManager private constructor(context: Context) {
         }
     }
 
-    private fun AgentCacheEntity.toMessageContactItemAo(message: ChatMessageEntity): MessageContactItemAo {
-        return MessageContactItemAo().also { item ->
+    private fun AgentCacheEntity.toMessageContactItemAo(message: ChatMessageEntity): MessageContactItemModel {
+        return MessageContactItemModel().also { item ->
             item.contactId = agentId.toString()
             item.timestamp = message.chatTimestamp
             item.vo.name = name
@@ -130,7 +130,7 @@ class ChatCacheManager private constructor(context: Context) {
         }
     }
 
-    private fun ChatMessageDo.toChatMessageEntity(): ChatMessageEntity? {
+    private fun ChatMessageEntity.toChatMessageEntity(): ChatMessageEntity? {
         val parsedId = id?.toLongOrNull() ?: return null
         val parsedAgentId = agentId?.toLongOrNull() ?: return null
         val parsedUserId = userId?.toLongOrNull() ?: return null
@@ -179,6 +179,6 @@ class ChatCacheManager private constructor(context: Context) {
 }
 
 data class CachedHomeSnapshot(
-    val agents: List<AgentAo>,
-    val messageItems: List<MessageContactItemAo>
+    val agents: List<AgentModel>,
+    val messageItems: List<MessageContactItemModel>
 )

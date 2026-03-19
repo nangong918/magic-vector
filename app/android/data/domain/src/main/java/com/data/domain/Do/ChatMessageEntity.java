@@ -4,10 +4,8 @@ package com.data.domain.Do;
 
 import com.data.domain.constant.chat.RoleTypeEnum;
 
-import java.time.LocalDateTime;
 
-
-public class ChatMessageDo {
+public class ChatMessageEntity {
     public String id; // 消息Id, 不自增，由RealtimeChatContextManager控制
     public String agentId; // 也可也理解为sessionId
     public String userId;

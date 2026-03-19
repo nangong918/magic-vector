@@ -7,7 +7,7 @@ import com.data.domain.constant.BaseConstant
 import com.magicvector.MainApplication
 import com.magicvector.domain.dto.http.response.UserTokenVerifyResponse
 import com.magicvector.domain.exception.NetworkBusinessException
-import com.magicvector.domain.model.UserSessionModel
+import com.magicvector.domain.model.user.UserSessionModel
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow

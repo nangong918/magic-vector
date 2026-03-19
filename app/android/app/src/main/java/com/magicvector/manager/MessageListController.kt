@@ -1,25 +1,25 @@
 package com.magicvector.manager
 
 import com.core.baseutil.date.DateUtils
-import com.data.domain.ao.agent.AgentChatAo
-import com.data.domain.ao.message.MessageContactItemAo
+import com.magicvector.domain.model.agent.AgentChatModel
+import com.magicvector.domain.model.message.MessageContactItemModel
 import com.magicvector.MainApplication
 import com.magicvector.domain.dto.http.response.AgentLastChatListResponse
 import java.util.Optional
 
 class MessageListController {
     // view
-    val messageContactItemAos: MutableList<MessageContactItemAo> = mutableListOf()
+    val messageContactItemModels: MutableList<MessageContactItemModel> = mutableListOf()
 
     fun setAgentChatAos(response: AgentLastChatListResponse){
         setMessageContactItemAos(
-            response.agentChatAos?.map { responseToView(it) }.orEmpty()
+            response.agentChatModels?.map { responseToView(it) }.orEmpty()
         )
     }
 
-    fun setMessageContactItemAos(list: List<MessageContactItemAo>) {
-        messageContactItemAos.clear()
-        messageContactItemAos.addAll(list.sortedByDescending { it.timestamp })
+    fun setMessageContactItemAos(list: List<MessageContactItemModel>) {
+        messageContactItemModels.clear()
+        messageContactItemModels.addAll(list.sortedByDescending { it.timestamp })
     }
 
     fun upsertLatestMessage(
@@ -31,7 +31,7 @@ class MessageListController {
         if (agentId.isBlank()) {
             return
         }
-        val exist = messageContactItemAos.firstOrNull { it.contactId == agentId }
+        val exist = messageContactItemModels.firstOrNull { it.contactId == agentId }
         if (exist != null) {
             exist.timestamp = timestamp
             exist.vo.setMessagePreview(preview)
@@ -39,7 +39,7 @@ class MessageListController {
         } else {
             val agent = MainApplication.getAgentsManager().agentList.value.firstOrNull { it.agentId == agentId }
                 ?: return
-            val created = MessageContactItemAo().apply {
+            val created = MessageContactItemModel().apply {
                 contactId = agentId
                 this.timestamp = timestamp
                 vo.name = agent.agentVo?.name.orEmpty()
@@ -48,21 +48,21 @@ class MessageListController {
                 vo.time = chatTime
                 vo.unreadCount = 0
             }
-            messageContactItemAos.add(created)
+            messageContactItemModels.add(created)
         }
-        messageContactItemAos.sortByDescending { it.timestamp }
+        messageContactItemModels.sortByDescending { it.timestamp }
     }
 
-    private fun responseToView(ao: AgentChatAo): MessageContactItemAo{
-        val viewAo = MessageContactItemAo()
+    private fun responseToView(ao: AgentChatModel): MessageContactItemModel{
+        val viewAo = MessageContactItemModel()
 
         // data
-        viewAo.contactId = ao.agentAo?.agentId?: ""
+        viewAo.contactId = ao.agentModel?.agentId?: ""
         viewAo.timestamp = ao.lastChatTime
 
         // ItemVo
-        viewAo.vo.avatarUrl = ao.agentAo?.agentVo?.avatarUrl?: ""
-        viewAo.vo.name = ao.agentAo?.agentVo?.name?: ""
+        viewAo.vo.avatarUrl = ao.agentModel?.agentVo?.avatarUrl?: ""
+        viewAo.vo.name = ao.agentModel?.agentVo?.name?: ""
         val messagePreview : String = Optional.ofNullable(ao.lastChatMessages)
             .filter { it -> it.isNotEmpty() }
             .map { it -> it[0] }
@@ -80,6 +80,6 @@ class MessageListController {
     }
 
     fun clear() {
-        messageContactItemAos.clear()
+        messageContactItemModels.clear()
     }
 }

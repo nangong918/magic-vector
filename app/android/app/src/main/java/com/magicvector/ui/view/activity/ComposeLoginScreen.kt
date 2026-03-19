@@ -30,7 +30,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.magicvector.ui.theme.MagicVectorTheme
 import com.magicvector.viewModel.activity.LoginState
-import com.magicvector.domain.model.UserSessionModel
+import com.magicvector.domain.model.user.UserSessionModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

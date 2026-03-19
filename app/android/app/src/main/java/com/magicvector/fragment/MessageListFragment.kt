@@ -55,7 +55,7 @@ class MessageListFragment : BaseAppCompatVmFragment<
 
         vm.initAdapter(object : OnPositionItemClick {
             override fun onPositionItemClick(position: Int) {
-                Optional.of(MainApplication.getMessageListManager().messageContactItemAos)
+                Optional.of(MainApplication.getMessageListManager().messageContactItemModels)
                     .filter { it -> it.size > position }
                     .ifPresent {
                         it ->

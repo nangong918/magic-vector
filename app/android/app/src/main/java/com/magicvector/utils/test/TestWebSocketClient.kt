@@ -1,8 +1,8 @@
 package com.magicvector.utils.test
 
 import android.util.Log
-import com.data.domain.event.WebSocketMessageEvent
-import com.data.domain.event.WebsocketEventTypeEnum
+import com.magicvector.domain.event.WebSocketMessageEvent
+import com.magicvector.domain.event.WebsocketEventTypeEnum
 import com.google.gson.Gson
 import okhttp3.OkHttpClient
 import okhttp3.Request

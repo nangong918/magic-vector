@@ -31,7 +31,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.sp
-import com.data.domain.ao.message.MessageContactItemAo
+import com.magicvector.domain.model.message.MessageContactItemModel
 import com.data.domain.vo.message.MessageContactItemVo
 import com.magicvector.viewModel.fragment.MessageListIntent
 import com.magicvector.viewModel.fragment.MessageListDataState
@@ -48,7 +48,7 @@ fun MessageListScreen(
     modifier: Modifier = Modifier,
     viewModel: MessageListMviVm,
     onCreateAgentClick: () -> Unit = {},
-    onOpenChat: (MessageContactItemAo) -> Unit = {},
+    onOpenChat: (MessageContactItemModel) -> Unit = {},
     onOpenAgentEditor: (String) -> Unit = {}
 ) {
     val context = LocalContext.current
@@ -409,8 +409,8 @@ private fun createMockMessageItem(
         2 -> 3
         else -> 5
     }
-): MessageContactItemAo {
-    return MessageContactItemAo().apply {
+): MessageContactItemModel {
+    return MessageContactItemModel().apply {
         contactId = "contact_$index"
         timestamp = System.currentTimeMillis() - index * 3_600_000L
 

@@ -4,7 +4,7 @@ import android.text.TextUtils
 import androidx.recyclerview.widget.RecyclerView
 import com.core.baseutil.image.ImageLoadUtil
 import com.data.domain.OnPositionItemClick
-import com.data.domain.ao.message.MessageContactItemAo
+import com.data.domain.ao.message.MessageContactItemModel
 import com.view.appview.databinding.ViewMessageCardItemBinding
 
 class MessageCardItemViewHolder : RecyclerView.ViewHolder {
@@ -15,11 +15,11 @@ class MessageCardItemViewHolder : RecyclerView.ViewHolder {
 
     private val binding: ViewMessageCardItemBinding
 
-    private var messageContactItemAo : MessageContactItemAo? = null
+    private var messageContactItemModel : MessageContactItemModel? = null
 
-    fun bindAo(ao: MessageContactItemAo){
+    fun bindAo(ao: MessageContactItemModel){
         // 存储data
-        messageContactItemAo = ao
+        messageContactItemModel = ao
 
         // bind vo
         if (TextUtils.isEmpty(ao.vo.avatarUrl)){

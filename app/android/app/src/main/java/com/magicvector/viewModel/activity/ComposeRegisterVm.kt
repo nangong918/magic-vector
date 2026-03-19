@@ -9,7 +9,7 @@ import com.core.baseutil.file.FileUtil
 import com.data.domain.constant.BaseConstant
 import com.magicvector.MainApplication
 import com.magicvector.domain.exception.NetworkBusinessException
-import com.magicvector.domain.model.UserSessionModel
+import com.magicvector.domain.model.user.UserSessionModel
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow

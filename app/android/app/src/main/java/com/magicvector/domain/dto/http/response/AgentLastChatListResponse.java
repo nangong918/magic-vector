@@ -1,7 +1,7 @@
 package com.magicvector.domain.dto.http.response;
 
 
-import com.data.domain.ao.agent.AgentChatAo;
+import com.magicvector.domain.model.agent.AgentChatModel;
 
 import java.util.List;
 
@@ -10,5 +10,5 @@ import java.util.List;
  * @date 2025/10/15 11:31
  */
 public class AgentLastChatListResponse {
-    public List<AgentChatAo> agentChatAos;
+    public List<AgentChatModel> agentChatModels;
 }

@@ -6,7 +6,7 @@ import com.magicvector.domain.dto.http.request.UserLoginRequest
 import com.magicvector.MainApplication
 import com.magicvector.domain.dto.http.response.UserAuthResponse
 import com.magicvector.domain.exception.NetworkBusinessException
-import com.magicvector.domain.model.UserSessionModel
+import com.magicvector.domain.model.user.UserSessionModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow

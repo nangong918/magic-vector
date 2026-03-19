@@ -1,7 +1,6 @@
 package com.data.domain.fragmentActivity.aao
 
 import androidx.lifecycle.MutableLiveData
-import com.data.domain.ao.message.MessageContactItemAo
 
 class ChatAAo {
 

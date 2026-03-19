@@ -1,7 +1,7 @@
 package com.magicvector.domain.convertor
 
 import com.magicvector.domain.entity.UserEntity
-import com.magicvector.domain.model.UserSessionModel
+import com.magicvector.domain.model.user.UserSessionModel
 
 object UserConvertor {
     fun model2Entity(session: UserSessionModel): UserEntity {

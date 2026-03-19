@@ -129,7 +129,7 @@ class MainVm : ViewModel() {
         viewModelScope.launch {
             try {
                 val response = api.getAgentInfo(agentId)
-                val vo = response.agentAo?.agentVo
+                val vo = response.agentModel?.agentVo
                 _uiState.update {
                     it.copy(
                         agentEditor = it.agentEditor.copy(
@@ -167,7 +167,7 @@ class MainVm : ViewModel() {
                         description = description
                     )
                     _uiState.update { it.copy(agentEditor = AgentEditorState()) }
-                    response.agentAo?.let {
+                    response.agentModel?.let {
                         MainApplication.getAgentEventManager().upsert(it, EventSourceType.USER_ACTION)
                     }
                     messageListVm.processIntent(MessageListIntent.Refresh)
@@ -193,7 +193,7 @@ class MainVm : ViewModel() {
                     description = description
                 )
                 _uiState.update { it.copy(agentEditor = AgentEditorState()) }
-                response.agentAo?.let {
+                response.agentModel?.let {
                     MainApplication.getAgentEventManager().upsert(it, EventSourceType.USER_ACTION)
                 }
                 messageListVm.processIntent(MessageListIntent.Refresh)

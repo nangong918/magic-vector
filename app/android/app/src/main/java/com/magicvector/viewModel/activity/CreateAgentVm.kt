@@ -9,7 +9,6 @@ import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
 import com.core.baseutil.file.FileUtil
 import com.core.baseutil.permissions.GainPermissionCallback
 import com.core.baseutil.permissions.PermissionUtil
@@ -18,7 +17,6 @@ import com.core.baseutil.ui.ToastUtils
 import com.data.domain.constant.BaseConstant
 import com.data.domain.fragmentActivity.aao.CreateAgentAAo
 import com.magicvector.MainApplication
-import kotlinx.coroutines.launch
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
 import okhttp3.RequestBody
@@ -122,7 +120,7 @@ class CreateAgentVm(
             name = nameBody,
             description = descriptionBody
         )
-        if (response.agentAo?.agentId != null) {
+        if (response.agentModel?.agentId != null) {
             ToastUtils.showToastActivity(
                 context,
                 context.getString(com.view.appview.R.string.create_success)

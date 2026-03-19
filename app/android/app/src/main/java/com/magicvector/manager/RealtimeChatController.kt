@@ -10,7 +10,7 @@ import androidx.annotation.RequiresPermission
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.MutableLiveData
 import com.magicvector.repository.api.config.ApiUrlConfig
-import com.data.domain.ao.message.MessageContactItemAo
+import com.magicvector.domain.model.message.MessageContactItemModel
 import com.data.domain.ao.mixLLM.McpSwitch
 import com.data.domain.ao.mixLLM.MixLLMEvent
 import com.data.domain.constant.BaseConstant
@@ -89,7 +89,7 @@ class RealtimeChatController : IsAudioRecording{
     }
     
     // 数据
-    var messageContactItemAo : MessageContactItemAo? = null
+    var messageContactItemModel : MessageContactItemModel? = null
 
     //---------------------------Network / Mapper---------------------------
 
@@ -625,7 +625,7 @@ class RealtimeChatController : IsAudioRecording{
     @RequiresPermission(Manifest.permission.RECORD_AUDIO)
     fun initResource(
         chatActivity: FragmentActivity,
-        ao: MessageContactItemAo?,
+        ao: MessageContactItemModel?,
         chatAAo: ChatAAo,
         initNetworkRunnable: () -> Job,
         whereNeedUpdate: RecyclerViewWhereNeedUpdate,
@@ -640,11 +640,11 @@ class RealtimeChatController : IsAudioRecording{
         this.onReceiveAgentTextCallback = onReceiveAgentTextCallback
         this.onVadChatStateChange = onVadChatStateChange
 
-        messageContactItemAo = ao
-        if (messageContactItemAo?.contactId != null){
+        messageContactItemModel = ao
+        if (messageContactItemModel?.contactId != null){
             realtimeChatState.postValue(RealtimeChatState.Initializing)
             ensureUserConnection(MainApplication.getUserId())
-            bindChannel(messageContactItemAo!!.contactId!!)
+            bindChannel(messageContactItemModel!!.contactId!!)
         }
         else {
             realtimeChatState.postValue(RealtimeChatState.Error("Agent Id is Null"))
@@ -655,7 +655,7 @@ class RealtimeChatController : IsAudioRecording{
 
         // 获取chatManager
         chatControllerPointer = MainApplication.getChatMapManager().getChatManager(
-            messageContactItemAo!!.contactId!!
+            messageContactItemModel!!.contactId!!
         )
         // 初始化网络请求
         initNetworkRunnable.invoke()
@@ -699,7 +699,7 @@ class RealtimeChatController : IsAudioRecording{
             timestamp = resolvedTimestamp ?: 0L,
             chatTime = resolvedChatTime
         )
-        val summary = MainApplication.getMessageListManager().messageContactItemAos
+        val summary = MainApplication.getMessageListManager().messageContactItemModels
             .firstOrNull { it.contactId == response.agentId }
         snapshot?.let {
             MainApplication.getChatEventManager().appendRealtimeMessage(
@@ -710,7 +710,7 @@ class RealtimeChatController : IsAudioRecording{
             )
         }
         MainApplication.getChatEventManager().replaceSummaries(
-            MainApplication.getMessageListManager().messageContactItemAos.toList(),
+            MainApplication.getMessageListManager().messageContactItemModels.toList(),
             EventSourceType.WS_REALTIME
         )
         cacheScope.launch {
@@ -747,7 +747,7 @@ class RealtimeChatController : IsAudioRecording{
         isChatCalling = null
 
         // 2. 清空数据
-        messageContactItemAo = null
+        messageContactItemModel = null
 
         // 3. 清空回调
         recyclerViewWhereNeedUpdate = null

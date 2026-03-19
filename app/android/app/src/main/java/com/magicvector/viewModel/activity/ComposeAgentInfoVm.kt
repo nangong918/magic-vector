@@ -68,7 +68,7 @@ class ComposeAgentInfoVm : ViewModel() {
         viewModelScope.launch {
             try {
                 val response = api.getAgentInfo(agentId)
-                response.agentAo?.agentVo?.let { vo ->
+                response.agentModel?.agentVo?.let { vo ->
                     _uiState.update {
                         it.copy(
                             avatarUrl = vo.avatarUrl,

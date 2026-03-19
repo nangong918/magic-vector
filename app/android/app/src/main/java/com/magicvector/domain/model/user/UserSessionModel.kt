@@ -1,4 +1,4 @@
-package com.magicvector.domain.model
+package com.magicvector.domain.model.user
 
 import com.core.baseutil.json.GsonBean
 

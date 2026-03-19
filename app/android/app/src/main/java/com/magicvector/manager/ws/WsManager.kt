@@ -1,7 +1,7 @@
 package com.magicvector.manager.ws
 
 import android.util.Log
-import com.data.domain.ao.chat.ChatWsTextMessageParseResult
+import com.magicvector.domain.model.chat.ChatWsTextMessageParseModel
 import com.data.domain.constant.chat.RealtimeRequestDataTypeEnum
 import com.data.domain.constant.chat.RealtimeResponseDataTypeEnum
 import com.data.domain.constant.chat.RoleTypeEnum
@@ -25,7 +25,7 @@ object WsManager {
      * @param text  text文本信息
      * @return  ChatWsTextMessageParseResult    解析结果
      */
-    fun getTextMessageDataType(text: String): ChatWsTextMessageParseResult?{
+    fun getTextMessageDataType(text: String): ChatWsTextMessageParseModel?{
         if (text.isEmpty()) {
             Log.e(TAG, "handleTextMessage: text is empty")
             return null
@@ -56,7 +56,7 @@ object WsManager {
             return  null
         }
 
-        return ChatWsTextMessageParseResult(responseType, map)
+        return ChatWsTextMessageParseModel(responseType, map)
     }
 
     fun sendConnectInfo(userId: String, wsClient: AbstractWsClient){

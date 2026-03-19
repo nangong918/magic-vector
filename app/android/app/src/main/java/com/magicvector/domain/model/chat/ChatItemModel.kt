@@ -1,9 +1,9 @@
-package com.data.domain.ao.chat
+package com.magicvector.domain.model.chat
 
 import com.core.baseutil.sort.SortItem
 import com.data.domain.vo.chat.ChatItemVo
 
-class ChatItemAo : SortItem{
+class ChatItemModel : SortItem{
 
     // vo
     var vo : ChatItemVo = ChatItemVo()

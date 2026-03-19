@@ -15,7 +15,7 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.data.domain.ao.message.MessageContactItemAo
+import com.magicvector.domain.model.message.MessageContactItemModel
 import com.data.domain.constant.VadChatState
 import com.data.domain.constant.chat.RealtimeRequestDataTypeEnum
 import com.data.domain.fragmentActivity.aao.ChatAAo
@@ -58,7 +58,7 @@ class ComposeChatVm : ViewModel() {
     val effect: Flow<ChatEffect> = _effect.receiveAsFlow()
 
     private val chatAAo = ChatAAo()
-    private var messageAo: MessageContactItemAo? = null
+    private var messageAo: MessageContactItemModel? = null
     private val isCalling = AtomicBoolean(false)
 
     private var chatServiceBinder: ChatService.ChatServiceBinder? = null

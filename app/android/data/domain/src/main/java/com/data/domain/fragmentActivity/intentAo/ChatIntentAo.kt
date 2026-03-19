@@ -1,10 +1,10 @@
 package com.data.domain.fragmentActivity.intentAo
 
-import com.data.domain.ao.message.MessageContactItemAo
+import com.data.domain.ao.message.MessageContactItemModel
 import java.io.Serializable
 
 class ChatIntentAo : Serializable{
 
-    var ao : MessageContactItemAo? = null
+    var ao : MessageContactItemModel? = null
 
 }

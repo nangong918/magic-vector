@@ -3,7 +3,7 @@ package com.magicvector.manager.user
 import android.content.Context
 import com.magicvector.dataSource.local.UserLocalSource
 import com.magicvector.domain.convertor.UserConvertor
-import com.magicvector.domain.model.UserSessionModel
+import com.magicvector.domain.model.user.UserSessionModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 

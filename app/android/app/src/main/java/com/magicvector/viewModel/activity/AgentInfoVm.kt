@@ -1,6 +1,5 @@
 package com.magicvector.viewModel.activity
 
-import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
 import android.util.Log
@@ -9,14 +8,12 @@ import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
 import com.core.baseutil.permissions.GainPermissionCallback
 import com.core.baseutil.permissions.PermissionUtil
 import com.core.baseutil.photo.SelectPhotoUtil
 import com.core.baseutil.ui.ToastUtils
 import com.data.domain.fragmentActivity.aao.AgentInfoAAo
 import com.magicvector.MainApplication
-import kotlinx.coroutines.launch
 
 class AgentInfoVm(
 
@@ -41,7 +38,7 @@ class AgentInfoVm(
     // 查询Agent
     suspend fun requestAgentInfo(agentId: String) {
         val response = api.getAgentInfo(agentId)
-        response.agentAo?.let { ao ->
+        response.agentModel?.let { ao ->
             ao.agentVo?.let { vo ->
                 aao.avatarUrlLd.postValue(vo.avatarUrl)
                 aao.nameLd.postValue(vo.name)

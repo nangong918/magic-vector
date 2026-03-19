@@ -1,7 +1,7 @@
 package com.magicvector.manager.event.chat
 
-import com.data.domain.ao.chat.ChatItemAo
-import com.data.domain.ao.message.MessageContactItemAo
+import com.magicvector.domain.model.chat.ChatItemModel
+import com.magicvector.domain.model.message.MessageContactItemModel
 import com.magicvector.manager.event.AbstractEventManager
 import com.magicvector.manager.event.EventSourceType
 
@@ -9,8 +9,8 @@ class ChatEventManager : AbstractEventManager<ChatSessionState, ChatEvent>() {
 
     fun replaceConversation(
         agentId: String,
-        messages: List<ChatItemAo>,
-        summary: MessageContactItemAo?,
+        messages: List<ChatItemModel>,
+        summary: MessageContactItemModel?,
         source: EventSourceType
     ): List<ChatSessionState> {
         val session = ChatSessionState(
@@ -32,7 +32,7 @@ class ChatEventManager : AbstractEventManager<ChatSessionState, ChatEvent>() {
 
     fun insertHistoryPage(
         agentId: String,
-        history: List<ChatItemAo>,
+        history: List<ChatItemModel>,
         source: EventSourceType
     ): List<ChatSessionState> {
         val current = getSession(agentId)
@@ -57,8 +57,8 @@ class ChatEventManager : AbstractEventManager<ChatSessionState, ChatEvent>() {
 
     fun appendRealtimeMessage(
         agentId: String,
-        item: ChatItemAo,
-        summary: MessageContactItemAo?,
+        item: ChatItemModel,
+        summary: MessageContactItemModel?,
         source: EventSourceType
     ): List<ChatSessionState> {
         val current = getSession(agentId)
@@ -82,7 +82,7 @@ class ChatEventManager : AbstractEventManager<ChatSessionState, ChatEvent>() {
     }
 
     fun replaceSummaries(
-        list: List<MessageContactItemAo>,
+        list: List<MessageContactItemModel>,
         source: EventSourceType
     ): List<ChatSessionState> {
         val currentMap = snapshotItems().associateBy { it.agentId }
@@ -111,7 +111,7 @@ class ChatEventManager : AbstractEventManager<ChatSessionState, ChatEvent>() {
         return snapshotItems().firstOrNull { it.agentId == agentId }
     }
 
-    fun getSummaries(): List<MessageContactItemAo> {
+    fun getSummaries(): List<MessageContactItemModel> {
         return snapshotItems()
             .mapNotNull { it.summary }
             .sortedByDescending { it.timestamp }
@@ -120,33 +120,33 @@ class ChatEventManager : AbstractEventManager<ChatSessionState, ChatEvent>() {
 
 data class ChatSessionState(
     val agentId: String,
-    val messages: List<ChatItemAo>,
-    val summary: MessageContactItemAo?
+    val messages: List<ChatItemModel>,
+    val summary: MessageContactItemModel?
 )
 
 sealed class ChatEvent {
     data class ReplaceConversation(
         val agentId: String,
-        val messages: List<ChatItemAo>,
-        val summary: MessageContactItemAo?,
+        val messages: List<ChatItemModel>,
+        val summary: MessageContactItemModel?,
         val source: EventSourceType
     ) : ChatEvent()
 
     data class AppendRealtimeMessage(
         val agentId: String,
-        val message: ChatItemAo,
-        val summary: MessageContactItemAo?,
+        val message: ChatItemModel,
+        val summary: MessageContactItemModel?,
         val source: EventSourceType
     ) : ChatEvent()
 
     data class InsertHistoryPage(
         val agentId: String,
-        val messages: List<ChatItemAo>,
+        val messages: List<ChatItemModel>,
         val source: EventSourceType
     ) : ChatEvent()
 
     data class ReplaceSummaries(
-        val summaries: List<MessageContactItemAo>,
+        val summaries: List<MessageContactItemModel>,
         val source: EventSourceType
     ) : ChatEvent()
 }
