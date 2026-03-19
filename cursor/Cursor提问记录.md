@@ -5,11 +5,11 @@
 
 # 启动页，注册登录
 
-开发的时候应该先读取我项目中的文档：[ProjectAndMainRule.md](ProjectAndMainRule.md)包括里面涉及到了的模块的的开发规范和规则。
+开发的时候应该先读取我项目中的文档：[ProjectAndMainRule.md](../ProjectAndMainRule.md)包括里面涉及到了的模块的的开发规范和规则。
 
 现在开发Android和SpringBoot的相关功能，Flutter先不同步。
 SpringBoot的minio我还没配置好，但是你可以先设计文件传输，SpringBoot那边先不对文件做处理，
-当然如果你愿意，你也可以帮我配置一下，我的minio在[minio-starter](springboot/starters/minio-starter)
+当然如果你愿意，你也可以帮我配置一下，我的minio在[minio-starter](../springboot/starters/minio-starter)
 目前我还没有网关，所以没法反向代理，一般minio返回的是url路径资源，这个资源需要被反向代理，我现在没做，
 所以你返回一个错的url也没关系，记得写个todo。
 还有根据`ProjectAndMainRule`，你需要写cursorDevelopLog，Android和springboot的都要写，其实不用写多复杂，就写一下自己设计了哪些类，
@@ -81,7 +81,7 @@ SpringBoot的minio我还没配置好，但是你可以先设计文件传输，Sp
 
 ## 问题补充 + Bug修复
 我现在要提一些修改需求，你现在要按照我的需求进行修改，并把我的需求归纳整理到我刚刚跟你说的：
-SpringBoot的[developAndRules.md](springboot/docs/developAndRules.md)和Android中[developAndRules.md](app/android/docs/developAndRules.md)
+SpringBoot的[developAndRules.md](../springboot/docs/developAndRules.md)和Android中[developAndRules.md](../app/android/docs/developAndRules.md)
 
 * Android的Formdata之外的数据Post请求需要使用单一请求体类型，请求体内部可以用Entity或者Module进行聚合。
   所以你的/user/login和/user/token/verify接口都要定义请求体以及响应体。响应体不能单独一个Boolean，不可扩展，要封装成xxxResponse内部聚合可拓展。
@@ -91,30 +91,30 @@ SpringBoot的[developAndRules.md](springboot/docs/developAndRules.md)和Android�
     * 基本的数据结构要放在domain中, dto中存放request和response, entity中存放数据库实体, module中存放业务实体
   其中，几乎每个请求都要定义request和response，他们属于dto，dto可以由module和entity进行聚合，module可以由entity进行聚合。entity不能聚合必须跟表一一对应。
 * 我说了mvi的uistate，datastate，intent，effect，event的字段定义都要写注释的，不然后续不好维护。
-* 你把cursor开发结束之后需要绘制uml图的事情记录到[ProjectAndMainRule.md](ProjectAndMainRule.md)中，
+* 你把cursor开发结束之后需要绘制uml图的事情记录到[ProjectAndMainRule.md](../ProjectAndMainRule.md)中，
   `uml的，我比较注重类图，对象图，活动图，状态机图，时序图，通讯图。`现在并且除了这些之外还需要`线程状态图`，你看看`mermaid`有没有实现的办法，线程任务执行时序和各个状态管理这个最重要了。
-  所以需要你绘制到cursorDevelopLog中，并把以后开发完成之后要绘制uml图的任务记录到[ProjectAndMainRule.md](ProjectAndMainRule.md)
-* SpringBoot的问题，这次我没看到[magic_vector.sql](springboot/db/magic_vector.sql)数据库的改动，我审核了一下代码确实没有需要改的，这次就这样，下次如果涉及到之后你需要修改这个数据库的sql设计。
-  并且在cursorDevelopLog中记录修改内容，记录为什么这么设计，以及你现在要把我说的这条记录到SpringBoot的[developAndRules.md](springboot/docs/developAndRules.md)中
+  所以需要你绘制到cursorDevelopLog中，并把以后开发完成之后要绘制uml图的任务记录到[ProjectAndMainRule.md](../ProjectAndMainRule.md)
+* SpringBoot的问题，这次我没看到[magic_vector.sql](../springboot/db/magic_vector.sql)数据库的改动，我审核了一下代码确实没有需要改的，这次就这样，下次如果涉及到之后你需要修改这个数据库的sql设计。
+  并且在cursorDevelopLog中记录修改内容，记录为什么这么设计，以及你现在要把我说的这条记录到SpringBoot的[developAndRules.md](../springboot/docs/developAndRules.md)中
 * cursorDevelopLog在涉及到数据库的调整时，需要在cursorDevelopLog中记录数据库表设计以及改动，最好有设计图，我不知道`mermaid`能否实现，你看下能否实现。Android的Room和Spring的MySql都需要。
-  并且把我这条开发任务记录到SpringBoot的[developAndRules.md](springboot/docs/developAndRules.md)和Android中[developAndRules.md](app/android/docs/developAndRules.md)
+  并且把我这条开发任务记录到SpringBoot的[developAndRules.md](../springboot/docs/developAndRules.md)和Android中[developAndRules.md](../app/android/docs/developAndRules.md)
 * SpringBoot的问题：我看你UserService竟然写获取UserDo的代码，这是不允许的，Service只能进行业务操作和获取业务实体，比如获取Module。或者执行void，boolean等无实际返回函数。
   Do的这种Entity数据库类型应该交给Mapper层处理。Service应该写业务代码所以把这些下沉到Mapper层。
 * Android的问题：我记得我跟你说过Activity的逻辑要简明，要把Screen的UI放在`com/magicvector/ui/view/activity`，不然Activity的代码逻辑太大了不好处理。就比如ComposeLoginActivity的LoginScreen拆分出去。
-  你写的其他Activity也要，并且这条规则你看看Android中[developAndRules.md](app/android/docs/developAndRules.md)有没有，没有就记录。
+  你写的其他Activity也要，并且这条规则你看看Android中[developAndRules.md](../app/android/docs/developAndRules.md)有没有，没有就记录。
 * 还有为了方便维护请求和响应体，你可以直接把SpringBoot的dto直接复制到Android项目中做一些微调，比如spring的代码有@data，Android没有，所以Android就都用public。方便维护。
 * Android问题，严重！！！：不要创建UserDatabase，Android中只能有一个数据库：Vector数据库，User只是其中一个表，不要专门去设计一个UserDataBase
 * ComposeRegisterActivity的获取权限报错，是我说错了，不是使用PermissionUtils，那个是提供给AndroidX的，我现在新封装了ComposePermissionUtils用这个，修复Bug。
 
-### 本次的修改也要更新到cursorDevelopLog，新增规则也要更新到SpringBoot的[developAndRules.md](springboot/docs/developAndRules.md)和Android中[developAndRules.md](app/android/docs/developAndRules.md)
-* 注意我新增要求的两个绘图：数据库的和线程的，并且如果你觉得其他比较重要的UML图我没有涉及到你可以绘制出来。并写将其写在：[ProjectAndMainRule.md](ProjectAndMainRule.md)这个规则写在这里是因为我觉得这是整个项目公用的而不是属于SpringBoot或者Android的。
-* 你用到了哪些设计模式以及为什么用这些设计模式也可以写道cursorDevelopLog中，并把这条规则记录到[ProjectAndMainRule.md](ProjectAndMainRule.md)
-* 我希望学习一些计算机理论, 如果涉及到核心的`操作系统(线程, IO)`, `计算机网络`, `数据结构`, `算法`, `计算机组成原理`, `数据库`的知识你要标注出来. 并把这条规则记录到[ProjectAndMainRule.md](ProjectAndMainRule.md)
+### 本次的修改也要更新到cursorDevelopLog，新增规则也要更新到SpringBoot的[developAndRules.md](../springboot/docs/developAndRules.md)和Android中[developAndRules.md](../app/android/docs/developAndRules.md)
+* 注意我新增要求的两个绘图：数据库的和线程的，并且如果你觉得其他比较重要的UML图我没有涉及到你可以绘制出来。并写将其写在：[ProjectAndMainRule.md](../ProjectAndMainRule.md)这个规则写在这里是因为我觉得这是整个项目公用的而不是属于SpringBoot或者Android的。
+* 你用到了哪些设计模式以及为什么用这些设计模式也可以写道cursorDevelopLog中，并把这条规则记录到[ProjectAndMainRule.md](../ProjectAndMainRule.md)
+* 我希望学习一些计算机理论, 如果涉及到核心的`操作系统(线程, IO)`, `计算机网络`, `数据结构`, `算法`, `计算机组成原理`, `数据库`的知识你要标注出来. 并把这条规则记录到[ProjectAndMainRule.md](../ProjectAndMainRule.md)
 
 
 ### 继续调整
 * 之前说绘制各个线程的状态图是我说错了，应该是各个线程的甘特图，我已经添加规则到主规则，现在稍微修改一下图：多线程设计要画出线程的甘特图，表示在不同时间各个线程的执行顺序、线程状态以及线程锁。
-* 我审核代码发现你把数据库的表id竟然使用string，这明显会降低数据库的排序性能。你要做修改改为long，并在[ProjectAndMainRule.md](ProjectAndMainRule.md)
+* 我审核代码发现你把数据库的表id竟然使用string，这明显会降低数据库的排序性能。你要做修改改为long，并在[ProjectAndMainRule.md](../ProjectAndMainRule.md)
   中加入此规则，并稍微说明原因，用`数据库`的理论原理来说明。并且记录每个表的主键必须叫做id。所以引申出Android的UserEntity必须改.
 * `AccessToken`的验证逻辑我觉得有问题，我认为验证accessToken应该跟userId（后端分配的）强相关，所以重新设计，而且现在我要求你用uml图展示accessToken内部原理，
   用`通讯图`和`活动图`来绘制
@@ -129,7 +129,7 @@ SpringBoot的[developAndRules.md](springboot/docs/developAndRules.md)和Android�
 ## 规则集
 * 自动读取规则集：总规则集，模块规则集
 * 根据我的需求自动修改补全规则集
-主要规则集在[ProjectAndMainRule.md](ProjectAndMainRule.md)
+主要规则集在[ProjectAndMainRule.md](../ProjectAndMainRule.md)
 内部包含了整个项目cursor开发的时候需要注意的规则集。
 
 
@@ -145,13 +145,13 @@ SpringBoot的[developAndRules.md](springboot/docs/developAndRules.md)和Android�
 * 相关知识自动记录到Knowledge知识库
 
 我现在不仅在设计整个项目，我还在积攒我的计算机知识相关的知识库，
-如果有什么重要的知识我希望后续的cursor能记录到[学习笔记.md](学习笔记.md)
-不是现在让你记录而是让你写一条规则在[ProjectAndMainRule.md](ProjectAndMainRule.md)
-能让后续的cursor把我说的重要知识记录到[学习笔记.md](学习笔记.md)，规则要写我让记录再记录，不让记录的时候不要记录。
+如果有什么重要的知识我希望后续的cursor能记录到[学习笔记.md](../学习笔记.md)
+不是现在让你记录而是让你写一条规则在[ProjectAndMainRule.md](../ProjectAndMainRule.md)
+能让后续的cursor把我说的重要知识记录到[学习笔记.md](../学习笔记.md)，规则要写我让记录再记录，不让记录的时候不要记录。
 
 
-所以你现在要做的事情是：1.整理我上述说的到规则集，2.把你之前写的cursorDevelopLog日志迁移到[MainDesignDocument.md](MainDesignDocument.md)
-内部对应的模块。3.在规则集中取消使用cursorDevelopLog，替换的是读取，设计，写入[MainDesignDocument.md](MainDesignDocument.md)
+所以你现在要做的事情是：1.整理我上述说的到规则集，2.把你之前写的cursorDevelopLog日志迁移到[MainDesignDocument.md](../MainDesignDocument.md)
+内部对应的模块。3.在规则集中取消使用cursorDevelopLog，替换的是读取，设计，写入[MainDesignDocument.md](../MainDesignDocument.md)
 
 
 
@@ -193,13 +193,13 @@ Agent
 
 
 其实大部分我的功能已经完成，
-你现在看如果已经完成是否分别符合[ProjectAndMainRule.md](ProjectAndMainRule.md)，
-[developAndRules.md](springboot/docs/developAndRules.md)
-和[developAndRules.md](app/android/docs/developAndRules.md)
+你现在看如果已经完成是否分别符合[ProjectAndMainRule.md](../ProjectAndMainRule.md)，
+[developAndRules.md](../springboot/docs/developAndRules.md)
+和[developAndRules.md](../app/android/docs/developAndRules.md)
 
 现在我详细说明要开发什么：
 用户交互的main界面会展示三个navigation，分别是Agent（聊天Agent相关），Control（设备状态操作监控），Mine（我的）
-详情你想了解可以看[MainDesignDocument.md](MainDesignDocument.md)可以只是了解，因为本次我不会让你全部开发。
+详情你想了解可以看[MainDesignDocument.md](../MainDesignDocument.md)可以只是了解，因为本次我不会让你全部开发。
 
 ##### 创建 Agent
 - 如果一个 Agent 都没有，页面中间显示一个大大的创建按钮, 有Agent之后按钮不显示, 变为agent列表
@@ -210,7 +210,7 @@ Agent
 而是创建Agent的Compose组合函数，放在fragment碎片(不是真的fragment，现在我用Jetpack都使用组合函数了
 参考app/android/app/src/main/java/com/magicvector/fragment)下面有自己的vm
 我希望点击创建按钮还是在Main页面就不用跳转新的activity了，然后组合函数UI弹性放大占满屏幕。内容我已经写好了你可以参考
-[ComposeCreateAgentActivity.kt](app/android/app/src/main/java/com/magicvector/activity/ComposeCreateAgentActivity.kt)
+[ComposeCreateAgentActivity.kt](../app/android/app/src/main/java/com/magicvector/activity/ComposeCreateAgentActivity.kt)
 然后点击创建收到响应或者用户点击返回要弹性缩小。这样还能免除使用activity返回值，而是使用全局事件比如eventbus直接在agentList展示创建好的agent。
 当然我觉得eventbus在jetpack compose是兜底方案，你还是不要这么实现，写到设计文档吧，分析一下在compose的框架下用ViewModel 中用 SharedFlow/StateFlow是不是更合适，并实现。
 
@@ -221,7 +221,7 @@ Agent
 - 这里也要注意用jetpack compose的ViewModel，用SharedFlow/StateFlow去控制AgentList上的UI变化。
 
 ##### 选择Agent与接收Agent消息
-其实我基本已经实现了，你参考一下跳转[ComposeChatActivity.kt](app/android/app/src/main/java/com/magicvector/activity/ComposeChatActivity.kt)的逻辑
+其实我基本已经实现了，你参考一下跳转[ComposeChatActivity.kt](../app/android/app/src/main/java/com/magicvector/activity/ComposeChatActivity.kt)的逻辑
 目前只要做一些小的修改。
 我觉得选择聊天的逻辑相对复杂，所以选择Agent就是点击AgentList上的item然后跳转到ChatActivity，此处需要创建Activity。
 跳转到ChatActivity之后不要忘记接收其他Agent的消息，在背后线程也要更新UI消息，特别注意线程管理避免直接new而是使用协程或者线程池。
@@ -236,7 +236,7 @@ ChatActivity的本次不需要开发，直接用我的ComposeChatActivity
 这个dao我觉得稍微难设计一点，关于设计sql我觉得你还是要写在设计文档。当然SpringBoot的Mapper也要完成跟Android的Dao一样的接口功能。
 要特别注意聊天消息的索引设计，能让我快速实现上述功能。设计文档中绘制ER图，然后看看SQL函数的UML图怎么绘制合适？
 
-然后要做网络请求缓存，我已经设计了一部分，就是首次打开[MessageListPage.kt](app/android/app/src/main/java/com/magicvector/fragment/MessageListPage.kt)
+然后要做网络请求缓存，我已经设计了一部分，就是首次打开[MessageListPage.kt](../app/android/app/src/main/java/com/magicvector/fragment/MessageListPage.kt)
 这个页面的时候才去网络请求。由于我是使用了ws所以本次需要监控ws的状态，用Android的系统级别广播监听网络状态，
 设计一个`NetworkManger`把，专门监听和管理，绘制类图，状态图，活动图，通信图，甘特图。
 如果之前是连接现在断开，然后再次连接的话，就再次主动get请求，否则MessageListPage只在初始化请求一次，其他的数据都又ws更新，
@@ -255,9 +255,9 @@ chatManager是管理单个Agent的消息，内部有一个顺序排列的List，
 #### 任务
 
 你完成任务的顺序：先写设计文档，把新增的功能或者已经开发的功能（需要审核是否规范）写入设计文档：
-[MainDesignDocument.md](MainDesignDocument.md)（如果有，这里大部分是架构设计，应该没什么要写的）
-[SpringBootDesignDocument.md](springboot/docs/SpringBootDesignDocument.md)（这里是SpringBoot设计）
-[AndroidDesignDocument.md](app/android/docs/AndroidDesignDocument.md)（这是Android的设计文档）
+[MainDesignDocument.md](../MainDesignDocument.md)（如果有，这里大部分是架构设计，应该没什么要写的）
+[SpringBootDesignDocument.md](../springboot/docs/SpringBootDesignDocument.md)（这里是SpringBoot设计）
+[AndroidDesignDocument.md](../app/android/docs/AndroidDesignDocument.md)（这是Android的设计文档）
 
 写完方案之后开发SpringBoot和Android。
 
@@ -285,12 +285,12 @@ SpringBootDesignDocument也要跟上述的一样合并, 缺少的就补上.
 
 #### SpringBoot
 * `/chat/getByAnchor`这个方法需要修改
-设计的接口不传递文件就不使用FormData类型数据，应该传递xxxRequest。内部使用校验。你难道没看`SpringBoot developAndRules`[developAndRules.md](springboot/docs/developAndRules.md)吗？
+设计的接口不传递文件就不使用FormData类型数据，应该传递xxxRequest。内部使用校验。你难道没看`SpringBoot developAndRules`[developAndRules.md](../springboot/docs/developAndRules.md)吗？
 而且不要使用比对字符串`direction`，要使用布尔值。
 #### Android
 * NetworkManager我认为是全局需要，不仅仅是MainActivity，所以应该放在Application中。
 * 如果你认为你MainEffect.LaunchCreateAgent完成的很好了，就是不用再使用新的创建Activity之后应该删除这个`effect`
-* 根据Android的设计规则[developAndRules.md](app/android/docs/developAndRules.md)
+* 根据Android的设计规则[developAndRules.md](../app/android/docs/developAndRules.md)
   Activity页面不做复杂的UI设计，UI要拆分到 `com/magicvector/ui/view/activity`，Activity仅保留编排逻辑（导航、effect监听、权限触发等）。
   所以很明显你忘记拆分Activity的UI了，不要把UI耦合在Activity，太重了。
 * 我看你的NetWorkManager中只监听了网络变化，但是我忘了告诉你了Ws的变化也要属于网络变化，你就写Websocket变化吧。是我没说完整，现在Websocket变化跟网络变化的逻辑基本一致，
@@ -311,8 +311,8 @@ SpringBootDesignDocument也要跟上述的一样合并, 缺少的就补上.
 1. 思考整体最优设计，你有权利可以考虑重写整个代码。
 2. 改为登录成功之后就尝试进行去ws长连接，连接建立是用userId而不是agentId。agentId作为路由入参，相当于channel，需要改Android和SpringBoot。
 3. 优化后的逻辑要能够跟整体业务兼容。就比如说在打开agent1的chatActivity的时候，RealTimeChatController更新了数据，SharedFlow/StateFlow去更新MainActivity中Fragment的UI。
-4. 讲你新设计的逻辑功能归类添加到Android[AndroidDesignDocument.md](app/android/docs/AndroidDesignDocument.md)和
-   SpringBoot[SpringBootDesignDocument.md](springboot/docs/SpringBootDesignDocument.md)的文档中。
+4. 讲你新设计的逻辑功能归类添加到Android[AndroidDesignDocument.md](../app/android/docs/AndroidDesignDocument.md)和
+   SpringBoot[SpringBootDesignDocument.md](../springboot/docs/SpringBootDesignDocument.md)的文档中。
    要绘制出：静态UML：类图，对象图；动态UML：活动图，时序图，功能线程甘特图，通信图。
    要写你用了哪些设计模式比如工厂模式等。
 5. ws要添加SpringBoot和Android的心跳连接以及60秒未心跳的断连判断以及NetworkManager中的ws断开重连机制。
@@ -321,8 +321,8 @@ SpringBootDesignDocument也要跟上述的一样合并, 缺少的就补上.
 ### 补充
 * 心跳请求是自己写吗？我记得SpringBoot和Android都有直接支持的啊？如果没有就算了，你去查一下资料，
   我这里面Android和SpringBoot使用的ws对应的框架是否直接自己直接配置心跳而不用自己写。如果存在就改为框架的心跳，如果不存在就算了，就这样吧。
-* WS长连接的网络状态图也要绘制，当然你可以更新到已有的网络状态图中。在Android[AndroidDesignDocument.md](app/android/docs/AndroidDesignDocument.md)和
-  SpringBoot[SpringBootDesignDocument.md](springboot/docs/SpringBootDesignDocument.md)的文档中。
+* WS长连接的网络状态图也要绘制，当然你可以更新到已有的网络状态图中。在Android[AndroidDesignDocument.md](../app/android/docs/AndroidDesignDocument.md)和
+  SpringBoot[SpringBootDesignDocument.md](../springboot/docs/SpringBootDesignDocument.md)的文档中。
 * 另外Android的RealTimeChatController我当时设计的时候内部含管理其他的东西，比如AudioRecord，VadDetection，还有各种Controller和Callback要画在类图中。
   我看你只补充了之前的打的类图，并没有绘制RealTimeChatController内部的类图，对象图，状态图，活动图，时序图，功能线程甘特图，通信图。
   你需要补充一下。
@@ -343,29 +343,29 @@ SpringBootDesignDocument也要跟上述的一样合并, 缺少的就补上.
 
 ##### UI设计
 现在UI改成：
-一个Activity，顶部有两个小圆点，可以左滑右滑切换Fragment（Compose中的组合Fragment函数，放在[fragment](app/android/app/src/main/java/com/magicvector/fragment)）
-左边的组合函数fragment是一个纯黑的页面，中间两个白色的眼睛，逻辑几乎可以参考：[ComposeAgentEmojiActivity.kt](app/android/app/src/main/java/com/magicvector/activity/ComposeAgentEmojiActivity.kt)
+一个Activity，顶部有两个小圆点，可以左滑右滑切换Fragment（Compose中的组合Fragment函数，放在[fragment](../app/android/app/src/main/java/com/magicvector/fragment)）
+左边的组合函数fragment是一个纯黑的页面，中间两个白色的眼睛，逻辑几乎可以参考：[ComposeAgentEmojiActivity.kt](../app/android/app/src/main/java/com/magicvector/activity/ComposeAgentEmojiActivity.kt)
 只不过现在横屏改为了竖屏，逻辑几乎不变。
 然后底部有一个小圆圈，在未连接和断开等状态是灰色的，异常是红色的，用户语音还清之后是绿色的，
 用户正在说话是蓝色的，Agent正在回复的紫色的。
 这个小圆圈要在唤醒的时候弹性变大，然后Agent回复完毕之后弹性还原。
-逻辑大概可以参考[voice_agent_page.dart](demo/flutter/flutternew/lib/page/voice_agent_page.dart)
-我在flutter中实现过demo。可以不用实现，但是你得把设计稿和设计图给我：[AndroidDesignDocument.md](app/android/docs/AndroidDesignDocument.md)
+逻辑大概可以参考[voice_agent_page.dart](../demo/flutter/flutternew/lib/page/voice_agent_page.dart)
+我在flutter中实现过demo。可以不用实现，但是你得把设计稿和设计图给我：[AndroidDesignDocument.md](../app/android/docs/AndroidDesignDocument.md)
 反正就是flutter的这个也页面逻辑voice_agent_page和ComposeAgentEmojiActivity的基本逻辑组合一下作为第一个Fragment：
-这两个fragment都需要vm，都放在[fragment](app/android/app/src/main/java/com/magicvector/viewModel/fragment)
+这两个fragment都需要vm，都放在[fragment](../app/android/app/src/main/java/com/magicvector/viewModel/fragment)
 都需要mvi设计模式的，你可以参考之前的设计。
-AgentEmojiFragment放在[fragment](app/android/app/src/main/java/com/magicvector/fragment)
+AgentEmojiFragment放在[fragment](../app/android/app/src/main/java/com/magicvector/fragment)
 
-第二个fragment是原先的[ComposeChatActivity.kt](app/android/app/src/main/java/com/magicvector/activity/ComposeChatActivity.kt)
+第二个fragment是原先的[ComposeChatActivity.kt](../app/android/app/src/main/java/com/magicvector/activity/ComposeChatActivity.kt)
 这个逻辑，两个fragment都在同一个ComposeChatActivity，这样把，为了让你参考原先的ComposeChatActivity逻辑
 你新写的Activity要叫做`ComposeAgentChatActivity`
 要看设计文档，思考如何利用已有的ReatimeChatController，ChatController，ChatManager，ChatCacheController做好ws消息插入、持久化等。还要画好ChatActivity的各种UML图。
 
 我其实原先的逻辑基本设计的差不多了，你要合并并写在设计图中，
-SpringBoot的要写在[SpringBootDesignDocument.md](springboot/docs/SpringBootDesignDocument.md)
-Android的写在[AndroidDesignDocument.md](app/android/docs/AndroidDesignDocument.md)
+SpringBoot的要写在[SpringBootDesignDocument.md](../springboot/docs/SpringBootDesignDocument.md)
+Android的写在[AndroidDesignDocument.md](../app/android/docs/AndroidDesignDocument.md)
 这里面的规则都要遵守
-都要按照规则[MainDesignDocument.md](MainDesignDocument.md)[developAndRules.md](springboot/docs/developAndRules.md)[developAndRules.md](app/android/docs/developAndRules.md)
+都要按照规则[MainDesignDocument.md](../MainDesignDocument.md)[developAndRules.md](../springboot/docs/developAndRules.md)[developAndRules.md](../app/android/docs/developAndRules.md)
 
 其实这里的逻辑是本项目最难的，你需要绘制很多设计图：
 Android：
@@ -384,10 +384,10 @@ Android：
 
 ### 补充
 
-我怎么看你就写了一些Android的逻辑，你有检查SpringBoot[open-api](springboot/open-api)的逻辑吗？
+我怎么看你就写了一些Android的逻辑，你有检查SpringBoot[open-api](../springboot/open-api)的逻辑吗？
 而且我让你要绘制Android和SpringBoot的设计图以及设计文档你怎么没绘制。
 继续完成我刚刚说的任务：完成的内容都要绘制UML图，而且按照我刚刚跟你说的进行绘制。
-SpringBoot的这块逻辑主要在[RealtimeChatServiceImpl.java](springboot/open-api/src/main/java/com/openapi/service/impl/RealtimeChatServiceImpl.java)
+SpringBoot的这块逻辑主要在[RealtimeChatServiceImpl.java](../springboot/open-api/src/main/java/com/openapi/service/impl/RealtimeChatServiceImpl.java)
 你根据上下文设计类图，对象图，状态图，活动图，时序图，功能线程甘特图，通信图，设计模式。
 如果你忘了刚刚的任务我再说一遍：
 ```text
@@ -500,13 +500,13 @@ UI基本跟云操控平台一致。
 
 总体设计要能跑通，
 我需要你看目前已有的设计
-[MainDesignDocument.md](MainDesignDocument.md)
-[SpringBootDesignDocument.md](springboot/docs/SpringBootDesignDocument.md)
-[AndroidDesignDocument.md](app/android/docs/AndroidDesignDocument.md)
+[MainDesignDocument.md](../MainDesignDocument.md)
+[SpringBootDesignDocument.md](../springboot/docs/SpringBootDesignDocument.md)
+[AndroidDesignDocument.md](../app/android/docs/AndroidDesignDocument.md)
 并把新增的设计设计出来再去写代码。
 你还需要遵守开发规范：
-[developAndRules.md](app/android/docs/developAndRules.md)
-[developAndRules.md](springboot/docs/developAndRules.md)
+[developAndRules.md](../app/android/docs/developAndRules.md)
+[developAndRules.md](../springboot/docs/developAndRules.md)
 上述的开发设计要写道设计文档，插入到应该属于的地方，要参考之前怎么写的
 
 要设计合适的Page并设计Mvi设计模式的viewmodel，并绘制跟参考文档中其他page一样的UML图。
@@ -550,13 +550,13 @@ Setting的业务逻辑暂时就那两个很简单，我都懒得绘制任何功�
 这次开发的需要一样
 总体设计要能跑通，
 我需要你看目前已有的设计
-[MainDesignDocument.md](MainDesignDocument.md)
-[SpringBootDesignDocument.md](springboot/docs/SpringBootDesignDocument.md)
-[AndroidDesignDocument.md](app/android/docs/AndroidDesignDocument.md)
+[MainDesignDocument.md](../MainDesignDocument.md)
+[SpringBootDesignDocument.md](../springboot/docs/SpringBootDesignDocument.md)
+[AndroidDesignDocument.md](../app/android/docs/AndroidDesignDocument.md)
 并把新增的设计设计出来再去写代码。
 你还需要遵守开发规范：
-[developAndRules.md](app/android/docs/developAndRules.md)
-[developAndRules.md](springboot/docs/developAndRules.md)
+[developAndRules.md](../app/android/docs/developAndRules.md)
+[developAndRules.md](../springboot/docs/developAndRules.md)
 上述的开发设计要写道设计文档，插入到应该属于的地方，要参考之前怎么写的
 
 要设计合适的Page并设计Mvi设计模式的viewmodel，并绘制跟参考文档中其他page一样的UML图。
@@ -576,7 +576,7 @@ Setting的业务逻辑暂时就那两个很简单，我都懒得绘制任何功�
 
 这个项目目前还有较多的为实现，因为涉及各种sdk所以我不要求你实现，但是我希望你去查资料，给出可行方案：
 
-我已经创建了[RKDesignDocument.md](rk/docs/RKDesignDocument.md)
+我已经创建了[RKDesignDocument.md](../rk/docs/RKDesignDocument.md)
 我的RK需要烧入系统级别App（我还没写）用于跟我现在的App和SpringBoot进行通讯。
 关于RK，我还没选好芯片，RK3566?RK3588?我的需求就是部署Android系统APP进行操控，以及能通过JNI操控cpp然后操控GPIO引脚操控sg90舵机运动，
 要有摄像头，并传输摄像头数据，我已经实现Android系统App的silero VAD（TensorflowLite）和YOLOv8，我希望能成功部署RK，我不要求有多高的性能其实跟手机差不多就行。
@@ -593,8 +593,8 @@ Setting的业务逻辑暂时就那两个很简单，我都懒得绘制任何功�
   * RK与SpringBoot连接状态（给出和SpringBoot进行Ws，Mqtt连接的方案，以及http请求）
 * 云操控平台(Live)
   * 接收Nginx的Live推流
-    （我已经实现demo，基本上就是用nginx[nginx-rtmp-win32-dev](nginx-rtmp-win32-dev)）
-     我目前推流设计基本已经完成，并且我测试通过[LiveActivity.kt](demo/cpp/app/src/main/java/com/demo/cpp/activity/LiveActivity.kt)
+    （我已经实现demo，基本上就是用nginx[nginx-rtmp-win32-dev](../nginx-rtmp-win32-dev)）
+     我目前推流设计基本已经完成，并且我测试通过[LiveActivity.kt](../demo/cpp/app/src/main/java/com/demo/cpp/activity/LiveActivity.kt)
      大概是用jni + RTMP实现的，你可以参考。拉流我没实现。我是用Windows的VL player验证成功的。
     * 另一台设备的Camera信道（Nginx）测试（参考上述我说的给出方案就行）
     * 视频录制保存本地（给出方案）
@@ -616,17 +616,17 @@ Setting的业务逻辑暂时就那两个很简单，我都懒得绘制任何功�
 
 ### Fix
 
-你修复的bug要写入到[CursorBug日志.md](CursorBugLog.md)
+你修复的bug要写入到[CursorBug日志.md](../CursorBugLog.md)
 
 #### 1. 打开页面无法创建Agent
-你看[MainDesignDocument.md](MainDesignDocument.md)里面包含Android设计文档，
+你看[MainDesignDocument.md](../MainDesignDocument.md)里面包含Android设计文档，
 看到Android设计文档的##### Agent 列表页面（MessageListScreen）
 **布局结构**：
 - 空状态：中心提示 + 创建按钮
 - 非空状态：Agent 列表 + 创建 FAB
 我看好像并没有实现，我没有看到提示`创建Agent`的按钮，显示是`当前暂无消息`，
 我觉得的状态机错了，我觉得需要两个状态值来管理：是否有Agent和是否有消息。这两个值共同来管理UI界面。重构一下这部分的设计文档和代码（添加状态机UML图，更新其他相关UML图）。
-当前逻辑在[MainActivity.kt](demo/app/app/src/main/java/com/magicvector/demo/activity/MainActivity.kt)
+当前逻辑在[MainActivity.kt](../demo/app/app/src/main/java/com/magicvector/demo/activity/MainActivity.kt)
 你认真看设计文档并做修改，如果修改改动了设计架构要写在设计文档中。
 
 当然我还能提供你的信息：
@@ -728,9 +728,9 @@ Setting的业务逻辑暂时就那两个很简单，我都懒得绘制任何功�
 
 ### 问题：已有账号信息未跳转
 
-首先你看一下设计文档[MainDesignDocument.md](MainDesignDocument.md)
-[AndroidDesignDocument.md](app/android/docs/AndroidDesignDocument.md)
-[SpringBootDesignDocument.md](springboot/docs/SpringBootDesignDocument.md)
+首先你看一下设计文档[MainDesignDocument.md](../MainDesignDocument.md)
+[AndroidDesignDocument.md](../app/android/docs/AndroidDesignDocument.md)
+[SpringBootDesignDocument.md](../springboot/docs/SpringBootDesignDocument.md)
 
 #### 日志
 按照设计文档中写的，StartActivity中应该查询Android本地的数据库看看是否有已经登录的账号，如果有，找到token验证，看看是否生效。
@@ -744,12 +744,12 @@ Setting的业务逻辑暂时就那两个很简单，我都懒得绘制任何功�
 再新增加账号的密码存储功能，也就是说你现在想需要修改Android的数据库设计，
 数据库要新增密码字段。这个密码只有登录成功才存储。下拉选择任何账号的时候如果这个账号存储了密码，那么自动填充。
 
-修复bug的记录要存储在[CursorBug日志.md](CursorBugLog.md)
+修复bug的记录要存储在[CursorBug日志.md](../CursorBugLog.md)
 
 
 
 #### 补充
-我发现你没有理解我设计文档中dataState的用途，我给你解释明白之后记得去记录到[AndroidDesignDocument.md](app/android/docs/AndroidDesignDocument.md)
+我发现你没有理解我设计文档中dataState的用途，我给你解释明白之后记得去记录到[AndroidDesignDocument.md](../app/android/docs/AndroidDesignDocument.md)
 dataState就是数据缓存，除了uiState之外的业务数据缓存。
 
 首先你看到ComposeLoginVm的这一行代码：password = state.password
@@ -772,15 +772,15 @@ dataState内是允许放一些Entity，Module聚合一个整体的DataState的�
 
 
 
-把我跟你说的dataState规则写入[developAndRules.md](app/android/docs/developAndRules.md)
-把我说的东西写进设计文档[AndroidDesignDocument.md](app/android/docs/AndroidDesignDocument.md)
+把我跟你说的dataState规则写入[developAndRules.md](../app/android/docs/developAndRules.md)
+把我说的东西写进设计文档[AndroidDesignDocument.md](../app/android/docs/AndroidDesignDocument.md)
 
 
 
 ### 重构App
 
-看到这个[StartActivity.kt](app/android/app/src/main/java/com/magicvector/activity/StartActivity.kt)
-现在我希望你封装一个BaseComponentActivity在[activity](app/android/app/src/main/java/com/magicvector/utils/activity)
+看到这个[StartActivity.kt](../app/android/app/src/main/java/com/magicvector/activity/StartActivity.kt)
+现在我希望你封装一个BaseComponentActivity在[activity](../app/android/app/src/main/java/com/magicvector/utils/activity)
 大概就是把setupFullScreen()的逻辑封装在BaseComponentActivity中，并且onResume()默认直接调用这个方法，
 然后把其他的composeActivity切换为继承这个BaseComponentActivity，就实现了代码复用
 不准删我任何注释！！！
@@ -789,31 +789,31 @@ dataState内是允许放一些Entity，Module聚合一个整体的DataState的�
 
 ### 重构handler以及写
 
-现在需要你修改一下android的设计文档[AndroidDesignDocument.md](app/android/docs/AndroidDesignDocument.md)
+现在需要你修改一下android的设计文档[AndroidDesignDocument.md](../app/android/docs/AndroidDesignDocument.md)
 我决定修改一下架构：
-[domain](app/android/app/src/main/java/com/magicvector/domain)
+[domain](../app/android/app/src/main/java/com/magicvector/domain)
 domain中存放数据结构，
-[dto](app/android/app/src/main/java/com/magicvector/domain/dto)
+[dto](../app/android/app/src/main/java/com/magicvector/domain/dto)
 内部放传输按数据类型。
-[entity](app/android/app/src/main/java/com/magicvector/domain/entity)
+[entity](../app/android/app/src/main/java/com/magicvector/domain/entity)
 内部存放数据库类型
-[model](app/android/app/src/main/java/com/magicvector/domain/model)
+[model](../app/android/app/src/main/java/com/magicvector/domain/model)
 内部存放业务类型
-[convertor](app/android/app/src/main/java/com/magicvector/domain/convertor)
+[convertor](../app/android/app/src/main/java/com/magicvector/domain/convertor)
 这里面是数据类型转换工具
 dto，entity，model之间的数据转换需要用convertor
 
 
-[repository](app/android/app/src/main/java/com/magicvector/repository)
+[repository](../app/android/app/src/main/java/com/magicvector/repository)
 这个存放数据源接口：
-[api](app/android/app/src/main/java/com/magicvector/repository/api)
+[api](../app/android/app/src/main/java/com/magicvector/repository/api)
 这里面是网络层接口：
-其中[ApiRequest.kt](app/android/app/src/main/java/com/magicvector/repository/api/ApiRequest.kt)
+其中[ApiRequest.kt](../app/android/app/src/main/java/com/magicvector/repository/api/ApiRequest.kt)
 这个Retrofit接口
-[dao](app/android/app/src/main/java/com/magicvector/repository/dao)
+[dao](../app/android/app/src/main/java/com/magicvector/repository/dao)
 这里面放的是数据库的接口
 
-[dataSource](app/android/app/src/main/java/com/magicvector/dataSource)
+[dataSource](../app/android/app/src/main/java/com/magicvector/dataSource)
 这是数据源层，跟repository的区别是里面会包含业务逻辑
 我打个比方，看到StartVm的这个代码：
 ```kotlin
@@ -867,7 +867,7 @@ request组成，都放在这里面，然后各种异常回调，相应处理，�
 相当于是我抽象出来请求，因为请求大部分数据是一样的，各个vm只是做不同相应而已，所以没必要重复在多个vm中写请求。
 并且这样做我还能取消[ApiRequestImpl.kt](app/android/app/src/main/java/com/magicvector/repository/api/ApiRequestImpl.kt)
 这是一个无意义的类，所以你现在需要实现我的设想。并将你能修改的请求都改成我希望的样子。
-放在[remote](app/android/app/src/main/java/com/magicvector/dataSource/remote)
+放在[remote](../app/android/app/src/main/java/com/magicvector/dataSource/remote)
 类名就叫做RemoteApiSource
 
 然后就是数据库的重复业务封装，
@@ -896,7 +896,7 @@ request组成，都放在这里面，然后各种异常回调，相应处理，�
 ```
 很明显，第一UserSessionModel转为UserEntity需要按照我说的规则用convertor去实现，
 第二saveCurrentUser这个方法应该封装到
-[local](app/android/app/src/main/java/com/magicvector/dataSource/local)
+[local](../app/android/app/src/main/java/com/magicvector/dataSource/local)
 中的object类总，然后提供数据结果回调，传入一个方法，这个方法的入参是数据库操作结果（如果是void就传入null）以及需要的数据
 比如这里需要的就是currentUserSessionCache的更新，
 那么就应该给回调UserEntity，这个userEntity的数据应该copy：
@@ -952,8 +952,8 @@ request组成，都放在这里面，然后各种异常回调，相应处理，�
 你现在要做的是：
 1. 学习我写的RemoteApiSource.verifyAccessToken的这个完整链路，这个链路我是人审过代码的。
 2. 浏览RemoteApiSource然后大概思考要怎么改并不做修改，让你有个印象。
-3. 把我的这个总结到开规则[developAndRules.md](app/android/docs/developAndRules.md)和详细设计
-  [AndroidDesignDocument.md](app/android/docs/AndroidDesignDocument.md)
+3. 把我的这个总结到开规则[developAndRules.md](../app/android/docs/developAndRules.md)和详细设计
+  [AndroidDesignDocument.md](../app/android/docs/AndroidDesignDocument.md)
   并说明为什么要suspend化，解决了什么问题
 4. 梳理代码，并实现涉及到RemoteApiSource相关的整个app请求链路suspend化。
 
@@ -981,9 +981,9 @@ RemoteApiSource的getLastChat这个方法，我看了一下吗还是使用把res
 这里面`## RemoteApiSource suspend 化改造` 是另一个AI写的，它比较笨，把这个当设计日志了。
 你现在要把这部分内容拆分到RemoteApiSource以及设计文档应有的位置，我这个设计文档是由目录层次结构的，不能这么写。
 ```以 `verifyAccessToken` 为标准链路：```这种例子都得删掉。与之替换的是应该添加上
-[remote](app/android/app/src/main/java/com/magicvector/dataSource/remote)中的[RemoteApiSource.kt](app/android/app/src/main/java/com/magicvector/dataSource/remote/RemoteApiSource.kt)
-[local](app/android/app/src/main/java/com/magicvector/dataSource/local)中的 **LocalSource
-[repository](app/android/app/src/main/java/com/magicvector/repository)
+[remote](../app/android/app/src/main/java/com/magicvector/dataSource/remote)中的[RemoteApiSource.kt](../app/android/app/src/main/java/com/magicvector/dataSource/remote/RemoteApiSource.kt)
+[local](../app/android/app/src/main/java/com/magicvector/dataSource/local)中的 **LocalSource
+[repository](../app/android/app/src/main/java/com/magicvector/repository)
 以及调用他们的vm和manager的这样规划的架构。
 并写上remote，local的设计模式，绘制UML图：整体类图，内部函数架构的通用甘特图（就是里面的函数基本相同统一绘制一个就行），
 内部函数的通用状态图。以及补充上这样设计的计算机理论基础，包括为什么使用suspend取消回调。
@@ -994,18 +994,18 @@ RemoteApiSource的getLastChat这个方法，我看了一下吗还是使用把res
 ### 代码审核完成与笔记录入
 我现在审核完成代码了。
 我发现了一些问题：
-1. datasource的操作很明显都是耗时操作，所以其suspend函数需要指定为IO（这部分代码可能你还需要改）[dataSource](app/android/app/src/main/java/com/magicvector/dataSource)
-   并将规则记录到[AndroidDesignDocument.md](app/android/docs/AndroidDesignDocument.md)
+1. datasource的操作很明显都是耗时操作，所以其suspend函数需要指定为IO（这部分代码可能你还需要改）[dataSource](../app/android/app/src/main/java/com/magicvector/dataSource)
+   并将规则记录到[AndroidDesignDocument.md](../app/android/docs/AndroidDesignDocument.md)
 2. 给登录和注册的甘特图进行更新，因为现在甘特图不仅要写功能的线程甘特图了，还需要写不同操作具体在kotlin的哪个协程中执行比如IO或者Main
-   然后查询kotlin中协程有多少种协程状态，比如IO，Main等，然后结合计算机理论：《操作系统》种的线程状态去分析各种操作应该放在哪种协程状态种。然后写入规则中。[AndroidDesignDocument.md](app/android/docs/AndroidDesignDocument.md)
+   然后查询kotlin中协程有多少种协程状态，比如IO，Main等，然后结合计算机理论：《操作系统》种的线程状态去分析各种操作应该放在哪种协程状态种。然后写入规则中。[AndroidDesignDocument.md](../app/android/docs/AndroidDesignDocument.md)
 
 
 
 
 ### 修复Agent请求Bug
 
-我的Android路径是[app](app/android/app)
-我的springBoot路径是[open-api](springboot/open-api)
+我的Android路径是[app](../app/android/app)
+我的springBoot路径是[open-api](../springboot/open-api)
 
 我遇到一个问题，我发现是因为参数类型不配导致的，就是我之前设计的Do非常不合理，虽然数据库我已经修改了，
 但是我的实体类型忘记修改了。问题如下：
@@ -1026,12 +1026,12 @@ RemoteApiSource的getLastChat这个方法，我看了一下吗还是使用把res
 现在你需要看哪些Do类型的Id还是String，然后全链路改到http的String转为long之前都应该改为Long。
 然后对应的Do，Mapper，Service都需要进行对应的修改。
 我要补充说的就是，有一点是Oss这个文件存储，这是我之前设计的，我感觉非常的冗余，
-你现在重新设计并将其设计加入到[SpringBootDesignDocument.md](springboot/docs/SpringBootDesignDocument.md)设计文档中。
-然后oss相关的代码在[minio](springboot/starters/minio-starter/src/main/java/com/minio)
+你现在重新设计并将其设计加入到[SpringBootDesignDocument.md](../springboot/docs/SpringBootDesignDocument.md)设计文档中。
+然后oss相关的代码在[minio](../springboot/starters/minio-starter/src/main/java/com/minio)
 
-其中[MinioConfig.java](springboot/starters/minio-starter/src/main/java/com/minio/config/MinioConfig.java)
+其中[MinioConfig.java](../springboot/starters/minio-starter/src/main/java/com/minio/config/MinioConfig.java)
 这个是配置文件，
-[MinioUtils.java](springboot/starters/minio-starter/src/main/java/com/minio/utils/MinioUtils.java)
+[MinioUtils.java](../springboot/starters/minio-starter/src/main/java/com/minio/utils/MinioUtils.java)
 这个是工具类。
 我现在的需求有：
 * 存储MultiPartFile文件、图片等资源；获取这个资源的url（可能还需要springgateway反向代理，我以前实现并成功过，但是目前的项目暂时比较简单就注释掉了。你可以写todo，暂时不用反向代理，然后我之前的注释不要删毕竟成功过了）
@@ -1041,11 +1041,11 @@ RemoteApiSource的getLastChat这个方法，我看了一下吗还是使用把res
 * 批量查询文件资源：就比如我现在打开app的云端视频页面，就会请求user按照时间或者大小排序的n~n+m个文件url比如0~20，21~40这种。
 * 文件幂等性，你设计一个方法来实现上传过的文件能查出来，我初步构想是`userId_文件名`
 * 支持对m3u8的传输或者将mp4转为m3u8，这个可能涉及FFmpeg，你可以只写todo，但是你要查询FFmpeg把mp4转为m3u8的实现方案，然后记录到设计文档。
-* 之前说到了文件幂等性，就必须有批量插入文件哪些成功了哪些失败了都要能响应给前端，所以我之前设计了[ao](springboot/starters/minio-starter/src/main/java/com/minio/domain/ao)
+* 之前说到了文件幂等性，就必须有批量插入文件哪些成功了哪些失败了都要能响应给前端，所以我之前设计了[ao](../springboot/starters/minio-starter/src/main/java/com/minio/domain/ao)
   这一系列的Ao，但是我感觉太复杂了，没有意义，现在你可重构。
 
-关于重构oss：你可以只保留[MinioConfig.java](springboot/starters/minio-starter/src/main/java/com/minio/config/MinioConfig.java)和
-[MinioUtils.java](springboot/starters/minio-starter/src/main/java/com/minio/utils/MinioUtils.java)其他不用然后全部设计。
+关于重构oss：你可以只保留[MinioConfig.java](../springboot/starters/minio-starter/src/main/java/com/minio/config/MinioConfig.java)和
+[MinioUtils.java](../springboot/starters/minio-starter/src/main/java/com/minio/utils/MinioUtils.java)其他不用然后全部设计。
 没必要参考我之前设计的，我觉得还怪冗余的。
 
 设计完成写设计文档，然后文档设计完成之后才开始写代码。
@@ -1054,8 +1054,8 @@ RemoteApiSource的getLastChat这个方法，我看了一下吗还是使用把res
 
 #### 补充
 我刚刚审核了一下代码，提出几点问题
-* 我看你重构了oss逻辑，还设计了oss的实体类型，但是我没看到你修改数据库啊？[magic_vector.sql](springboot/db/magic_vector.sql)
-  这里的设计需要修改，并且你怎么没有修改设计文档[SpringBootDesignDocument.md](springboot/docs/SpringBootDesignDocument.md)
+* 我看你重构了oss逻辑，还设计了oss的实体类型，但是我没看到你修改数据库啊？[magic_vector.sql](../springboot/db/magic_vector.sql)
+  这里的设计需要修改，并且你怎么没有修改设计文档[SpringBootDesignDocument.md](../springboot/docs/SpringBootDesignDocument.md)
 * 第二我认为你写的设计文档不合格，你不能作为日志写在设计文档顶部，你完全没有读懂设计文档。
   你应该在下面新增一个模块叫做oss，然后里面协商你是怎么设计oss系统的，给出uml的类图，各个功能的活动图。
 * 第三我喊你写针对minio中的mp4文件通过ffmpeg转为m3u8的方案你怎么没给我，我都没喊你写代码，
@@ -1065,7 +1065,7 @@ RemoteApiSource的getLastChat这个方法，我看了一下吗还是使用把res
 
 ### Token验证
 
-你现在查看一下[application.yml](springboot/open-api/src/main/resources/application.yml)
+你现在查看一下[application.yml](../springboot/open-api/src/main/resources/application.yml)
 这里面包含Token校验的路由，
 然后我没加就出现了禁止调用api：
 ```shell
@@ -1075,7 +1075,7 @@ at com.magicvector.dataSource.remote.RemoteApiSource$requestData$2.invokeSuspend
 ```
 现在需要解决这个问题：
 1. 阅读application的哪些api需要token验证
-2. [AndroidDesignDocument.md](app/android/docs/AndroidDesignDocument.md)这是Android设计文档，你先检查里面有没有token校验的设计，没有就加上设计
+2. [AndroidDesignDocument.md](../app/android/docs/AndroidDesignDocument.md)这是Android设计文档，你先检查里面有没有token校验的设计，没有就加上设计
    思考如何加上。
 3. 修改Android代码
 
@@ -1083,7 +1083,7 @@ at com.magicvector.dataSource.remote.RemoteApiSource$requestData$2.invokeSuspend
 
 ### Bug修复：创建Agent之后主页面收到了后端的响应，但是主页没有更新
 
-Android代码在[android](app/android)
+Android代码在[android](../app/android)
 
 我创建完Agent之后收到了响应体。我觉得可以排除SpringBoot的原因，就是Android没有做好。
 GET请求`/agent/getLastAgentChatList?userId=2032466744930009088`
@@ -1110,11 +1110,11 @@ GET请求`/agent/getLastAgentChatList?userId=2032466744930009088`
   }
 }
 ```
-收到响应体之后[MessageListPage.kt](app/android/app/src/main/java/com/magicvector/fragment/MessageListPage.kt)
+收到响应体之后[MessageListPage.kt](../app/android/app/src/main/java/com/magicvector/fragment/MessageListPage.kt)
 这个页面并没有立刻更新UI页面从创建变为List展示已有的AgentItems。
 需要你排查这个bug，
-修复代码完成之后请更新[CursorBugLog.md](CursorBugLog.md)
-然后在设计文档[AndroidDesignDocument.md](app/android/docs/AndroidDesignDocument.md)中
+修复代码完成之后请更新[CursorBugLog.md](../CursorBugLog.md)
+然后在设计文档[AndroidDesignDocument.md](../app/android/docs/AndroidDesignDocument.md)中
 找到你修改的部分，然后如果过涉及到的话在你涉及到的模块中进行修改
 
 
@@ -1131,13 +1131,13 @@ GET请求`/agent/getLastAgentChatList?userId=2032466744930009088`
 我现在的想法是让所有调用composeView的activity去持有composeview的vm（不使用remember，感觉rm不能处理复杂业务，而且业务冗余在view中了）
 大概是这样的，composeView的vm从函数入参给如，然后activity的vm内部持有各个子view的vm。
 MainActivity的三个FragmentComposeView页面都需要将vm交给MainVm
-修复代码完成之后请更新[CursorBugLog.md](CursorBugLog.md)
-然后在设计文档[AndroidDesignDocument.md](app/android/docs/AndroidDesignDocument.md)中
+修复代码完成之后请更新[CursorBugLog.md](../CursorBugLog.md)
+然后在设计文档[AndroidDesignDocument.md](../app/android/docs/AndroidDesignDocument.md)中
 
 
 ### 点击选择选择Agent闪退
 
-[app](app/android/app)
+[app](../app/android/app)
 这是我app的代码
 我现在选择agent先要进入chat页面，闪退了：
 ```shell
@@ -1149,7 +1149,7 @@ Shutting down VM
                 at com.magicvector.activity.ComposeChatActivity.getVm(ComposeChatActivity.kt:45)
                                                                                                     	at com.magicvector.activity.ComposeChatActivity.onCreate(ComposeChatActivity.kt:71)                                                                                    	                                                                                        	
 ```
-修复这个bug并记录到[CursorBugLog.md](CursorBugLog.md)
+修复这个bug并记录到[CursorBugLog.md](../CursorBugLog.md)
 
 
 ### Agent模块人工审核代码
@@ -1174,7 +1174,7 @@ todo：修改view展示数据结构
 我审核了一版本的Agent模块人工审核代码
 
 问题：
-* ChatService：我希望在[MessageListPage.kt](app/android/app/src/main/java/com/magicvector/fragment/MessageListPage.kt)
+* ChatService：我希望在[MessageListPage.kt](../app/android/app/src/main/java/com/magicvector/fragment/MessageListPage.kt)
   这个页面的顶部加上一个圆和一个text，这个ui状态值保存在其vm中。灰色是`未绑定service`或`未连接ws`，具体原因需要写在text，红色是异常，就写`异常`就行。绿色是`已绑定service并链接ws`，这个绑定状态也应该从activity交给vm的dataState。
 * MainVm的MVI设计：MainVm没有设计effect，不符合mvi设计模式，是不是应该重新设计一下；我记得我设计文档写过，跟ui相关的才写到uiState，否则就写入dataState，
   很明显MainVm你没创建dataState而且`isChatServiceBound`明显属于MainVm的dataState因为MainActivity不绘制，但是属于MessageListMviVm的uiState因为其需要绘制。
@@ -1185,14 +1185,14 @@ todo：修改view展示数据结构
 * MessageListMviVm的MVI：你这个也没设计dataState；比如hasAgent和hasMessage都是服务uiMode的
 
 
-你修改完成上述问题都要将他们在[AndroidDesignDocument.md](app/android/docs/AndroidDesignDocument.md)
+你修改完成上述问题都要将他们在[AndroidDesignDocument.md](../app/android/docs/AndroidDesignDocument.md)
 中找到合适的位置并理解，写入。
 
 
 #### 补充
 
 * 断网存储和获取逻辑：
-  我发现你没有做Agent的断网和存储逻辑，你先看下我的设计文档[AndroidDesignDocument.md](app/android/docs/AndroidDesignDocument.md)
+  我发现你没有做Agent的断网和存储逻辑，你先看下我的设计文档[AndroidDesignDocument.md](../app/android/docs/AndroidDesignDocument.md)
   我记得我设计了Agent缓存的manager，这个好像存在,ChatCacheManager你看看这个，这个我是实现的逻辑好像是把agent和chatList视为一体了。逻辑是这样的： 
   1. 初始化App的时候全量Agents的Http查询。并且比对同步到room数据库。
   2. 后续消息都由ws来添加。并且比对同步到room数据库。
@@ -1286,7 +1286,7 @@ todo：
 我发现设计并不完美。
 
 #### 数据库LocalSource
-取消：`ChatCacheManager`，我认为数据库在Dao层之上的业务数据应该放在[local](app/android/app/src/main/java/com/magicvector/dataSource/local)
+取消：`ChatCacheManager`，我认为数据库在Dao层之上的业务数据应该放在[local](../app/android/app/src/main/java/com/magicvector/dataSource/local)
 并且应该拆分`Agent`和`Chat`
 
 #### 事件分发EventManager
@@ -1314,9 +1314,12 @@ Agent消息订阅：MessageListPage
 Chat消息订阅：MessageListPage（Agent最新消息变化之后，Item的最新消息view要变化，并且要消息提示显示几条消息未读），ComposeAgentChatActivity
 
 所以需要根据上述需求进行设计，做这些主要是为了保证多数据源（生产者）都交给一个管理者，并同步给多个消费者。记得加同步锁，并分析同步会不会导致消息堆积，是否需要消息队列（我觉得Android这种级别的不需要吧）。
-设计完成记得更新设计文档[AndroidDesignDocument.md](app/android/docs/AndroidDesignDocument.md)
+设计完成记得更新设计文档[AndroidDesignDocument.md](../app/android/docs/AndroidDesignDocument.md)
 
 
+
+
+其实dataSource层感觉有点冗余了
 
 
 
