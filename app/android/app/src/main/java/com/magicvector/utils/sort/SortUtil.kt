@@ -9,7 +9,7 @@ object SortUtil {
     /**
      * 中文排序器（单例，避免重复创建）
      */
-    private val chineseCollator: Collator = Collator.getInstance(Locale.CHINESE)
+    val chineseCollator: Collator = Collator.getInstance(Locale.CHINESE)
 
     /**
      * 根据排序模式查找插入位置
@@ -17,13 +17,14 @@ object SortUtil {
     fun <T : SortItem> findInsertPosition(
         item: T,
         sortedList: MutableList<T>,
-        mode: SortMode = SortMode.TIMESTAMP_DESC
+        mode: SortMode = SortMode.LONG_DESC,
+        longSelector: (T) -> Long = { it.getUid() }
     ): Int {
         return when (mode) {
-            SortMode.TIMESTAMP_ASC -> ascFindInsertPosition(item.getIndex(), sortedList)
-            SortMode.TIMESTAMP_DESC -> descFindInsertPosition(item.getIndex(), sortedList)
-            SortMode.NAME_ASC -> ascFindInsertPosition(item.getStringIndex(), sortedList)
-            SortMode.NAME_DESC -> descFindInsertPosition(item.getStringIndex(), sortedList)
+            SortMode.LONG_ASC -> ascFindInsertPosition(longSelector(item), sortedList, longSelector)
+            SortMode.LONG_DESC -> descFindInsertPosition(longSelector(item), sortedList, longSelector)
+            SortMode.STRING_ASC -> ascFindInsertPosition(item.getStringIndex(), sortedList)
+            SortMode.STRING_DESC -> descFindInsertPosition(item.getStringIndex(), sortedList)
             SortMode.CUSTOM -> sortedList.size // 自定义模式需单独处理
         }
     }
@@ -38,14 +39,18 @@ object SortUtil {
      * @param index 索引
      * @return  插入位置
      */
-    fun <T : SortItem> ascFindInsertPosition(index: Long, sortItemList: MutableList<T>): Int {
+    fun <T : SortItem> ascFindInsertPosition(
+        index: Long,
+        sortedList: MutableList<T>,
+        valueSelector: (T) -> Long = { it.getUid() }
+    ): Int {
         var low = 0
-        var high = sortItemList.size - 1
+        var high = sortedList.size - 1
 
         while (low <= high) {
             val mid = (low + high) / 2
             // 中间值比索引小：-----|--I---
-            if (sortItemList[mid].getIndex() < index) {
+            if (valueSelector(sortedList[mid]) < index) {
                 low = mid + 1 // 向右查找 (大的放右边)
             }
             // 中间值比索引大：--I---|-----
@@ -66,14 +71,18 @@ object SortUtil {
      * @param index 索引
      * @return  插入位置
      */
-    fun <T : SortItem> descFindInsertPosition(index: Long, sortItemList: MutableList<T>): Int {
+    fun <T : SortItem> descFindInsertPosition(
+        index: Long,
+        sortedList: MutableList<T>,
+        valueSelector: (T) -> Long = { it.getUid() }
+    ): Int {
         var low = 0
-        var high = sortItemList.size - 1
+        var high = sortedList.size - 1
 
         while (low <= high) {
             val mid = (low + high) / 2
             // 中间值比索引小：-----|--I---
-            if (sortItemList[mid].getIndex() < index) {
+            if (valueSelector(sortedList[mid]) < index) {
                 high = mid - 1 // 向左查找 (大的放左边)
             }
             // 中间值比索引大：--I---|-----
@@ -134,21 +143,27 @@ object SortUtil {
 
     /**
      * 先合并再整体排序
+     *
+     * @param newItems 待插入的新元素列表
+     * @param sortedList 目标列表（会被修改）
+     * @param mode 排序模式
+     * @param longSelector LONG排序时使用的字段选择器（默认用timestamp，也可用uid）
      */
     fun <T : SortItem> insertOrdered(
         newItems: List<T>,
         sortedList: MutableList<T>,
-        mode: SortMode = SortMode.TIMESTAMP_DESC
+        mode: SortMode = SortMode.LONG_DESC,
+        longSelector: (T) -> Long = { it.getUid() }
     ): List<T> {
         // 先合并
         sortedList.addAll(newItems)
 
         // 再整体排序
         when (mode) {
-            SortMode.TIMESTAMP_ASC -> sortedList.sortBy { it.getIndex() }
-            SortMode.TIMESTAMP_DESC -> sortedList.sortByDescending { it.getIndex() }
-            SortMode.NAME_ASC -> sortedList.sortWith(compareBy(chineseCollator) { it.getStringIndex() })
-            SortMode.NAME_DESC -> sortedList.sortWith(compareByDescending(chineseCollator) { it.getStringIndex() })
+            SortMode.LONG_ASC -> sortedList.sortBy { longSelector(it) }
+            SortMode.LONG_DESC -> sortedList.sortByDescending { longSelector(it) }
+            SortMode.STRING_ASC -> sortedList.sortWith(compareBy(chineseCollator) { it.getStringIndex() })
+            SortMode.STRING_DESC -> sortedList.sortWith(compareByDescending(chineseCollator) { it.getStringIndex() })
             SortMode.CUSTOM -> {} // 自定义处理
         }
 
