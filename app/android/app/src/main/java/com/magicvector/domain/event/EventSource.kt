@@ -4,7 +4,7 @@ package com.magicvector.domain.event
  * 事件来源 - 精确区分数据变更的原因
  * 订阅者根据来源决定如何响应（如RoomManager根据来源决定是否更新数据库）
  */
-sealed class EventSource {
+open class EventSource {
 
     /**
      * 1. 用户主动操作 (UI层)
