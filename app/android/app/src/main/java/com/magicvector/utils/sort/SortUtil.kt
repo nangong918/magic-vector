@@ -227,29 +227,38 @@ object SortUtil {
     }
 
     /**
-     * 批量有序插入（优化版）
+     * 批量有序插入（逐个插入版）
      *
      * 时间复杂度分析：
-     * - UID排序：O(m * log n + m)，每个元素二分查找O(log n)，覆盖/插入O(1)（ArrayList插入为O(n)但批量操作摊销后）
-     * - 时间戳/字符串排序：O(m * log n + m * n)最坏情况，建议小批量使用
-     * - 替代方案：先合并再整体排序 O((n+m)log(n+m))，适用于大批量数据
+     * - UID排序：O(m * n)，其中 m 是新元素数量，n 是原列表大小
+     * - 时间戳/字符串排序：O(m * n)
+     *
+     * 说明：ArrayList 的 add(position, element) 需要移动元素，因此每个插入为 O(n)
      *
      * 使用建议：
-     * - 单条或少量数据：使用本方法逐个插入（保持稳定）
-     * - 大量数据（如分页加载）：使用 insertOrderedBatch 方法（先合并再整体排序）
+     * - 单条或少量数据（< 10条）：使用本方法（稳定插入）
+     * - 大量数据（如分页加载，> 10条）：使用 insertOrderedBatch 方法（先合并再排序）
      *
      * @param newItems 待插入的新元素列表
      * @param sortedList 目标列表（会被修改）
      * @param mode 排序模式
-     * @param onDuplicate UID重复时的处理策略，默认覆盖更新
+     * @param conflictResolver UID冲突时的解决策略，默认覆盖（返回新元素）
+     * @param duplicateStrategy 时间戳/字符串重复时的处理策略，默认插入旁边（保持重复）
      * @return 修改后的有序列表
      */
-    fun <T : SortItem> insertOrdered(
+    fun <T : SortItem> insertOrderedBatch(
         newItems: List<T>,
         sortedList: MutableList<T>,
         mode: SortMode,
-        onDuplicate: (existing: T, new: T) -> T = { _, new -> new }  // 默认覆盖
+        conflictResolver: (existing: T, new: T) -> T = { _, new -> new },
+        duplicateStrategy: DuplicateStrategy = DuplicateStrategy.INSERT_ADJACENT
     ): List<T> {
+        // 优化：空列表直接添加
+        if (sortedList.isEmpty()) {
+            sortedList.addAll(newItems)
+            return sortedList
+        }
+
         when (mode) {
             // ========== UID排序：唯一值，二分查找 + 覆盖/插入 ==========
             is SortMode.UidSort -> {
@@ -264,7 +273,8 @@ object SortUtil {
                     if (result.isFound) {
                         // UID已存在：根据策略更新
                         val existing = sortedList[result.position]
-                        sortedList[result.position] = onDuplicate(existing, newItem)
+                        val merged = conflictResolver(existing, newItem)
+                        sortedList[result.position] = merged
                     } else {
                         // UID不存在：插入到正确位置
                         sortedList.add(result.position, newItem)
@@ -277,6 +287,18 @@ object SortUtil {
                 val isDesc = mode.isDesc
                 newItems.forEach { newItem ->
                     val timestamp = newItem.getTimestamp()
+
+                    // 可选：去重逻辑
+                    if (duplicateStrategy == DuplicateStrategy.SKIP_DUPLICATE) {
+                        val exists = if (isDesc) {
+                            // 检查是否存在相同时间戳
+                            sortedList.any { it.getTimestamp() == timestamp }
+                        } else {
+                            sortedList.any { it.getTimestamp() == timestamp }
+                        }
+                        if (exists) return@forEach
+                    }
+
                     val position = if (isDesc) {
                         descFindInsertPositionByTimestamp(timestamp, sortedList)
                     } else {
@@ -292,6 +314,17 @@ object SortUtil {
                 val collator = mode.collator
                 newItems.forEach { newItem ->
                     val str = newItem.getStringIndex()
+
+                    // 可选：去重逻辑
+                    if (duplicateStrategy == DuplicateStrategy.SKIP_DUPLICATE) {
+                        val exists = if (isDesc) {
+                            sortedList.any { collator.compare(it.getStringIndex(), str) == 0 }
+                        } else {
+                            sortedList.any { collator.compare(it.getStringIndex(), str) == 0 }
+                        }
+                        if (exists) return@forEach
+                    }
+
                     val position = if (isDesc) {
                         descFindInsertPositionByString(str, sortedList, collator)
                     } else {
