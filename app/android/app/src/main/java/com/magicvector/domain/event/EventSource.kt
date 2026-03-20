@@ -6,39 +6,27 @@ package com.magicvector.domain.event
  */
 open class EventSource {
 
-    /**
-     * 1. 用户主动操作 (UI层)
-     * 行为：置顶插入/更新
-     */
-    object UserAction : EventSource()
+    // ========== 用户操作 ==========
+    sealed class UserAction : EventSource() {
+        object AddOne : UserAction()      // 新增一条
+        object DeleteOne : UserAction()   // 删除一条
+        object DeleteAll : UserAction()   // 清空全部
+        object UpdateOne : UserAction()   // 更新一条（不提供批量更新）
+        object ChangeSort : UserAction()  // 切换排序方式
+    }
 
-    /**
-     * 2. Http全量请求 (RemoteApi)
-     * 行为：全量替换
-     */
-    object RemoteFull : EventSource()
+    // ========== 远程请求 ==========
+    sealed class Remote : EventSource() {
+        object Full : Remote()  // Http全量
+        object Page : Remote()  // Http分页
+    }
 
-    /**
-     * 3. Http分页请求 (RemoteApi)
-     * 行为：有序插入历史数据
-     */
-    object RemotePage : EventSource()
-
-    /**
-     * 4. Ws长连接消息 (RealtimeChatController)
-     * 行为：置顶插入最新消息
-     */
+    // ========== WebSocket ==========
     object WebSocket : EventSource()
 
-    /**
-     * 5. Room全量查询 (无网络+无内存缓存)
-     * 行为：全量替换
-     */
-    object RoomFull : EventSource()
-
-    /**
-     * 6. Room分页查询 (无网络+有内存缓存)
-     * 行为：有序插入历史数据
-     */
-    object RoomPage : EventSource()
+    // ========== Room查询 ==========
+    sealed class Room : EventSource() {
+        object Full : Room()  // Room全量
+        object Page : Room()  // Room分页
+    }
 }
