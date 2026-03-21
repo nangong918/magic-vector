@@ -2,6 +2,8 @@ package com.magicvector.manager.event
 
 import android.util.Log
 import com.magicvector.domain.event.EventSource
+import com.magicvector.domain.exception.CacheException
+import com.magicvector.domain.exception.NetworkException
 import com.magicvector.utils.sort.PageDirection
 import com.magicvector.utils.sort.SortItem
 import com.magicvector.utils.sort.SortMode
@@ -279,7 +281,7 @@ abstract class AbstractEventManager<TItem : SortItem>(
         sortMode: SortMode,
         direction: PageDirection,
         limit: Int,
-        cursor: Any?
+        cursor: SortItem?
     ): List<TItem>
 
     /**
@@ -294,7 +296,7 @@ abstract class AbstractEventManager<TItem : SortItem>(
         sortMode: SortMode,
         direction: PageDirection,
         limit: Int,
-        cursor: Any?
+        cursor: SortItem?
     ): List<TItem>
 
 
@@ -358,6 +360,10 @@ abstract class AbstractEventManager<TItem : SortItem>(
 
     /**
      * 用户切换排序方式
+     * @param newSortMode 新的排序方式
+     * @param hasNetwork 是否有网络
+     * @return 列表
+     * @throws Exception    抛出异常 (可能是网络异常，也可能是其他异常)
      */
     open suspend fun onUserResort(newSortMode: SortMode, hasNetwork: Boolean) {
         if (defaultSortMode.value == newSortMode) return
@@ -370,6 +376,7 @@ abstract class AbstractEventManager<TItem : SortItem>(
                 replaceAll(items, EventSource.Remote.Full)
             } catch (e: Exception) {
                 Log.e(TAG, "onUserResort: loadFromRemoteFull failed",e)
+                throw e
             }
         }
         else {
@@ -381,6 +388,7 @@ abstract class AbstractEventManager<TItem : SortItem>(
 
     /**
      * Http全量加载（刷新）
+     * @throws Exception      抛出异常 (可能是网络异常，也可能是其他异常)
      */
     open suspend fun onHttpFullLoad() {
         try {
@@ -388,6 +396,7 @@ abstract class AbstractEventManager<TItem : SortItem>(
             replaceAll(items, EventSource.Remote.Full)
         } catch (e: Exception) {
             Log.e(TAG, "onHttpFullLoad: loadFromRemoteFull failed",e)
+            throw e
         }
     }
 
@@ -395,17 +404,20 @@ abstract class AbstractEventManager<TItem : SortItem>(
      * Http分页加载
      * @param direction UP=向上加载更早的数据，DOWN=向下加载更新的数据
      * @param limit 加载条数
+     * @throws CacheException 当分页游标为null时抛出
+     * @throws Exception      抛出异常 (可能是网络异常，也可能是其他异常)
      */
     open suspend fun onHttpPageLoad(
         direction: PageDirection = PageDirection.DOWN,
         limit: Int = 20
     ) {
         // 获取游标
-        val cursor = when (direction) {
-            // 向上查，取第一个元素的排序值
-            PageDirection.UP -> getFirstCursor()
-            // 向下查，取最后一个元素的排序值
-            PageDirection.DOWN -> getLastCursor()
+        val cursor = getCursor(direction)
+
+        if (cursor == null) {
+            throw CacheException(
+                message = "Remote分页cursor是null"
+            )
         }
 
         try {
@@ -414,7 +426,8 @@ abstract class AbstractEventManager<TItem : SortItem>(
             if (items.isEmpty()) return
             insertOrderedBatch(items, defaultSortMode.value, EventSource.Remote.Page)
         } catch (e: Exception) {
-            Log.e(TAG, "onHttpPageLoad: loadFromRemotePage failed",e)
+            Log.e(TAG, "onHttpPageLoad: loadFromRemotePage failed", e)
+            throw e
         }
     }
 
@@ -428,14 +441,20 @@ abstract class AbstractEventManager<TItem : SortItem>(
 
     /**
      * Room分页加载（离线模式）
+     * @param direction UP=向上加载更早的数据，DOWN=向下加载更新的数据
+     * @param limit 加载条数
+     * @throws CacheException 当分页游标为null时抛出
      */
     open suspend fun onLocalPageLoad(
         direction: PageDirection = PageDirection.DOWN,
         limit: Int = 20
     ) {
-        val cursor = when (direction) {
-            PageDirection.UP -> getFirstCursor()
-            PageDirection.DOWN -> getLastCursor()
+        // 获取游标
+        val cursor = getCursor(direction)
+        if (cursor == null) {
+            throw CacheException(
+                message = "Local分页cursor是null"
+            )
         }
 
         val items = loadFromLocalPage(defaultSortMode.value,
@@ -470,6 +489,7 @@ abstract class AbstractEventManager<TItem : SortItem>(
 
     /**
      * WebSocket插入
+     * @param items 待插入的元素列表
      */
     open suspend fun onWsUpsert(items: List<TItem>) {
         if (items.isEmpty()) return
@@ -479,26 +499,17 @@ abstract class AbstractEventManager<TItem : SortItem>(
     // ========== 内部辅助方法 ==========
 
     /**
-     * 获取第一个元素的游标值（用于向上查询）
+     * 获取分页游标
+     * @param direction UP=向上加载更早的数据，DOWN=向下加载更新的数据
+     * @return 游标
      */
-    private fun getFirstCursor(): Any? {
-        val firstItem = _items.value.firstOrNull() ?: return null
-        return when (defaultSortMode.value) {
-            is SortMode.TimestampSort -> firstItem.getTimestamp()
-            is SortMode.UidSort -> firstItem.getUid()
-            is SortMode.StringSort -> firstItem.getStringIndex()
-        }
-    }
-
-    /**
-     * 获取最后一个元素的游标值（用于向下查询）
-     */
-    private fun getLastCursor(): Any? {
-        val lastItem = _items.value.lastOrNull() ?: return null
-        return when (defaultSortMode.value) {
-            is SortMode.TimestampSort -> lastItem.getTimestamp()
-            is SortMode.UidSort -> lastItem.getUid()
-            is SortMode.StringSort -> lastItem.getStringIndex()
+    private fun getCursor(direction: PageDirection = PageDirection.DOWN): SortItem? {
+        // 获取游标
+        return when (direction) {
+            // 向上查，取第一个元素的排序值
+            PageDirection.UP -> _items.value.firstOrNull()
+            // 向下查，取最后一个元素的排序值
+            PageDirection.DOWN -> _items.value.lastOrNull()
         }
     }
 }
