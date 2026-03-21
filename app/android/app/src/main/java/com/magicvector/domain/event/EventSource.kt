@@ -8,10 +8,10 @@ open class EventSource {
 
     // ========== 用户操作 ==========
     sealed class UserAction : EventSource() {
-        object AddOne : UserAction()      // 新增一条
-        object DeleteOne : UserAction()   // 删除一条
-        object DeleteAll : UserAction()   // 清空全部
-        object UpdateOne : UserAction()   // 更新一条（不提供批量更新）
+        object Add : UserAction()      // 新增
+        object Delete : UserAction()   // 删除
+        object DeleteAllCache : UserAction()   // 清空全部
+        object Update : UserAction()   // 更新一条（不提供批量更新）
         object ChangeSort : UserAction()  // 切换排序方式
     }
 

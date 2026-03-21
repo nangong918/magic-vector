@@ -297,30 +297,11 @@ abstract class AbstractEventManager<TItem : SortItem>(
         cursor: Any?
     ): List<TItem>
 
-    /**
-     * 添加单条数据到: 缓存，数据库，服务器
-     */
-    protected abstract suspend fun addOne(item: TItem)
-
-    /**
-     * 删除单条数据从: 缓存，数据库，服务器
-     */
-    protected abstract suspend fun deleteOne(uid: Long)
-
-    /**
-     * 清空所有数据从: 缓存，数据库（不提供一键删除服务器数据功能）
-     */
-    protected abstract suspend fun clearAllFromCache()
-
-    /**
-     * WebSocket推送的更新处理到：缓存，数据库
-     */
-    protected abstract suspend fun handleWebSocketUpdate(item: TItem)
 
     // ========== 公开的业务方法（供UI层调用） ==========
 
     /**
-     * 用户添加一条数据
+     * 用户添加一条数据到: 缓存，数据库，服务器
      */
     open suspend fun onUserAddOne(item: TItem) {
         // 1. 获取当前排序模式
@@ -336,26 +317,43 @@ abstract class AbstractEventManager<TItem : SortItem>(
         // 3. 根据升/降序决定调用的方法
         if (isDesc) {
             // 降序：最新item数值最大 → 插入顶部
-            prependTop(listOf(item), EventSource.UserAction.AddOne)
+            prependTop(listOf(item), EventSource.UserAction.Add)
         } else {
             // 升序：最新item数值最大 → 插入底部
-            appendBottom(listOf(item), EventSource.UserAction.AddOne)
+            appendBottom(listOf(item), EventSource.UserAction.Add)
         }
     }
 
     /**
-     * 用户删除单条数据（根据UID）
+     * 用户添加多条数据到: 缓存，数据库，服务器
+     */
+    open suspend fun onUserUpsert(items: List<TItem>) {
+        if (items.isEmpty()) return
+        insertOrderedBatch(items, defaultSortMode.value, EventSource.UserAction.Add)
+     }
+
+    /**
+     * 用户删除单条数据（根据UID）从: 缓存，数据库，服务器
      * @param uid 要删除元素的唯一UID
      */
     open suspend fun onUserDelete(uid: Long): List<TItem> {
-        return remove({ it.getUid() == uid }, EventSource.UserAction.DeleteOne)
+        return remove({ it.getUid() == uid }, EventSource.UserAction.Delete)
     }
 
     /**
-     * 用户清空所有数据
+     * 用户删除多条数据（根据UID）从: 缓存，数据库，服务器
+     * @param uids 要删除元素的唯一UID列表
      */
-    open suspend fun onUserClearAll() {
-        clear(EventSource.UserAction.DeleteAll)
+    open suspend fun onUserDelete(uids: List<Long>): List<TItem> {
+        if (uids.isEmpty()) return _items.value
+        return remove({ uids.contains(it.getUid()) }, EventSource.UserAction.Delete)
+    }
+
+    /**
+     * 用户清空所有数据从: 缓存，数据库
+     */
+    open suspend fun onUserClearAllFromCache() {
+        clear(EventSource.UserAction.DeleteAllCache)
     }
 
     /**
@@ -372,8 +370,6 @@ abstract class AbstractEventManager<TItem : SortItem>(
                 replaceAll(items, EventSource.Remote.Full)
             } catch (e: Exception) {
                 Log.e(TAG, "onUserResort: loadFromRemoteFull failed",e)
-                val items = loadFromLocalFull(newSortMode)
-                replaceAll(items, EventSource.Remote.Full)
             }
         }
         else {
@@ -415,7 +411,8 @@ abstract class AbstractEventManager<TItem : SortItem>(
         try {
             val items = loadFromRemotePage(defaultSortMode.value,
                 direction, limit, cursor)
-            handlePageResult(items, EventSource.Remote.Page)
+            if (items.isEmpty()) return
+            insertOrderedBatch(items, defaultSortMode.value, EventSource.Remote.Page)
         } catch (e: Exception) {
             Log.e(TAG, "onHttpPageLoad: loadFromRemotePage failed",e)
         }
@@ -443,13 +440,14 @@ abstract class AbstractEventManager<TItem : SortItem>(
 
         val items = loadFromLocalPage(defaultSortMode.value,
             direction, limit, cursor)
-        handlePageResult(items, EventSource.Room.Page)
+        if (items.isEmpty()) return
+        insertOrderedBatch(items, defaultSortMode.value, EventSource.Room.Page)
     }
 
     /**
-     * WebSocket更新
+     * WebSocket插入一条
      */
-    open suspend fun onWsUpdate(item: TItem) {
+    open suspend fun onWsUpsertOne(item: TItem) {
         // 1. 获取当前排序模式
         val currentSortMode = defaultSortMode.value
 
@@ -468,6 +466,14 @@ abstract class AbstractEventManager<TItem : SortItem>(
             // 升序：最新item数值最大 → 插入底部
             appendBottom(listOf(item), EventSource.WebSocket)
         }
+    }
+
+    /**
+     * WebSocket插入
+     */
+    open suspend fun onWsUpsert(items: List<TItem>) {
+        if (items.isEmpty()) return
+        insertOrderedBatch(items, defaultSortMode.value, EventSource.WebSocket)
     }
 
     // ========== 内部辅助方法 ==========
@@ -493,15 +499,6 @@ abstract class AbstractEventManager<TItem : SortItem>(
             is SortMode.TimestampSort -> lastItem.getTimestamp()
             is SortMode.UidSort -> lastItem.getUid()
             is SortMode.StringSort -> lastItem.getStringIndex()
-        }
-    }
-
-    /**
-     * 处理分页结果
-     */
-    private fun handlePageResult(items: List<TItem>, event: EventSource) {
-        if (items.isNotEmpty()) {
-            insertOrderedBatch(items, defaultSortMode.value, event)
         }
     }
 }
