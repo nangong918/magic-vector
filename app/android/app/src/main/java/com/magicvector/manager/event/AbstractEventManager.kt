@@ -1,6 +1,8 @@
 package com.magicvector.manager.event
 
+import android.util.Log
 import com.magicvector.domain.event.EventSource
+import com.magicvector.utils.sort.PageDirection
 import com.magicvector.utils.sort.SortItem
 import com.magicvector.utils.sort.SortMode
 import com.magicvector.utils.sort.SortUtil
@@ -29,20 +31,26 @@ import kotlinx.coroutines.flow.asStateFlow
  * @param TEvent 事件类型
  * @param defaultSortMode 默认排序模式（默认时间降序：新到旧）
  */
-abstract class AbstractEventManager<TItem : SortItem, TEvent : EventSource>(
-    private val defaultSortMode: SortMode = SortMode.TimestampSort.desc(),
+abstract class AbstractEventManager<TItem : SortItem>(
     replay: Int = 1,
     extraBufferCapacity: Int = 64
 ) {
+
+    companion object {
+        private val TAG = AbstractEventManager::class.simpleName
+    }
+
     private val reducerLock = ReentrantLock()
     private val _items = MutableStateFlow<List<TItem>>(emptyList())
     val items: StateFlow<List<TItem>> = _items.asStateFlow()
+    private val _defaultSortMode: MutableStateFlow<SortMode> = MutableStateFlow(SortMode.TimestampSort.desc())
+    val defaultSortMode: StateFlow<SortMode> = _defaultSortMode.asStateFlow()
 
-    private val _events = MutableSharedFlow<TEvent>(
+    private val _events = MutableSharedFlow<EventSource>(
         replay = replay,
         extraBufferCapacity = extraBufferCapacity
     )
-    val events: SharedFlow<TEvent> = _events.asSharedFlow()
+    val events: SharedFlow<EventSource> = _events.asSharedFlow()
 
     // ========== 基础工具方法 ==========
 
@@ -56,7 +64,7 @@ abstract class AbstractEventManager<TItem : SortItem, TEvent : EventSource>(
     /**
      * 发送事件（内部使用）
      */
-    private fun emitEvent(event: TEvent) {
+    private fun emitEvent(event: EventSource) {
         _events.tryEmit(event)
     }
 
@@ -72,7 +80,7 @@ abstract class AbstractEventManager<TItem : SortItem, TEvent : EventSource>(
      */
     protected fun replaceAll(
         newItems: List<TItem>,
-        event: TEvent
+        event: EventSource
     ): List<TItem> = reducerLock.withLock {
         _items.value = newItems.toList()
         emitEvent(event)
@@ -90,7 +98,7 @@ abstract class AbstractEventManager<TItem : SortItem, TEvent : EventSource>(
      */
     protected fun prependTop(
         items: List<TItem>,
-        event: TEvent
+        event: EventSource
     ): List<TItem> = reducerLock.withLock {
         val next = _items.value.toMutableList()
         // 在顶部插入所有项（保持items本身的顺序）
@@ -110,7 +118,7 @@ abstract class AbstractEventManager<TItem : SortItem, TEvent : EventSource>(
      */
     protected fun appendBottom(
         items: List<TItem>,
-        event: TEvent
+        event: EventSource
     ): List<TItem> = reducerLock.withLock {
         val next = _items.value.toMutableList()
         next.addAll(items)  // 直接追加到底部，不查重，不排序
@@ -134,9 +142,9 @@ abstract class AbstractEventManager<TItem : SortItem, TEvent : EventSource>(
      */
     protected fun insertOrderedBatch(
         items: List<TItem>,
-        mode: SortMode = defaultSortMode,
+        mode: SortMode = defaultSortMode.value,
         conflictResolver: (existing: TItem, new: TItem) -> TItem = { _, new -> new },
-        event: TEvent
+        event: EventSource
     ): List<TItem> = reducerLock.withLock {
         val next = _items.value.toMutableList()
 
@@ -166,8 +174,8 @@ abstract class AbstractEventManager<TItem : SortItem, TEvent : EventSource>(
      */
     protected fun insertOrderedBatch(
         items: List<TItem>,
-        mode: SortMode = defaultSortMode,
-        event: TEvent
+        mode: SortMode = defaultSortMode.value,
+        event: EventSource
     ): List<TItem> = reducerLock.withLock {
         val next = _items.value.toMutableList()
 
@@ -192,7 +200,7 @@ abstract class AbstractEventManager<TItem : SortItem, TEvent : EventSource>(
      */
     protected fun remove(
         matcher: (TItem) -> Boolean,
-        event: TEvent
+        event: EventSource
     ): List<TItem> = reducerLock.withLock {
         _items.value = _items.value.filterNot(matcher)
         emitEvent(event)
@@ -213,9 +221,9 @@ abstract class AbstractEventManager<TItem : SortItem, TEvent : EventSource>(
     protected fun updateByUid(
         uid: Long,
         updater: (TItem) -> TItem,
-        event: TEvent,
+        event: EventSource,
         resort: Boolean = false,
-        mode: SortMode = defaultSortMode
+        mode: SortMode = defaultSortMode.value
     ): Boolean = reducerLock.withLock {
         val next = _items.value.toMutableList()
         val index = next.indexOfFirst { it.getUid() == uid }
@@ -247,9 +255,253 @@ abstract class AbstractEventManager<TItem : SortItem, TEvent : EventSource>(
      * @param event 变更事件
      * @return 清空后的列表（空列表）
      */
-    protected fun clear(event: TEvent): List<TItem> = reducerLock.withLock {
+    protected fun clear(event: EventSource): List<TItem> = reducerLock.withLock {
         _items.value = emptyList()
         emitEvent(event)
         _items.value
+    }
+
+    /// ========== 抽象方法（子类必须实现数据加载逻辑） ==========
+
+    /**
+     * Http全量查询（有网络时）
+     */
+    protected abstract suspend fun loadFromRemoteFull(sortMode: SortMode): List<TItem>
+
+    /**
+     * Http分页查询（有网络时）
+     * @param sortMode 排序模式
+     * @param direction 查询方向（UP向上查更早的，DOWN向下查更新的）
+     * @param limit 查询条数
+     * @param cursor 游标值（向上查传第一个元素的排序值，向下查传最后一个元素的排序值，首次传null）
+     */
+    protected abstract suspend fun loadFromRemotePage(
+        sortMode: SortMode,
+        direction: PageDirection,
+        limit: Int,
+        cursor: Any?
+    ): List<TItem>
+
+    /**
+     * Room全量查询（无网络时）
+     */
+    protected abstract suspend fun loadFromLocalFull(sortMode: SortMode): List<TItem>
+
+    /**
+     * Room分页查询（无网络时）
+     */
+    protected abstract suspend fun loadFromLocalPage(
+        sortMode: SortMode,
+        direction: PageDirection,
+        limit: Int,
+        cursor: Any?
+    ): List<TItem>
+
+    /**
+     * 添加单条数据到: 缓存，数据库，服务器
+     */
+    protected abstract suspend fun addOne(item: TItem)
+
+    /**
+     * 删除单条数据从: 缓存，数据库，服务器
+     */
+    protected abstract suspend fun deleteOne(uid: Long)
+
+    /**
+     * 清空所有数据从: 缓存，数据库（不提供一键删除服务器数据功能）
+     */
+    protected abstract suspend fun clearAllFromCache()
+
+    /**
+     * WebSocket推送的更新处理到：缓存，数据库
+     */
+    protected abstract suspend fun handleWebSocketUpdate(item: TItem)
+
+    // ========== 公开的业务方法（供UI层调用） ==========
+
+    /**
+     * 用户添加一条数据
+     */
+    open suspend fun onUserAddOne(item: TItem) {
+        // 1. 获取当前排序模式
+        val currentSortMode = defaultSortMode.value
+
+        // 2. 统一判断当前排序是升序还是降序
+        val isDesc = when (currentSortMode) {
+            is SortMode.UidSort -> currentSortMode.isDesc
+            is SortMode.TimestampSort -> currentSortMode.isDesc
+            is SortMode.StringSort -> currentSortMode.isDesc
+        }
+
+        // 3. 根据升/降序决定调用的方法
+        if (isDesc) {
+            // 降序：最新item数值最大 → 插入顶部
+            prependTop(listOf(item), EventSource.UserAction.AddOne)
+        } else {
+            // 升序：最新item数值最大 → 插入底部
+            appendBottom(listOf(item), EventSource.UserAction.AddOne)
+        }
+    }
+
+    /**
+     * 用户删除单条数据（根据UID）
+     * @param uid 要删除元素的唯一UID
+     */
+    open suspend fun onUserDelete(uid: Long): List<TItem> {
+        return remove({ it.getUid() == uid }, EventSource.UserAction.DeleteOne)
+    }
+
+    /**
+     * 用户清空所有数据
+     */
+    open suspend fun onUserClearAll() {
+        clear(EventSource.UserAction.DeleteAll)
+    }
+
+    /**
+     * 用户切换排序方式
+     */
+    open suspend fun onUserResort(newSortMode: SortMode, hasNetwork: Boolean) {
+        if (defaultSortMode.value == newSortMode) return
+        _defaultSortMode.value = newSortMode
+        emitEvent(EventSource.UserAction.ChangeSort)
+
+        if (hasNetwork) {
+            try {
+                val items = loadFromRemoteFull(newSortMode)
+                replaceAll(items, EventSource.Remote.Full)
+            } catch (e: Exception) {
+                Log.e(TAG, "onUserResort: loadFromRemoteFull failed",e)
+                val items = loadFromLocalFull(newSortMode)
+                replaceAll(items, EventSource.Remote.Full)
+            }
+        }
+        else {
+            val items = loadFromLocalFull(newSortMode)
+            replaceAll(items, EventSource.Room.Full)
+        }
+
+    }
+
+    /**
+     * Http全量加载（刷新）
+     */
+    open suspend fun onHttpFullLoad() {
+        try {
+            val items = loadFromRemoteFull(defaultSortMode.value)
+            replaceAll(items, EventSource.Remote.Full)
+        } catch (e: Exception) {
+            Log.e(TAG, "onHttpFullLoad: loadFromRemoteFull failed",e)
+        }
+    }
+
+    /**
+     * Http分页加载
+     * @param direction UP=向上加载更早的数据，DOWN=向下加载更新的数据
+     * @param limit 加载条数
+     */
+    open suspend fun onHttpPageLoad(
+        direction: PageDirection = PageDirection.DOWN,
+        limit: Int = 20
+    ) {
+        // 获取游标
+        val cursor = when (direction) {
+            // 向上查，取第一个元素的排序值
+            PageDirection.UP -> getFirstCursor()
+            // 向下查，取最后一个元素的排序值
+            PageDirection.DOWN -> getLastCursor()
+        }
+
+        try {
+            val items = loadFromRemotePage(defaultSortMode.value,
+                direction, limit, cursor)
+            handlePageResult(items, EventSource.Remote.Page)
+        } catch (e: Exception) {
+            Log.e(TAG, "onHttpPageLoad: loadFromRemotePage failed",e)
+        }
+    }
+
+    /**
+     * Room全量加载（离线模式）
+     */
+    open suspend fun onLocalFullLoad() {
+        val items = loadFromLocalFull(defaultSortMode.value)
+        replaceAll(items, EventSource.Room.Full)
+    }
+
+    /**
+     * Room分页加载（离线模式）
+     */
+    open suspend fun onLocalPageLoad(
+        direction: PageDirection = PageDirection.DOWN,
+        limit: Int = 20
+    ) {
+        val cursor = when (direction) {
+            PageDirection.UP -> getFirstCursor()
+            PageDirection.DOWN -> getLastCursor()
+        }
+
+        val items = loadFromLocalPage(defaultSortMode.value,
+            direction, limit, cursor)
+        handlePageResult(items, EventSource.Room.Page)
+    }
+
+    /**
+     * WebSocket更新
+     */
+    open suspend fun onWsUpdate(item: TItem) {
+        // 1. 获取当前排序模式
+        val currentSortMode = defaultSortMode.value
+
+        // 2. 统一判断当前排序是升序还是降序
+        val isDesc = when (currentSortMode) {
+            is SortMode.UidSort -> currentSortMode.isDesc
+            is SortMode.TimestampSort -> currentSortMode.isDesc
+            is SortMode.StringSort -> currentSortMode.isDesc
+        }
+
+        // 3. 根据升/降序决定调用的方法
+        if (isDesc) {
+            // 降序：最新item数值最大 → 插入顶部
+            prependTop(listOf(item), EventSource.WebSocket)
+        } else {
+            // 升序：最新item数值最大 → 插入底部
+            appendBottom(listOf(item), EventSource.WebSocket)
+        }
+    }
+
+    // ========== 内部辅助方法 ==========
+
+    /**
+     * 获取第一个元素的游标值（用于向上查询）
+     */
+    private fun getFirstCursor(): Any? {
+        val firstItem = _items.value.firstOrNull() ?: return null
+        return when (defaultSortMode.value) {
+            is SortMode.TimestampSort -> firstItem.getTimestamp()
+            is SortMode.UidSort -> firstItem.getUid()
+            is SortMode.StringSort -> firstItem.getStringIndex()
+        }
+    }
+
+    /**
+     * 获取最后一个元素的游标值（用于向下查询）
+     */
+    private fun getLastCursor(): Any? {
+        val lastItem = _items.value.lastOrNull() ?: return null
+        return when (defaultSortMode.value) {
+            is SortMode.TimestampSort -> lastItem.getTimestamp()
+            is SortMode.UidSort -> lastItem.getUid()
+            is SortMode.StringSort -> lastItem.getStringIndex()
+        }
+    }
+
+    /**
+     * 处理分页结果
+     */
+    private fun handlePageResult(items: List<TItem>, event: EventSource) {
+        if (items.isNotEmpty()) {
+            insertOrderedBatch(items, defaultSortMode.value, event)
+        }
     }
 }
