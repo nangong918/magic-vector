@@ -3,6 +3,7 @@ package com.magicvector.dataSource.remote
 import com.core.baseutil.network.BaseResponse
 import com.data.domain.constant.BaseConstant
 import com.magicvector.MainApplication
+import com.magicvector.domain.convertor.AgentChatConvertor
 import com.magicvector.domain.dto.http.request.AgentDeleteRequest
 import com.magicvector.domain.dto.http.request.ChatByAnchorRequest
 import com.magicvector.domain.dto.http.request.ControlCommandRequest
@@ -12,7 +13,6 @@ import com.magicvector.domain.dto.http.request.UserTokenVerifyRequest
 import com.magicvector.domain.dto.http.request.VideoUploadCompleteRequest
 import com.magicvector.domain.dto.http.request.VideoUploadInitRequest
 import com.magicvector.domain.dto.http.response.AgentLastChatListResponse
-import com.magicvector.domain.dto.http.response.AgentListResponse
 import com.magicvector.domain.dto.http.response.AgentResponse
 import com.magicvector.domain.dto.http.response.ChatMessageResponse
 import com.magicvector.domain.dto.http.response.ControlAgentLogResponse
@@ -29,6 +29,7 @@ import com.magicvector.domain.dto.http.response.VideoUploadCompleteResponse
 import com.magicvector.domain.dto.http.response.VideoUploadInitResponse
 import com.magicvector.domain.exception.NetworkBusinessException
 import com.magicvector.domain.exception.NetworkParamIllegalException
+import com.magicvector.domain.model.agent.AgentChatModel
 import com.magicvector.repository.api.ApiRequest
 import com.magicvector.utils.auth.AuthTokenHandler
 import kotlinx.coroutines.Dispatchers
@@ -89,11 +90,42 @@ class RemoteApiSource(
         )
     }
 
-    suspend fun getAgentList(userId: String): AgentListResponse {
-        return requestData(
-            apiCall = { apiRequest.getAgentList(userId) },
+    /**
+     * 获取Agent列表
+     * @param userId 用户Id
+     * @return Agent列表
+     */
+    suspend fun getAgentListFull(userId: String): List<AgentChatModel>{
+        val response = requestData(
+            apiCall = { apiRequest.getAgentListFull(userId) },
             emptyDataMessage = "Agent列表响应为空"
         )
+        return AgentChatConvertor.dtos2Models(response.agentList)
+    }
+
+    /**
+     * 分页获取Agent列表
+     * @param userId 用户Id
+     * @param sortField 排序字段 (lastChatTime, agentId, name)
+     * @param sortOrder 排序顺序 (ASC, DESC)
+     * @param pageDirection 分页方向 (after, before)
+     * @param cursor 游标值
+     * @param limit 查询条数
+     * @return Agent列表
+     */
+    suspend fun getAgentListPage(
+        userId: String,
+        sortField: String,
+        sortOrder: String,
+        pageDirection: String,
+        cursor: String,
+        limit: Int
+    ): List<AgentChatModel> {
+        val response = requestData(
+            apiCall = { apiRequest.getAgentListPage(userId, sortField, sortOrder, pageDirection, cursor, limit) },
+            emptyDataMessage = "Agent分页列表响应为空"
+        )
+        return AgentChatConvertor.dtos2Models(response.agentList)
     }
 
     suspend fun updateAgent(

@@ -65,13 +65,33 @@ interface ApiRequest {
     ): BaseResponse<AgentResponse>
 
     /**
-     * 获取Agent列表
+     * 全量获取Agent列表
      * @param userId   用户Id
      * @return  Agent列表
      */
-    @GET("/agent/getList")
-    suspend fun getAgentList(
+    @GET("/agent/getListFull")
+    suspend fun getAgentListFull(
         @Query("userId") userId: String
+    ): BaseResponse<AgentListResponse>
+
+    /**
+     * 分页获取Agent列表
+     * @param userId 用户Id
+     * @param sortField 排序字段 (lastChatTime, agentId, name)
+     * @param sortOrder 排序顺序 (ASC, DESC)
+     * @param pageDirection 分页方向 (after, before)
+     * @param cursor 游标值
+     * @param limit 查询条数
+     * @return Agent列表
+     */
+    @GET("/agent/getListPage")
+    suspend fun getAgentListPage(
+        @Query("userId") userId: String,
+        @Query("sortField") sortField: String,
+        @Query("sortOrder") sortOrder: String,
+        @Query("pageDirection") pageDirection: String,
+        @Query("cursor") cursor: String,
+        @Query("limit") limit: Int
     ): BaseResponse<AgentListResponse>
 
     @Multipart

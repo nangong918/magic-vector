@@ -25,15 +25,4 @@ interface SortItem {
      * 可能重复（如同名用户、相同标题）
      */
     fun getStringIndex(): String = ""
-
-    /**
-     * 获取排序值（用于多字段排序的默认实现）
-     */
-    fun getSortValue(mode: SortMode): Comparable<*> {
-        return when (mode) {
-            SortMode.LONG_ASC, SortMode.LONG_DESC -> getTimestamp()
-            SortMode.STRING_ASC, SortMode.STRING_DESC -> getStringIndex()
-            else -> getTimestamp()
-        }
-    }
 }

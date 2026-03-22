@@ -17,7 +17,9 @@ class AgentEventManager() : AbstractEventManager<AgentChatModel>() {
     }
 
     override suspend fun loadFromRemoteFull(sortMode: SortMode): List<AgentChatModel> {
-        TODO("Not yet implemented")
+        val userId = MainApplication.getUserId()
+        if (userId.isEmpty()) return emptyList()
+        return api.getAgentListFull(userId)
     }
 
     override suspend fun loadFromRemotePage(
@@ -26,7 +28,40 @@ class AgentEventManager() : AbstractEventManager<AgentChatModel>() {
         limit: Int,
         cursor: SortItem?
     ): List<AgentChatModel> {
-        TODO("Not yet implemented")
+        val userId = MainApplication.getUserId()
+        if (userId.isEmpty()) return emptyList()
+
+        val sortField = when (sortMode) {
+            is SortMode.TimestampSort -> "lastChatTime"
+            is SortMode.UidSort -> "agentId"
+            is SortMode.StringSort -> "name"
+        }
+
+        val sortOrder = when (sortMode) {
+            is SortMode.TimestampSort -> if (sortMode.isDesc) "DESC" else "ASC"
+            is SortMode.UidSort -> if (sortMode.isDesc) "DESC" else "ASC"
+            is SortMode.StringSort -> if (sortMode.isDesc) "DESC" else "ASC"
+        }
+
+        val pageDirectionStr = when (direction) {
+            PageDirection.UP -> "before"
+            PageDirection.DOWN -> "after"
+        }
+
+        val cursorValue = when (sortMode) {
+            is SortMode.TimestampSort -> cursor?.getTimestamp()?.toString() ?: ""
+            is SortMode.UidSort -> cursor?.getUid()?.toString() ?: ""
+            is SortMode.StringSort -> cursor?.getStringIndex() ?: ""
+        }
+
+        return api.getAgentListPage(
+            userId = userId,
+            sortField = sortField,
+            sortOrder = sortOrder,
+            pageDirection = pageDirectionStr,
+            cursor = cursorValue,
+            limit = limit
+        )
     }
 
     override suspend fun loadFromLocalFull(sortMode: SortMode): List<AgentChatModel> {
