@@ -32,10 +32,10 @@ import com.data.domain.constant.chat.RoleTypeEnum
 )
 data class AgentChatEntity(
     @PrimaryKey(autoGenerate = true)
-    val id: Long? = null,
+    val id: Long? = null,   // 前端内部的agentId
 
     // AgentChatModel
-    @ColumnInfo(name = "agent_id")
+    @ColumnInfo(name = "agent_id")  // SpringBoot后端分配的agentId
     val agentId: Long,
     @ColumnInfo(name = "user_id")
     val userId: Long,
