@@ -3,13 +3,12 @@ package com.magicvector.viewModel.fragment
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.magicvector.domain.model.agent.AgentModel
 import com.magicvector.domain.model.agent.AgentChatModel
 import com.magicvector.domain.model.message.MessageContactItemModel
 import com.magicvector.MainApplication
-import com.magicvector.domain.convertor.MessageConvertor
+import com.magicvector.domain.convertor.ChatMessageConvertor
+import com.magicvector.domain.event.EventSource
 import com.magicvector.domain.exception.NetworkBusinessException
-import com.magicvector.manager.event.EventSourceType
 import com.magicvector.manager.network.NetworkState
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
@@ -27,11 +26,16 @@ class MessageListMviVm : ViewModel() {
 
     companion object {
         val TAG: String = MessageListMviVm::class.java.name
+        // ========== Managers（数据源） ==========
         val api = MainApplication.getApiRequestImplInstance()
+        val agentEventManager = MainApplication.getAgentEventManager()
     }
 
-    private val _uiState = MutableStateFlow(MessageListState())
-    val uiState: StateFlow<MessageListState> = _uiState.asStateFlow()
+    // ========== UI 直接观察的数据流（从 Manager 暴露） ==========
+    val agents: StateFlow<List<AgentChatModel>> = agentEventManager.items
+    // ========== UI 状态（不包含列表数据） ==========
+    private val _uiState = MutableStateFlow(MessageListUiState())
+    val uiState: StateFlow<MessageListUiState> = _uiState.asStateFlow()
     private val _dataState = MutableStateFlow(MessageListDataState())
     val dataState: StateFlow<MessageListDataState> = _dataState.asStateFlow()
 
@@ -41,15 +45,17 @@ class MessageListMviVm : ViewModel() {
 
     init {
         observeNetworkState()
+        observeManagerEvents()
     }
 
+    // ========== Intent 处理 ==========
     fun processIntent(intent: MessageListIntent) {
         when (intent) {
             MessageListIntent.Initialize -> initialize()
-            is MessageListIntent.SelectMessage -> onMessageItemClick(intent.position)
+            is MessageListIntent.SelectAgent -> onAgentClick(intent.position)
             is MessageListIntent.EditAgent -> onEditAgent(intent.position)
             MessageListIntent.CreateAgent -> sendEffect(MessageListEffect.OpenCreateAgent)
-            MessageListIntent.Refresh -> refreshMessages()
+            MessageListIntent.Refresh -> refresh()
             is MessageListIntent.UpdateConnectionState -> {
                 _dataState.update {
                     it.copy(
@@ -60,7 +66,7 @@ class MessageListMviVm : ViewModel() {
             }
             is MessageListIntent.AgentCreated -> {
                 if (intent.created) {
-                    refreshMessages()
+                    refresh()
                 }
             }
             MessageListIntent.StartChat -> sendEffect(MessageListEffect.RequestAudioPermission)
@@ -69,6 +75,7 @@ class MessageListMviVm : ViewModel() {
 
     private fun initialize() {
         viewModelScope.launch {
+            // 更新网络状态
             val latestNetworkState = MainApplication.getNetworkManager().refreshNetworkState()
             _dataState.update {
                 it.copy(
@@ -76,24 +83,79 @@ class MessageListMviVm : ViewModel() {
                     isWsConnected = latestNetworkState.isWsConnected
                 )
             }
-            val userId = resolveUserId().toLongOrNull() ?: return@launch
-            if (userId <= 0L) {
+
+            val userId = resolveUserId().toLongOrNull()
+            if (userId == null || userId <= 0L) {
+                Log.w(TAG, "User not logged in")
                 return@launch
             }
-            if (_dataState.value.hasInitialized) {
-                applyManagerSnapshot(userId)
-                return@launch
-            }
+
             _dataState.update { it.copy(hasInitialized = true) }
-            val hasManagerCache = applyManagerSnapshot(userId)
-            if (latestNetworkState.isNetworkOnline) {
-                refreshMessages(showLoading = !hasManagerCache && _uiState.value.messages.isEmpty())
+
+            // 检查是否有数据
+            val hasAgents = agentEventManager.items.value.isNotEmpty()
+
+            if (hasAgents) {
+                // 已有数据，更新 UI 模式
+                updateUiMode()
+                finishSync(hasException = false)
+            } else if (latestNetworkState.isNetworkOnline) {
+                // 无数据且有网，刷新
+                refresh()
             } else {
+                // 无数据且无网，尝试从本地加载（Manager 会自动处理）
                 finishSync(hasException = false)
             }
         }
     }
 
+    private fun refresh() {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isRefreshing = true, isLoading = true) }
+
+            val userId = resolveUserId()
+            if (userId.isEmpty()) {
+                handleError("用户未登录")
+                return@launch
+            }
+
+            // 有网络时调用 Http 全量加载（Manager 内部会处理网络请求和数据更新）
+            if (_dataState.value.isNetworkOnline) {
+                try {
+                    agentEventManager.onHttpFullLoad()
+                    // ChatManager 也需要刷新，但需要先获取 Agent 列表后的消息？
+                    // 这里根据你的业务逻辑决定是否一起刷新
+                    finishSync(hasException = false)
+                } catch (e: Exception) {
+                    Log.e(TAG, "Refresh failed", e)
+                    handleError("刷新失败: ${e.message}")
+                    finishSync(hasException = true)
+                }
+            } else {
+                // 无网络时从本地加载（Manager 内部会自动处理）
+                agentEventManager.onLocalFullLoad()
+                finishSync(hasException = false)
+            }
+        }
+    }
+
+    private fun updateUiMode() {
+        val hasAgent = agentEventManager.items.value.isNotEmpty()
+
+        _dataState.update {
+            it.copy(
+                hasAgent = hasAgent,
+            )
+        }
+
+        _uiState.update {
+            it.copy(
+                uiMode = deriveUiMode(hasAgent)
+            )
+        }
+    }
+
+    // ========== 监听网络状态 ==========
     private fun observeNetworkState() {
         viewModelScope.launch {
             MainApplication.getNetworkManager().state.collect { networkState ->
@@ -108,38 +170,69 @@ class MessageListMviVm : ViewModel() {
                 val userId = resolveUserId().toLongOrNull() ?: return@collect
                 // 网络恢复: 重新同步数据
                 if (!previous.isNetworkOnline && networkState.isNetworkOnline) {
-                    refreshMessages(showLoading = _uiState.value.messages.isEmpty())
+                    refresh()
                 }
                 // 断网: 调用本地数据
                 else if (previous.isNetworkOnline && !networkState.isNetworkOnline) {
-                    applyCachedSnapshot(userId)
                     finishSync(hasException = false)
                 }
             }
         }
     }
 
-    private fun refreshMessages(showLoading: Boolean = false) {
+    // ========== 监听 Manager 事件（用于持久化决策） ==========
+    private fun observeManagerEvents() {
         viewModelScope.launch {
-            _uiState.update { it.copy(isRefreshing = true, isLoading = showLoading) }
-            syncAgentAndMessageState()
+            // 监听 AgentManager 事件
+            agentEventManager.events.collect { event ->
+                // 根据事件来源决定是否持久化到 Room
+                when (event) {
+                    is EventSource.Remote,
+                    is EventSource.UserAction,
+                    is EventSource.WebSocket -> {
+                        // 非 Room 来源的数据变化，需要持久化
+                        // Agent 的持久化逻辑可以在这里处理
+                        Log.d(TAG, "Agent event from: $event, should sync to Room")
+                    }
+                    else -> {
+                        // Room 来源的事件，不需要再持久化
+                        Log.d(TAG, "Agent event from Room, skip sync")
+                    }
+                }
+            }
+        }
+
+        viewModelScope.launch {
+            // 监听 ChatManager 事件
+            agentEventManager.events.collect { event ->
+                when (event) {
+                    is EventSource.Remote,
+                    is EventSource.UserAction,
+                    is EventSource.WebSocket -> {
+                        // 非 Room 来源的数据变化，需要持久化
+                        Log.d(TAG, "Chat event from: $event, should sync to Room")
+                    }
+                    else -> {
+                        Log.d(TAG, "Chat event from Room, skip sync")
+                    }
+                }
+            }
         }
     }
 
-    private fun onMessageItemClick(position: Int) {
-        val messages = _uiState.value.messages
-        if (messages.size > position) {
-            sendEffect(MessageListEffect.NavigateToChat(messages[position]))
+    private fun onAgentClick(position: Int) {
+        val agentList = agents.value
+        if (agentList.size > position) {
+            val agent = agentList[position]
+            sendEffect(MessageListEffect.NavigateToChat(agent))
         }
     }
 
     private fun onEditAgent(position: Int) {
-        val messages = _uiState.value.messages
-        if (messages.size > position) {
-            val agentId = messages[position].contactId
-            if (!agentId.isNullOrBlank()) {
-                sendEffect(MessageListEffect.OpenAgentEditor(agentId))
-            }
+        val agentList = agents.value
+        if (agentList.size > position) {
+            val agentId = agentList[position].agentId
+            sendEffect(MessageListEffect.OpenAgentEditor(agentId))
         }
     }
 
@@ -147,10 +240,6 @@ class MessageListMviVm : ViewModel() {
         viewModelScope.launch {
             _effect.send(effect)
         }
-    }
-
-    fun initNetworkRequest() {
-        refreshMessages(showLoading = _uiState.value.messages.isEmpty())
     }
 
     private suspend fun resolveUserId(): String {
@@ -167,139 +256,6 @@ class MessageListMviVm : ViewModel() {
         return ""
     }
 
-    private suspend fun syncAgentAndMessageState() {
-        val userId = resolveUserId()
-        val parsedUserId = userId.toLongOrNull()
-        if (userId.isBlank() || parsedUserId == null || parsedUserId <= 0L) {
-            handleError("用户未登录")
-            _uiState.update { it.copy(isLoading = false, isRefreshing = false) }
-            return
-        }
-
-        // 一开始就没网络
-        if (!MainApplication.getNetworkManager().state.value.isNetworkOnline) {
-            // 同步本地数据
-            applyCachedSnapshot(parsedUserId)
-            finishSync(hasException = false)
-            return
-        }
-
-        // 有网络：全量请求
-        runCatching {
-            supervisorScope {
-                val agentDeferred = async(Dispatchers.IO) { api.getAgentList(userId).agentModels.orEmpty() }
-                val chatDeferred = async(Dispatchers.IO) { api.getLastAgentChatList(userId).agentChatModels.orEmpty() }
-                OnlineHomeSnapshot(
-                    agents = agentDeferred.await(),
-                    agentChats = chatDeferred.await()
-                )
-            }
-        }.onSuccess { snapshot ->
-            applyOnlineSnapshot(parsedUserId, snapshot)
-            finishSync(hasException = false)
-        }.onFailure { exception ->
-            Log.e(TAG, "远端同步失败，回退本地缓存", exception)
-            val loaded = applyCachedSnapshot(parsedUserId)
-            val message = when (exception) {
-                is NetworkBusinessException -> exception.message ?: "远端同步失败"
-                else -> "远端同步失败: ${exception.message}"
-            }
-            if (!loaded) {
-                handleError(message)
-            } else {
-                _uiState.update { it.copy(error = message) }
-                _dataState.update { it.copy(hasException = true) }
-                sendEffect(MessageListEffect.ShowToast("$message，已回退到本地缓存"))
-            }
-            finishSync(hasException = true)
-        }
-    }
-
-    private suspend fun applyOnlineSnapshot(userId: Long, snapshot: OnlineHomeSnapshot) {
-        val messageItems = MessageConvertor.agentChatAos2MessageContactItemAos(snapshot.agentChats)
-            .sortedByDescending { it.timestamp }
-        // 离线同步
-        MainApplication.getChatCacheManager().syncHomeSnapshot(
-            userId = userId,
-            agents = snapshot.agents,
-            agentChats = snapshot.agentChats
-        )
-        MainApplication.getAgentEventManager().replaceAll(snapshot.agents, EventSourceType.HTTP_FULL)
-        MainApplication.getChatEventManager().replaceSummaries(messageItems, EventSourceType.HTTP_FULL)
-        MainApplication.getMessageListManager().setMessageContactItemAos(messageItems)
-        // ui更新
-        applyUiSnapshot(
-            agentCount = snapshot.agents.size,
-            messages = messageItems,
-            error = null
-        )
-    }
-
-    private suspend fun applyCachedSnapshot(userId: Long): Boolean {
-        val snapshot = MainApplication.getChatCacheManager().queryHomeSnapshot(userId)
-        MainApplication.getAgentEventManager().replaceAll(snapshot.agents, EventSourceType.ROOM_FULL)
-        MainApplication.getChatEventManager().replaceSummaries(snapshot.messageItems, EventSourceType.ROOM_FULL)
-        MainApplication.getMessageListManager().setMessageContactItemAos(snapshot.messageItems)
-        applyUiSnapshot(
-            agentCount = snapshot.agents.size,
-            messages = snapshot.messageItems,
-            error = null
-        )
-        return snapshot.agents.isNotEmpty() || snapshot.messageItems.isNotEmpty()
-    }
-
-    private suspend fun applyManagerSnapshot(userId: Long): Boolean {
-        val eventAgents = MainApplication.getAgentEventManager().items.value
-        val eventMessages = MainApplication.getChatEventManager().getSummaries()
-        val agents = if (eventAgents.isNotEmpty()) {
-            eventAgents
-        } else {
-            MainApplication.getAgentsManager().agentList.value
-        }
-        val messages = if (eventMessages.isNotEmpty()) {
-            eventMessages
-        } else {
-            MainApplication.getMessageListManager().messageContactItemModels.toList()
-        }
-            .sortedByDescending { it.timestamp }
-        if (agents.isNotEmpty() || messages.isNotEmpty()) {
-            applyUiSnapshot(
-                agentCount = agents.size,
-                messages = messages,
-                error = null
-            )
-            return true
-        }
-        return applyCachedSnapshot(userId)
-    }
-
-    private fun applyUiSnapshot(
-        agentCount: Int,
-        messages: List<MessageContactItemModel>,
-        error: String?
-    ) {
-        val hasAgent = agentCount > 0
-        val hasMessage = messages.isNotEmpty()
-        _dataState.update {
-            it.copy(
-                hasAgent = hasAgent,
-                hasMessage = hasMessage
-            )
-        }
-        _uiState.update {
-            it.copy(
-                agentCount = agentCount,
-                messages = messages,
-                messageCount = messages.size,
-                error = error,
-                uiMode = deriveUiMode(
-                    hasAgent = hasAgent,
-                    hasMessage = hasMessage
-                )
-            )
-        }
-    }
-
     private fun finishSync(hasException: Boolean) {
         _uiState.update {
             it.copy(
@@ -307,7 +263,6 @@ class MessageListMviVm : ViewModel() {
                 isRefreshing = false,
                 uiMode = deriveUiMode(
                     hasAgent = _dataState.value.hasAgent,
-                    hasMessage = _dataState.value.hasMessage
                 )
             )
         }
@@ -327,18 +282,17 @@ class MessageListMviVm : ViewModel() {
         sendEffect(MessageListEffect.ShowToast(error))
     }
 
-    private fun deriveUiMode(hasAgent: Boolean, hasMessage: Boolean): MessageListUiMode {
+    private fun deriveUiMode(hasAgent: Boolean): MessageListUiMode {
         return when {
             !hasAgent -> MessageListUiMode.NO_AGENT
-            !hasMessage -> MessageListUiMode.HAS_AGENT_NO_MESSAGE
-            else -> MessageListUiMode.HAS_MESSAGE
+            else -> MessageListUiMode.HAS_AGENT
         }
     }
 }
 
 sealed class MessageListIntent {
     data object Initialize : MessageListIntent()
-    data class SelectMessage(val position: Int) : MessageListIntent()
+    data class SelectAgent(val position: Int) : MessageListIntent()
     data class EditAgent(val position: Int) : MessageListIntent()
     data object CreateAgent : MessageListIntent()
     data object Refresh : MessageListIntent()
@@ -357,36 +311,25 @@ data class MessageListDataState(
     val hasInitialized: Boolean = false,
     val hasException: Boolean = false,
     val hasAgent: Boolean = false,
-    val hasMessage: Boolean = false
 )
 
-data class MessageListState(
+data class MessageListUiState(
     val isLoading: Boolean = false,
     val isRefreshing: Boolean = false,
-    val messages: List<MessageContactItemModel> = emptyList(),
-    val messageCount: Int = 0,
-    val agentCount: Int = 0,
     val uiMode: MessageListUiMode = MessageListUiMode.NO_AGENT,
     val error: String? = null,
-    val isFirstOpen: Boolean = true,
-    val needLoadNetworkData: Boolean = false
+    val isFirstOpen: Boolean = true
 )
 
 enum class MessageListUiMode {
     NO_AGENT,
-    HAS_AGENT_NO_MESSAGE,
-    HAS_MESSAGE
+    HAS_AGENT
 }
 
 sealed class MessageListEffect {
     data object OpenCreateAgent : MessageListEffect()
-    data class OpenAgentEditor(val agentId: String) : MessageListEffect()
+    data class OpenAgentEditor(val agentId: Long) : MessageListEffect()
     data class NavigateToChat(val ao: MessageContactItemModel) : MessageListEffect()
     data class ShowToast(val message: String) : MessageListEffect()
     data object RequestAudioPermission : MessageListEffect()
 }
-
-private data class OnlineHomeSnapshot(
-    val agents: List<AgentModel>,
-    val agentChats: List<AgentChatModel>
-)
