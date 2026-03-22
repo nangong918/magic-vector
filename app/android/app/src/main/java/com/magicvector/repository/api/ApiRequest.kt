@@ -2,17 +2,15 @@ package com.magicvector.repository.api
 
 import com.core.baseutil.network.BaseResponse
 import com.magicvector.domain.dto.http.request.AgentDeleteRequest
-import com.magicvector.domain.dto.http.request.ChatByAnchorRequest
 import com.magicvector.domain.dto.http.request.ControlCommandRequest
 import com.magicvector.domain.dto.http.request.UserLoginRequest
 import com.magicvector.domain.dto.http.request.UserPasswordUpdateRequest
 import com.magicvector.domain.dto.http.request.UserTokenVerifyRequest
 import com.magicvector.domain.dto.http.request.VideoUploadCompleteRequest
 import com.magicvector.domain.dto.http.request.VideoUploadInitRequest
-import com.magicvector.domain.dto.http.response.AgentLastChatListResponse
 import com.magicvector.domain.dto.http.response.AgentListResponse
 import com.magicvector.domain.dto.http.response.AgentResponse
-import com.magicvector.domain.dto.http.response.ChatMessageResponse
+import com.magicvector.domain.dto.http.response.ChatMessageListResponse
 import com.magicvector.domain.dto.http.response.ControlAgentLogResponse
 import com.magicvector.domain.dto.http.response.ControlCommandResponse
 import com.magicvector.domain.dto.http.response.ControlStatusResponse
@@ -109,48 +107,42 @@ interface ApiRequest {
         @Body request: AgentDeleteRequest
     ): BaseResponse<AgentResponse>
 
-    /**
-     * 获取LastAgentChat列表
-     * @param userId   用户Id
-     * @return  LastAgentChat列表
-     */
-    @GET("/agent/getLastAgentChatList")
-    suspend fun getLastAgentChatList(
-        @Query("userId") userId: String
-    ): BaseResponse<AgentLastChatListResponse>
 
     //==========Chat
 
     /**
-     * 获取最新的20条消息
-     * @param agentId   agentId
-     * @return  最新的20条消息
+     * 全量获取聊天消息列表
+     * @param agentId AgentId
+     * @param userId 用户Id
+     * @return 聊天消息列表
      */
-    @GET("/chat/getLastChat")
-    suspend fun getLastChat(
-        @Query("agentId") agentId: String
-    ): BaseResponse<ChatMessageResponse>
+    @GET("/chat/getListFull")
+    suspend fun getChatListFull(
+        @Query("agentId") agentId: String,
+        @Query("userId") userId: String
+    ): BaseResponse<ChatMessageListResponse>
 
     /**
-     * 获取指定时间段的消息
-     * @param agentId    agentId
-     * @param deadline   最后时间; yyyy-MM-dd HH:mm:ss
-     * @param limit      限制：max 50
-     * @return  指定时间段消息
+     * 分页获取聊天消息列表
+     * @param agentId AgentId
+     * @param userId 用户Id
+     * @param sortField 排序字段 (timestamp, messageId)
+     * @param sortOrder 排序顺序 (ASC, DESC)
+     * @param pageDirection 分页方向 (after, before)
+     * @param cursor 游标值
+     * @param limit 查询条数
+     * @return 聊天消息列表
      */
-    @GET("/chat/getTimeLimitChat")
-    suspend fun getTimeLimitChat(
+    @GET("/chat/getListPage")
+    suspend fun getChatListPage(
         @Query("agentId") agentId: String,
-        // yyyy-MM-dd HH:mm:ss
-        @Query("deadline") deadline: String,
-        // max 50
-        @Query("limit") limit: Int,
-    ): BaseResponse<ChatMessageResponse>
-
-    @POST("/chat/getByAnchor")
-    suspend fun getChatByAnchor(
-        @Body request: ChatByAnchorRequest
-    ): BaseResponse<ChatMessageResponse>
+        @Query("userId") userId: String,
+        @Query("sortField") sortField: String,
+        @Query("sortOrder") sortOrder: String,
+        @Query("pageDirection") pageDirection: String,
+        @Query("cursor") cursor: String,
+        @Query("limit") limit: Int
+    ): BaseResponse<ChatMessageListResponse>
 
     /**
      * http上传image的vision任务

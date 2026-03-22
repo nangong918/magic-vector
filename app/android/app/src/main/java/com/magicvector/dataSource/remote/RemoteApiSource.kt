@@ -4,6 +4,7 @@ import com.core.baseutil.network.BaseResponse
 import com.data.domain.constant.BaseConstant
 import com.magicvector.MainApplication
 import com.magicvector.domain.convertor.AgentChatConvertor
+import com.magicvector.domain.convertor.ChatMessageConvertor
 import com.magicvector.domain.dto.http.request.AgentDeleteRequest
 import com.magicvector.domain.dto.http.request.ChatByAnchorRequest
 import com.magicvector.domain.dto.http.request.ControlCommandRequest
@@ -12,9 +13,7 @@ import com.magicvector.domain.dto.http.request.UserPasswordUpdateRequest
 import com.magicvector.domain.dto.http.request.UserTokenVerifyRequest
 import com.magicvector.domain.dto.http.request.VideoUploadCompleteRequest
 import com.magicvector.domain.dto.http.request.VideoUploadInitRequest
-import com.magicvector.domain.dto.http.response.AgentLastChatListResponse
 import com.magicvector.domain.dto.http.response.AgentResponse
-import com.magicvector.domain.dto.http.response.ChatMessageResponse
 import com.magicvector.domain.dto.http.response.ControlAgentLogResponse
 import com.magicvector.domain.dto.http.response.ControlCommandResponse
 import com.magicvector.domain.dto.http.response.ControlStatusResponse
@@ -30,6 +29,7 @@ import com.magicvector.domain.dto.http.response.VideoUploadInitResponse
 import com.magicvector.domain.exception.NetworkBusinessException
 import com.magicvector.domain.exception.NetworkParamIllegalException
 import com.magicvector.domain.model.agent.AgentChatModel
+import com.magicvector.domain.model.chat.ChatMessageModel
 import com.magicvector.repository.api.ApiRequest
 import com.magicvector.utils.auth.AuthTokenHandler
 import kotlinx.coroutines.Dispatchers
@@ -148,47 +148,49 @@ class RemoteApiSource(
         )
     }
 
-    suspend fun getLastAgentChatList(userId: String): AgentLastChatListResponse {
-        return requestData(
-            apiCall = { apiRequest.getLastAgentChatList(userId) },
-            emptyDataMessage = "最近会话列表响应为空"
-        )
-    }
 
-    suspend fun getLastChat(agentId: String): ChatMessageResponse {
-        return requestData(
-            apiCall = { apiRequest.getLastChat(agentId) },
-            emptyDataMessage = "聊天记录响应为空"
-        )
-    }
-
-    suspend fun getTimeLimitChat(
+    /**
+     * 全量获取聊天消息列表
+     * @param agentId AgentId
+     * @param userId 用户Id
+     * @return 聊天消息列表
+     */
+    suspend fun getChatListFull(
         agentId: String,
-        deadline: String,
-        limit: Int
-    ): ChatMessageResponse {
-        return requestData(
-            apiCall = { apiRequest.getTimeLimitChat(agentId = agentId, deadline = deadline, limit = limit) },
-            emptyDataMessage = "时间段聊天记录响应为空"
+        userId: String
+    ): List<ChatMessageModel> {
+        val response = requestData(
+            apiCall = { apiRequest.getChatListFull(agentId, userId) },
+            emptyDataMessage = "聊天消息列表响应为空"
         )
+        return ChatMessageConvertor.dtos2Models(response.messageList)
     }
 
-    suspend fun getChatByAnchor(
+    /**
+     * 分页获取聊天消息列表
+     * @param agentId AgentId
+     * @param userId 用户Id
+     * @param sortField 排序字段 (timestamp, messageId)
+     * @param sortOrder 排序顺序 (ASC, DESC)
+     * @param pageDirection 分页方向 (after, before)
+     * @param cursor 游标值
+     * @param limit 查询条数
+     * @return 聊天消息列表
+     */
+    suspend fun getChatListPage(
         agentId: String,
-        anchorTimestamp: Long,
-        before: Boolean,
+        userId: String,
+        sortField: String,
+        sortOrder: String,
+        pageDirection: String,
+        cursor: String,
         limit: Int
-    ): ChatMessageResponse {
-        val request = ChatByAnchorRequest().apply {
-            this.agentId = agentId
-            this.anchorTimestamp = anchorTimestamp
-            this.before = before
-            this.limit = limit
-        }
-        return requestData(
-            apiCall = { apiRequest.getChatByAnchor(request) },
-            emptyDataMessage = "锚点聊天记录响应为空"
+    ): List<ChatMessageModel> {
+        val response = requestData(
+            apiCall = { apiRequest.getChatListPage(agentId, userId, sortField, sortOrder, pageDirection, cursor, limit) },
+            emptyDataMessage = "聊天消息分页列表响应为空"
         )
+        return ChatMessageConvertor.dtos2Models(response.messageList)
     }
 
     suspend fun uploadImageVision(

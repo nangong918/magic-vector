@@ -6,7 +6,7 @@ import com.magicvector.domain.entity.AgentChatEntity
 import com.magicvector.domain.model.agent.AgentChatModel
 import com.magicvector.domain.vo.agent.AgentChatVo
 import com.magicvector.domain.vo.agent.AgentVo
-import com.magicvector.domain.vo.message.ChatMessageVo
+import com.magicvector.domain.vo.message.ChatBriefMessageVo
 
 object AgentChatConvertor {
 
@@ -30,9 +30,9 @@ object AgentChatConvertor {
             avatarUrl = model.agentChatVo?.agentVo?.avatarUrl,
 
             // ChatMessageVo
-            content = model.agentChatVo?.chatMessageVo?.content ?: "",
-            chatTime = model.agentChatVo?.chatMessageVo?.chatTime ?: "",
-            role = model.agentChatVo?.chatMessageVo?.role ?: RoleTypeEnum.AGENT.value
+            content = model.agentChatVo?.chatBriefMessageVo?.content ?: "",
+            chatTime = model.agentChatVo?.chatBriefMessageVo?.chatTime ?: "",
+            role = model.agentChatVo?.chatBriefMessageVo?.role ?: RoleTypeEnum.AGENT.value
         )
     }
 
@@ -52,7 +52,7 @@ object AgentChatConvertor {
                 avatarUrl = entity.avatarUrl
             )
             // ChatMessageVo
-            val chatMessageVo = ChatMessageVo(
+            val chatBriefMessageVo = ChatBriefMessageVo(
                 content = entity.content,
                 chatTime = entity.chatTime,
                 role = entity.role
@@ -61,7 +61,7 @@ object AgentChatConvertor {
             // AgentChatVo
             agentChatVo = AgentChatVo(
                 agentVo = agentVo,
-                chatMessageVo = chatMessageVo,
+                chatBriefMessageVo = chatBriefMessageVo,
                 unreadCount = entity.unreadCount
             )
         }
@@ -85,9 +85,9 @@ object AgentChatConvertor {
             avatarUrl = model.agentChatVo?.agentVo?.avatarUrl,
 
             // ChatMessageVo 字段（空值兜底）
-            content = model.agentChatVo?.chatMessageVo?.content ?: "",
-            chatTime = model.agentChatVo?.chatMessageVo?.chatTime ?: "",
-            role = model.agentChatVo?.chatMessageVo?.role ?: RoleTypeEnum.AGENT.value
+            content = model.agentChatVo?.chatBriefMessageVo?.content ?: "",
+            chatTime = model.agentChatVo?.chatBriefMessageVo?.chatTime ?: "",
+            role = model.agentChatVo?.chatBriefMessageVo?.role ?: RoleTypeEnum.AGENT.value
         )
     }
 
@@ -106,7 +106,7 @@ object AgentChatConvertor {
                 description = dto.description,
                 avatarUrl = dto.avatarUrl
             )
-            val chatMessageVo = ChatMessageVo(
+            val chatBriefMessageVo = ChatBriefMessageVo(
                 content = dto.content,
                 chatTime = dto.chatTime,
                 role = dto.role
@@ -115,7 +115,7 @@ object AgentChatConvertor {
             // 3. 赋值AgentChatVo
             agentChatVo = AgentChatVo(
                 agentVo = agentVo,
-                chatMessageVo = chatMessageVo,
+                chatBriefMessageVo = chatBriefMessageVo,
                 unreadCount = dto.unreadCount
             )
         }

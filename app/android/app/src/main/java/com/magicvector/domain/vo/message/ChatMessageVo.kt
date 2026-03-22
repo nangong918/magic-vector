@@ -1,15 +1,16 @@
 package com.magicvector.domain.vo.message
 
-import com.data.domain.constant.chat.RoleTypeEnum
+import com.data.domain.constant.chat.MessageTypeEnum
 
 /**
- * 聊天消息vo
+ * 聊天项vo
  */
 data class ChatMessageVo(
-    // 内容
-    val content: String,
-    // 时间(展示用)
-    val chatTime: String,
-    // 发送方: 0: agent, 1: user (相当于isUser ? 0 : 1)
-    val role: Int = RoleTypeEnum.AGENT.value
+    var briefMessageVo: ChatBriefMessageVo,
+    // 图片资源
+    var imgUrl: String,
+    // 消息类型
+    var messageType: Int = MessageTypeEnum.TEXT.value
+//    // 是否已读
+//    var isRead: Boolean = false
 )

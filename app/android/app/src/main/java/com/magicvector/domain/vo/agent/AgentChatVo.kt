@@ -1,12 +1,12 @@
 package com.magicvector.domain.vo.agent
 
-import com.magicvector.domain.vo.message.ChatMessageVo
+import com.magicvector.domain.vo.message.ChatBriefMessageVo
 
 /**
  * Agent Item 包含聊天 vo
  */
 data class AgentChatVo(
     val agentVo: AgentVo,
-    val chatMessageVo: ChatMessageVo,
+    val chatBriefMessageVo: ChatBriefMessageVo,
     val unreadCount: Int = 0
 )
