@@ -4,8 +4,8 @@ import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
-import com.magicvector.repository.dao.AgentCacheDao
-import com.magicvector.domain.entity.AgentCacheEntity
+import com.magicvector.repository.dao.AgentChatDao
+import com.magicvector.domain.entity.AgentChatEntity
 import com.magicvector.repository.dao.ChatMessageDao
 import com.magicvector.domain.entity.ChatMessageEntity
 import com.magicvector.repository.dao.ControlAgentLogDao
@@ -20,7 +20,7 @@ import com.magicvector.domain.entity.UserEntity
 @Database(
     entities = [
         UserEntity::class,
-        AgentCacheEntity::class,
+        AgentChatEntity::class,
         ChatMessageEntity::class,
         ControlAgentLogEntity::class
     ],
@@ -29,7 +29,7 @@ import com.magicvector.domain.entity.UserEntity
 )
 abstract class VectorDatabase : RoomDatabase() {
     abstract fun userDao(): UserDao
-    abstract fun agentCacheDao(): AgentCacheDao
+    abstract fun agentCacheDao(): AgentChatDao
     abstract fun chatMessageDao(): ChatMessageDao
     abstract fun controlAgentLogDao(): ControlAgentLogDao
 

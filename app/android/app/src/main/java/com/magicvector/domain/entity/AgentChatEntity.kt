@@ -2,6 +2,7 @@ package com.magicvector.domain.entity
 
 import androidx.room.ColumnInfo
 import androidx.room.Entity
+import androidx.room.Index
 import androidx.room.PrimaryKey
 import com.data.domain.constant.chat.RoleTypeEnum
 
@@ -9,7 +10,26 @@ import com.data.domain.constant.chat.RoleTypeEnum
  * Agent Item 业务持久化
  * @see com.magicvector.domain.model.agent.AgentChatModel
  */
-@Entity(tableName = "agent_chat")
+@Entity(
+    tableName = "agent_chat",
+    indices = [
+        // 核心索引1：覆盖「user_id + last_chat_time」（匹配queryFull/queryPage）
+        Index(
+            value = ["user_id", "last_chat_time"],
+            name = "idx_user_last_chat_time"
+        ),
+        // 核心索引2：覆盖「user_id + agent_id」（匹配deleteByAgentId + 部分queryPage）
+        Index(
+            value = ["user_id", "agent_id"],
+            name = "idx_user_agent"
+        ),
+        // 核心索引3：覆盖「user_id + name」（匹配queryFullByName/queryPageByName）
+        Index(
+            value = ["user_id", "name"],
+            name = "idx_user_name"
+        )
+    ]
+)
 data class AgentChatEntity(
     @PrimaryKey(autoGenerate = true)
     val id: Long? = null,

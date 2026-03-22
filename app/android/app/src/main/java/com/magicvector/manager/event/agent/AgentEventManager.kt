@@ -1,79 +1,115 @@
 package com.magicvector.manager.event.agent
 
-import com.data.domain.ao.agent.AgentAo
-import com.magicvector.manager.agent.AgentsManager
+import com.magicvector.MainApplication
+import com.magicvector.domain.model.agent.AgentChatModel
 import com.magicvector.manager.event.AbstractEventManager
-import com.magicvector.manager.event.EventSourceType
+import com.magicvector.utils.sort.PageDirection
+import com.magicvector.utils.sort.SortItem
+import com.magicvector.utils.sort.SortMode
 
-class AgentEventManager(
-    private val compatibilityStore: AgentsManager? = null
-) : AbstractEventManager<AgentAo, AgentEvent>() {
+class AgentEventManager() : AbstractEventManager<AgentChatModel>() {
 
-    fun replaceAll(
-        list: List<AgentAo>,
-        source: EventSourceType
-    ): List<AgentAo> {
-        val next = replaceAllInternal(
-            list = list,
-            event = AgentEvent.ReplaceAll(list = list, source = source)
-        )
-        syncCompatibilityStore(next)
-        return next
+    companion object {
+        private const val TAG = "AgentEventManager"
+        private val api = MainApplication.getRemoteApiSource()
+        private val local = MainApplication.getAgentLocalSource()
+        const val FULL_LIMIT = 20
     }
 
-    fun upsert(
-        agent: AgentAo,
-        source: EventSourceType
-    ): List<AgentAo> {
-        val next = upsertTopInternal(
-            item = agent,
-            matcher = { it.agentId == agent.agentId },
-            event = AgentEvent.UpsertOne(agent = agent, source = source)
-        )
-        syncCompatibilityStore(next)
-        return next
+    override suspend fun loadFromRemoteFull(sortMode: SortMode): List<AgentChatModel> {
+        TODO("Not yet implemented")
     }
 
-    fun remove(
-        agentId: String,
-        source: EventSourceType
-    ): List<AgentAo> {
-        val next = removeInternal(
-            matcher = { it.agentId == agentId },
-            event = AgentEvent.RemoveOne(agentId = agentId, source = source)
-        )
-        syncCompatibilityStore(next)
-        return next
+    override suspend fun loadFromRemotePage(
+        sortMode: SortMode,
+        direction: PageDirection,
+        limit: Int,
+        cursor: SortItem?
+    ): List<AgentChatModel> {
+        TODO("Not yet implemented")
     }
 
-    fun clear(source: EventSourceType): List<AgentAo> {
-        val next = clearInternal(AgentEvent.Cleared(source = source))
-        syncCompatibilityStore(next)
-        return next
+    override suspend fun loadFromLocalFull(sortMode: SortMode): List<AgentChatModel> {
+        val userId = MainApplication.getUserId().toLongOrNull() ?: return emptyList()
+
+        return when (sortMode) {
+            is SortMode.TimestampSort -> {
+                local.queryFull(
+                    userId = userId,
+                    orderBy = "last_chat_time",
+                    sortOrder = if (sortMode.isDesc) "DESC" else "ASC",
+                    limit = FULL_LIMIT
+                )
+            }
+            is SortMode.UidSort -> {
+                local.queryFull(
+                    userId = userId,
+                    orderBy = "agent_id",
+                    sortOrder = if (sortMode.isDesc) "DESC" else "ASC",
+                    limit = FULL_LIMIT
+                )
+            }
+            is SortMode.StringSort -> {
+                local.queryFullByName(
+                    userId = userId,
+                    sortOrder = if (sortMode.isDesc) "DESC" else "ASC",
+                    limit = FULL_LIMIT
+                )
+            }
+        }
     }
 
-    private fun syncCompatibilityStore(list: List<AgentAo>) {
-        compatibilityStore?.setAgents(list)
+    override suspend fun loadFromLocalPage(
+        sortMode: SortMode,
+        direction: PageDirection,
+        limit: Int,
+        cursor: SortItem?
+    ): List<AgentChatModel> {
+        val userId = MainApplication.getUserId().toLongOrNull() ?: return emptyList()
+
+        // 获取游标值
+        val cursorValue = when (sortMode) {
+            is SortMode.TimestampSort -> cursor?.getTimestamp() ?: return emptyList()
+            is SortMode.UidSort -> cursor?.getUid() ?: return emptyList()
+            is SortMode.StringSort -> cursor?.getStringIndex() ?: return emptyList()
+        }
+
+        // 分页方向转换
+        val pageDirection = when (direction) {
+            PageDirection.UP -> "before"
+            PageDirection.DOWN -> "after"
+        }
+
+        return when (sortMode) {
+            is SortMode.TimestampSort -> {
+                local.queryPage(
+                    userId = userId,
+                    orderBy = "last_chat_time",
+                    sortOrder = if (sortMode.isDesc) "DESC" else "ASC",
+                    pageDirection = pageDirection,
+                    cursor = cursorValue as Long,
+                    limit = limit
+                )
+            }
+            is SortMode.UidSort -> {
+                local.queryPage(
+                    userId = userId,
+                    orderBy = "agent_id",
+                    sortOrder = if (sortMode.isDesc) "DESC" else "ASC",
+                    pageDirection = pageDirection,
+                    cursor = cursorValue as Long,
+                    limit = limit
+                )
+            }
+            is SortMode.StringSort -> {
+                local.queryPageByName(
+                    userId = userId,
+                    sortOrder = if (sortMode.isDesc) "DESC" else "ASC",
+                    pageDirection = pageDirection,
+                    cursor = cursorValue as String,
+                    limit = limit
+                )
+            }
+        }
     }
-}
-
-sealed class AgentEvent {
-    data class ReplaceAll(
-        val list: List<AgentAo>,
-        val source: EventSourceType
-    ) : AgentEvent()
-
-    data class UpsertOne(
-        val agent: AgentAo,
-        val source: EventSourceType
-    ) : AgentEvent()
-
-    data class RemoveOne(
-        val agentId: String,
-        val source: EventSourceType
-    ) : AgentEvent()
-
-    data class Cleared(
-        val source: EventSourceType
-    ) : AgentEvent()
 }
