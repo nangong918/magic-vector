@@ -10,14 +10,11 @@ import com.google.gson.GsonBuilder
 import com.magicvector.dataSource.local.AgentLocalSource
 import com.magicvector.dataSource.local.ChatLocalSource
 import com.magicvector.dataSource.remote.RemoteApiSource
-import com.magicvector.manager.ChatMapController
 import com.magicvector.manager.MessageListController
-import com.magicvector.manager.agent.AgentsManager
-import com.magicvector.manager.chat.ChatCacheManager
 import com.magicvector.manager.control.ControlAgentLogManager
 import com.magicvector.manager.control.ControlConsoleManager
 import com.magicvector.manager.event.agent.AgentEventManager
-import com.magicvector.manager.event.chat.ChatEventManager
+import com.magicvector.manager.event.chat.ChatEventMapManager
 import com.magicvector.manager.network.NetworkManager
 import com.magicvector.manager.user.UserManager
 import com.magicvector.manager.yolo.VisionManager
@@ -118,45 +115,20 @@ class MainApplication : Application() {
             return messageListController
         }
 
-        private var agentsManager: AgentsManager? = null
-        fun getAgentsManager(): AgentsManager {
-            if (agentsManager == null) {
-                agentsManager = AgentsManager()
-            }
-            return agentsManager!!
-        }
-
         private var agentEventManager: AgentEventManager? = null
         fun getAgentEventManager(): AgentEventManager {
             if (agentEventManager == null) {
-                agentEventManager = AgentEventManager(getAgentsManager())
+                agentEventManager = AgentEventManager()
             }
             return agentEventManager!!
         }
 
-        // chatMapManager
-        private var chatMapController: ChatMapController? = null
-        fun getChatMapManager(): ChatMapController {
-            if (chatMapController == null) {
-                chatMapController = ChatMapController()
+        private var chatEventMapManager: ChatEventMapManager? = null
+        fun getChatEventMapManager(): ChatEventMapManager {
+            if (chatEventMapManager == null) {
+                chatEventMapManager = ChatEventMapManager.getInstance()
             }
-            return chatMapController!!
-        }
-
-        private var chatCacheManager: ChatCacheManager? = null
-        fun getChatCacheManager(): ChatCacheManager {
-            if (chatCacheManager == null) {
-                chatCacheManager = ChatCacheManager.getInstance(getApp())
-            }
-            return chatCacheManager!!
-        }
-
-        private var chatEventManager: ChatEventManager? = null
-        fun getChatEventManager(): ChatEventManager {
-            if (chatEventManager == null) {
-                chatEventManager = ChatEventManager()
-            }
-            return chatEventManager!!
+            return chatEventMapManager!!
         }
 
         private var agentLocalSource: AgentLocalSource? = null

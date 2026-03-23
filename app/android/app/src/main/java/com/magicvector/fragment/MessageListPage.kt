@@ -44,7 +44,7 @@ import com.magicvector.viewModel.fragment.*
 @Composable
 fun MessageListScreen(
     modifier: Modifier = Modifier,
-    viewModel: MessageListMviVm,
+    viewModel: MessageListVm,
     onCreateAgentClick: () -> Unit = {},
     onOpenChat: (AgentChatBO) -> Unit = {},
     onOpenAgentEditor: (Long) -> Unit = {}

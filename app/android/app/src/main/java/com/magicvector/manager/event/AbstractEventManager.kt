@@ -512,4 +512,13 @@ abstract class AbstractEventManager<TItem : SortItem>(
             PageDirection.DOWN -> _items.value.lastOrNull()
         }
     }
+
+    /**
+     * 清空列表（公开方法，用于清理缓存）
+     * @param event 变更事件，默认使用 UserAction.ClearCache
+     * @return 清空后的空列表
+     */
+    open fun clearCache(event: EventSource = EventSource.UserAction.DeleteAllCache): List<TItem> {
+        return clear(event)
+    }
 }

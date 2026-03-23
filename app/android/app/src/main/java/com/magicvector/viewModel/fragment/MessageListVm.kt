@@ -4,7 +4,6 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.magicvector.domain.model.agent.AgentChatModel
-import com.magicvector.domain.model.message.MessageContactItemModel
 import com.magicvector.MainApplication
 import com.magicvector.domain.bo.AgentChatBO
 import com.magicvector.domain.event.EventSource
@@ -19,10 +18,10 @@ import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-class MessageListMviVm : ViewModel() {
+class MessageListVm : ViewModel() {
 
     companion object {
-        val TAG: String = MessageListMviVm::class.java.name
+        val TAG: String = MessageListVm::class.java.name
         // ========== Managers（数据源） ==========
         val api = MainApplication.getApiRequestImplInstance()
         val agentEventManager = MainApplication.getAgentEventManager()
