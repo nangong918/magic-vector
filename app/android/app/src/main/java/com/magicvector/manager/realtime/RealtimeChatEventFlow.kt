@@ -1,6 +1,6 @@
 package com.magicvector.manager.realtime
 
-import com.data.domain.constant.VadChatState
+import com.magicvector.domain.constant.VadChatState
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow

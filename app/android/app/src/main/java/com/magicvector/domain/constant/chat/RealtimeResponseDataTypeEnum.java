@@ -1,4 +1,4 @@
-package com.data.domain.constant.chat;
+package com.magicvector.domain.constant.chat;
 
 import com.data.domain.ao.mixLLM.MixLLMEvent;
 import com.data.domain.dto.ws.reponse.RealtimeChatTextResponse;

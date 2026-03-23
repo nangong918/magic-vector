@@ -3,8 +3,8 @@ package com.magicvector.domain.dto.udp;
 import androidx.annotation.NonNull;
 
 import com.core.baseutil.udp.ByteUtils;
-import com.data.domain.constant.BaseConstant;
-import com.data.domain.constant.udp.UdpDataType;
+import com.magicvector.domain.constant.BaseConstant;
+import com.magicvector.domain.constant.udp.UdpDataType;
 
 import org.jetbrains.annotations.NotNull;
 

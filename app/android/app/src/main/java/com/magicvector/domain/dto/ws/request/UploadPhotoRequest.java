@@ -1,6 +1,6 @@
 package com.magicvector.domain.dto.ws.request;
 
-import com.data.domain.constant.chat.RealtimeSystemRequestEventEnum;
+import com.magicvector.domain.constant.chat.RealtimeSystemRequestEventEnum;
 
 public class UploadPhotoRequest {
     public String event = RealtimeSystemRequestEventEnum.UPLOAD_PHOTO.getCode();

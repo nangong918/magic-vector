@@ -1,4 +1,4 @@
-package com.data.domain.constant.chat;
+package com.magicvector.domain.constant.chat;
 
 import org.jetbrains.annotations.NotNull;
 

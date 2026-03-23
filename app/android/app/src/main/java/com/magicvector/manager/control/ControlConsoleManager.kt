@@ -1,7 +1,7 @@
 package com.magicvector.manager.control
 
 import android.util.Log
-import com.data.domain.constant.BaseConstant
+import com.magicvector.domain.constant.BaseConstant
 import com.magicvector.domain.dto.http.request.ControlCommandRequest
 import com.magicvector.domain.dto.http.response.ControlCommandResponse
 import com.magicvector.domain.dto.http.response.ControlStatusResponse

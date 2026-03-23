@@ -1,4 +1,4 @@
-package com.data.domain.constant.udp;
+package com.magicvector.domain.constant.udp;
 
 
 import androidx.annotation.NonNull;

@@ -5,7 +5,7 @@ import android.os.Bundle
 import androidx.lifecycle.lifecycleScope
 import com.core.baseutil.network.networkLoad.NetworkLoadUtils
 import com.core.baseutil.ui.ToastUtils
-import com.data.domain.constant.BaseConstant
+import com.magicvector.domain.constant.BaseConstant
 import com.magicvector.databinding.ActivityCreateAgentBinding
 import com.magicvector.utils.BaseAppCompatVmActivity
 import com.magicvector.viewModel.activity.CreateAgentVm

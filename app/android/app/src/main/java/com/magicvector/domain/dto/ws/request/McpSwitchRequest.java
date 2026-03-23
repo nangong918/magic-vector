@@ -2,7 +2,7 @@ package com.magicvector.domain.dto.ws.request;
 
 
 import com.data.domain.ao.mixLLM.McpSwitch;
-import com.data.domain.constant.chat.RealtimeSystemRequestEventEnum;
+import com.magicvector.domain.constant.chat.RealtimeSystemRequestEventEnum;
 
 /**
  * @author 13225

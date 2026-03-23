@@ -14,7 +14,7 @@ import com.core.baseutil.permissions.GainPermissionCallback
 import com.core.baseutil.permissions.PermissionUtil
 import com.core.baseutil.photo.SelectPhotoUtil
 import com.core.baseutil.ui.ToastUtils
-import com.data.domain.constant.BaseConstant
+import com.magicvector.domain.constant.BaseConstant
 import com.data.domain.fragmentActivity.aao.CreateAgentAAo
 import com.magicvector.MainApplication
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
@@ -120,7 +120,7 @@ class CreateAgentVm(
             name = nameBody,
             description = descriptionBody
         )
-        if (response.agentModel?.agentId != null) {
+        if (response.agent.agentId > 0L) {
             ToastUtils.showToastActivity(
                 context,
                 context.getString(com.view.appview.R.string.create_success)

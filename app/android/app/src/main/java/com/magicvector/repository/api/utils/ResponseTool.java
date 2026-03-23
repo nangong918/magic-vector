@@ -8,7 +8,7 @@ import android.widget.Toast;
 import com.core.baseutil.network.BaseResponse;
 import com.core.baseutil.network.ResponseUtil;
 import com.core.baseutil.ui.ToastUtils;
-import com.data.domain.constant.BaseConstant;
+import com.magicvector.domain.constant.BaseConstant;
 import com.magicvector.repository.api.handler.AsyncRequestCallback;
 import com.magicvector.repository.api.handler.FourConsumer;
 import com.magicvector.repository.api.handler.SyncRequestCallback;

@@ -3,7 +3,7 @@ package com.magicvector.viewModel.activity
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.data.domain.constant.BaseConstant
+import com.magicvector.domain.constant.BaseConstant
 import com.magicvector.MainApplication
 import com.magicvector.domain.dto.http.response.UserTokenVerifyResponse
 import com.magicvector.domain.exception.NetworkBusinessException

@@ -1,12 +1,11 @@
 package com.magicvector.dataSource.remote
 
 import com.core.baseutil.network.BaseResponse
-import com.data.domain.constant.BaseConstant
+import com.magicvector.domain.constant.BaseConstant
 import com.magicvector.MainApplication
 import com.magicvector.domain.convertor.AgentChatConvertor
 import com.magicvector.domain.convertor.ChatMessageConvertor
 import com.magicvector.domain.dto.http.request.AgentDeleteRequest
-import com.magicvector.domain.dto.http.request.ChatByAnchorRequest
 import com.magicvector.domain.dto.http.request.ControlCommandRequest
 import com.magicvector.domain.dto.http.request.UserLoginRequest
 import com.magicvector.domain.dto.http.request.UserPasswordUpdateRequest

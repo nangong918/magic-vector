@@ -1,7 +1,7 @@
 package com.magicvector.domain.dto.http.response
 
-import com.data.domain.constant.chat.MessageTypeEnum
-import com.data.domain.constant.chat.RoleTypeEnum
+import com.magicvector.domain.constant.chat.MessageTypeEnum
+import com.magicvector.domain.constant.chat.RoleTypeEnum
 
 class ChatMessageListResponse {
     val messageList: List<ChatMessageDto> = emptyList()

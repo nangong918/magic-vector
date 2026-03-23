@@ -3,7 +3,8 @@ package com.magicvector.manager.realtime
 import android.Manifest
 import android.util.Base64
 import androidx.annotation.RequiresPermission
-import com.data.domain.constant.VadChatState
+import com.magicvector.domain.constant.VadChatState
+import com.magicvector.domain.constant.chat.RealtimeRequestDataTypeEnum
 import com.magicvector.manager.audio.AudioController
 import com.magicvector.manager.audio.AudioHandleCallback
 import com.magicvector.manager.audio.IsAudioRecording
@@ -107,8 +108,8 @@ class RealtimeChatAudioManager(
 
             override fun onStartRecording() {
                 val dataMap = mapOf(
-                    com.data.domain.constant.chat.RealtimeRequestDataTypeEnum.TYPE to com.data.domain.constant.chat.RealtimeRequestDataTypeEnum.START_AUDIO_RECORD.type,
-                    com.data.domain.constant.chat.RealtimeRequestDataTypeEnum.DATA to com.data.domain.constant.chat.RealtimeRequestDataTypeEnum.START_AUDIO_RECORD.name
+                    RealtimeRequestDataTypeEnum.TYPE to RealtimeRequestDataTypeEnum.START_AUDIO_RECORD.type,
+                    RealtimeRequestDataTypeEnum.DATA to RealtimeRequestDataTypeEnum.START_AUDIO_RECORD.name
                 )
                 wsManager.sendSystemMessage(dataMap)
                 eventFlow.updateRealtimeState(RealtimeChatState.RecordingAndSending)
@@ -116,16 +117,16 @@ class RealtimeChatAudioManager(
 
             override fun onObtainAudio(base64Audio: String) {
                 val dataMap = mapOf(
-                    com.data.domain.constant.chat.RealtimeRequestDataTypeEnum.TYPE to com.data.domain.constant.chat.RealtimeRequestDataTypeEnum.AUDIO_CHUNK.type,
-                    com.data.domain.constant.chat.RealtimeRequestDataTypeEnum.DATA to base64Audio
+                    RealtimeRequestDataTypeEnum.TYPE to RealtimeRequestDataTypeEnum.AUDIO_CHUNK.type,
+                    RealtimeRequestDataTypeEnum.DATA to base64Audio
                 )
                 wsManager.sendSystemMessage(dataMap)
             }
 
             override fun onStopRecording() {
                 val dataMap = mapOf(
-                    com.data.domain.constant.chat.RealtimeRequestDataTypeEnum.TYPE to com.data.domain.constant.chat.RealtimeRequestDataTypeEnum.STOP_AUDIO_RECORD.type,
-                    com.data.domain.constant.chat.RealtimeRequestDataTypeEnum.DATA to com.data.domain.constant.chat.RealtimeRequestDataTypeEnum.STOP_AUDIO_RECORD.name
+                    RealtimeRequestDataTypeEnum.TYPE to RealtimeRequestDataTypeEnum.STOP_AUDIO_RECORD.type,
+                    RealtimeRequestDataTypeEnum.DATA to RealtimeRequestDataTypeEnum.STOP_AUDIO_RECORD.name
                 )
                 wsManager.sendSystemMessage(dataMap)
             }
@@ -146,8 +147,8 @@ class RealtimeChatAudioManager(
 
             override fun onStopSpeech() {
                 val dataMap = mapOf(
-                    com.data.domain.constant.chat.RealtimeRequestDataTypeEnum.TYPE to com.data.domain.constant.chat.RealtimeRequestDataTypeEnum.STOP_AUDIO_RECORD.type,
-                    com.data.domain.constant.chat.RealtimeRequestDataTypeEnum.DATA to com.data.domain.constant.chat.RealtimeRequestDataTypeEnum.STOP_AUDIO_RECORD.name
+                    RealtimeRequestDataTypeEnum.TYPE to RealtimeRequestDataTypeEnum.STOP_AUDIO_RECORD.type,
+                    RealtimeRequestDataTypeEnum.DATA to RealtimeRequestDataTypeEnum.STOP_AUDIO_RECORD.name
                 )
                 wsManager.sendSystemMessage(dataMap)
                 eventFlow.emitVadState(VadChatState.Silent)
@@ -158,8 +159,8 @@ class RealtimeChatAudioManager(
     private fun sendAudioData(audioBuffer: ByteArray, isStart: Boolean = false) {
         if (isStart) {
             val startMap = mapOf(
-                com.data.domain.constant.chat.RealtimeRequestDataTypeEnum.TYPE to com.data.domain.constant.chat.RealtimeRequestDataTypeEnum.START_AUDIO_RECORD.type,
-                com.data.domain.constant.chat.RealtimeRequestDataTypeEnum.DATA to com.data.domain.constant.chat.RealtimeRequestDataTypeEnum.START_AUDIO_RECORD.name
+                RealtimeRequestDataTypeEnum.TYPE to RealtimeRequestDataTypeEnum.START_AUDIO_RECORD.type,
+                RealtimeRequestDataTypeEnum.DATA to RealtimeRequestDataTypeEnum.START_AUDIO_RECORD.name
             )
             wsManager.sendSystemMessage(startMap)
         }
@@ -167,8 +168,8 @@ class RealtimeChatAudioManager(
         if (audioBuffer.isNotEmpty()) {
             val base64Audio = Base64.encodeToString(audioBuffer, 0, audioBuffer.size, Base64.NO_WRAP)
             val dataMap = mapOf(
-                com.data.domain.constant.chat.RealtimeRequestDataTypeEnum.TYPE to com.data.domain.constant.chat.RealtimeRequestDataTypeEnum.AUDIO_CHUNK.type,
-                com.data.domain.constant.chat.RealtimeRequestDataTypeEnum.DATA to base64Audio
+                RealtimeRequestDataTypeEnum.TYPE to RealtimeRequestDataTypeEnum.AUDIO_CHUNK.type,
+                RealtimeRequestDataTypeEnum.DATA to base64Audio
             )
             wsManager.sendSystemMessage(dataMap)
         }

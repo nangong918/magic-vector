@@ -4,7 +4,6 @@ import android.Manifest
 import android.content.Intent
 import android.os.Bundle
 import android.provider.MediaStore
-import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
@@ -32,7 +31,7 @@ import androidx.lifecycle.lifecycleScope
 import coil.compose.AsyncImage
 import com.core.baseutil.permissions.GainPermissionCallback
 import com.core.baseutil.ui.ToastUtils
-import com.data.domain.constant.BaseConstant
+import com.magicvector.domain.constant.BaseConstant
 import com.magicvector.ui.theme.MagicVectorTheme
 import com.magicvector.ui.view.InfoBarView
 import com.magicvector.ui.view.activity.AgentDescriptionInput

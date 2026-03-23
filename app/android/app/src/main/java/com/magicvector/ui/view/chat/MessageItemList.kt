@@ -23,7 +23,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.data.domain.constant.chat.RoleTypeEnum
+import com.magicvector.domain.constant.chat.MessageTypeEnum
+import com.magicvector.domain.constant.chat.RoleTypeEnum
 import com.magicvector.domain.model.chat.ChatMessageModel
 import com.magicvector.domain.vo.message.ChatBriefMessageVO
 import com.magicvector.domain.vo.message.ChatMessageVO
@@ -142,7 +143,7 @@ fun MessageListView(
                         messageText = message.chatMessageVo.briefMessageVo.content,
                         messageImageUrl = message.chatMessageVo.imgUrl.takeIf { it.isNotEmpty() },
                         timeText = message.chatMessageVo.briefMessageVo.chatTime,
-                        isShowImage = message.chatMessageVo.messageType != com.data.domain.constant.chat.MessageTypeEnum.TEXT.value,
+                        isShowImage = message.chatMessageVo.messageType != MessageTypeEnum.TEXT.value,
                     )
                 }
                 else -> {
@@ -153,7 +154,7 @@ fun MessageListView(
                         messageText = message.chatMessageVo.briefMessageVo.content,
                         messageImageUrl = message.chatMessageVo.imgUrl.takeIf { it.isNotEmpty() },
                         timeText = message.chatMessageVo.briefMessageVo.chatTime,
-                        isShowImage = message.chatMessageVo.messageType != com.data.domain.constant.chat.MessageTypeEnum.TEXT.value,
+                        isShowImage = message.chatMessageVo.messageType != MessageTypeEnum.TEXT.value,
                     )
                 }
             }
@@ -195,7 +196,7 @@ private fun ChatScreen() {
                         role = RoleTypeEnum.AGENT.value
                     ),
                     imgUrl = "",
-                    messageType = com.data.domain.constant.chat.MessageTypeEnum.TEXT.value
+                    messageType = MessageTypeEnum.TEXT.value
                 ),
                 agentId = 1L,
                 userId = 1L,
@@ -210,7 +211,7 @@ private fun ChatScreen() {
                         role = RoleTypeEnum.USER.value
                     ),
                     imgUrl = "",
-                    messageType = com.data.domain.constant.chat.MessageTypeEnum.TEXT.value
+                    messageType = MessageTypeEnum.TEXT.value
                 ),
                 agentId = 1L,
                 userId = 1L,
@@ -225,7 +226,7 @@ private fun ChatScreen() {
                         role = RoleTypeEnum.AGENT.value
                     ),
                     imgUrl = "",
-                    messageType = com.data.domain.constant.chat.MessageTypeEnum.TEXT.value
+                    messageType = MessageTypeEnum.TEXT.value
                 ),
                 agentId = 1L,
                 userId = 1L,
@@ -251,7 +252,7 @@ private fun ChatScreen() {
                                 role = RoleTypeEnum.AGENT.value
                             ),
                             imgUrl = "",
-                            messageType = com.data.domain.constant.chat.MessageTypeEnum.TEXT.value
+                            messageType = MessageTypeEnum.TEXT.value
                         ),
                         agentId = 1L,
                         userId = 1L,

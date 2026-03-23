@@ -1,4 +1,4 @@
-package com.data.domain.constant.chat
+package com.magicvector.domain.constant.chat
 
 enum class MessageTypeEnum(val value: Int, val desc: String) {
     UNKNOWN(-1, "unknown"),
@@ -7,7 +7,7 @@ enum class MessageTypeEnum(val value: Int, val desc: String) {
 
     companion object {
         fun getMessageType(value: Int): MessageTypeEnum {
-            return MessageTypeEnum.entries.find { it.value == value } ?: UNKNOWN
+            return entries.find { it.value == value } ?: UNKNOWN
         }
     }
 }

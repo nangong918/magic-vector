@@ -1,6 +1,5 @@
-package com.data.domain.constant.chat;
+package com.magicvector.domain.constant.chat;
 
-import com.data.domain.dto.ws.request.RealtimeChatConnectRequest;
 
 import org.jetbrains.annotations.NotNull;
 

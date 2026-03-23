@@ -5,7 +5,7 @@ import android.graphics.Bitmap
 import android.os.Build
 import android.os.Environment
 import android.util.Base64
-import com.data.domain.constant.BaseConstant
+import com.magicvector.domain.constant.BaseConstant
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.FileOutputStream

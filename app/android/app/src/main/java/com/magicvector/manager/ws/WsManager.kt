@@ -2,9 +2,9 @@ package com.magicvector.manager.ws
 
 import android.util.Log
 import com.magicvector.domain.model.chat.ChatWsTextMessageParseModel
-import com.data.domain.constant.chat.RealtimeRequestDataTypeEnum
-import com.data.domain.constant.chat.RealtimeResponseDataTypeEnum
-import com.data.domain.constant.chat.RoleTypeEnum
+import com.magicvector.domain.constant.chat.RealtimeRequestDataTypeEnum
+import com.magicvector.domain.constant.chat.RealtimeResponseDataTypeEnum
+import com.magicvector.domain.constant.chat.RoleTypeEnum
 import com.magicvector.domain.dto.ws.response.WsChatTextResponse
 import com.magicvector.domain.dto.ws.request.RealtimeChatBindChannelRequest
 import com.magicvector.domain.dto.ws.request.RealtimeChatConnectRequest

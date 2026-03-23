@@ -1,4 +1,4 @@
-package com.data.domain.constant.chat
+package com.magicvector.domain.constant.chat
 
 // image, image list, video
 enum class VisionTypeEnum(val code: String) {
@@ -10,7 +10,7 @@ enum class VisionTypeEnum(val code: String) {
 
     companion object {
         fun getVisionType(code: String): VisionTypeEnum {
-            return VisionTypeEnum.entries.find { it.code == code } ?: UNKNOWN
+            return entries.find { it.code == code } ?: UNKNOWN
         }
     }
 }

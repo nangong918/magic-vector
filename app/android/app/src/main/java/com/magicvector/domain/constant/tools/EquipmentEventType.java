@@ -1,4 +1,4 @@
-package com.data.domain.constant.tools;
+package com.magicvector.domain.constant.tools;
 
 /**
  * @author 13225

@@ -5,7 +5,6 @@ import android.content.Intent
 import android.os.Binder
 import android.os.IBinder
 import com.magicvector.manager.RealtimeChatController
-import com.magicvector.manager.yolo.VisionManager
 
 /**
  * Chat后台Service

@@ -2,7 +2,7 @@ package com.magicvector.repository.api.config
 
 import android.util.Log
 import com.core.baseutil.debug.DebugEnvironment
-import com.data.domain.constant.BaseConstant
+import com.magicvector.domain.constant.BaseConstant
 
 
 open class ApiUrlConfig {

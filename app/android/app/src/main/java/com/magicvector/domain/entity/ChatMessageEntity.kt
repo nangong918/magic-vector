@@ -4,8 +4,8 @@ import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.Index
 import androidx.room.PrimaryKey
-import com.data.domain.constant.chat.MessageTypeEnum
-import com.data.domain.constant.chat.RoleTypeEnum
+import com.magicvector.domain.constant.chat.MessageTypeEnum
+import com.magicvector.domain.constant.chat.RoleTypeEnum
 
 /**
  * 聊天消息业务持久化

@@ -1,12 +1,10 @@
 package com.magicvector.manager.yolo
 
 import android.util.Log
-import com.core.baseutil.debug.DebugEnvironment
 import com.data.domain.ao.yolo.TargetActivityDetectionResult
-import com.data.domain.constant.BaseConstant
+import com.magicvector.domain.constant.BaseConstant
 import com.detection.yolov8.BoundingBox
 import com.detection.yolov8.targetPoint.TargetPoint
-import com.magicvector.MainApplication
 import kotlin.math.abs
 import kotlin.math.pow
 import kotlin.math.sqrt

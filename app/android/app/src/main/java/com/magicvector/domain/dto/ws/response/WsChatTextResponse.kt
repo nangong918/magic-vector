@@ -1,6 +1,6 @@
 package com.magicvector.domain.dto.ws.response
 
-import com.data.domain.constant.chat.RoleTypeEnum
+import com.magicvector.domain.constant.chat.RoleTypeEnum
 
 /**
  * WebSocket实时聊天文本响应DTO

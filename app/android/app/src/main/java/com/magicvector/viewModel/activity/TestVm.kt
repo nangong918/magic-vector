@@ -19,8 +19,8 @@ import androidx.lifecycle.viewModelScope
 import com.core.baseutil.permissions.GainPermissionCallback
 import com.core.baseutil.permissions.PermissionUtil
 import com.core.baseutil.ui.ToastUtils
-import com.data.domain.constant.BaseConstant
-import com.data.domain.constant.test.RealtimeDataTypeEnum
+import com.magicvector.domain.constant.BaseConstant
+import com.magicvector.domain.constant.test.RealtimeDataTypeEnum
 import com.magicvector.domain.dto.ws.request.RealtimeChatConnectRequest
 import com.magicvector.domain.dto.ws.response.WsChatTextResponse
 import com.magicvector.domain.event.WebSocketMessageEvent

@@ -1,7 +1,7 @@
-package com.data.domain.constant
+package com.magicvector.domain.constant
 
-import com.data.domain.constant.chat.VisionTypeEnum
-import com.data.domain.constant.chat.VisionUploadTypeEnum
+import com.magicvector.domain.constant.chat.VisionTypeEnum
+import com.magicvector.domain.constant.chat.VisionUploadTypeEnum
 
 class BaseConstant {
 

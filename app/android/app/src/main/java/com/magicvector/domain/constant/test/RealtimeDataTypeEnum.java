@@ -1,4 +1,4 @@
-package com.data.domain.constant.test;
+package com.magicvector.domain.constant.test;
 
 import org.jetbrains.annotations.NotNull;
 

@@ -3,8 +3,9 @@ package com.magicvector.manager.realtime
 
 import android.util.Log
 import com.magicvector.repository.api.config.ApiUrlConfig
-import com.data.domain.constant.BaseConstant
+import com.magicvector.domain.constant.BaseConstant
 import com.magicvector.MainApplication
+import com.magicvector.domain.constant.chat.RealtimeRequestDataTypeEnum
 import com.magicvector.manager.ws.WsManager
 import com.magicvector.utils.chat.RealtimeChatWsClient
 import okhttp3.Response
@@ -71,8 +72,8 @@ class RealtimeChatWebSocketManager(
      */
     fun sendTextMessage(message: String) {
         val dataMap = mapOf(
-            com.data.domain.constant.chat.RealtimeRequestDataTypeEnum.TYPE to com.data.domain.constant.chat.RealtimeRequestDataTypeEnum.USER_TEXT_MESSAGE.type,
-            com.data.domain.constant.chat.RealtimeRequestDataTypeEnum.DATA to message
+            RealtimeRequestDataTypeEnum.TYPE to RealtimeRequestDataTypeEnum.USER_TEXT_MESSAGE.type,
+            RealtimeRequestDataTypeEnum.DATA to message
         )
         realtimeChatWsClient?.sendMessage(dataMap)
     }

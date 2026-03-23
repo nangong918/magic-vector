@@ -1,4 +1,4 @@
-package com.data.domain.constant.chat
+package com.magicvector.domain.constant.chat
 
 enum class VisionUploadTypeEnum(val code: String) {
     UNKNOWN("unknown"),

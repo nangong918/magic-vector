@@ -1,4 +1,4 @@
-package com.data.domain.constant.chat
+package com.magicvector.domain.constant.chat
 
 /**
  * 发送消息类型枚举
@@ -11,7 +11,7 @@ enum class SendMessageTypeEnum(val value: Int, val desc: String) {
 
     companion object {
         fun getSendMessageType(value: Int): SendMessageTypeEnum {
-            return SendMessageTypeEnum.entries.find { it.value == value } ?: VIEW_TYPE_USER
+            return entries.find { it.value == value } ?: VIEW_TYPE_USER
         }
     }
 

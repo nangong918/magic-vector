@@ -6,7 +6,7 @@ import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.core.baseutil.file.FileUtil
-import com.data.domain.constant.BaseConstant
+import com.magicvector.domain.constant.BaseConstant
 import com.magicvector.MainApplication
 import com.magicvector.domain.exception.NetworkBusinessException
 import com.magicvector.domain.model.user.UserSessionModel

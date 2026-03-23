@@ -3,8 +3,9 @@ package com.magicvector.manager
 import android.Manifest
 import androidx.annotation.RequiresPermission
 import com.data.domain.ao.mixLLM.McpSwitch
-import com.data.domain.constant.VadChatState
+import com.magicvector.domain.constant.VadChatState
 import com.magicvector.MainApplication
+import com.magicvector.domain.constant.chat.RealtimeRequestDataTypeEnum
 import com.magicvector.domain.model.message.MessageContactItemModel
 import com.magicvector.manager.audio.IsAudioRecording
 import com.magicvector.manager.mcp.HandleSystemResponse
@@ -148,8 +149,8 @@ class RealtimeChatController : IsAudioRecording {
     private fun sendMcpSwitch(mcpSwitch: McpSwitch) {
         val mcpSwitchJson = MainApplication.GSON.toJson(mcpSwitch)
         val dataMap = mapOf(
-            com.data.domain.constant.chat.RealtimeRequestDataTypeEnum.TYPE to com.data.domain.constant.chat.RealtimeRequestDataTypeEnum.SYSTEM_MESSAGE.type,
-            com.data.domain.constant.chat.RealtimeRequestDataTypeEnum.DATA to mcpSwitchJson
+            RealtimeRequestDataTypeEnum.TYPE to RealtimeRequestDataTypeEnum.SYSTEM_MESSAGE.type,
+            RealtimeRequestDataTypeEnum.DATA to mcpSwitchJson
         )
         webSocketManager.sendSystemMessage(dataMap)
     }

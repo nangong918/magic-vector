@@ -10,7 +10,7 @@ import android.media.MediaRecorder
 import android.util.Base64
 import android.util.Log
 import androidx.annotation.RequiresPermission
-import com.data.domain.constant.BaseConstant
+import com.magicvector.domain.constant.BaseConstant
 import com.magicvector.manager.audio.vad.VadDetectionCallback
 import com.magicvector.manager.audio.vad.VadSileroController
 import kotlinx.coroutines.CoroutineScope

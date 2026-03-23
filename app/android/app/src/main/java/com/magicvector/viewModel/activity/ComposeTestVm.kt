@@ -12,8 +12,8 @@ import androidx.compose.runtime.Stable
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.data.domain.constant.BaseConstant
-import com.data.domain.constant.test.RealtimeDataTypeEnum
+import com.magicvector.domain.constant.BaseConstant
+import com.magicvector.domain.constant.test.RealtimeDataTypeEnum
 import com.magicvector.domain.dto.ws.request.RealtimeChatConnectRequest
 import com.magicvector.domain.dto.ws.response.WsChatTextResponse
 import com.magicvector.domain.event.WebSocketMessageEvent

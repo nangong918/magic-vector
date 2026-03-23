@@ -3,7 +3,7 @@ package com.magicvector.repository.api.config
 import com.core.baseutil.network.BaseApiRequestProvider
 import com.core.baseutil.network.LoggingInterceptor
 import com.core.baseutil.network.TimeoutInterceptor
-import com.data.domain.constant.BaseConstant
+import com.magicvector.domain.constant.BaseConstant
 import com.magicvector.repository.api.ApiRequest
 import okhttp3.Interceptor
 

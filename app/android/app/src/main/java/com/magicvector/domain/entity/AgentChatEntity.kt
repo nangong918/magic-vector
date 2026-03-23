@@ -4,7 +4,7 @@ import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.Index
 import androidx.room.PrimaryKey
-import com.data.domain.constant.chat.RoleTypeEnum
+import com.magicvector.domain.constant.chat.RoleTypeEnum
 
 /**
  * Agent Item 业务持久化

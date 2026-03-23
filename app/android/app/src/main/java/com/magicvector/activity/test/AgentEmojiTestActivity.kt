@@ -25,7 +25,7 @@ import androidx.lifecycle.LifecycleOwner
 import com.core.baseutil.fragmentActivity.BaseAppCompatActivity
 import com.core.baseutil.permissions.GainPermissionCallback
 import com.core.baseutil.permissions.PermissionUtil
-import com.data.domain.constant.BaseConstant
+import com.magicvector.domain.constant.BaseConstant
 import com.detection.yolov8.BoundingBox
 import com.detection.yolov8.Detector
 import com.detection.yolov8.YOLOv8Constants

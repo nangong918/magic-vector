@@ -1,7 +1,7 @@
 package com.magicvector.domain.vo.message
 
-import com.data.domain.constant.chat.MessageTypeEnum
-import com.data.domain.constant.chat.RoleTypeEnum
+import com.magicvector.domain.constant.chat.MessageTypeEnum
+import com.magicvector.domain.constant.chat.RoleTypeEnum
 
 /**
  * 聊天项vo

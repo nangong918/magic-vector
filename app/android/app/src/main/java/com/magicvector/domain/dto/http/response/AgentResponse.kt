@@ -1,6 +1,6 @@
 package com.magicvector.domain.dto.http.response
 
-import com.data.domain.constant.chat.RoleTypeEnum
+import com.magicvector.domain.constant.chat.RoleTypeEnum
 
 
 data class AgentListResponse (

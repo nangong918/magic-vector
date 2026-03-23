@@ -2,7 +2,7 @@ package com.magicvector.manager.vl
 
 import android.graphics.Bitmap
 import com.core.baseutil.log.Log
-import com.data.domain.constant.BaseConstant
+import com.magicvector.domain.constant.BaseConstant
 import com.magicvector.domain.dto.udp.VideoUdpPacket
 import com.magicvector.MainApplication
 import kotlinx.coroutines.CoroutineScope

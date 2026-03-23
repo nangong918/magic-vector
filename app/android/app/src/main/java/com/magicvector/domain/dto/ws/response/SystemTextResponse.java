@@ -1,7 +1,7 @@
 package com.magicvector.domain.dto.ws.response;
 
 
-import com.data.domain.constant.chat.RealtimeSystemResponseEventEnum;
+import com.magicvector.domain.constant.chat.RealtimeSystemResponseEventEnum;
 
 /**
  * @author 13225

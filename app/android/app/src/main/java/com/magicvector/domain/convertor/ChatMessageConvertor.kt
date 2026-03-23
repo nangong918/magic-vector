@@ -1,6 +1,6 @@
 package com.magicvector.domain.convertor
 
-import com.data.domain.constant.chat.MessageTypeEnum
+import com.magicvector.domain.constant.chat.MessageTypeEnum
 import com.magicvector.domain.convertor.base.BaseConvertor
 import com.magicvector.domain.dto.http.response.ChatMessageDto
 import com.magicvector.domain.dto.ws.response.WsChatTextResponse

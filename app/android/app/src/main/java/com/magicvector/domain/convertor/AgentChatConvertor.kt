@@ -1,6 +1,6 @@
 package com.magicvector.domain.convertor
 
-import com.data.domain.constant.chat.RoleTypeEnum
+import com.magicvector.domain.constant.chat.RoleTypeEnum
 import com.magicvector.domain.convertor.base.BaseConvertor
 import com.magicvector.domain.dto.http.response.AgentChatDto
 import com.magicvector.domain.entity.AgentChatEntity

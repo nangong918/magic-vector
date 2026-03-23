@@ -1,4 +1,4 @@
-package com.data.domain.constant
+package com.magicvector.domain.constant
 
 open class VadChatState {
     // 静音中

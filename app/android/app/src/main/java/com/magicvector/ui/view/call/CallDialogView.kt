@@ -32,7 +32,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import coil.compose.AsyncImage
-import com.data.domain.constant.VadChatState
+import com.magicvector.domain.constant.VadChatState
 
 @Composable
 fun CallDialogView(
