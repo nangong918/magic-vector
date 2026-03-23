@@ -31,16 +31,14 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.sp
-import com.magicvector.domain.model.message.MessageContactItemModel
-import com.data.domain.vo.message.MessageContactItemVo
-import com.magicvector.viewModel.fragment.MessageListIntent
-import com.magicvector.viewModel.fragment.MessageListDataState
-import com.magicvector.viewModel.fragment.MessageListMviVm
-import com.magicvector.viewModel.fragment.MessageListState
-import com.magicvector.viewModel.fragment.MessageListUiMode
+import com.magicvector.domain.bo.AgentChatBO
+import com.magicvector.domain.model.agent.AgentChatModel
+import com.magicvector.domain.vo.agent.AgentChatVO
+import com.magicvector.domain.vo.agent.AgentVO
+import com.magicvector.domain.vo.message.ChatBriefMessageVO
 import com.magicvector.ui.view.messageList.MessageListItem
 import com.magicvector.ui.view.NetworkLoadingOverlay
-import com.magicvector.viewModel.fragment.MessageListEffect
+import com.magicvector.viewModel.fragment.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -48,12 +46,13 @@ fun MessageListScreen(
     modifier: Modifier = Modifier,
     viewModel: MessageListMviVm,
     onCreateAgentClick: () -> Unit = {},
-    onOpenChat: (MessageContactItemModel) -> Unit = {},
-    onOpenAgentEditor: (String) -> Unit = {}
+    onOpenChat: (AgentChatBO) -> Unit = {},
+    onOpenAgentEditor: (Long) -> Unit = {}
 ) {
     val context = LocalContext.current
-    val state by viewModel.uiState.collectAsState()
+    val uiState by viewModel.uiState.collectAsState()
     val dataState by viewModel.dataState.collectAsState()
+    val agents by viewModel.agents.collectAsState()  // 直接从 Manager 观察数据
     val listState = rememberLazyListState()
 
     // 初始化
@@ -69,7 +68,7 @@ fun MessageListScreen(
                     Toast.makeText(context, effect.message, Toast.LENGTH_SHORT).show()
                 }
                 is MessageListEffect.NavigateToChat -> {
-                    onOpenChat(effect.ao)
+                    onOpenChat(effect.bo)
                 }
                 is MessageListEffect.OpenAgentEditor -> {
                     onOpenAgentEditor(effect.agentId)
@@ -81,7 +80,7 @@ fun MessageListScreen(
 
     // 下拉刷新
     PullToRefreshBox(
-        isRefreshing = state.isRefreshing,
+        isRefreshing = uiState.isRefreshing,
         onRefresh = { viewModel.processIntent(MessageListIntent.Refresh) },
         modifier = modifier.fillMaxSize()
     ) {
@@ -98,21 +97,18 @@ fun MessageListScreen(
                         .fillMaxWidth()
                         .weight(1f)
                 ) {
-                    when (state.uiMode) {
+                    when (uiState.uiMode) {
                         MessageListUiMode.NO_AGENT -> {
                             EmptyStateView(
                                 onCreateAgentClick = onCreateAgentClick
                             )
                         }
-                        MessageListUiMode.HAS_AGENT_NO_MESSAGE -> {
-                            NoMessageStateView()
-                        }
-                        MessageListUiMode.HAS_MESSAGE -> {
-                            MessageListContent(
-                                state = state,
+                        MessageListUiMode.HAS_AGENT -> {
+                            AgentListContent(
+                                agents = agents,
                                 listState = listState,
                                 onItemClick = { position ->
-                                    viewModel.processIntent(MessageListIntent.SelectMessage(position))
+                                    viewModel.processIntent(MessageListIntent.SelectAgent(position))
                                 },
                                 onItemLongClick = { position ->
                                     viewModel.processIntent(MessageListIntent.EditAgent(position))
@@ -123,15 +119,15 @@ fun MessageListScreen(
                 }
             }
 
-            if (state.uiMode != MessageListUiMode.NO_AGENT) {
+            if (uiState.uiMode != MessageListUiMode.NO_AGENT) {
                 CreateAgentFloatingButton(
                     onClick = onCreateAgentClick,
                     modifier = Modifier.align(Alignment.BottomEnd)
                 )
             }
 
-            // 顶层加载遮罩，完全由 uiState.isLoading 控制
-            NetworkLoadingOverlay(isLoading = state.isLoading)
+            // 顶层加载遮罩
+            NetworkLoadingOverlay(isLoading = uiState.isLoading)
         }
     }
 }
@@ -161,8 +157,8 @@ private fun MessageServiceStatusView(
 }
 
 @Composable
-fun MessageListContent(
-    state: MessageListState,
+fun AgentListContent(
+    agents: List<AgentChatModel>,
     listState: LazyListState,
     onItemClick: (Int) -> Unit,
     onItemLongClick: (Int) -> Unit
@@ -171,25 +167,27 @@ fun MessageListContent(
         state = listState,
         modifier = Modifier.fillMaxSize()
     ) {
-        // 消息列表
         items(
-            items = state.messages,
-            key = { it.contactId ?: it.hashCode().toString() }
-        ) { message ->
+            items = agents,
+            key = { it.agentId }
+        ) { agent ->
+            // 这里需要根据 AgentChatModel 转换为 MessageListItem 所需的数据
+            // 注意：Agent 列表显示的是 Agent 的基本信息，不是消息预览
+            // 你需要根据实际需求调整显示内容
             MessageListItem(
-                avatarUrl = message.vo.avatarUrl,
-                name = message.vo.name,
-                messagePreview = message.vo.getMessagePreview(),
-                time = message.vo.time ?: "",
-                unreadCount = message.vo.unreadCount,
+                avatarUrl = agent.agentChatVo?.agentVo?.avatarUrl,
+                name = agent.agentChatVo?.agentVo?.name ?: "未知",
+                messagePreview = agent.agentChatVo?.chatBriefMessageVo?.content ?: "暂无消息",
+                time = agent.agentChatVo?.chatBriefMessageVo?.chatTime ?: "",
+                unreadCount = agent.agentChatVo?.unreadCount ?: 0,
                 onClick = {
-                    val position = state.messages.indexOf(message)
+                    val position = agents.indexOf(agent)
                     if (position >= 0) {
                         onItemClick(position)
                     }
                 },
                 onLongClick = {
-                    val position = state.messages.indexOf(message)
+                    val position = agents.indexOf(agent)
                     if (position >= 0) {
                         onItemLongClick(position)
                     }
@@ -233,22 +231,6 @@ fun EmptyStateView(
     }
 }
 
-@Composable
-fun NoMessageStateView(
-    modifier: Modifier = Modifier
-) {
-    Box(
-        modifier = modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center
-    ) {
-        Text(
-            text = stringResource(id = com.view.appview.R.string.have_no_message_now),
-            color = colorResource(id = com.view.appview.R.color.s1_800),
-            fontSize = 20.sp
-        )
-    }
-}
-
 // 创建Agent的FAB
 @SuppressLint("ResourceType")
 @Composable
@@ -271,6 +253,7 @@ fun CreateAgentFloatingButton(
     }
 }
 
+// ========== Preview ==========
 
 @Preview(showBackground = true)
 @Composable
@@ -282,143 +265,60 @@ private fun EmptyStatePreview() {
 
 @Preview(showBackground = true, heightDp = 800)
 @Composable
-private fun MessageListWith10ItemsPreview() {
+private fun AgentListPreview() {
     MaterialTheme {
-        // 创建模拟数据
-        val mockState = createMockMessageListState(10)
-        val listState = rememberLazyListState()
-
-        Column(
-            modifier = Modifier.fillMaxSize()
-        ) {
-            // 标题
-            Text(
-                text = "消息列表预览 (10条消息)",
-                modifier = Modifier.padding(16.dp)
-            )
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            // 消息列表内容
-            MessageListContent(
-                state = mockState,
-                listState = listState,
-                onItemClick = { position ->
-                    println("点击了第 $position 条消息")
-                },
-                onItemLongClick = {}
-            )
-        }
-    }
-}
-
-@Preview(showBackground = true, heightDp = 800)
-@Composable
-private fun MessageListWith0ItemsPreview() {
-    NoMessageStateView()
-}
-
-
-@Preview(showBackground = true, heightDp = 800)
-@Composable
-private fun MessageListWithMixedStatesPreview() {
-    MaterialTheme {
-        // 创建混合状态的模拟数据
-        val mockState = createMixedStateMessageList()
+        val mockAgents = createMockAgents(10)
         val listState = rememberLazyListState()
 
         Column(
             modifier = Modifier.fillMaxSize()
         ) {
             Text(
-                text = "消息列表预览 (混合状态)",
+                text = "Agent列表预览 (10个Agent)",
                 modifier = Modifier.padding(16.dp)
             )
-
             Spacer(modifier = Modifier.height(8.dp))
 
-            MessageListContent(
-                state = mockState,
+            AgentListContent(
+                agents = mockAgents,
                 listState = listState,
                 onItemClick = { position ->
-                    println("点击了第 $position 条消息")
+                    println("点击了第 $position 个Agent")
                 },
-                onItemLongClick = {}
+                onItemLongClick = { position ->
+                    println("长按了第 $position 个Agent")
+                }
             )
         }
     }
 }
 
-// 创建模拟的 MessageListState
-private fun createMockMessageListState(count: Int): MessageListState {
-    val messages = List(count) { index ->
-        createMockMessageItem(index)
-    }
+// 创建模拟的 AgentChatModel 列表
+private fun createMockAgents(count: Int): List<AgentChatModel> {
+    return List(count) { index ->
+        AgentChatModel().apply {
+            agentId = index.toLong()
+            userId = 1L
+            lastChatTime = System.currentTimeMillis() - index * 3_600_000L
+            updatedAt = System.currentTimeMillis() - index * 3_600_000L
 
-    return MessageListState(
-        isLoading = false,
-        isRefreshing = false,
-        messages = messages,
-        messageCount = count,
-        error = null,
-        isFirstOpen = false,
-        needLoadNetworkData = false
-    )
-}
-
-
-// 创建混合状态的消息列表
-private fun createMixedStateMessageList(): MessageListState {
-    val messages = listOf(
-        createMockMessageItem(0, "张三", "你好，最近怎么样？", "10:30", 0),
-        createMockMessageItem(1, "李四", "文件已发送，请查收", "09:15", 2),
-        createMockMessageItem(2, "系统通知", "你的Agent已创建成功", "昨天", 1),
-        createMockMessageItem(3, "王五", "这是一条非常长的消息预览，用来测试换行效果，应该只显示一行并在末尾显示省略号", "2024-01-01", 3),
-        createMockMessageItem(4, "赵六", "收到请回复", "昨天", 5),
-        createMockMessageItem(5, "钱七", "周末一起去吃饭吗？", "11:20", 0),
-        createMockMessageItem(6, "孙八", "项目进展怎么样了？", "周三", 1),
-        createMockMessageItem(7, "周九", "图片已上传", "周二", 0),
-        createMockMessageItem(8, "吴十", "好的，我知道了", "周一", 0),
-        createMockMessageItem(9, "郑十一", "这是一个超长用户名的用户用来测试显示效果", "2024-01-02", 99)
-    )
-
-    return MessageListState(
-        isLoading = false,
-        isRefreshing = false,
-        messages = messages,
-        messageCount = messages.size,
-        error = null,
-        isFirstOpen = false,
-        needLoadNetworkData = false
-    )
-}
-
-// 创建模拟的 MessageContactItemAo
-private fun createMockMessageItem(
-    index: Int,
-    name: String = "用户 $index",
-    preview: String = "这是第 $index 条消息的预览内容",
-    time: String = when (index % 3) {
-        0 -> "10:30"
-        1 -> "昨天"
-        else -> "2024-01-${index + 1}"
-    },
-    unreadCount: Int = when (index % 4) {
-        0 -> 0
-        1 -> 1
-        2 -> 3
-        else -> 5
-    }
-): MessageContactItemModel {
-    return MessageContactItemModel().apply {
-        contactId = "contact_$index"
-        timestamp = System.currentTimeMillis() - index * 3_600_000L
-
-        vo = MessageContactItemVo().apply {
-            this.avatarUrl = null  // 使用默认头像
-            this.name = name
-            this.time = time
-            this.unreadCount = unreadCount
+            agentChatVo = AgentChatVO(
+                unreadCount = (index % 5),
+                agentVo = AgentVO(
+                    name = "Agent $index",
+                    description = "这是Agent $index 的描述",
+                    avatarUrl = null
+                ),
+                chatBriefMessageVo = ChatBriefMessageVO(
+                    content = "这是第 $index 条消息的预览内容",
+                    chatTime = when (index % 3) {
+                        0 -> "10:30"
+                        1 -> "昨天"
+                        else -> "2024-01-${index + 1}"
+                    },
+                    role = 0
+                )
+            )
         }
     }
 }
