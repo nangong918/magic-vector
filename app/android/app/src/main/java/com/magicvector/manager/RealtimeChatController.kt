@@ -1,8 +1,7 @@
 package com.magicvector.manager
 
 import android.Manifest
-import android.os.Handler
-import android.os.Looper
+import android.graphics.Bitmap
 import android.util.Base64
 import android.util.Log
 import androidx.annotation.RequiresPermission
@@ -19,8 +18,6 @@ import com.data.domain.constant.chat.RealtimeSystemResponseEventEnum
 import com.data.domain.fragmentActivity.aao.ChatAAo
 import com.google.gson.reflect.TypeToken
 import com.magicvector.MainApplication
-import com.magicvector.callback.OnVadChatStateChange
-import com.magicvector.callback.OnReceiveAgentTextCallback
 import com.magicvector.manager.audio.AudioController
 import com.magicvector.manager.audio.AudioHandleCallback
 import com.magicvector.manager.audio.IsAudioRecording
@@ -34,8 +31,11 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -43,21 +43,21 @@ import okhttp3.Response
 import okhttp3.WebSocket
 import okhttp3.WebSocketListener
 import okio.ByteString
-import java.util.concurrent.atomic.AtomicBoolean
 import com.data.domain.constant.chat.MessageTypeEnum
 import com.magicvector.domain.model.chat.ChatMessageModel
 import com.magicvector.domain.vo.message.ChatBriefMessageVO
 import com.magicvector.domain.vo.message.ChatMessageVO
 import com.magicvector.manager.event.chat.ChatEventManager
 import com.magicvector.utils.sort.PageDirection
+import java.util.concurrent.atomic.AtomicBoolean
 
 /**
  * 实时聊天控制器 - MVI 设计模式
  * 状态驱动，事件流管理
  * 维护：
  * 1. WS消息长连接
- * 2. VAD语音活动检测
- * 3. YOLOv8物体检测
+ * 2. VAD语音活动检测（持续录音）
+ * 3. YOLOv8物体检测（通过UDP持续发送视频帧）
  * 4. ChatEventManager历史消息
  */
 class RealtimeChatController : IsAudioRecording {
@@ -65,7 +65,6 @@ class RealtimeChatController : IsAudioRecording {
     companion object {
         const val TAG = "RealtimeChatController"
         val GSON = MainApplication.GSON
-        val mainHandler: Handler = Handler(Looper.getMainLooper())
     }
 
     // ========== MVI State ==========
@@ -75,26 +74,33 @@ class RealtimeChatController : IsAudioRecording {
     private val _realtimeState = MutableStateFlow<RealtimeChatState>(RealtimeChatState.NotInitialized)
     val realtimeState: StateFlow<RealtimeChatState> = _realtimeState.asStateFlow()
 
+    // ========== Events (替代回调) ==========
+    private val _vadStateEvents = MutableSharedFlow<VadChatState>()
+    val vadStateEvents: SharedFlow<VadChatState> = _vadStateEvents.asSharedFlow()
+
+    private val _agentTextEvents = MutableSharedFlow<String>()
+    val agentTextEvents: SharedFlow<String> = _agentTextEvents.asSharedFlow()
+
     // ========== Data ==========
     private val cacheScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
-    private val currentIsEmoji = AtomicBoolean(false)
-    private var onVadChatStateChange: OnVadChatStateChange? = null
-    private var onReceiveAgentTextCallback: OnReceiveAgentTextCallback? = null
+    private var udpVisionManager: UdpVisionManager? = null
     var messageContactItemModel: MessageContactItemModel? = null
-    var currentAgentId: Long = 0L
 
     // ========== Network ==========
     private var realtimeChatWsClient: RealtimeChatWsClient? = null
     private var userId: Long? = null
     private var agentId: Long? = null
+    private val manualWsClosing = AtomicBoolean(false)
 
     // ========== Audio ==========
     var audioController: AudioController? = null
-    var isChatCalling: AtomicBoolean? = null
 
     // ========== Handlers ==========
     private var handleSystemResponse: HandleSystemResponse? = null
     private var chatEventManager: ChatEventManager? = null
+
+    // ========== Vision 视频帧回调 ==========
+    private var onVideoFrameCallback: ((Bitmap) -> Unit)? = null
 
     // ========== MVI Intent ==========
     sealed class Intent {
@@ -103,21 +109,18 @@ class RealtimeChatController : IsAudioRecording {
             val ao: MessageContactItemModel?,
             val chatAAo: ChatAAo,
             val initNetworkRunnable: () -> Job,
-            val onReceiveAgentTextCallback: OnReceiveAgentTextCallback,
-            val onVadChatStateChange: OnVadChatStateChange
+            val onVideoFrame: ((Bitmap) -> Unit)? = null
         ) : Intent()
         data class BindChannel(val agentId: Long) : Intent()
         data class SendTextMessage(val message: String) : Intent()
-        data class StartRecordAudio(val scope: CoroutineScope) : Intent()
-        data object StopRecordAudio : Intent()
         data object StartVadCall : Intent()
         data object StopVadCall : Intent()
         data object DestroyVadCall : Intent()
-        data class SetEmojiMode(val isEmoji: Boolean) : Intent()
         data class SendMcpSwitch(val mcpSwitch: McpSwitch) : Intent()
         data object RefreshMessages : Intent()
         data object LoadMoreMessages : Intent()
         data object ClearCache : Intent()
+        data class SendVideoFrame(val bitmap: Bitmap) : Intent()
     }
 
     @RequiresPermission(Manifest.permission.RECORD_AUDIO)
@@ -126,16 +129,14 @@ class RealtimeChatController : IsAudioRecording {
             is Intent.Initialize -> initialize(intent)
             is Intent.BindChannel -> bindChannel(intent.agentId)
             is Intent.SendTextMessage -> sendTextMessage(intent.message)
-            is Intent.StartRecordAudio -> startRecordAudio(intent.scope)
-            Intent.StopRecordAudio -> stopRecordAudio()
             Intent.StartVadCall -> startVadCall()
             Intent.StopVadCall -> stopVadCall()
             Intent.DestroyVadCall -> destroyVadCall()
-            is Intent.SetEmojiMode -> setEmojiMode(intent.isEmoji)
             is Intent.SendMcpSwitch -> sendMcpSwitch(intent.mcpSwitch)
             Intent.RefreshMessages -> refreshMessages()
             Intent.LoadMoreMessages -> loadMoreMessages()
             Intent.ClearCache -> clearCache()
+            is Intent.SendVideoFrame -> sendVideoFrame(intent.bitmap)
         }
     }
 
@@ -145,11 +146,10 @@ class RealtimeChatController : IsAudioRecording {
         _uiState.update { it.copy(isLoading = true) }
 
         this.messageContactItemModel = intent.ao
-        this.onReceiveAgentTextCallback = intent.onReceiveAgentTextCallback
-        this.onVadChatStateChange = intent.onVadChatStateChange
+        this.onVideoFrameCallback = intent.onVideoFrame
 
         intent.ao?.contactId?.toLongOrNull()?.let { agentId ->
-            currentAgentId = agentId
+            this.agentId = agentId
             chatEventManager = MainApplication.getChatEventMapManager().getOrCreateManager(agentId)
         }
 
@@ -165,8 +165,27 @@ class RealtimeChatController : IsAudioRecording {
             throw IllegalArgumentException("Agent Id is Null")
         }
 
+        // 初始化UDP视觉管理器
+        initUdpVisionManager()
+
         intent.initNetworkRunnable.invoke()
         _uiState.update { it.copy(isLoading = false) }
+    }
+
+    private fun initUdpVisionManager() {
+        val userIdStr = MainApplication.getUserId()
+        val agentIdStr = agentId?.toString() ?: return
+        udpVisionManager = UdpVisionManager.getInstance().apply {
+            initialize(userIdStr, agentIdStr)
+        }
+    }
+
+    private fun sendVideoFrame(bitmap: Bitmap) {
+        // 回调给外部（用于YOLOv8识别）
+        onVideoFrameCallback?.invoke(bitmap)
+
+        // 通过UDP发送视频帧给后端
+        udpVisionManager?.sendVideoFrame(bitmap)
     }
 
     private fun bindChannel(agentId: Long) {
@@ -243,6 +262,7 @@ class RealtimeChatController : IsAudioRecording {
         }
 
         realtimeChatWsClient?.let { client ->
+            manualWsClosing.set(false)
             val listener = createWebSocketListener(client)
             if (forceReconnect) {
                 client.reconnect(listener)
@@ -256,11 +276,15 @@ class RealtimeChatController : IsAudioRecording {
         return object : WebSocketListener() {
             override fun onClosed(webSocket: WebSocket, code: Int, reason: String) {
                 _realtimeState.value = RealtimeChatState.Disconnected
+                val shouldReconnect = !manualWsClosing.getAndSet(false)
+                MainApplication.getNetworkManager().onWebSocketDisconnected(shouldReconnect)
             }
 
             override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
                 Log.e(TAG, "realtimeChatWsClient::onFailure: ${t.message}")
                 _realtimeState.value = RealtimeChatState.Error(t.message ?: "-")
+                val shouldReconnect = !manualWsClosing.getAndSet(false)
+                MainApplication.getNetworkManager().onWebSocketDisconnected(shouldReconnect)
             }
 
             override fun onMessage(webSocket: WebSocket, text: String) {
@@ -301,22 +325,14 @@ class RealtimeChatController : IsAudioRecording {
 
     private fun handleStartTts() {
         _realtimeState.value = RealtimeChatState.Receiving
-        onVadChatStateChange?.onChange(VadChatState.Replying)
+        cacheScope.launch { _vadStateEvents.emit(VadChatState.Replying) }
         audioController?.startAudioTrackPlay()
-
-        if (currentIsEmoji.get() || isChatCalling?.get() == true) {
-            audioController?.stopVAD { Log.d(TAG, "AI正在回复, 停止录音") }
-        }
     }
 
     private fun handleStopTts() {
         _realtimeState.value = RealtimeChatState.InitializedConnected
-        onVadChatStateChange?.onChange(VadChatState.Silent)
+        cacheScope.launch { _vadStateEvents.emit(VadChatState.Silent) }
         audioController?.stopAudioTrackPlay()
-
-        if (currentIsEmoji.get() || isChatCalling?.get() == true) {
-            audioController?.startVAD { Log.d(TAG, "AI回复结束, 继续录音") }
-        }
     }
 
     private fun handleAudioChunk(map: Map<String, String>) {
@@ -359,16 +375,7 @@ class RealtimeChatController : IsAudioRecording {
 
         cacheScope.launch {
             chatEventManager?.onWsUpsertOne(chatMessage)
-            onReceiveAgentTextCallback?.onText(response.content)
-        }
-
-        // 同步到本地缓存
-        syncToLocalCache(response)
-    }
-
-    private fun syncToLocalCache(response: com.magicvector.domain.dto.ws.response.WsChatTextResponse) {
-        cacheScope.launch {
-            // 可选：更新本地数据库
+            _agentTextEvents.emit(response.content)
         }
     }
 
@@ -414,7 +421,7 @@ class RealtimeChatController : IsAudioRecording {
         realtimeChatWsClient?.sendMessage(dataMap)
     }
 
-    // ========== 音频处理 ==========
+    // ========== 音频处理（持续录音） ==========
     private fun initAudioController() {
         if (audioController == null) {
             audioController = AudioController(
@@ -427,7 +434,7 @@ class RealtimeChatController : IsAudioRecording {
     private fun createAudioHandleCallback(): AudioHandleCallback {
         return object : AudioHandleCallback {
             override fun onPlayBase64Audio(base64Audio: String) {
-                onVadChatStateChange?.onChange(VadChatState.Replying)
+                cacheScope.launch { _vadStateEvents.emit(VadChatState.Replying) }
             }
 
             override fun onStartRecording() {
@@ -461,12 +468,12 @@ class RealtimeChatController : IsAudioRecording {
         return object : VadDetectionCallback {
             override fun onStartSpeech(audioBuffer: ByteArray) {
                 sendAudioData(audioBuffer, isStart = true)
-                onVadChatStateChange?.onChange(VadChatState.Speaking)
+                cacheScope.launch { _vadStateEvents.emit(VadChatState.Speaking) }
             }
 
             override fun speeching(audioBuffer: ByteArray) {
                 sendAudioData(audioBuffer)
-                onVadChatStateChange?.onChange(VadChatState.Speaking)
+                cacheScope.launch { _vadStateEvents.emit(VadChatState.Speaking) }
             }
 
             override fun onStopSpeech() {
@@ -475,7 +482,7 @@ class RealtimeChatController : IsAudioRecording {
                     RealtimeRequestDataTypeEnum.DATA to RealtimeRequestDataTypeEnum.STOP_AUDIO_RECORD.name
                 )
                 realtimeChatWsClient?.sendMessage(dataMap)
-                onVadChatStateChange?.onChange(VadChatState.Silent)
+                cacheScope.launch { _vadStateEvents.emit(VadChatState.Silent) }
             }
         }
     }
@@ -499,33 +506,21 @@ class RealtimeChatController : IsAudioRecording {
         }
     }
 
-    private fun startRecordAudio(scope: CoroutineScope) {
-        audioController?.startRecordingAudio(isAudioRecording = this, scope)
-    }
-
-    private fun stopRecordAudio() {
-        _realtimeState.value = RealtimeChatState.InitializedConnected
-    }
-
     private fun startVadCall() {
         audioController?.startVAD(onStart = {
-            onVadChatStateChange?.onChange(VadChatState.Silent)
+            cacheScope.launch { _vadStateEvents.emit(VadChatState.Silent) }
         })
     }
 
     private fun stopVadCall() {
         audioController?.stopVAD(onStop = {
-            onVadChatStateChange?.onChange(VadChatState.Muted)
+            cacheScope.launch { _vadStateEvents.emit(VadChatState.Muted) }
         })
     }
 
     private fun destroyVadCall() {
         audioController?.releaseVADController()
-        onVadChatStateChange?.onChange(VadChatState.Muted)
-    }
-
-    private fun setEmojiMode(isEmoji: Boolean) {
-        currentIsEmoji.set(isEmoji)
+        cacheScope.launch { _vadStateEvents.emit(VadChatState.Muted) }
     }
 
     override fun isAudioRecording(): Boolean {
@@ -534,14 +529,6 @@ class RealtimeChatController : IsAudioRecording {
 
     fun setHandleSystemResponse(handleSystemResponse: HandleSystemResponse?) {
         this.handleSystemResponse = handleSystemResponse
-    }
-
-    fun setCurrentVADStateChange(callback: OnVadChatStateChange) {
-        onVadChatStateChange = callback
-    }
-
-    fun initIsChatCalling(isCalling: AtomicBoolean) {
-        this.isChatCalling = isCalling
     }
 
     fun reconnectUserConnectionIfNeeded() {
@@ -553,13 +540,11 @@ class RealtimeChatController : IsAudioRecording {
 
     // ========== 生命周期 ==========
     fun releaseAllResource() {
-        currentIsEmoji.set(false)
-        isChatCalling = null
         messageContactItemModel = null
-        onReceiveAgentTextCallback = null
         _realtimeState.value = RealtimeChatState.NotInitialized
 
         realtimeChatWsClient?.let {
+            manualWsClosing.set(true)
             it.close()
             realtimeChatWsClient = null
             MainApplication.getNetworkManager().onWebSocketDisconnected(shouldReconnect = false)
@@ -567,6 +552,9 @@ class RealtimeChatController : IsAudioRecording {
 
         audioController?.releaseAll()
         audioController = null
+
+        udpVisionManager?.destroy()
+        udpVisionManager = null
     }
 
     fun destroy() {
@@ -578,7 +566,6 @@ class RealtimeChatController : IsAudioRecording {
 // ========== State 定义 ==========
 data class RealtimeChatUiState(
     val isLoading: Boolean = false,
-    val isEmojiMode: Boolean = false,
     val agentText: String = ""
 )
 
@@ -599,4 +586,3 @@ open class RealtimeChatState {
     // 错误
     data class Error(val message: String) : RealtimeChatState()
 }
-
