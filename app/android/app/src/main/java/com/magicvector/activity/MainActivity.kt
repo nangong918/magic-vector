@@ -18,8 +18,7 @@ import androidx.annotation.RequiresPermission
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import com.magicvector.domain.model.message.MessageContactItemModel
-import com.data.domain.fragmentActivity.intentAo.ChatIntentAo
+import com.magicvector.domain.bo.AgentChatBO
 import com.magicvector.service.ChatService
 import com.magicvector.ui.theme.MagicVectorTheme
 import com.magicvector.viewModel.activity.MainEffect
@@ -135,10 +134,9 @@ class MainActivity : BaseComponentActivity() {
         vm.processIntent(MainIntent.ChatServiceUnbound)
     }
 
-    private fun openChatPage(ao: MessageContactItemModel) {
-        val intentAo = ChatIntentAo().apply { this.ao = ao }
+    private fun openChatPage(agentBo: AgentChatBO) {
         val intent = Intent(this, ComposeAgentChatActivity::class.java).apply {
-            putExtra(ChatIntentAo::class.simpleName, intentAo)
+            putExtra(AgentChatBO::class.simpleName, agentBo)
         }
         startActivity(intent)
     }

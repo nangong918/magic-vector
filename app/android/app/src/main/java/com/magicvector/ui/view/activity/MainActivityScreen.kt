@@ -26,8 +26,8 @@ import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
-import com.magicvector.domain.model.message.MessageContactItemModel
 import com.magicvector.MainApplication
+import com.magicvector.domain.bo.AgentChatBO
 import com.magicvector.fragment.AgentEditorOverlay
 import com.magicvector.fragment.ControlScreen
 import com.magicvector.fragment.MessageListScreen
@@ -37,7 +37,7 @@ import com.magicvector.ui.theme.MagicVectorTheme
 import com.magicvector.viewModel.activity.MainDataState
 import com.magicvector.viewModel.activity.MainState
 import com.magicvector.viewModel.fragment.ControlVm
-import com.magicvector.viewModel.fragment.MessageListMviVm
+import com.magicvector.viewModel.fragment.MessageListVm
 import com.magicvector.viewModel.fragment.MineVm
 import com.view.appview.MainSelectItemEnum
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -46,13 +46,13 @@ import kotlinx.coroutines.flow.MutableStateFlow
 fun MainActivityScreen(
     state: MainState,
     dataState: MainDataState,
-    messageListVm: MessageListMviVm,
+    messageListVm: MessageListVm,
     controlVm: ControlVm,
     mineVm: MineVm,
     onSelectTab: (MainSelectItemEnum) -> Unit,
     onCreateAgent: () -> Unit,
-    onOpenAgentEditor: (String) -> Unit,
-    onOpenChat: (MessageContactItemModel) -> Unit,
+    onOpenAgentEditor: (Long) -> Unit,
+    onOpenChat: (AgentChatBO) -> Unit,
     onEditorClose: () -> Unit,
     onEditorNameChange: (String) -> Unit,
     onEditorDescriptionChange: (String) -> Unit,
@@ -157,7 +157,7 @@ private fun MainActivityScreenPreview() {
         MainActivityScreen(
             state = MainState(currentSelected = MainSelectItemEnum.HOME),
             dataState = MainDataState(isChatServiceBound = true),
-            messageListVm = MessageListMviVm(),
+            messageListVm = MessageListVm(),
             controlVm = ControlVm(),
             mineVm = MineVm(),
             onSelectTab = {},
