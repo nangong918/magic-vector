@@ -5,8 +5,8 @@ import com.data.domain.constant.chat.MessageTypeEnum
 /**
  * 聊天项vo
  */
-data class ChatMessageVo(
-    var briefMessageVo: ChatBriefMessageVo,
+data class ChatMessageVO(
+    var briefMessageVo: ChatBriefMessageVO,
     // 图片资源
     var imgUrl: String,
     // 消息类型

@@ -5,9 +5,9 @@ import com.data.domain.constant.chat.RoleTypeEnum
 /**
  * 聊天简略消息vo
  * 详情vo:
- * @see ChatMessageVo
+ * @see ChatMessageVO
  */
-data class ChatBriefMessageVo(
+data class ChatBriefMessageVO(
     // 内容
     val content: String,
     // 时间(展示用)

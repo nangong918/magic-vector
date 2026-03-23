@@ -1,6 +1,6 @@
 package com.magicvector.domain.model.chat
 
-import com.magicvector.domain.vo.message.ChatMessageVo
+import com.magicvector.domain.vo.message.ChatMessageVO
 import com.magicvector.utils.sort.SortItem
 
 /**
@@ -8,7 +8,7 @@ import com.magicvector.utils.sort.SortItem
  */
 data class ChatMessageModel(
     // vo
-    val chatMessageVo : ChatMessageVo,
+    val chatMessageVo : ChatMessageVO,
     // data
     var agentId : Long,
     var userId : Long,

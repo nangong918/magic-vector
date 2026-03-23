@@ -5,9 +5,9 @@ import com.magicvector.domain.convertor.base.BaseConvertor
 import com.magicvector.domain.dto.http.response.AgentChatDto
 import com.magicvector.domain.entity.AgentChatEntity
 import com.magicvector.domain.model.agent.AgentChatModel
-import com.magicvector.domain.vo.agent.AgentChatVo
-import com.magicvector.domain.vo.agent.AgentVo
-import com.magicvector.domain.vo.message.ChatBriefMessageVo
+import com.magicvector.domain.vo.agent.AgentChatVO
+import com.magicvector.domain.vo.agent.AgentVO
+import com.magicvector.domain.vo.message.ChatBriefMessageVO
 
 object AgentChatConvertor : BaseConvertor<AgentChatModel, AgentChatEntity, AgentChatDto>() {
 
@@ -35,18 +35,18 @@ object AgentChatConvertor : BaseConvertor<AgentChatModel, AgentChatEntity, Agent
             lastChatTime = entity.lastChatTime
             updatedAt = entity.updatedAt
 
-            val agentVo = AgentVo(
+            val agentVo = AgentVO(
                 name = entity.name,
                 description = entity.description,
                 avatarUrl = entity.avatarUrl
             )
-            val chatBriefMessageVo = ChatBriefMessageVo(
+            val chatBriefMessageVo = ChatBriefMessageVO(
                 content = entity.content,
                 chatTime = entity.chatTime,
                 role = entity.role
             )
 
-            agentChatVo = AgentChatVo(
+            agentChatVo = AgentChatVO(
                 agentVo = agentVo,
                 chatBriefMessageVo = chatBriefMessageVo,
                 unreadCount = entity.unreadCount
@@ -77,18 +77,18 @@ object AgentChatConvertor : BaseConvertor<AgentChatModel, AgentChatEntity, Agent
             lastChatTime = dto.lastChatTime
             updatedAt = dto.updatedAt
 
-            val agentVo = AgentVo(
+            val agentVo = AgentVO(
                 name = dto.name,
                 description = dto.description,
                 avatarUrl = dto.avatarUrl
             )
-            val chatBriefMessageVo = ChatBriefMessageVo(
+            val chatBriefMessageVo = ChatBriefMessageVO(
                 content = dto.content,
                 chatTime = dto.chatTime,
                 role = dto.role
             )
 
-            agentChatVo = AgentChatVo(
+            agentChatVo = AgentChatVO(
                 agentVo = agentVo,
                 chatBriefMessageVo = chatBriefMessageVo,
                 unreadCount = dto.unreadCount

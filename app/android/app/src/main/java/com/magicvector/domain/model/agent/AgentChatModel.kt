@@ -1,6 +1,6 @@
 package com.magicvector.domain.model.agent
 
-import com.magicvector.domain.vo.agent.AgentChatVo
+import com.magicvector.domain.vo.agent.AgentChatVO
 import com.magicvector.utils.sort.SortItem
 
 /**
@@ -8,7 +8,7 @@ import com.magicvector.utils.sort.SortItem
  * @see com.magicvector.domain.entity.AgentChatEntity
  */
 class AgentChatModel : SortItem {
-    var agentChatVo: AgentChatVo? = null
+    var agentChatVo: AgentChatVO? = null
     var agentId: Long = 0L
     var userId: Long = 0L
     var lastChatTime: Long = 0L
