@@ -13,7 +13,7 @@ import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import com.core.baseutil.permissions.GainPermissionCallback
 import com.core.baseutil.ui.ToastUtils
-import com.data.domain.constant.VadChatState
+import com.magicvector.domain.constant.VadChatState
 import com.magicvector.MainApplication
 import com.magicvector.ui.theme.MagicVectorTheme
 import com.magicvector.ui.view.activity.ComposeAgentChatScreen
@@ -118,10 +118,6 @@ class ComposeAgentChatActivity : FragmentActivity() {
 
                         is AgentChatEffect.ShowToastRes -> {
                             ToastUtils.showToastActivity(this@ComposeAgentChatActivity, getString(effect.messageRes))
-                        }
-
-                        is AgentChatEffect.SyncTextMessages -> {
-                            textVm.processIntent(AgentTextChatFragmentIntent.SyncMessages(effect.messages))
                         }
                     }
                 }

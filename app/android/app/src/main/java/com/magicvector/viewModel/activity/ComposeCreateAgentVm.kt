@@ -7,7 +7,7 @@ import androidx.compose.runtime.Stable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.core.baseutil.file.FileUtil
-import com.data.domain.constant.BaseConstant
+import com.magicvector.domain.constant.BaseConstant
 import com.magicvector.MainApplication
 import com.magicvector.domain.exception.NetworkBusinessException
 import kotlinx.coroutines.channels.Channel
@@ -191,10 +191,10 @@ class ComposeCreateAgentVm() : ViewModel() {
                     name = nameBody,
                     description = descriptionBody
                 )
-                if (response.agentModel?.agentId != null) {
+                if (response.agent.agentId > 0L) {
                     _uiState.update { it.copy(isCreateSuccess = false) }
                     sendEffect(CreateAgentEffect.ShowToast(appContext.getString(com.view.appview.R.string.create_success)))
-                    sendEffect(CreateAgentEffect.AgentCreated(response.agentModel?.agentId.orEmpty()))
+                    sendEffect(CreateAgentEffect.AgentCreated(response.agent.agentId))
                 }
             } catch (e: NetworkBusinessException) {
                 Log.e(TAG, "Create agent business failed", e)
@@ -305,7 +305,7 @@ sealed class CreateAgentEffect {
     data class ShowError(val message: String) : CreateAgentEffect()
 
     // 结果相关
-    data class AgentCreated(val agentId: String) : CreateAgentEffect()
+    data class AgentCreated(val agentId: Long) : CreateAgentEffect()
 }
 
 

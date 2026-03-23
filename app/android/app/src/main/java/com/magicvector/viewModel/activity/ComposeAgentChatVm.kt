@@ -1,159 +1,69 @@
 package com.magicvector.viewModel.activity
 
 import android.Manifest
-import android.content.ComponentName
 import android.content.Context
-import android.content.Context.BIND_AUTO_CREATE
 import android.content.Intent
-import android.content.ServiceConnection
-import android.os.IBinder
+import android.graphics.Bitmap
 import android.util.Log
 import androidx.annotation.RequiresPermission
 import androidx.compose.runtime.Stable
 import androidx.fragment.app.FragmentActivity
-import androidx.lifecycle.MutableLiveData
-import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.data.domain.Do.ChatMessageEntity
-import com.magicvector.domain.model.message.MessageContactItemModel
-import com.magicvector.domain.model.chat.ChatItemModel
-import com.data.domain.constant.VadChatState
-import com.data.domain.constant.chat.RealtimeRequestDataTypeEnum
-import com.data.domain.fragmentActivity.aao.ChatAAo
-import com.data.domain.fragmentActivity.intentAo.ChatIntentAo
-import com.data.domain.vo.test.RealtimeChatState
 import com.magicvector.MainApplication
-import com.magicvector.callback.OnReceiveAgentTextCallback
-import com.magicvector.callback.OnVadChatStateChange
-import com.magicvector.manager.RealtimeChatController
-import com.magicvector.manager.event.EventSourceType
+import com.magicvector.domain.bo.AgentChatBO
+import com.magicvector.domain.constant.VadChatState
+import com.magicvector.domain.model.chat.ChatMessageModel
+import com.magicvector.manager.realtime.RealtimeChatController
+import com.magicvector.manager.event.chat.ChatEventManager
 import com.magicvector.manager.network.NetworkState
-import com.magicvector.service.ChatService
-import com.magicvector.ui.view.chat.MessageItem
+import com.magicvector.manager.realtime.RealtimeChatIntent
+import com.magicvector.manager.realtime.RealtimeChatState
 import com.view.appview.R
-import com.view.appview.recycler.RecyclerViewWhereNeedUpdate
-import com.view.appview.recycler.UpdateRecyclerViewItem
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.receiveAsFlow
-import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
-import java.lang.ref.WeakReference
-import java.util.concurrent.atomic.AtomicBoolean
 
 class ComposeAgentChatVm : ViewModel() {
 
     companion object {
         val TAG: String = ComposeAgentChatVm::class.java.name
         val application = MainApplication.getApp()
+        private val chatEventMapManager = MainApplication.getChatEventMapManager()
     }
 
-    /** MVI: UI 渲染状态。 */
+    // ========== Managers ==========
+    private var agentId: Long = 0L
+    private val chatEventManager: ChatEventManager?
+        get() = if (agentId > 0) chatEventMapManager.getOrCreateManager(agentId) else null
+
+    private var realtimeChatController: RealtimeChatController? = null
+
+    // ========== UI 直接观察的数据流 ==========
+    val messages: StateFlow<List<ChatMessageModel>> = chatEventManager?.items ?:
+        MutableStateFlow<List<ChatMessageModel>>(emptyList()).asStateFlow()
+
+    // ========== UI 状态 ==========
     private val _uiState = MutableStateFlow(AgentChatUiState())
     val uiState: StateFlow<AgentChatUiState> = _uiState.asStateFlow()
 
-    /** MVI: 一次性副作用。 */
     private val _effect = Channel<AgentChatEffect>(Channel.BUFFERED)
     val effect: Flow<AgentChatEffect> = _effect.receiveAsFlow()
 
-    private val chatAAo = ChatAAo()
-    private var messageAo: MessageContactItemModel? = null
-    private val isCalling = AtomicBoolean(false)
-
-    private var chatServiceBinder: ChatService.ChatServiceBinder? = null
-    val chatServiceBoundLd = MutableLiveData(false)
-
-    var realtimeChatController: RealtimeChatController? = null
-        private set
-
-    private var observedRealtimeController: RealtimeChatController? = null
-    private var onBoundChatService: Runnable? = null
-    private var lastObservedNetworkState: NetworkState = MainApplication.getNetworkManager().state.value
-
-    private val realtimeStateObserver = Observer<RealtimeChatState> { state ->
-        val enableSend = when (state) {
-            is RealtimeChatState.InitializedConnected -> true
-            is RealtimeChatState.RecordingAndSending -> true
-            else -> false
-        }
-        _uiState.update {
-            it.copy(
-                isEnableSend = enableSend,
-                orbPhase = mapOrbPhase(vadState = it.vadChatState, realtimeState = state)
-            )
-        }
-    }
-
-    private val onReceiveAgentTextCallback = object : OnReceiveAgentTextCallback {
-        override fun onText(text: String) {
-            _uiState.update { it.copy(agentText = text) }
-            syncConversationMessagesToUi(EventSourceType.WS_REALTIME)
-        }
-    }
-
-    private val onVadChatStateChange = object : OnVadChatStateChange {
-        override fun onChange(state: VadChatState) {
-            val actual = if (_uiState.value.isMicClosed &&
-                (state is VadChatState.Silent || state is VadChatState.Speaking)
-            ) {
-                VadChatState.Muted
-            } else {
-                state
-            }
-            _uiState.update {
-                it.copy(
-                    vadChatState = actual,
-                    orbPhase = mapOrbPhase(actual, realtimeChatController?.realtimeChatState?.value),
-                    orbExpanded = (actual is VadChatState.Speaking || actual is VadChatState.Replying)
-                )
-            }
-        }
-    }
-
-    private val chatServiceConnection = object : ServiceConnection {
-        override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
-            val binder = service as? ChatService.ChatServiceBinder ?: return
-            chatServiceBinder = binder
-            chatServiceBoundLd.postValue(true)
-            realtimeChatController = binder.getChatMessageHandler()
-            _uiState.update { it.copy(isChatServiceBound = true) }
-
-            observedRealtimeController?.realtimeChatState?.removeObserver(realtimeStateObserver)
-            realtimeChatController?.realtimeChatState?.observeForever(realtimeStateObserver)
-            observedRealtimeController = realtimeChatController
-            realtimeChatController?.setCurrentVADStateChange(onVadChatStateChange)
-            realtimeChatController?.initIsChatCalling(isCalling)
-
-            onBoundChatService?.run()
-        }
-
-        override fun onServiceDisconnected(name: ComponentName?) {
-            chatServiceBoundLd.postValue(false)
-            _uiState.update {
-                it.copy(
-                    isChatServiceBound = false,
-                    orbPhase = AgentVoiceOrbPhase.DISCONNECTED
-                )
-            }
-            chatServiceBinder = null
-            realtimeChatController = null
-        }
-    }
+    private var lastObservedNetworkState: NetworkState =
+        MainApplication.getNetworkManager().state.value
 
     init {
         observeNetworkState()
+        observeRealtimeControllerEvents()
     }
 
     @RequiresPermission(Manifest.permission.RECORD_AUDIO)
     fun processIntent(intent: AgentChatIntent) {
         when (intent) {
             is AgentChatIntent.Initialize -> initialize(intent.intent, intent.activity)
-            AgentChatIntent.Resume -> realtimeChatController?.setCurrentVADStateChange(onVadChatStateChange)
+            AgentChatIntent.Resume -> Unit // 新架构中不需要单独 Resume
             is AgentChatIntent.SendTextMessage -> sendTextMessage(intent.message)
             is AgentChatIntent.StartSendVoice -> startSendVoice(intent.scope)
             AgentChatIntent.StopSendVoice -> stopSendVoice()
@@ -166,225 +76,210 @@ class ComposeAgentChatVm : ViewModel() {
             AgentChatIntent.EndVoiceMode -> endVoiceMode()
             is AgentChatIntent.PageChanged -> _uiState.update { it.copy(currentPage = intent.page) }
             AgentChatIntent.SwitchToEmojiPage -> _uiState.update { it.copy(currentPage = 0) }
+            is AgentChatIntent.SendVideoFrame -> sendVideoFrame(intent.bitmap)
         }
     }
 
+    // ========== 初始化 ==========
+    /**
+     * 初始化页面与会话资源
+     * @param intent 包含 AgentChatBO 的 Intent
+     * @param activity 当前 FragmentActivity
+     */
+    @RequiresPermission(Manifest.permission.RECORD_AUDIO)
     private fun initialize(intent: Intent, activity: FragmentActivity) {
-        val intentAo = try {
-            intent.getSerializableExtra(ChatIntentAo::class.simpleName) as ChatIntentAo
+        val agentChatBo = try {
+            intent.getSerializableExtra(AgentChatBO::class.simpleName) as AgentChatBO
         } catch (e: Exception) {
             Log.e(TAG, "ComposeAgentChatActivity::intentAo转换失败", e)
             sendEffect(AgentChatEffect.Finish)
             return
         }
 
-        messageAo = intentAo.ao
+        agentId = agentChatBo.agentId
         _uiState.update {
             it.copy(
-                title = messageAo?.vo?.name ?: "",
-                avatarUrl = messageAo?.vo?.avatarUrl,
+                title = agentChatBo.agentVo.name,
+                avatarUrl = agentChatBo.agentVo.avatarUrl,
             )
         }
 
-        initService(
-            Runnable @androidx.annotation.RequiresPermission(android.Manifest.permission.RECORD_AUDIO) {
-                initResource(activity)
-            }
-        )
-    }
+        // 初始化 RealtimeChatController
+        realtimeChatController = RealtimeChatController()
 
-    private fun initService(onBoundChatService: Runnable) {
-        this.onBoundChatService = onBoundChatService
-        val serviceIntent = Intent(application, ChatService::class.java)
-        application.bindService(serviceIntent, chatServiceConnection, BIND_AUTO_CREATE)
-    }
-
-    @RequiresPermission(Manifest.permission.RECORD_AUDIO)
-    private fun initResource(activity: FragmentActivity) {
-        val ao = messageAo ?: run {
-            sendEffect(AgentChatEffect.ShowToast("Agent信息为空，初始化失败"))
-            sendEffect(AgentChatEffect.Finish)
-            return
-        }
-
-        try {
-            _uiState.update { it.copy(isLoading = true) }
-            realtimeChatController?.initResource(
+        // 发送初始化 Intent
+        realtimeChatController?.processIntent(
+            RealtimeChatIntent.Initialize(
                 chatActivity = activity,
-                ao = ao,
-                chatAAo = chatAAo,
+                agentChatBo = agentChatBo,
                 initNetworkRunnable = {
                     viewModelScope.launch {
-                        syncConversationHistory(showLoading = true)
-                    }
-                } ,
-                whereNeedUpdate = object : RecyclerViewWhereNeedUpdate {
-                    override fun whereNeedUpdate(updateInfos: List<UpdateRecyclerViewItem>) {
+                        refreshMessages()
                     }
                 },
-                onReceiveAgentTextCallback = onReceiveAgentTextCallback,
-                onVadChatStateChange = onVadChatStateChange
+                onVideoFrame = { bitmap ->
+                    // 可选：处理 YOLOv8 识别结果
+                    _uiState.update { it.copy(lastFrame = bitmap) }
+                }
             )
+        )
+
+        // 绑定 Agent 频道
+        realtimeChatController?.processIntent(RealtimeChatIntent.BindChannel(agentId))
+
+        // 启动 VAD 检测（进入页面即开始）
+        realtimeChatController?.processIntent(RealtimeChatIntent.StartVadCall)
+
+        // 刷新消息
+        viewModelScope.launch {
+            refreshMessages()
+        }
+    }
+
+    // ========== 观察 RealtimeChatController 的事件 ==========
+    /**
+     * 监听实时聊天控制器的事件流
+     * - vadStateEvents: VAD 状态变化 → 更新 UI 中的球体动画
+     * - agentTextEvents: Agent 文本回复 → 更新流式文本显示
+     * - realtimeState: 连接状态 → 更新发送按钮可用状态
+     * - uiState: 控制器内部 UI 状态 → 更新加载状态
+     */
+    private fun observeRealtimeControllerEvents() {
+        val controller = realtimeChatController ?: return
+
+        viewModelScope.launch {
+            controller.vadStateEvents.collect { vadState ->
+                val actual = if (_uiState.value.isMicClosed &&
+                    (vadState is VadChatState.Silent || vadState is VadChatState.Speaking)
+                ) {
+                    VadChatState.Muted
+                } else {
+                    vadState
+                }
+                _uiState.update {
+                    it.copy(
+                        vadChatState = actual,
+                        orbPhase = mapOrbPhase(actual, controller.realtimeState.value),
+                        orbExpanded = (actual is VadChatState.Speaking || actual is VadChatState.Replying)
+                    )
+                }
+            }
+        }
+
+        viewModelScope.launch {
+            controller.agentTextEvents.collect { text ->
+                _uiState.update { it.copy(agentText = text) }
+            }
+        }
+
+        viewModelScope.launch {
+            controller.realtimeState.collect { state ->
+                val enableSend = when (state) {
+                    is RealtimeChatState.InitializedConnected -> true
+                    is RealtimeChatState.RecordingAndSending -> true
+                    else -> false
+                }
+                _uiState.update {
+                    it.copy(
+                        isEnableSend = enableSend,
+                        isChatServiceBound = state is RealtimeChatState.InitializedConnected,
+                        orbPhase = mapOrbPhase(_uiState.value.vadChatState, state)
+                    )
+                }
+            }
+        }
+
+        viewModelScope.launch {
+            controller.uiState.collect { uiState ->
+                _uiState.update { it.copy(isLoading = uiState.isLoading) }
+            }
+        }
+    }
+
+    // ========== 消息管理 ==========
+    /**
+     * 刷新消息列表（网络请求）
+     */
+    private suspend fun refreshMessages() {
+        val manager = chatEventManager ?: return
+
+        _uiState.update { it.copy(isLoading = true) }
+        try {
+            val latestNetworkState = MainApplication.getNetworkManager().refreshNetworkState()
+            if (!latestNetworkState.isNetworkOnline) {
+                loadMessagesFromLocal()
+                return
+            }
+
+            // 使用新的 ChatEventManager 加载数据
+            manager.onHttpFullLoad()
         } catch (e: Exception) {
-            Log.e(TAG, "ComposeAgentChatActivity::initResource失败", e)
-            sendEffect(AgentChatEffect.ShowToastRes(R.string.init_agent_failed))
-            sendEffect(AgentChatEffect.Finish)
+            Log.e(TAG, "refreshMessages failed", e)
+            loadMessagesFromLocal()
+            sendEffect(AgentChatEffect.ShowToast("聊天记录同步失败，已回退到本地缓存"))
         } finally {
             _uiState.update { it.copy(isLoading = false) }
         }
     }
 
-    private fun observeNetworkState() {
-        viewModelScope.launch {
-            MainApplication.getNetworkManager().state.collect { networkState ->
-                val previous = lastObservedNetworkState
-                lastObservedNetworkState = networkState
-                if (messageAo?.contactId.isNullOrBlank()) {
-                    return@collect
-                }
-                if (!previous.isNetworkOnline && networkState.isNetworkOnline) {
-                    syncConversationHistory(showLoading = false)
-                } else if (previous.isNetworkOnline && !networkState.isNetworkOnline) {
-                    loadConversationFromRoom()
-                }
-            }
-        }
+    /**
+     * 从本地数据库加载消息（离线模式）
+     */
+    private suspend fun loadMessagesFromLocal() {
+        val manager = chatEventManager ?: return
+        manager.onLocalFullLoad()
     }
 
-    private suspend fun syncConversationHistory(showLoading: Boolean) {
-        val ao = messageAo ?: return
-        val agentId = ao.contactId ?: return
-        val controller = MainApplication.getChatMapManager().getChatManager(agentId)
-        if (showLoading) {
-            _uiState.update { it.copy(isLoading = true) }
-        }
-        try {
-            val latestNetworkState = MainApplication.getNetworkManager().refreshNetworkState()
-            if (!latestNetworkState.isNetworkOnline) {
-                loadConversationFromRoom()
-                return
-            }
-            if (!controller.shouldRemoteSync(latestNetworkState.recoveryToken)) {
-                syncConversationMessagesToUi(EventSourceType.MEMORY_CACHE)
-                return
-            }
-            val chatMessages = MainApplication.getRemoteApiSource().getLastChat(agentId).chatMessages.orEmpty()
-            MainApplication.getChatCacheManager().upsertRemoteMessages(chatMessages)
-            controller.clear()
-            controller.setResponsesToViews(chatMessages)
-            controller.markRemoteSyncCompleted(latestNetworkState.recoveryToken)
-            syncConversationMessagesToUi(EventSourceType.HTTP_FULL)
-        } catch (e: Exception) {
-            Log.e(TAG, "syncConversationHistory: remote failed", e)
-            loadConversationFromRoom()
-            sendEffect(AgentChatEffect.ShowToast("聊天记录同步失败，已回退到本地缓存"))
-        } finally {
-            if (showLoading) {
-                _uiState.update { it.copy(isLoading = false) }
-            }
-        }
-    }
 
-    private suspend fun loadConversationFromRoom() {
-        val agentId = messageAo?.contactId ?: return
-        val parsedAgentId = agentId.toLongOrNull() ?: return
-        val cachedMessages = MainApplication.getChatCacheManager().queryLastMessages(parsedAgentId, 100)
-        val controller = MainApplication.getChatMapManager().getChatManager(agentId)
-        controller.clear()
-        controller.setResponsesToViews(
-            cachedMessages.map { entity ->
-                ChatMessageEntity().apply {
-                    id = entity.id.toString()
-                    this.agentId = entity.agentId.toString()
-                    userId = entity.userId.toString()
-                    content = entity.content
-                    chatTime = entity.chatTime
-                    chatTimestamp = entity.chatTimestamp
-                    role = entity.role
-                }
-            }
-        )
-        syncConversationMessagesToUi(EventSourceType.ROOM_FULL)
-    }
-
-    private fun syncConversationMessagesToUi(source: EventSourceType) {
-        val agentId = messageAo?.contactId ?: return
-        val controllerItems = MainApplication.getChatMapManager()
-            .getChatManager(agentId)
-            .getViewChatMessageList()
-        val summary = buildConversationSummary(agentId, controllerItems)
-        MainApplication.getChatEventManager().replaceConversation(
-            agentId = agentId,
-            messages = controllerItems,
-            summary = summary,
-            source = source
-        )
-        val items = controllerItems
-            .sortedBy { it.timestamp }
-            .map { it.toMessageItem() }
-        sendEffect(AgentChatEffect.SyncTextMessages(items))
-    }
-
-    private fun buildConversationSummary(
-        agentId: String,
-        items: List<ChatItemModel>
-    ): MessageContactItemModel {
-        val latest = items.maxByOrNull { it.timestamp }
-        return MessageContactItemModel().apply {
-            contactId = agentId
-            timestamp = latest?.timestamp ?: 0L
-            vo.name = messageAo?.vo?.name.orEmpty()
-            vo.avatarUrl = messageAo?.vo?.avatarUrl
-            vo.setMessagePreview(latest?.vo?.content.orEmpty())
-            vo.time = latest?.vo?.time
-            vo.unreadCount = 0
-        }
-    }
-
-    private fun ChatItemModel.toMessageItem(): MessageItem {
-        return if (vo.viewType == 0) {
-            MessageItem.Received(
-                id = messageId.orEmpty(),
-                messageText = vo.content,
-                chatTime = vo.time.orEmpty()
-            )
-        } else {
-            MessageItem.Sent(
-                id = messageId.orEmpty(),
-                messageText = vo.content,
-                timeText = vo.time.orEmpty()
-            )
-        }
-    }
-
+    // ========== 发送消息 ==========
+    /**
+     * 发送文本消息
+     * @param message 消息内容
+     */
+    @RequiresPermission(Manifest.permission.RECORD_AUDIO)
     private fun sendTextMessage(message: String) {
         val isAllWhitespaceOrSpecialChars = message.all { it.isWhitespace() || !it.isLetterOrDigit() }
         if (message.isBlank() || isAllWhitespaceOrSpecialChars) {
-            sendEffect(AgentChatEffect.ShowToastRes(com.view.appview.R.string.please_input_legal_content))
+            sendEffect(AgentChatEffect.ShowToastRes(R.string.please_input_legal_content))
             return
         }
 
-        val dataMap = mapOf(
-            RealtimeRequestDataTypeEnum.TYPE to RealtimeRequestDataTypeEnum.USER_TEXT_MESSAGE.type,
-            RealtimeRequestDataTypeEnum.DATA to message
-        )
-        realtimeChatController?.realtimeChatWsClient?.sendMessage(dataMap, true)
+        realtimeChatController?.processIntent(RealtimeChatIntent.SendTextMessage(message))
             ?: sendEffect(AgentChatEffect.ShowToast("连接未建立，发送失败"))
     }
 
+    // ========== 视频帧发送 ==========
+    /**
+     * 发送视频帧（用于 YOLOv8 物体检测）
+     * @param bitmap 视频帧图片
+     */
+    @RequiresPermission(Manifest.permission.RECORD_AUDIO)
+    private fun sendVideoFrame(bitmap: Bitmap) {
+        realtimeChatController?.processIntent(RealtimeChatIntent.SendVideoFrame(bitmap))
+    }
+
+    // ========== 音频控制 ==========
+    /**
+     * 开始录音发送（VAD 持续录音，此方法保留兼容性）
+     */
     private fun startSendVoice(scope: CoroutineScope) {
-        val weakScope = WeakReference(scope)
-        realtimeChatController?.startRecordRealtimeChatAudio(weakScope)
+        // 新架构中不需要单独 startSendVoice，VAD 持续录音
+        // 但为了兼容旧接口，保留空实现
     }
 
+    /**
+     * 停止录音发送（VAD 持续录音，此方法保留兼容性）
+     */
     private fun stopSendVoice() {
-        realtimeChatController?.stopAndSendRealtimeChatAudio()
+        // 新架构中不需要单独 stopSendVoice，VAD 自动处理
     }
 
+    /**
+     * 打开语音模式（VAD 持续录音，此方法保留兼容性）
+     */
     @RequiresPermission(Manifest.permission.RECORD_AUDIO)
     private fun openVoiceMode(context: Context) {
-        realtimeChatController?.initVadCall(WeakReference(context))
-        isCalling.set(true)
+        // 新架构中进入页面即开始 VAD，不需要单独打开
         _uiState.update {
             it.copy(
                 isMicClosed = false,
@@ -394,20 +289,27 @@ class ComposeAgentChatVm : ViewModel() {
         }
     }
 
+    /**
+     * 切换麦克风状态
+     */
+    @RequiresPermission(Manifest.permission.RECORD_AUDIO)
     private fun toggleMicState() {
         val current = _uiState.value
         if (current.isMicClosed) {
-            realtimeChatController?.startVadCall()
+            realtimeChatController?.processIntent(RealtimeChatIntent.StartVadCall)
             _uiState.update { it.copy(isMicClosed = false, vadChatState = VadChatState.Silent) }
         } else {
-            realtimeChatController?.stopVadCall()
+            realtimeChatController?.processIntent(RealtimeChatIntent.StopVadCall)
             _uiState.update { it.copy(isMicClosed = true, vadChatState = VadChatState.Muted) }
         }
     }
 
+    /**
+     * 结束语音模式
+     */
+    @RequiresPermission(Manifest.permission.RECORD_AUDIO)
     private fun endVoiceMode() {
-        realtimeChatController?.destroyVadCall()
-        isCalling.set(false)
+        realtimeChatController?.processIntent(RealtimeChatIntent.DestroyVadCall)
         _uiState.update {
             it.copy(
                 isMicClosed = true,
@@ -419,6 +321,37 @@ class ComposeAgentChatVm : ViewModel() {
         }
     }
 
+    // ========== 网络状态监听 ==========
+    /**
+     * 监听网络状态变化
+     * - 网络恢复：重新同步消息 + 重连 WebSocket
+     * - 断网：从本地加载消息
+     */
+    private fun observeNetworkState() {
+        viewModelScope.launch {
+            MainApplication.getNetworkManager().state.collect { networkState ->
+                val previous = lastObservedNetworkState
+                lastObservedNetworkState = networkState
+
+                if (agentId == 0L) return@collect
+
+                if (!previous.isNetworkOnline && networkState.isNetworkOnline) {
+                    refreshMessages()
+                    realtimeChatController?.reconnectUserConnectionIfNeeded()
+                } else if (previous.isNetworkOnline && !networkState.isNetworkOnline) {
+                    loadMessagesFromLocal()
+                }
+            }
+        }
+    }
+
+    // ========== 辅助方法 ==========
+    /**
+     * 映射底部状态球阶段
+     * @param vadState VAD 状态
+     * @param realtimeState 实时连接状态
+     * @return 球体阶段
+     */
     private fun mapOrbPhase(
         vadState: VadChatState,
         realtimeState: RealtimeChatState?
@@ -439,21 +372,10 @@ class ComposeAgentChatVm : ViewModel() {
         }
     }
 
-    private fun disconnectService() {
-        application.let { context ->
-            if (chatServiceBoundLd.value == true) {
-                try {
-                    context.unbindService(chatServiceConnection)
-                } catch (e: Exception) {
-                    Log.e(TAG, "disconnectService failed", e)
-                }
-            }
-        }
-        chatServiceBoundLd.postValue(false)
-        chatServiceBinder = null
-        realtimeChatController = null
-    }
 
+    /**
+     * 发送副作用事件
+     */
     private fun sendEffect(effect: AgentChatEffect) {
         viewModelScope.launch {
             _effect.send(effect)
@@ -462,11 +384,12 @@ class ComposeAgentChatVm : ViewModel() {
 
     override fun onCleared() {
         super.onCleared()
-        observedRealtimeController?.realtimeChatState?.removeObserver(realtimeStateObserver)
-        disconnectService()
+        realtimeChatController?.destroy()
+        realtimeChatController = null
     }
 }
 
+// ========== UI State ==========
 @Stable
 data class AgentChatUiState(
     /** 顶部标题 */
@@ -491,6 +414,8 @@ data class AgentChatUiState(
     val orbPhase: AgentVoiceOrbPhase = AgentVoiceOrbPhase.DISCONNECTED,
     /** 底部状态球弹性缩放开关 */
     val orbExpanded: Boolean = false,
+    /** 最新视频帧（用于调试） */
+    val lastFrame: Bitmap? = null
 )
 
 enum class AgentVoiceOrbPhase {
@@ -501,6 +426,7 @@ enum class AgentVoiceOrbPhase {
     AGENT_REPLYING
 }
 
+// ========== Intent ==========
 sealed class AgentChatIntent {
     /** 初始化页面与会话资源。 */
     data class Initialize(val intent: Intent, val activity: FragmentActivity) : AgentChatIntent()
@@ -537,12 +463,15 @@ sealed class AgentChatIntent {
 
     /** 切换到 Emoji 页面。 */
     data object SwitchToEmojiPage : AgentChatIntent()
+
+    /** 发送视频帧（YOLOv8 识别） */
+    data class SendVideoFrame(val bitmap: Bitmap) : AgentChatIntent()
 }
 
+// ========== Effect ==========
 sealed class AgentChatEffect {
     data object Finish : AgentChatEffect()
     data object RequestRecordPermission : AgentChatEffect()
     data class ShowToast(val message: String) : AgentChatEffect()
     data class ShowToastRes(val messageRes: Int) : AgentChatEffect()
-    data class SyncTextMessages(val messages: List<MessageItem>) : AgentChatEffect()
 }

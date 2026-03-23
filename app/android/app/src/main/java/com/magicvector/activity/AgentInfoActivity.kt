@@ -6,7 +6,7 @@ import android.util.Log
 import androidx.lifecycle.lifecycleScope
 import com.core.baseutil.network.networkLoad.NetworkLoadUtils
 import com.core.baseutil.ui.ToastUtils
-import com.data.domain.constant.BaseConstant
+import com.magicvector.domain.constant.BaseConstant
 import com.magicvector.databinding.ActivityAgentInfoBinding
 import com.magicvector.utils.BaseAppCompatVmActivity
 import com.magicvector.viewModel.activity.AgentInfoVm

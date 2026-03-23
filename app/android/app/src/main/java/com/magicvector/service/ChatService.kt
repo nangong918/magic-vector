@@ -4,7 +4,7 @@ import android.app.Service
 import android.content.Intent
 import android.os.Binder
 import android.os.IBinder
-import com.magicvector.manager.RealtimeChatController
+import com.magicvector.manager.realtime.RealtimeChatController
 
 /**
  * Chat后台Service

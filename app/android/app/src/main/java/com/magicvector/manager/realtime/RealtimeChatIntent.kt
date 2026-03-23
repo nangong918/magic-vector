@@ -4,8 +4,7 @@ package com.magicvector.manager.realtime
 import android.graphics.Bitmap
 import androidx.fragment.app.FragmentActivity
 import com.data.domain.ao.mixLLM.McpSwitch
-import com.magicvector.domain.model.message.MessageContactItemModel
-import com.data.domain.fragmentActivity.aao.ChatAAo
+import com.magicvector.domain.bo.AgentChatBO
 import kotlinx.coroutines.Job
 
 /**
@@ -14,8 +13,7 @@ import kotlinx.coroutines.Job
 sealed class RealtimeChatIntent {
     data class Initialize(
         val chatActivity: FragmentActivity,
-        val ao: MessageContactItemModel?,
-        val chatAAo: ChatAAo,
+        val agentChatBo: AgentChatBO?,
         val initNetworkRunnable: () -> Job,
         val onVideoFrame: ((Bitmap) -> Unit)? = null
     ) : RealtimeChatIntent()

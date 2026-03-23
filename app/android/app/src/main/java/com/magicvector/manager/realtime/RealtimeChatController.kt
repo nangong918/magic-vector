@@ -1,4 +1,4 @@
-package com.magicvector.manager
+package com.magicvector.manager.realtime
 
 import android.Manifest
 import androidx.annotation.RequiresPermission
@@ -6,10 +6,10 @@ import com.data.domain.ao.mixLLM.McpSwitch
 import com.magicvector.domain.constant.VadChatState
 import com.magicvector.MainApplication
 import com.magicvector.domain.constant.chat.RealtimeRequestDataTypeEnum
-import com.magicvector.domain.model.message.MessageContactItemModel
+import com.magicvector.domain.bo.AgentChatBO
 import com.magicvector.manager.audio.IsAudioRecording
+import com.magicvector.manager.event.chat.ChatEventManager
 import com.magicvector.manager.mcp.HandleSystemResponse
-import com.magicvector.manager.realtime.*
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -49,10 +49,10 @@ class RealtimeChatController : IsAudioRecording {
     val agentTextEvents: SharedFlow<String> = eventFlow.agentTextEvents
 
     // ========== 数据 ==========
-    var messageContactItemModel: MessageContactItemModel? = null
+    var agentChatBO: AgentChatBO? = null
     private var agentId: Long? = null
     private var userId: Long? = null
-    private var chatEventManager: com.magicvector.manager.event.chat.ChatEventManager? = null
+    private var chatEventManager: ChatEventManager? = null
 
     // ========== MVI Intent ==========
     @RequiresPermission(Manifest.permission.RECORD_AUDIO)
@@ -77,18 +77,16 @@ class RealtimeChatController : IsAudioRecording {
     private fun initialize(intent: RealtimeChatIntent.Initialize) {
         eventFlow.updateUiState { it.copy(isLoading = true) }
 
-        this.messageContactItemModel = intent.ao
+        this.agentChatBO = intent.agentChatBo
         visionManager.setOnVideoFrameCallback(intent.onVideoFrame)
 
-        intent.ao?.contactId?.toLongOrNull()?.let { agentId ->
-            this.agentId = agentId
-            chatEventManager = MainApplication.getChatEventMapManager().getOrCreateManager(agentId)
+        agentChatBO?.let { bo ->
+            this.agentId = bo.agentId
+            chatEventManager = MainApplication.getChatEventMapManager().getOrCreateManager(bo.agentId)
         }
 
-        intent.chatAAo.nameLd.postValue(intent.ao?.vo?.name ?: "")
-        intent.chatAAo.avatarUrlLd.postValue(intent.ao?.vo?.avatarUrl ?: "")
 
-        if (messageContactItemModel?.contactId != null) {
+        if (agentChatBO != null) {
             eventFlow.updateRealtimeState(RealtimeChatState.Initializing)
 
             // 初始化子模块
@@ -97,7 +95,7 @@ class RealtimeChatController : IsAudioRecording {
             // 建立用户连接
             val success = webSocketManager.ensureUserConnection(MainApplication.getUserId())
             if (success) {
-                bindChannel(messageContactItemModel!!.contactId!!.toLong())
+                bindChannel(agentChatBO!!.agentId)
             }
         } else {
             eventFlow.updateRealtimeState(RealtimeChatState.Error("Agent Id is Null"))
@@ -170,7 +168,7 @@ class RealtimeChatController : IsAudioRecording {
 
     // ========== 生命周期 ==========
     fun releaseAllResource() {
-        messageContactItemModel = null
+        agentChatBO = null
         eventFlow.updateRealtimeState(RealtimeChatState.NotInitialized)
 
         webSocketManager.release()
