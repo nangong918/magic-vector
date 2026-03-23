@@ -27,7 +27,6 @@ import com.magicvector.callback.OnReceiveAgentTextCallback
 import com.magicvector.manager.audio.AudioController
 import com.magicvector.manager.audio.AudioHandleCallback
 import com.magicvector.manager.audio.IsAudioRecording
-import com.magicvector.manager.event.EventSourceType
 import com.magicvector.manager.mcp.HandleSystemResponse
 import com.magicvector.manager.audio.vad.VadDetectionCallback
 import com.magicvector.manager.vl.UdpVisionManager
@@ -51,13 +50,13 @@ import kotlin.math.sqrt
 
 /**
  * ChatMessageHandler管理：
- * WS长连接
- * 音频处理：AudioRecord, AudioTrack, VAD语音活动检测
- * ChatHistory管理
- * VL: UdpVision
+ * 1. WS长连接
+ * 2. 音频处理：AudioRecord, AudioTrack, VAD语音活动检测
+ * 3. ChatHistory管理
+ * 4. VL: UdpVision
  * todo 解耦chatMessageHandler，绘制UML图，多数据源合并问题。（具体需要先实现AppDemo中的Jetpack Compose的多数据源插入LazyColumn）
  */
-class RealtimeChatController : IsAudioRecording{
+class RealtimeChatController : IsAudioRecording {
 
     companion object {
         const val TAG = "RealtimeChatController"
@@ -73,21 +72,14 @@ class RealtimeChatController : IsAudioRecording{
     // 当前是否是表情页面
     val currentIsEmoji: AtomicBoolean = AtomicBoolean(false)
     // 当前是否在通话中（仅仅用于chatActivity中的Call；至于是null是因为这个是指针，对象直接从CallDialog中获取）
-    var isChatCalling: AtomicBoolean? = null
-    var recyclerViewWhereNeedUpdate: RecyclerViewWhereNeedUpdate? = null
-    var onReceiveAgentTextCallback: OnReceiveAgentTextCallback? = null
     var onVadChatStateChange: OnVadChatStateChange? = null
-    val realtimeChatState: MutableLiveData<RealtimeChatState> = MutableLiveData(RealtimeChatState.NotInitialized)
+    val realtimeChatState: MutableLiveData<RealtimeChatState> =
+        MutableLiveData(RealtimeChatState.NotInitialized)
 
     fun setCurrentVADStateChange(callback: OnVadChatStateChange) {
         onVadChatStateChange = callback
     }
 
-    // 设置isChatCalling指针
-    fun initIsChatCalling(isCalling: AtomicBoolean) {
-        isChatCalling = isCalling
-    }
-    
     // 数据
     var messageContactItemModel : MessageContactItemModel? = null
 
@@ -95,8 +87,8 @@ class RealtimeChatController : IsAudioRecording{
 
     //==========WS长连接
     var realtimeChatWsClient: RealtimeChatWsClient? = null // 长连接，可为null，允许销毁
-    private var currentUserId: String? = null
-    private var currentAgentId: String? = null
+    private var userId: Long? = null
+    private var agentId: Long? = null
     private val manualWsClosing = AtomicBoolean(false)
 
     private fun initRealtimeChatWsClient(): RealtimeChatWsClient {
@@ -115,7 +107,7 @@ class RealtimeChatController : IsAudioRecording{
             Log.w(TAG, "ensureUserConnection: userId is blank")
             return
         }
-        currentUserId = userId
+        this@RealtimeChatController.userId = userId
         realtimeChatWsClient = initRealtimeChatWsClient()
         initAudioController()
         audioController?.initAudioRecorderAndPlayer()
@@ -128,7 +120,7 @@ class RealtimeChatController : IsAudioRecording{
     }
 
     fun reconnectUserConnectionIfNeeded() {
-        val userId = currentUserId
+        val userId = userId
         if (userId.isNullOrBlank()) {
             Log.w(TAG, "reconnectUserConnectionIfNeeded: userId is blank")
             return
@@ -146,7 +138,7 @@ class RealtimeChatController : IsAudioRecording{
             Log.w(TAG, "bindChannel: agentId is blank")
             return
         }
-        currentAgentId = agentId
+        this@RealtimeChatController.agentId = agentId
         realtimeChatWsClient?.let {
             if (realtimeChatState.value == RealtimeChatState.InitializedConnected ||
                 realtimeChatState.value == RealtimeChatState.Receiving ||
@@ -163,8 +155,8 @@ class RealtimeChatController : IsAudioRecording{
             realtimeChatState.value == RealtimeChatState.RecordingAndSending
         )) {
             realtimeChatWsClient?.let { client ->
-                currentUserId?.let { WsManager.sendConnectInfo(it, client) }
-                currentAgentId?.let { WsManager.sendBindChannelInfo(it, client) }
+                userId?.let { WsManager.sendConnectInfo(it, client) }
+                agentId?.let { WsManager.sendBindChannelInfo(it, client) }
             }
             return
         }
@@ -224,11 +216,11 @@ class RealtimeChatController : IsAudioRecording{
                         realtimeChatState.postValue(RealtimeChatState.InitializedConnected)
                         MainApplication.getNetworkManager().onWebSocketConnected()
                         Log.i(TAG, "realtimeChatWsClient::onOpen; response: $response")
-                        currentUserId?.let { userId ->
+                        userId?.let { userId ->
                             WsManager.sendConnectInfo(userId = userId, wsClient = client)
                         }
 
-                        currentAgentId?.let { agentId ->
+                        agentId?.let { agentId ->
                             WsManager.sendBindChannelInfo(agentId = agentId, wsClient = client)
                         }
                     }
@@ -329,8 +321,7 @@ class RealtimeChatController : IsAudioRecording{
                     if (chatControllerPointer != null){
                         WsManager.handleTextMessage(
                             message = data,
-                            chatControllerPointer = chatControllerPointer!!,
-                            onReceiveAgentTextCallback = this.onReceiveAgentTextCallback
+                            chatEventMapManager = chatControllerPointer
                         )
                         syncWsMessageToLocalCache(data)
                         updateMessage()
@@ -684,14 +675,14 @@ class RealtimeChatController : IsAudioRecording{
     private fun syncWsMessageToLocalCache(message: String) {
         val controller = chatControllerPointer ?: return
         val response = runCatching {
-            GSON.fromJson(message, com.magicvector.domain.dto.ws.response.RealtimeChatTextResponse::class.java)
+            GSON.fromJson(message, com.magicvector.domain.dto.ws.response.WsChatTextResponse::class.java)
         }.getOrElse {
             Log.w(TAG, "syncWsMessageToLocalCache: parse failed", it)
             return
         }
         val snapshot = controller.getMessageSnapshot(response.messageId)
-        val resolvedContent = snapshot?.vo?.content ?: response.content.orEmpty()
-        val resolvedChatTime = snapshot?.vo?.time ?: response.chatTime
+        val resolvedContent = snapshot?.chatMessageVo?.content ?: response.content.orEmpty()
+        val resolvedChatTime = snapshot?.chatMessageVo?.chatTime ?: response.chatTime
         val resolvedTimestamp = snapshot?.timestamp ?: response.timestamp
         MainApplication.getMessageListManager().upsertLatestMessage(
             agentId = response.agentId ?: return,
@@ -789,4 +780,38 @@ class RealtimeChatController : IsAudioRecording{
         cacheScope.cancel()
     }
 
+}
+
+interface OnVadChatStateChange {
+    fun onChange(state: VadChatState)
+}
+
+open class VadChatState {
+    // 静音中
+    object Muted : VadChatState()
+    // 无声音
+    object Silent : VadChatState()
+    // 用户说话
+    object Speaking : VadChatState()
+    // Agent回复中
+    object Replying : VadChatState()
+    // 错误
+    data class Error(val message: String) : VadChatState()
+}
+
+open class RealtimeChatState {
+    // 未初始化
+    object NotInitialized : RealtimeChatState()
+    // 正在初始化
+    object Initializing : RealtimeChatState()
+    // 已初始化并且连接
+    object InitializedConnected : RealtimeChatState()
+    // 正在记录消息
+    object RecordingAndSending : RealtimeChatState()
+    // 正在接收消息
+    object Receiving : RealtimeChatState()
+    // 断开连接
+    object Disconnected : RealtimeChatState()
+    // 错误
+    data class Error(val message: String) : RealtimeChatState()
 }
