@@ -75,18 +75,20 @@ class RemoteApiSource(
         userId: RequestBody,
         name: RequestBody,
         description: RequestBody
-    ): AgentResponse {
-        return requestData(
+    ): AgentChatModel {
+        val response = requestData(
             apiCall = { apiRequest.createAgent(avatar, userId, name, description) },
             emptyDataMessage = "创建Agent响应为空"
         )
+        return AgentChatConvertor.dto2Model(response.agent)
     }
 
-    suspend fun getAgentInfo(agentId: String): AgentResponse {
-        return requestData(
+    suspend fun getAgentInfo(agentId: String): AgentChatModel {
+        val response = requestData(
             apiCall = { apiRequest.getAgentInfo(agentId) },
             emptyDataMessage = "Agent详情响应为空"
         )
+        return AgentChatConvertor.dto2Model(response.agent)
     }
 
     /**
@@ -133,11 +135,12 @@ class RemoteApiSource(
         userId: RequestBody,
         name: RequestBody,
         description: RequestBody
-    ): AgentResponse {
-        return requestData(
+    ): AgentChatModel {
+        val response = requestData(
             apiCall = { apiRequest.updateAgent(avatar, agentId, userId, name, description) },
             emptyDataMessage = "更新Agent响应为空"
         )
+        return AgentChatConvertor.dto2Model(response.agent)
     }
 
     suspend fun deleteAgent(request: AgentDeleteRequest): AgentResponse {

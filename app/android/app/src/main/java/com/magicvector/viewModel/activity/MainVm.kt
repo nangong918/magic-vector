@@ -1,17 +1,17 @@
 package com.magicvector.viewModel.activity
 
 import android.Manifest
+import android.util.Log
 import androidx.annotation.RequiresPermission
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.magicvector.domain.dto.http.request.AgentDeleteRequest
 import com.magicvector.MainApplication
-import com.magicvector.manager.RealtimeChatController
-import com.magicvector.manager.agent.AgentsEffect
-import com.magicvector.manager.event.EventSourceType
+import com.magicvector.manager.event.agent.AgentEventManager
+import com.magicvector.manager.realtime.RealtimeChatController
 import com.magicvector.viewModel.fragment.ControlVm
 import com.magicvector.viewModel.fragment.MessageListIntent
-import com.magicvector.viewModel.fragment.MessageListMviVm
+import com.magicvector.viewModel.fragment.MessageListVm
 import com.magicvector.viewModel.fragment.MineVm
 import com.view.appview.MainSelectItemEnum
 import kotlinx.coroutines.channels.Channel
@@ -25,33 +25,37 @@ import kotlinx.coroutines.launch
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.RequestBody.Companion.toRequestBody
 
-
 class MainVm : ViewModel() {
 
     companion object {
         val TAG: String = MainVm::class.java.name
         private val api = MainApplication.getRemoteApiSource()
+        private val agentEventManager: AgentEventManager = MainApplication.getAgentEventManager()
     }
 
-    // 保留对外控制器引用，避免影响其他页面后续接入。
-    var realtimeChatController: RealtimeChatController? = null
+    // ========== 子 ViewModel ==========
     // MainVm 统一持有各 Tab 子 VM，避免 Composable 重建时状态丢失。
-    val messageListVm: MessageListMviVm = MessageListMviVm()
+    val messageListVm: MessageListVm = MessageListVm()
     val controlVm: ControlVm = ControlVm()
     val mineVm: MineVm = MineVm()
 
-    // StateFlow (UI State) 存储 UI 状态
+    // ========== RealtimeChatController 引用 ==========
+    // 保留对外控制器引用，避免影响其他页面后续接入。
+    private var _realtimeChatController: RealtimeChatController? = null
+    val realtimeChatController: RealtimeChatController? get() = _realtimeChatController
+
+    // ========== StateFlow (UI State) ==========
     private val _uiState = MutableStateFlow(MainState())
     val uiState: StateFlow<MainState> = _uiState.asStateFlow()
+
     private val _dataState = MutableStateFlow(MainDataState())
     val dataState: StateFlow<MainDataState> = _dataState.asStateFlow()
+
     private val _effect = Channel<MainEffect>(Channel.BUFFERED)
     val effect: Flow<MainEffect> = _effect.receiveAsFlow()
-    private val agentsManager = MainApplication.getAgentsManager()
 
     init {
-        syncAgentsDataFromManager()
-        observeAgentsEffect()
+        observeAgentManager()
     }
 
     @RequiresPermission(Manifest.permission.RECORD_AUDIO)
@@ -75,7 +79,9 @@ class MainVm : ViewModel() {
             }
 
             MainIntent.OpenCreateAgent -> {
-                _uiState.update { it.copy(agentEditor = AgentEditorState(isVisible = true, mode = AgentEditorMode.CREATE)) }
+                _uiState.update {
+                    it.copy(agentEditor = AgentEditorState(isVisible = true, mode = AgentEditorMode.CREATE))
+                }
             }
 
             MainIntent.CloseAgentEditor -> {
@@ -99,23 +105,28 @@ class MainVm : ViewModel() {
             MainIntent.DeleteAgent -> deleteCurrentAgent()
 
             is MainIntent.ChatServiceBound -> {
-                realtimeChatController = intent.handler
-                realtimeChatController?.ensureUserConnection(MainApplication.getUserId())
+                _realtimeChatController = intent.handler
+                _realtimeChatController?.ensureUserConnection(MainApplication.getUserId())
                 MainApplication.getNetworkManager().bindWsReconnectAction {
-                    realtimeChatController?.reconnectUserConnectionIfNeeded()
+                    _realtimeChatController?.reconnectUserConnectionIfNeeded()
                 }
                 _dataState.update { it.copy(isChatServiceBound = true) }
             }
 
             MainIntent.ChatServiceUnbound -> {
                 MainApplication.getNetworkManager().unbindWsReconnectAction()
-                realtimeChatController = null
+                _realtimeChatController = null
                 _dataState.update { it.copy(isChatServiceBound = false) }
             }
         }
     }
 
-    private fun openEditAgent(agentId: String) {
+    // ========== Agent 编辑相关 ==========
+    /**
+     * 打开编辑 Agent 弹窗
+     * @param agentId Agent ID
+     */
+    private fun openEditAgent(agentId: Long) {
         _uiState.update {
             it.copy(
                 agentEditor = AgentEditorState(
@@ -128,126 +139,192 @@ class MainVm : ViewModel() {
         }
         viewModelScope.launch {
             try {
-                val response = api.getAgentInfo(agentId)
-                val vo = response.agentModel?.agentVo
+                val agentModel = api.getAgentInfo(agentId.toString())
                 _uiState.update {
                     it.copy(
                         agentEditor = it.agentEditor.copy(
                             isLoading = false,
-                            name = vo?.name ?: "",
-                            description = vo?.description ?: ""
+                            name = agentModel.agentChatVo?.agentVo?.name?: "",
+                            description = agentModel.agentChatVo?.agentVo?.description?: ""
                         )
                     )
                 }
-            } catch (_: Throwable) {
+            } catch (e: Exception) {
+                Log.e(TAG, "openEditAgent failed", e)
                 _uiState.update { it.copy(agentEditor = AgentEditorState()) }
                 sendEffect(MainEffect.ShowToast("获取 Agent 详情失败"))
             }
         }
     }
 
+    /**
+     * 提交 Agent 编辑（创建或更新）
+     */
     private fun submitAgentEditor() {
         val editor = _uiState.value.agentEditor
         if (editor.name.isBlank() || editor.description.isBlank()) {
             sendEffect(MainEffect.ShowToast("名称和描述不能为空"))
             return
         }
+
         _uiState.update { it.copy(agentEditor = it.agentEditor.copy(isSubmitting = true)) }
+
         val plain = "text/plain".toMediaTypeOrNull()
         val userId = MainApplication.getUserId().toRequestBody(plain)
         val name = editor.name.toRequestBody(plain)
         val description = editor.description.toRequestBody(plain)
+
         if (editor.mode == AgentEditorMode.CREATE) {
-            viewModelScope.launch {
-                try {
-                    val response = api.createAgent(
-                        avatar = null,
-                        userId = userId,
-                        name = name,
-                        description = description
-                    )
-                    _uiState.update { it.copy(agentEditor = AgentEditorState()) }
-                    response.agentModel?.let {
-                        MainApplication.getAgentEventManager().upsert(it, EventSourceType.USER_ACTION)
-                    }
-                    messageListVm.processIntent(MessageListIntent.Refresh)
-                } catch (_: Throwable) {
-                    _uiState.update { it.copy(agentEditor = it.agentEditor.copy(isSubmitting = false)) }
-                    sendEffect(MainEffect.ShowToast("创建 Agent 失败"))
-                }
-            }
-            return
+            createAgent(userId, name, description)
+        } else {
+            updateAgent(editor.agentId, userId, name, description)
         }
-        val agentId = editor.agentId?.toRequestBody(plain) ?: run {
-            _uiState.update { it.copy(agentEditor = it.agentEditor.copy(isSubmitting = false)) }
-            sendEffect(MainEffect.ShowToast("缺少 AgentId"))
-            return
-        }
+    }
+
+    /**
+     * 创建 Agent
+     */
+    private fun createAgent(
+        userId: okhttp3.RequestBody,
+        name: okhttp3.RequestBody,
+        description: okhttp3.RequestBody
+    ) {
         viewModelScope.launch {
             try {
-                val response = api.updateAgent(
+                val agentModel = api.createAgent(
                     avatar = null,
-                    agentId = agentId,
                     userId = userId,
                     name = name,
                     description = description
                 )
                 _uiState.update { it.copy(agentEditor = AgentEditorState()) }
-                response.agentModel?.let {
-                    MainApplication.getAgentEventManager().upsert(it, EventSourceType.USER_ACTION)
+                agentModel.let { agent ->
+                    // 使用新的 AgentEventManager 添加 Agent
+                    agentEventManager.onUserAddOne(agent)
+                }
+                // 刷新消息列表
+                messageListVm.processIntent(MessageListIntent.Refresh)
+                sendEffect(MainEffect.ShowToast("创建成功"))
+            } catch (e: Exception) {
+                Log.e(TAG, "createAgent failed", e)
+                _uiState.update { it.copy(agentEditor = it.agentEditor.copy(isSubmitting = false)) }
+                sendEffect(MainEffect.ShowToast("创建 Agent 失败"))
+            }
+        }
+    }
+
+    /**
+     * 更新 Agent
+     */
+    private fun updateAgent(
+        agentId: Long?,
+        userId: okhttp3.RequestBody,
+        name: okhttp3.RequestBody,
+        description: okhttp3.RequestBody
+    ) {
+        val agentIdBody = agentId?.toString()?.toRequestBody("text/plain".toMediaTypeOrNull())
+        if (agentIdBody == null) {
+            _uiState.update { it.copy(agentEditor = it.agentEditor.copy(isSubmitting = false)) }
+            sendEffect(MainEffect.ShowToast("缺少 AgentId"))
+            return
+        }
+
+        viewModelScope.launch {
+            try {
+                val agentModel = api.updateAgent(
+                    avatar = null,
+                    agentId = agentIdBody,
+                    userId = userId,
+                    name = name,
+                    description = description
+                )
+                _uiState.update { it.copy(agentEditor = AgentEditorState()) }
+                agentModel.let { it ->
+                    // 使用新的 AgentEventManager 更新 Agent
+                    agentEventManager.onUserAddOne(it)
                 }
                 messageListVm.processIntent(MessageListIntent.Refresh)
-            } catch (_: Throwable) {
+                sendEffect(MainEffect.ShowToast("更新成功"))
+            } catch (e: Exception) {
+                Log.e(TAG, "updateAgent failed", e)
                 _uiState.update { it.copy(agentEditor = it.agentEditor.copy(isSubmitting = false)) }
                 sendEffect(MainEffect.ShowToast("更新 Agent 失败"))
             }
         }
     }
 
+    /**
+     * 删除当前编辑的 Agent
+     */
     private fun deleteCurrentAgent() {
         val editor = _uiState.value.agentEditor
-        val agentId = editor.agentId ?: return
+        val agentId = editor.agentId ?: run {
+            sendEffect(MainEffect.ShowToast("缺少 AgentId"))
+            return
+        }
+
         val request = AgentDeleteRequest().apply {
-            this.agentId = agentId
+            this.agentId = agentId.toString()
             this.userId = MainApplication.getUserId()
         }
+
         _uiState.update { it.copy(agentEditor = it.agentEditor.copy(isSubmitting = true)) }
+
         viewModelScope.launch {
             try {
                 api.deleteAgent(request)
                 _uiState.update { it.copy(agentEditor = AgentEditorState()) }
-                MainApplication.getAgentEventManager().remove(agentId, EventSourceType.USER_ACTION)
+                // 使用新的 AgentEventManager 删除 Agent
+                agentEventManager.onUserDelete(agentId)
                 messageListVm.processIntent(MessageListIntent.Refresh)
-            } catch (_: Throwable) {
+                sendEffect(MainEffect.ShowToast("删除成功"))
+            } catch (e: Exception) {
+                Log.e(TAG, "deleteCurrentAgent failed", e)
                 _uiState.update { it.copy(agentEditor = it.agentEditor.copy(isSubmitting = false)) }
                 sendEffect(MainEffect.ShowToast("删除 Agent 失败"))
             }
         }
     }
 
-    private fun observeAgentsEffect() {
+    // ========== Agent 数据同步 ==========
+    /**
+     * 监听 AgentEventManager 的数据变化
+     */
+    private fun observeAgentManager() {
         viewModelScope.launch {
-            agentsManager.effect.collect { effect ->
-                when (effect) {
-                    AgentsEffect.AgentListChanged -> {
-                        syncAgentsDataFromManager()
-                    }
+            // 监听 Agent 列表变化，同步到 dataState
+            agentEventManager.items.collect { agents ->
+                _dataState.update {
+                    it.copy(
+                        agentCount = agents.size,
+                        agentListVersion = System.currentTimeMillis()
+                    )
                 }
+            }
+        }
+
+        viewModelScope.launch {
+            // 监听 Agent 事件，用于调试或特殊处理
+            agentEventManager.events.collect { event ->
+                Log.d(TAG, "Agent event: $event")
             }
         }
     }
 
-    // 从manager获取数据
+    /**
+     * 从 Manager 同步 Agent 数据（用于初始化）
+     */
     private fun syncAgentsDataFromManager() {
-        val list = agentsManager.agentList.value
+        val agents = agentEventManager.items.value
         _dataState.update {
             it.copy(
-                agentCount = list.size,
+                agentCount = agents.size,
                 agentListVersion = System.currentTimeMillis()
             )
         }
     }
 
+    // ========== 辅助方法 ==========
     private fun sendEffect(effect: MainEffect) {
         viewModelScope.launch {
             _effect.send(effect)
@@ -255,40 +332,43 @@ class MainVm : ViewModel() {
     }
 }
 
-
+// ========== Intent ==========
 sealed class MainIntent {
-    // 初始化意图 - 页面启动时调用
+    /** 初始化意图 - 页面启动时调用，选中某个 Tab */
     data class Initialize(val selected: MainSelectItemEnum) : MainIntent()
-    // 作用：告诉 ViewModel 页面启动了，并且需要选中某个 Tab
-    // 触发时机：onCreate 时调用
 
-    // 切换 Tab 意图 - 用户点击底部导航栏
+    /** 切换 Tab 意图 - 用户点击底部导航栏 */
     data class SelectTab(val tab: MainSelectItemEnum) : MainIntent()
-    // 作用：用户想要切换到某个页面（首页/应用/我的）
-    // 触发时机：底部导航栏点击时
 
-    // Service 绑定成功意图 - 系统回调
+    /** Service 绑定成功意图 - 系统回调 */
     data class ChatServiceBound(val handler: RealtimeChatController) : MainIntent()
-    // 作用：ChatService 已经连接成功，把通信处理器传给 ViewModel
-    // 触发时机：ServiceConnection.onServiceConnected
 
-    // Service 解绑意图 - 系统回调
+    /** Service 解绑意图 - 系统回调 */
     data object ChatServiceUnbound : MainIntent()
-    // 作用：ChatService 断开连接了，需要更新 UI 状态
-    // 触发时机：ServiceConnection.onServiceDisconnected 或 onDestroy
 
-    // 打开创建 Agent 意图 - 用户点击按钮
+    /** 打开创建 Agent 意图 - 用户点击按钮 */
     data object OpenCreateAgent : MainIntent()
-    // 作用：用户想要跳转到创建 Agent 页面
-    // 触发时机：点击"创建Agent"按钮
-    data class OpenEditAgent(val agentId: String) : MainIntent()
+
+    /** 打开编辑 Agent 意图 */
+    data class OpenEditAgent(val agentId: Long) : MainIntent()
+
+    /** 关闭 Agent 编辑弹窗 */
     data object CloseAgentEditor : MainIntent()
+
+    /** 更新编辑框名称 */
     data class UpdateEditorName(val name: String) : MainIntent()
+
+    /** 更新编辑框描述 */
     data class UpdateEditorDescription(val description: String) : MainIntent()
+
+    /** 提交 Agent 编辑（创建或更新） */
     data object SubmitAgentEditor : MainIntent()
+
+    /** 删除当前 Agent */
     data object DeleteAgent : MainIntent()
 }
 
+// ========== State ==========
 data class MainState(
     val currentSelected: MainSelectItemEnum = MainSelectItemEnum.HOME,
     val agentEditor: AgentEditorState = AgentEditorState()
@@ -300,21 +380,23 @@ data class MainDataState(
     val agentListVersion: Long = 0L
 )
 
+// ========== Agent 编辑相关 ==========
 enum class AgentEditorMode {
-    CREATE,
-    EDIT
+    CREATE,   // 创建模式
+    EDIT      // 编辑模式
 }
 
 data class AgentEditorState(
     val isVisible: Boolean = false,
     val mode: AgentEditorMode = AgentEditorMode.CREATE,
-    val agentId: String? = null,
+    val agentId: Long? = null,  // 改为可空类型，创建模式时为 null
     val name: String = "",
     val description: String = "",
     val isLoading: Boolean = false,
     val isSubmitting: Boolean = false
 )
 
+// ========== Effect ==========
 sealed class MainEffect {
     data class ShowToast(val message: String) : MainEffect()
 }

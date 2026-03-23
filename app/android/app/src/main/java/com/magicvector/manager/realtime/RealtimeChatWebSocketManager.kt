@@ -1,10 +1,9 @@
 package com.magicvector.manager.realtime
 
-
 import android.util.Log
 import com.magicvector.repository.api.config.ApiUrlConfig
-import com.magicvector.domain.constant.BaseConstant
 import com.magicvector.MainApplication
+import com.magicvector.domain.constant.BaseConstant
 import com.magicvector.domain.constant.chat.RealtimeRequestDataTypeEnum
 import com.magicvector.manager.ws.WsManager
 import com.magicvector.utils.chat.RealtimeChatWsClient
@@ -34,6 +33,8 @@ class RealtimeChatWebSocketManager(
 
     /**
      * 确保用户级别的 WebSocket 连接
+     * @param userId 用户ID字符串
+     * @return 是否成功建立连接
      */
     fun ensureUserConnection(userId: String): Boolean {
         if (userId.isBlank()) {

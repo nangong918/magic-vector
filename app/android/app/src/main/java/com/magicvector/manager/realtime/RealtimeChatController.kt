@@ -78,40 +78,42 @@ class RealtimeChatController : IsAudioRecording {
         eventFlow.updateUiState { it.copy(isLoading = true) }
 
         this.agentChatBO = intent.agentChatBo
-        visionManager.setOnVideoFrameCallback(intent.onVideoFrame)
 
         agentChatBO?.let { bo ->
             this.agentId = bo.agentId
             chatEventManager = MainApplication.getChatEventMapManager().getOrCreateManager(bo.agentId)
         }
 
-
-        if (agentChatBO != null) {
-            eventFlow.updateRealtimeState(RealtimeChatState.Initializing)
-
-            // 初始化子模块
-            initSubModules()
-
-            // 建立用户连接
-            val success = webSocketManager.ensureUserConnection(MainApplication.getUserId())
-            if (success) {
-                bindChannel(agentChatBO!!.agentId)
-            }
-        } else {
+        if (agentChatBO == null) {
             eventFlow.updateRealtimeState(RealtimeChatState.Error("Agent Id is Null"))
             throw IllegalArgumentException("Agent Id is Null")
         }
 
-        // 初始化 UDP 视觉管理器
+        // 1. 先初始化所有子模块
+        initSubModules()
+
+        // 2. 设置视频帧回调
+        visionManager.setOnVideoFrameCallback(intent.onVideoFrame)
+
+        // 3. 初始化 UDP 视觉管理器
         visionManager.init(MainApplication.getUserId(), agentId?.toString() ?: "")
 
+        // 4. 建立 WebSocket 连接
+        eventFlow.updateRealtimeState(RealtimeChatState.Initializing)
+        val success = webSocketManager.ensureUserConnection(MainApplication.getUserId())
+        if (success) {
+            bindChannel(agentChatBO!!.agentId)
+        }
+
+        // 5. 执行初始化网络回调（加载历史消息）
         intent.initNetworkRunnable.invoke()
+
         eventFlow.updateUiState { it.copy(isLoading = false) }
     }
 
     @RequiresPermission(Manifest.permission.RECORD_AUDIO)
     private fun initSubModules() {
-        // 消息处理器（先创建，但需要等 webSocketManager 和 audioManager 初始化后再设置）
+        // 1. 先创建消息处理器（因为它不依赖其他模块）
         messageHandler = RealtimeChatMessageHandler(
             coroutineScope = coroutineScope,
             eventFlow = eventFlow,
@@ -121,18 +123,28 @@ class RealtimeChatController : IsAudioRecording {
             userId = userId
         )
 
-        // WebSocket 管理器
+        // 2. 创建 WebSocket 管理器（依赖 messageHandler）
         webSocketManager = RealtimeChatWebSocketManager(eventFlow, messageHandler)
 
-        // 音频管理器
+        // 3. 创建音频管理器（依赖 webSocketManager）
         audioManager = RealtimeChatAudioManager(eventFlow, webSocketManager)
         audioManager.initAudioController()
 
-        // 视觉管理器
+        // 4. 创建视觉管理器
         visionManager = RealtimeChatVisionManager()
 
-        // 历史消息管理器
+        // 5. 创建历史消息管理器
         historyManager = RealtimeChatHistoryManager(coroutineScope, chatEventManager)
+    }
+
+    /**
+     * 确保用户级别的 WebSocket 连接
+     * @param userId 用户ID
+     * @return 是否成功建立连接
+     */
+    @RequiresPermission(Manifest.permission.RECORD_AUDIO)
+    fun ensureUserConnection(userId: String): Boolean {
+        return webSocketManager.ensureUserConnection(userId)
     }
 
     private fun bindChannel(agentId: Long) {
