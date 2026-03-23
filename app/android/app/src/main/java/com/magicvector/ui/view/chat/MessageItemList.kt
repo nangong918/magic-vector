@@ -23,47 +23,27 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.data.domain.constant.chat.RoleTypeEnum
+import com.magicvector.domain.model.chat.ChatMessageModel
+import com.magicvector.domain.vo.message.ChatBriefMessageVO
+import com.magicvector.domain.vo.message.ChatMessageVO
 import com.magicvector.ui.theme.MagicVectorTheme
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
-import kotlin.collections.indexOfFirst
-import kotlin.collections.isNotEmpty
-import kotlin.collections.sortedBy
-
-// 消息数据类
-sealed class MessageItem {
-    data class Received(
-        val id: String,
-        val avatarUrl: String? = null,
-        val messageText: String,
-        val messageImageUrl: String? = null,
-        val chatTime: String,
-        val isShowImage: Boolean = false
-    ) : MessageItem()
-
-    data class Sent(
-        val id: String,
-        val messageText: String,
-        val messageImageUrl: String? = null,
-        val timeText: String,
-        val isShowImage: Boolean = false
-    ) : MessageItem()
-}
 
 // 聊天列表状态管理
 class ChatListState {
-    val messages = mutableStateListOf<MessageItem>()
+    val messages = mutableStateListOf<ChatMessageModel>()
     var isLoading by mutableStateOf(false)
     var canLoadMore by mutableStateOf(true)
     var listState: LazyListState? = null
 
-    // 滚动到底部 - 使用消息数量快照避免并发问题
+    // 滚动到底部
     fun scrollToBottom(coroutineScope: CoroutineScope) {
         val state = listState ?: return
-
         coroutineScope.launch {
             val itemCount = messages.size
-                if (itemCount > 0 && itemCount - 1 < state.layoutInfo.totalItemsCount) {
+            if (itemCount > 0 && itemCount - 1 < state.layoutInfo.totalItemsCount) {
                 state.animateScrollToItem(itemCount - 1)
             }
         }
@@ -72,7 +52,6 @@ class ChatListState {
     // 立即滚动到底部（无动画）
     fun scrollToBottomImmediate(coroutineScope: CoroutineScope) {
         val state = listState ?: return
-
         coroutineScope.launch {
             val itemCount = messages.size
             if (itemCount > 0 && itemCount - 1 < state.layoutInfo.totalItemsCount) {
@@ -81,55 +60,39 @@ class ChatListState {
         }
     }
 
-    // 修改：新消息添加到尾部（时间正序）
-    fun addNewMessages(newMessages: List<MessageItem>) {
-        messages.addAll(newMessages.sortedBy { // 改为正序排序
-            when (it) {
-                is MessageItem.Received -> it.chatTime
-                is MessageItem.Sent -> it.timeText
-            }
-        })
+    // 添加新消息到尾部（按时间正序）
+    fun addNewMessages(newMessages: List<ChatMessageModel>) {
+        messages.addAll(newMessages.sortedBy { it.timestamp })
     }
 
-    // 修改：加载更多历史消息到头部
-    fun loadMoreMessages(historyMessages: List<MessageItem>) {
-        messages.addAll(0, historyMessages.sortedBy { // 添加到头部，正序排序
-            when (it) {
-                is MessageItem.Received -> it.chatTime
-                is MessageItem.Sent -> it.timeText
-            }
-        })
+    // 加载更多历史消息到头部
+    fun loadMoreMessages(historyMessages: List<ChatMessageModel>) {
+        messages.addAll(0, historyMessages.sortedBy { it.timestamp })
         canLoadMore = historyMessages.isNotEmpty()
     }
 
-    // 修改：插入单条消息到尾部（O(1) 操作）
-    fun insertMessage(message: MessageItem) {
-        messages.add(message) // 直接添加到尾部，性能最优
+    // 插入单条消息到尾部
+    fun insertMessage(message: ChatMessageModel) {
+        messages.add(message)
     }
 
-    // 修改：插入消息并滚动到底部
-    fun insertMessageAndScroll(message: MessageItem, coroutineScope: CoroutineScope) {
-        // 先添加消息，再滚动
+    // 插入消息并滚动到底部
+    fun insertMessageAndScroll(message: ChatMessageModel, coroutineScope: CoroutineScope) {
         insertMessage(message)
-        // 使用新的大小滚动
         coroutineScope.launch {
             listState?.animateScrollToItem(messages.size - 1)
         }
     }
 
-    fun replaceMessages(newMessages: List<MessageItem>) {
+    // 替换所有消息
+    fun replaceMessages(newMessages: List<ChatMessageModel>) {
         messages.clear()
-        messages.addAll(newMessages)
+        messages.addAll(newMessages.sortedBy { it.timestamp })
     }
 
     // 更新单条消息
-    fun updateMessage(messageId: String, update: (MessageItem) -> MessageItem) {
-        val index = messages.indexOfFirst {
-            when (it) {
-                is MessageItem.Received -> it.id == messageId
-                is MessageItem.Sent -> it.id == messageId
-            }
-        }
+    fun updateMessage(messageId: Long, update: (ChatMessageModel) -> ChatMessageModel) {
+        val index = messages.indexOfFirst { it.messageId == messageId }
         if (index != -1) {
             messages[index] = update(messages[index])
         }
@@ -146,86 +109,56 @@ fun MessageListView(
     modifier: Modifier = Modifier,
     state: ChatListState = rememberChatListState(),
     onLoadMore: () -> Unit = { },
-    onMessageClick: (MessageItem) -> Unit = { }
 ) {
-    println("state.messages.size = ${state.messages.size}")
-    // 关键：在创建 listState 时直接指定初始位置
     val listState = rememberLazyListState(
         initialFirstVisibleItemIndex = if (state.messages.isNotEmpty()) state.messages.size - 1 else 0
     )
 
-    // 保存 listState 到 ChatListState
     LaunchedEffect(listState) {
         state.listState = listState
     }
 
-//    // 监听滚动到底部自动加载更多
-//    val shouldLoadMore by remember(listState) {
-//        derivedStateOf {
-//            val layoutInfo = listState.layoutInfo
-//            val totalItems = layoutInfo.totalItemsCount
-//            if (totalItems == 0) return@derivedStateOf false
-//
-//            val lastVisibleItem = layoutInfo.visibleItemsInfo.lastOrNull()
-//            lastVisibleItem?.index == totalItems - 1 &&
-//                    !state.isLoading &&
-//                    state.canLoadMore
-//        }
-//    }
-//
-//    LaunchedEffect(shouldLoadMore) {
-//        if (shouldLoadMore) {
-//            state.isLoading = true
-//            onLoadMore()
-//            state.isLoading = false
-//        }
-//    }
-
     LazyColumn(
         modifier = modifier,
-        state = listState,
-        // 取消新消息在底部，因为ArrayList插入到头后续的item都需要位移，单次时间复杂度O(n), 而新消息插入在最后一个是O(1)
-//        reverseLayout = true
+        state = listState
     ) {
         items(
             count = state.messages.size,
             key = { index ->
-                when (val item = state.messages[index]) {
-                    is MessageItem.Received -> "received_${item.id}"
-                    is MessageItem.Sent -> "sent_${item.id}"
-                }
+                val message = state.messages[index]
+                "${message.chatMessageVo
+                    .briefMessageVo.role}_${message.messageId}"
             }
         ) { index ->
             val message = state.messages[index]
 
-            when (message) {
-                is MessageItem.Received -> {
+            when (message.chatMessageVo.briefMessageVo.role) {
+                RoleTypeEnum.AGENT.value -> {
                     ReceivedMessage(
                         modifier = Modifier
                             .fillParentMaxWidth()
                             .padding(vertical = 4.dp),
-                        avatarUrl = message.avatarUrl,
-                        messageText = message.messageText,
-                        messageImageUrl = message.messageImageUrl,
-                        timeText = message.chatTime,
-                        isShowImage = message.isShowImage
+                        avatarUrl = null, // 可以从 Agent 信息获取
+                        messageText = message.chatMessageVo.briefMessageVo.content,
+                        messageImageUrl = message.chatMessageVo.imgUrl.takeIf { it.isNotEmpty() },
+                        timeText = message.chatMessageVo.briefMessageVo.chatTime,
+                        isShowImage = message.chatMessageVo.messageType != com.data.domain.constant.chat.MessageTypeEnum.TEXT.value,
                     )
                 }
-                is MessageItem.Sent -> {
+                else -> {
                     SentMessage(
                         modifier = Modifier
                             .fillParentMaxWidth()
                             .padding(vertical = 4.dp),
-                        messageText = message.messageText,
-                        messageImageUrl = message.messageImageUrl,
-                        timeText = message.timeText,
-                        isShowImage = message.isShowImage
+                        messageText = message.chatMessageVo.briefMessageVo.content,
+                        messageImageUrl = message.chatMessageVo.imgUrl.takeIf { it.isNotEmpty() },
+                        timeText = message.chatMessageVo.briefMessageVo.chatTime,
+                        isShowImage = message.chatMessageVo.messageType != com.data.domain.constant.chat.MessageTypeEnum.TEXT.value,
                     )
                 }
             }
         }
 
-        // 加载更多指示器
         if (state.isLoading) {
             item {
                 LoadingIndicator()
@@ -252,26 +185,55 @@ private fun LoadingIndicator() {
 private fun ChatScreen() {
     val chatState = rememberChatListState()
 
-    // 初始化示例数据
     LaunchedEffect(Unit) {
         val initialMessages = listOf(
-            MessageItem.Received(
-                id = "1",
-                messageText = "你好！",
-                chatTime = "2025/10/9 10:00"
+            ChatMessageModel(
+                chatMessageVo = ChatMessageVO(
+                    briefMessageVo = ChatBriefMessageVO(
+                        content = "你好！",
+                        chatTime = "2025/10/9 10:00",
+                        role = RoleTypeEnum.AGENT.value
+                    ),
+                    imgUrl = "",
+                    messageType = com.data.domain.constant.chat.MessageTypeEnum.TEXT.value
+                ),
+                agentId = 1L,
+                userId = 1L,
+                messageId = 1L,
+                timestamp = 1696838400000L
             ),
-            MessageItem.Sent(
-                id = "2",
-                messageText = "你好！最近怎么样？",
-                timeText = "2025/10/9 10:01"
+            ChatMessageModel(
+                chatMessageVo = ChatMessageVO(
+                    briefMessageVo = ChatBriefMessageVO(
+                        content = "你好！最近怎么样？",
+                        chatTime = "2025/10/9 10:01",
+                        role = RoleTypeEnum.USER.value
+                    ),
+                    imgUrl = "",
+                    messageType = com.data.domain.constant.chat.MessageTypeEnum.TEXT.value
+                ),
+                agentId = 1L,
+                userId = 1L,
+                messageId = 2L,
+                timestamp = 1696838460000L
             ),
-            MessageItem.Received(
-                id = "3",
-                messageText = "还不错，你呢？",
-                chatTime = "2025/10/9 10:02"
+            ChatMessageModel(
+                chatMessageVo = ChatMessageVO(
+                    briefMessageVo = ChatBriefMessageVO(
+                        content = "还不错，你呢？",
+                        chatTime = "2025/10/9 10:02",
+                        role = RoleTypeEnum.AGENT.value
+                    ),
+                    imgUrl = "",
+                    messageType = com.data.domain.constant.chat.MessageTypeEnum.TEXT.value
+                ),
+                agentId = 1L,
+                userId = 1L,
+                messageId = 3L,
+                timestamp = 1696838520000L
             )
         )
-        chatState.addNewMessages(initialMessages)
+        chatState.replaceMessages(initialMessages)
     }
 
     Column(modifier = Modifier.fillMaxSize()) {
@@ -281,16 +243,23 @@ private fun ChatScreen() {
             onLoadMore = {
                 // 加载更多历史消息
                 val historyMessages = listOf(
-                    MessageItem.Received(
-                        id = "history_1",
-                        messageText = "这是历史消息",
-                        chatTime = "2025/10/8 09:00"
+                    ChatMessageModel(
+                        chatMessageVo = ChatMessageVO(
+                            briefMessageVo = ChatBriefMessageVO(
+                                content = "这是历史消息",
+                                chatTime = "2025/10/8 09:00",
+                                role = RoleTypeEnum.AGENT.value
+                            ),
+                            imgUrl = "",
+                            messageType = com.data.domain.constant.chat.MessageTypeEnum.TEXT.value
+                        ),
+                        agentId = 1L,
+                        userId = 1L,
+                        messageId = 0L,
+                        timestamp = 1696752000000L
                     )
                 )
                 chatState.loadMoreMessages(historyMessages)
-            },
-            onMessageClick = { message ->
-                // 处理消息点击
             }
         )
     }
