@@ -5,13 +5,14 @@ import com.magicvector.domain.model.chat.ChatWsTextMessageParseModel
 import com.data.domain.constant.chat.RealtimeRequestDataTypeEnum
 import com.data.domain.constant.chat.RealtimeResponseDataTypeEnum
 import com.data.domain.constant.chat.RoleTypeEnum
-import com.magicvector.domain.dto.ws.response.RealtimeChatTextResponse
+import com.magicvector.domain.dto.ws.response.WsChatTextResponse
 import com.magicvector.domain.dto.ws.request.RealtimeChatBindChannelRequest
 import com.magicvector.domain.dto.ws.request.RealtimeChatConnectRequest
 import com.google.gson.reflect.TypeToken
 import com.magicvector.MainApplication
-import com.magicvector.callback.OnReceiveAgentTextCallback
-import com.magicvector.manager.ChatController
+import com.magicvector.domain.convertor.ChatMessageConvertor
+import com.magicvector.domain.model.chat.ChatMessageModel
+import com.magicvector.manager.event.chat.ChatEventMapManager
 import com.magicvector.utils.chat.AbstractWsClient
 
 
@@ -91,28 +92,29 @@ object WsManager {
      * @param chatControllerPointer         ChatController指针
      * @param onReceiveAgentTextCallback    接收代理文本的回调
      */
-    fun handleTextMessage(message: String, chatControllerPointer: ChatController, onReceiveAgentTextCallback: OnReceiveAgentTextCallback?){
-        var response : RealtimeChatTextResponse
+    suspend fun handleTextMessage(message: String, chatEventMapManager: ChatEventMapManager){
+        var response : WsChatTextResponse
         try {
             Log.i(TAG, "handleTextMessage::receiveMessage: $message")
             response = GSON.fromJson(message,
-                RealtimeChatTextResponse::class.java)
+                WsChatTextResponse::class.java)
         } catch (e: Exception){
             Log.e(TAG, "handleTextMessage::error: $message", e)
             return
         }
 
-        if (response.role == null ||
-            (response.role != RoleTypeEnum.USER.value && response.role != RoleTypeEnum.AGENT.value)){
+        if (response.role != RoleTypeEnum.USER.value &&
+            response.role != RoleTypeEnum.AGENT.value){
             throw IllegalArgumentException("role is null or invalid")
         }
 
         try {
-            chatControllerPointer.setWsToViews(response)
-            response.content?.let {
-                onReceiveAgentTextCallback?.onText(it)
-                Log.i(TAG, "handleTextMessage::content: $it")
-            }
+            val agentId: Long = response.agentId.toLong()
+            val chatEventManager = chatEventMapManager.getOrCreateManager(agentId)
+            val chatMessageModel: ChatMessageModel = ChatMessageConvertor.wsChatTextResponse2Model(
+                response = response
+            )
+            chatEventManager.onWsUpsertOne(item = chatMessageModel)
         } catch (e: Exception){
             Log.e(TAG, "handleTextMessage::error: $message", e)
         }

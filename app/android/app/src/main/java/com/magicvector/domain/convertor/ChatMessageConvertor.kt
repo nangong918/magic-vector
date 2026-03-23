@@ -1,7 +1,9 @@
 package com.magicvector.domain.convertor
 
+import com.data.domain.constant.chat.MessageTypeEnum
 import com.magicvector.domain.convertor.base.BaseConvertor
 import com.magicvector.domain.dto.http.response.ChatMessageDto
+import com.magicvector.domain.dto.ws.response.WsChatTextResponse
 import com.magicvector.domain.entity.ChatMessageEntity
 import com.magicvector.domain.model.chat.ChatMessageModel
 import com.magicvector.domain.vo.message.ChatBriefMessageVO
@@ -76,6 +78,27 @@ object ChatMessageConvertor : BaseConvertor<ChatMessageModel, ChatMessageEntity,
             userId = dto.userId,
             messageId = dto.messageId,
             timestamp = dto.timestamp
+        )
+    }
+
+    // WsChatTextResponse -> model
+    fun wsChatTextResponse2Model(response: WsChatTextResponse): ChatMessageModel {
+        val briefMessageVo = ChatBriefMessageVO(
+            content = response.content,
+            chatTime = response.chatTime,
+            role = response.role
+        )
+        val chatMessageVo = ChatMessageVO(
+            briefMessageVo = briefMessageVo,
+            imgUrl = "",
+            messageType = MessageTypeEnum.TEXT.value
+        )
+        return ChatMessageModel(
+            chatMessageVo = chatMessageVo,
+            agentId = response.agentId.toLong(),
+            userId = response.userId.toLong(),
+            messageId = response.messageId.toLong(),
+            timestamp = response.timestamp
         )
     }
 }

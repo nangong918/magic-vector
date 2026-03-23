@@ -22,7 +22,7 @@ import com.core.baseutil.ui.ToastUtils
 import com.data.domain.constant.BaseConstant
 import com.data.domain.constant.test.RealtimeDataTypeEnum
 import com.magicvector.domain.dto.ws.request.RealtimeChatConnectRequest
-import com.magicvector.domain.dto.ws.response.RealtimeChatTextResponse
+import com.magicvector.domain.dto.ws.response.WsChatTextResponse
 import com.magicvector.domain.event.WebSocketMessageEvent
 import com.magicvector.domain.event.WebsocketEventTypeEnum
 import com.data.domain.vo.test.AudioRecordPlayState
@@ -280,9 +280,9 @@ class TestVm(
                 val data = map[RealtimeDataTypeEnum.DATA]
                 if (data != null){
                     Log.i(TAG, "handleTextMessage: $data")
-                    var response : RealtimeChatTextResponse
+                    var response : WsChatTextResponse
                     try {
-                        val type = object : TypeToken<RealtimeChatTextResponse>() {}.type
+                        val type = object : TypeToken<WsChatTextResponse>() {}.type
                         response = GSON.fromJson(data, type)
                         realtimeChat2Message.postValue(response.content?:"")
                     } catch (e: Exception){

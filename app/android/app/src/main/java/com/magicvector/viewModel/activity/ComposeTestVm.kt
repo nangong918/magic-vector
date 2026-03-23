@@ -15,7 +15,7 @@ import androidx.lifecycle.viewModelScope
 import com.data.domain.constant.BaseConstant
 import com.data.domain.constant.test.RealtimeDataTypeEnum
 import com.magicvector.domain.dto.ws.request.RealtimeChatConnectRequest
-import com.magicvector.domain.dto.ws.response.RealtimeChatTextResponse
+import com.magicvector.domain.dto.ws.response.WsChatTextResponse
 import com.magicvector.domain.event.WebSocketMessageEvent
 import com.magicvector.domain.event.WebsocketEventTypeEnum
 import com.data.domain.vo.test.AudioRecordPlayState
@@ -194,7 +194,7 @@ class ComposeTestVm : ViewModel() {
             RealtimeDataTypeEnum.TEXT_MESSAGE -> {
                 val data = map[RealtimeDataTypeEnum.DATA] ?: return
                 try {
-                    val response: RealtimeChatTextResponse = GSON.fromJson(data, object : TypeToken<RealtimeChatTextResponse>() {}.type)
+                    val response: WsChatTextResponse = GSON.fromJson(data, object : TypeToken<WsChatTextResponse>() {}.type)
                     realtimeChat2Message.postValue(response.content ?: "")
                 } catch (e: Exception) {
                     Log.e(TAG, "handleTextMessage2 parse error", e)
