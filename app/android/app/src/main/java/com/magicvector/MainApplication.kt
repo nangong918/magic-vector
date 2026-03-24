@@ -3,8 +3,8 @@ package com.magicvector
 import android.app.Application
 import com.magicvector.repository.api.ApiRequest
 import com.magicvector.repository.api.config.ApiRequestProvider
-import com.core.baseutil.image.ImageManager
-import com.data.domain.ao.mixLLM.McpSwitch
+import com.magicvector.utils.image.ImageManager
+import com.magicvector.domain.model.mixLLM.McpSwitch
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import com.magicvector.dataSource.local.AgentLocalSource

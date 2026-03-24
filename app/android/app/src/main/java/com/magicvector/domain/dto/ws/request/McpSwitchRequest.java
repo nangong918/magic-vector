@@ -1,7 +1,7 @@
 package com.magicvector.domain.dto.ws.request;
 
 
-import com.data.domain.ao.mixLLM.McpSwitch;
+import com.magicvector.domain.model.mixLLM.McpSwitch;
 import com.magicvector.domain.constant.chat.RealtimeSystemRequestEventEnum;
 
 /**

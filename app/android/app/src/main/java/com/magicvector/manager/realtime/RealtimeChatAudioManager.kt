@@ -3,7 +3,7 @@ package com.magicvector.manager.realtime
 import android.Manifest
 import android.util.Base64
 import androidx.annotation.RequiresPermission
-import com.magicvector.domain.constant.VadChatState
+import com.magicvector.domain.constant.VADChatState
 import com.magicvector.domain.constant.chat.RealtimeRequestDataTypeEnum
 import com.magicvector.manager.audio.AudioController
 import com.magicvector.manager.audio.AudioHandleCallback
@@ -44,7 +44,7 @@ class RealtimeChatAudioManager(
      */
     fun startVadCall() {
         audioController?.startVAD(onStart = {
-            eventFlow.emitVadState(VadChatState.Silent)
+            eventFlow.emitVadState(VADChatState.Silent)
         })
     }
 
@@ -53,7 +53,7 @@ class RealtimeChatAudioManager(
      */
     fun stopVadCall() {
         audioController?.stopVAD(onStop = {
-            eventFlow.emitVadState(VadChatState.Muted)
+            eventFlow.emitVadState(VADChatState.Muted)
         })
     }
 
@@ -62,7 +62,7 @@ class RealtimeChatAudioManager(
      */
     fun destroyVadCall() {
         audioController?.releaseVADController()
-        eventFlow.emitVadState(VadChatState.Muted)
+        eventFlow.emitVadState(VADChatState.Muted)
     }
 
     /**
@@ -103,7 +103,7 @@ class RealtimeChatAudioManager(
     private fun createAudioHandleCallback(): AudioHandleCallback {
         return object : AudioHandleCallback {
             override fun onPlayBase64Audio(base64Audio: String) {
-                eventFlow.emitVadState(VadChatState.Replying)
+                eventFlow.emitVadState(VADChatState.Replying)
             }
 
             override fun onStartRecording() {
@@ -137,12 +137,12 @@ class RealtimeChatAudioManager(
         return object : VadDetectionCallback {
             override fun onStartSpeech(audioBuffer: ByteArray) {
                 sendAudioData(audioBuffer, isStart = true)
-                eventFlow.emitVadState(VadChatState.Speaking)
+                eventFlow.emitVadState(VADChatState.Speaking)
             }
 
             override fun speeching(audioBuffer: ByteArray) {
                 sendAudioData(audioBuffer)
-                eventFlow.emitVadState(VadChatState.Speaking)
+                eventFlow.emitVadState(VADChatState.Speaking)
             }
 
             override fun onStopSpeech() {
@@ -151,7 +151,7 @@ class RealtimeChatAudioManager(
                     RealtimeRequestDataTypeEnum.DATA to RealtimeRequestDataTypeEnum.STOP_AUDIO_RECORD.name
                 )
                 wsManager.sendSystemMessage(dataMap)
-                eventFlow.emitVadState(VadChatState.Silent)
+                eventFlow.emitVadState(VADChatState.Silent)
             }
         }
     }

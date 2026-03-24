@@ -1,6 +1,6 @@
 package com.magicvector.domain.model.user
 
-import com.core.baseutil.json.GsonBean
+import com.magicvector.utils.json.GsonBean
 
 data class UserSessionModel(
     val userId: Long,

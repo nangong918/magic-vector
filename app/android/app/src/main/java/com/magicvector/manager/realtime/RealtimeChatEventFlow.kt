@@ -1,6 +1,6 @@
 package com.magicvector.manager.realtime
 
-import com.magicvector.domain.constant.VadChatState
+import com.magicvector.domain.constant.VADChatState
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -16,8 +16,8 @@ import kotlinx.coroutines.launch
 class RealtimeChatEventFlow(
     private val coroutineScope: CoroutineScope
 ) {
-    private val _vadStateEvents = MutableSharedFlow<VadChatState>()
-    val vadStateEvents: SharedFlow<VadChatState> = _vadStateEvents.asSharedFlow()
+    private val _vadStateEvents = MutableSharedFlow<VADChatState>()
+    val vadStateEvents: SharedFlow<VADChatState> = _vadStateEvents.asSharedFlow()
 
     private val _agentTextEvents = MutableSharedFlow<String>()
     val agentTextEvents: SharedFlow<String> = _agentTextEvents.asSharedFlow()
@@ -31,7 +31,7 @@ class RealtimeChatEventFlow(
     /**
      * 发送 VAD 状态事件
      */
-    fun emitVadState(state: VadChatState) {
+    fun emitVadState(state: VADChatState) {
         coroutineScope.launch {
             _vadStateEvents.emit(state)
         }

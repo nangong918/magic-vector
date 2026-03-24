@@ -32,14 +32,14 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import coil.compose.AsyncImage
-import com.magicvector.domain.constant.VadChatState
+import com.magicvector.domain.constant.VADChatState
 
 @Composable
 fun CallDialogView(
     visible: Boolean,
     agentName: String,
     agentAvatar: String?,
-    chatState: VadChatState,
+    chatState: VADChatState,
     chatMessage: String,
     isMicClosed: Boolean,
     onCloseClick: () -> Unit,
@@ -169,13 +169,13 @@ private fun CircleActionButton(
 }
 
 @Composable
-private fun getVadStateText(state: VadChatState): String {
+private fun getVadStateText(state: VADChatState): String {
     return when (state) {
-        is VadChatState.Muted -> stringResource(com.view.appview.R.string.muted)
-        is VadChatState.Silent -> stringResource(com.view.appview.R.string.silent)
-        is VadChatState.Speaking -> stringResource(com.view.appview.R.string.user_speaking)
-        is VadChatState.Replying -> stringResource(com.view.appview.R.string.agent_replying)
-        is VadChatState.Error -> stringResource(com.view.appview.R.string.error)
+        is VADChatState.Muted -> stringResource(com.view.appview.R.string.muted)
+        is VADChatState.Silent -> stringResource(com.view.appview.R.string.silent)
+        is VADChatState.Speaking -> stringResource(com.view.appview.R.string.user_speaking)
+        is VADChatState.Replying -> stringResource(com.view.appview.R.string.agent_replying)
+        is VADChatState.Error -> stringResource(com.view.appview.R.string.error)
         else -> stringResource(com.view.appview.R.string.muted)
     }
 }
@@ -188,7 +188,7 @@ private fun CallDialogViewPreview() {
         visible = true,
         agentName = "Agent Name",
         agentAvatar = null,
-        chatState = VadChatState.Muted,
+        chatState = VADChatState.Muted,
         chatMessage = "Chat message",
         isMicClosed = true,
         onCloseClick = {},

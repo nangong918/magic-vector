@@ -5,7 +5,6 @@ import androidx.activity.ComponentActivity
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
-import com.core.baseutil.permissions.GainPermissionCallback
 
 /**
  * Compose/AndroidX 页面专用权限工具。

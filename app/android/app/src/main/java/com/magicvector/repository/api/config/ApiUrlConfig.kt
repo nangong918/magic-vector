@@ -1,7 +1,7 @@
 package com.magicvector.repository.api.config
 
 import android.util.Log
-import com.core.baseutil.debug.DebugEnvironment
+import com.magicvector.utils.debug.DebugEnvironment
 import com.magicvector.domain.constant.BaseConstant
 
 

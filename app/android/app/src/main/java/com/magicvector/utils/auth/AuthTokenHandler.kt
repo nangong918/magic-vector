@@ -1,7 +1,7 @@
 package com.magicvector.utils.auth
 
 import android.content.Context
-import com.core.baseutil.fragmentActivity.ActivityLaunchUtils
+import com.magicvector.utils.fragmentActivity.ActivityLaunchUtils
 import com.magicvector.MainApplication
 import com.magicvector.activity.LoginActivity
 import com.magicvector.domain.exception.UserExceptions

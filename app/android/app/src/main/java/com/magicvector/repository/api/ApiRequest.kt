@@ -1,6 +1,6 @@
 package com.magicvector.repository.api
 
-import com.core.baseutil.network.BaseResponse
+import com.magicvector.utils.network.BaseResponse
 import com.magicvector.domain.dto.http.request.AgentDeleteRequest
 import com.magicvector.domain.dto.http.request.ControlCommandRequest
 import com.magicvector.domain.dto.http.request.UserLoginRequest

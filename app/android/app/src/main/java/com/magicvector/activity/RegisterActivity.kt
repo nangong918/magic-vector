@@ -13,8 +13,8 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
-import com.core.baseutil.fragmentActivity.ActivityLaunchUtils
-import com.core.baseutil.permissions.GainPermissionCallback
+import com.magicvector.utils.fragmentActivity.ActivityLaunchUtils
+import com.magicvector.utils.permissions.GainPermissionCallback
 import com.magicvector.ui.theme.MagicVectorTheme
 import com.magicvector.ui.view.activity.ComposeRegisterScreen
 import com.magicvector.utils.activity.BaseComponentActivity

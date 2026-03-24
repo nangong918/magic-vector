@@ -2,8 +2,8 @@ package com.magicvector.manager.realtime
 
 import android.Manifest
 import androidx.annotation.RequiresPermission
-import com.data.domain.ao.mixLLM.McpSwitch
-import com.magicvector.domain.constant.VadChatState
+import com.magicvector.domain.model.mixLLM.McpSwitch
+import com.magicvector.domain.constant.VADChatState
 import com.magicvector.MainApplication
 import com.magicvector.domain.constant.chat.RealtimeRequestDataTypeEnum
 import com.magicvector.domain.bo.AgentChatBO
@@ -45,7 +45,7 @@ class RealtimeChatController : IsAudioRecording {
     // ========== 外部可访问的 Flow ==========
     val uiState: StateFlow<RealtimeChatUiState> = eventFlow.uiState
     val realtimeState: StateFlow<RealtimeChatState> = eventFlow.realtimeState
-    val vadStateEvents: SharedFlow<VadChatState> = eventFlow.vadStateEvents
+    val vadStateEvents: SharedFlow<VADChatState> = eventFlow.vadStateEvents
     val agentTextEvents: SharedFlow<String> = eventFlow.agentTextEvents
 
     // ========== 数据 ==========

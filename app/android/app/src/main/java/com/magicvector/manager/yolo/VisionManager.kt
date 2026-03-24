@@ -16,7 +16,7 @@ import androidx.camera.view.PreviewView
 import androidx.core.content.ContextCompat
 import androidx.core.graphics.createBitmap
 import androidx.lifecycle.LifecycleOwner
-import com.core.baseutil.ui.ToastUtils
+import com.magicvector.utils.ui.ToastUtils
 import com.detection.yolov8.Detector
 import com.detection.yolov8.YOLOv8Constants
 import java.util.concurrent.ExecutorService

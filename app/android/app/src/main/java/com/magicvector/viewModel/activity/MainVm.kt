@@ -13,7 +13,6 @@ import com.magicvector.viewModel.fragment.ControlVm
 import com.magicvector.viewModel.fragment.MessageListIntent
 import com.magicvector.viewModel.fragment.MessageListVm
 import com.magicvector.viewModel.fragment.MineVm
-import com.view.appview.MainSelectItemEnum
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow

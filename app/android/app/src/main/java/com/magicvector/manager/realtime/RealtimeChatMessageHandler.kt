@@ -2,13 +2,13 @@ package com.magicvector.manager.realtime
 
 
 import android.util.Log
-import com.data.domain.ao.mixLLM.MixLLMEvent
+import com.magicvector.domain.model.mixLLM.MixLLMEvent
 import com.magicvector.domain.constant.chat.MessageTypeEnum
 import com.magicvector.domain.constant.chat.RealtimeResponseDataTypeEnum
 import com.magicvector.domain.constant.chat.RealtimeSystemResponseEventEnum
 import com.google.gson.reflect.TypeToken
 import com.magicvector.MainApplication
-import com.magicvector.domain.constant.VadChatState
+import com.magicvector.domain.constant.VADChatState
 import com.magicvector.domain.model.chat.ChatMessageModel
 import com.magicvector.domain.vo.message.ChatBriefMessageVO
 import com.magicvector.domain.vo.message.ChatMessageVO
@@ -60,13 +60,13 @@ class RealtimeChatMessageHandler(
 
     private fun handleStartTts() {
         eventFlow.updateRealtimeState(RealtimeChatState.Receiving)
-        eventFlow.emitVadState(VadChatState.Replying)
+        eventFlow.emitVadState(VADChatState.Replying)
         audioManager.startAudioTrackPlay()
     }
 
     private fun handleStopTts() {
         eventFlow.updateRealtimeState(RealtimeChatState.InitializedConnected)
-        eventFlow.emitVadState(VadChatState.Silent)
+        eventFlow.emitVadState(VADChatState.Silent)
         audioManager.stopAudioTrackPlay()
     }
 

@@ -24,7 +24,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
-import com.core.baseutil.fragmentActivity.ActivityLaunchUtils
+import com.magicvector.utils.fragmentActivity.ActivityLaunchUtils
 import com.magicvector.MainApplication
 import com.magicvector.ui.theme.MagicVectorTheme
 import com.magicvector.ui.theme.White

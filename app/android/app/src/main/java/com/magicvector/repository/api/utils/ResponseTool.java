@@ -5,9 +5,9 @@ import android.content.Context;
 import android.widget.Toast;
 
 
-import com.core.baseutil.network.BaseResponse;
-import com.core.baseutil.network.ResponseUtil;
-import com.core.baseutil.ui.ToastUtils;
+import com.magicvector.utils.network.BaseResponse;
+import com.magicvector.utils.network.ResponseUtil;
+import com.magicvector.utils.ui.ToastUtils;
 import com.magicvector.domain.constant.BaseConstant;
 import com.magicvector.repository.api.handler.AsyncRequestCallback;
 import com.magicvector.repository.api.handler.FourConsumer;

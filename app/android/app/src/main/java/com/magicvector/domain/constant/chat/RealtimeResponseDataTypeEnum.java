@@ -1,6 +1,6 @@
 package com.magicvector.domain.constant.chat;
 
-import com.data.domain.ao.mixLLM.MixLLMEvent;
+import com.magicvector.domain.model.mixLLM.MixLLMEvent;
 import com.data.domain.dto.ws.reponse.RealtimeChatTextResponse;
 import com.data.domain.dto.ws.reponse.SystemTextResponse;
 

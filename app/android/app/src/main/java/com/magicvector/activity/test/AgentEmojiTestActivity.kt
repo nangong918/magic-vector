@@ -22,9 +22,9 @@ import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.core.content.ContextCompat
 import androidx.core.graphics.createBitmap
 import androidx.lifecycle.LifecycleOwner
-import com.core.baseutil.fragmentActivity.BaseAppCompatActivity
-import com.core.baseutil.permissions.GainPermissionCallback
-import com.core.baseutil.permissions.PermissionUtil
+import com.magicvector.utils.fragmentActivity.BaseAppCompatActivity
+import com.magicvector.utils.permissions.GainPermissionCallback
+import com.magicvector.utils.permissions.PermissionUtil
 import com.magicvector.domain.constant.BaseConstant
 import com.detection.yolov8.BoundingBox
 import com.detection.yolov8.Detector

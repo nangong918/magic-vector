@@ -18,11 +18,11 @@ import com.magicvector.domain.dto.ws.request.RealtimeChatConnectRequest
 import com.magicvector.domain.dto.ws.response.WsChatTextResponse
 import com.magicvector.domain.event.WebSocketMessageEvent
 import com.magicvector.domain.event.WebsocketEventTypeEnum
-import com.data.domain.vo.test.AudioRecordPlayState
-import com.data.domain.vo.test.ChatState
-import com.data.domain.vo.test.RealtimeChatState
-import com.data.domain.vo.test.TtsChatState
-import com.data.domain.vo.test.WebsocketState
+import com.magicvector.domain.test.AudioRecordPlayState
+import com.magicvector.domain.test.ChatState
+import com.magicvector.domain.test.RealtimeChatState
+import com.magicvector.domain.test.TtsChatState
+import com.magicvector.domain.test.WebsocketState
 import com.google.gson.reflect.TypeToken
 import com.magicvector.MainApplication
 import com.magicvector.utils.test.SSEClient

@@ -1,7 +1,7 @@
 package com.magicvector.manager.yolo
 
 import android.util.Log
-import com.data.domain.ao.yolo.TargetActivityDetectionResult
+import com.magicvector.domain.bo.yolo.TargetActivityDetectionResultBO
 import com.magicvector.domain.constant.BaseConstant
 import com.detection.yolov8.BoundingBox
 import com.detection.yolov8.targetPoint.TargetPoint
@@ -43,7 +43,7 @@ object TargetActivityDetectionManager {
     fun detect(
         boundingBoxes: List<BoundingBox>,
         targetPoint: TargetPoint
-    ) : TargetActivityDetectionResult {
+    ) : TargetActivityDetectionResultBO {
 
         // 计算位移差
         val targetDistance = getDistance(lastTargetPoint, targetPoint)
@@ -154,7 +154,7 @@ object TargetActivityDetectionManager {
         boxCountDifferences: List<Int>,
         objSdiff: Float,
         personSdiff: Float
-    ) : TargetActivityDetectionResult {
+    ) : TargetActivityDetectionResultBO {
         val sDiff = 1 + objSdiff * BaseConstant.YOLO.OBJECT_SDIFF_W + personSdiff
         val personCountW = 1 + boxCountDifferences[0] * BaseConstant.YOLO.PERSON_COUNT_W
         val objCountW = 1 + boxCountDifferences[1] * BaseConstant.YOLO.OBJECT_COUNT_W
@@ -178,7 +178,7 @@ object TargetActivityDetectionManager {
             }
         }
 
-        return TargetActivityDetectionResult(
+        return TargetActivityDetectionResultBO(
             result = result,
             detectionType = detectionType,
             score = score

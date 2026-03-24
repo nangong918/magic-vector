@@ -9,7 +9,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
-import com.core.baseutil.fragmentActivity.ActivityLaunchUtils
+import com.magicvector.utils.fragmentActivity.ActivityLaunchUtils
 import com.magicvector.ui.theme.MagicVectorTheme
 import com.magicvector.ui.view.activity.ComposeLoginScreen
 import com.magicvector.utils.activity.BaseComponentActivity

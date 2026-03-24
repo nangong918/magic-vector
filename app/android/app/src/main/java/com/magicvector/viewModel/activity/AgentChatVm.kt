@@ -12,7 +12,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.magicvector.MainApplication
 import com.magicvector.domain.bo.AgentChatBO
-import com.magicvector.domain.constant.VadChatState
+import com.magicvector.domain.constant.VADChatState
 import com.magicvector.domain.model.chat.ChatMessageModel
 import com.magicvector.manager.realtime.RealtimeChatController
 import com.magicvector.manager.event.chat.ChatEventManager
@@ -150,9 +150,9 @@ class AgentChatVm : ViewModel() {
         viewModelScope.launch {
             controller.vadStateEvents.collect { vadState ->
                 val actual = if (_uiState.value.isMicClosed &&
-                    (vadState is VadChatState.Silent || vadState is VadChatState.Speaking)
+                    (vadState is VADChatState.Silent || vadState is VADChatState.Speaking)
                 ) {
-                    VadChatState.Muted
+                    VADChatState.Muted
                 } else {
                     vadState
                 }
@@ -160,7 +160,7 @@ class AgentChatVm : ViewModel() {
                     it.copy(
                         vadChatState = actual,
                         orbPhase = mapOrbPhase(actual, controller.realtimeState.value),
-                        orbExpanded = (actual is VadChatState.Speaking || actual is VadChatState.Replying)
+                        orbExpanded = (actual is VADChatState.Speaking || actual is VADChatState.Replying)
                     )
                 }
             }
@@ -283,7 +283,7 @@ class AgentChatVm : ViewModel() {
         _uiState.update {
             it.copy(
                 isMicClosed = false,
-                vadChatState = VadChatState.Silent,
+                vadChatState = VADChatState.Silent,
                 orbPhase = AgentVoiceOrbPhase.READY
             )
         }
@@ -297,10 +297,10 @@ class AgentChatVm : ViewModel() {
         val current = _uiState.value
         if (current.isMicClosed) {
             realtimeChatController?.processIntent(RealtimeChatIntent.StartVadCall)
-            _uiState.update { it.copy(isMicClosed = false, vadChatState = VadChatState.Silent) }
+            _uiState.update { it.copy(isMicClosed = false, vadChatState = VADChatState.Silent) }
         } else {
             realtimeChatController?.processIntent(RealtimeChatIntent.StopVadCall)
-            _uiState.update { it.copy(isMicClosed = true, vadChatState = VadChatState.Muted) }
+            _uiState.update { it.copy(isMicClosed = true, vadChatState = VADChatState.Muted) }
         }
     }
 
@@ -313,7 +313,7 @@ class AgentChatVm : ViewModel() {
         _uiState.update {
             it.copy(
                 isMicClosed = true,
-                vadChatState = VadChatState.Muted,
+                vadChatState = VADChatState.Muted,
                 agentText = "",
                 orbExpanded = false,
                 orbPhase = AgentVoiceOrbPhase.DISCONNECTED
@@ -353,10 +353,10 @@ class AgentChatVm : ViewModel() {
      * @return 球体阶段
      */
     private fun mapOrbPhase(
-        vadState: VadChatState,
+        vadState: VADChatState,
         realtimeState: RealtimeChatState?
     ): AgentVoiceOrbPhase {
-        if (realtimeState is RealtimeChatState.Error || vadState is VadChatState.Error) {
+        if (realtimeState is RealtimeChatState.Error || vadState is VADChatState.Error) {
             return AgentVoiceOrbPhase.ERROR
         }
         if (realtimeState !is RealtimeChatState.InitializedConnected &&
@@ -366,8 +366,8 @@ class AgentChatVm : ViewModel() {
             return AgentVoiceOrbPhase.DISCONNECTED
         }
         return when (vadState) {
-            is VadChatState.Speaking -> AgentVoiceOrbPhase.USER_SPEAKING
-            is VadChatState.Replying -> AgentVoiceOrbPhase.AGENT_REPLYING
+            is VADChatState.Speaking -> AgentVoiceOrbPhase.USER_SPEAKING
+            is VADChatState.Replying -> AgentVoiceOrbPhase.AGENT_REPLYING
             else -> AgentVoiceOrbPhase.READY
         }
     }
@@ -407,7 +407,7 @@ data class AgentChatUiState(
     /** 麦克风是否关闭 */
     val isMicClosed: Boolean = true,
     /** 当前 VAD 状态 */
-    val vadChatState: VadChatState = VadChatState.Muted,
+    val vadChatState: VADChatState = VADChatState.Muted,
     /** Agent 回复文本（流式片段） */
     val agentText: String = "",
     /** 底部状态球阶段 */

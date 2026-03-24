@@ -2,7 +2,7 @@ package com.magicvector.domain.dto.udp;
 
 import androidx.annotation.NonNull;
 
-import com.core.baseutil.udp.ByteUtils;
+import com.magicvector.utils.udp.ByteUtils;
 import com.magicvector.domain.constant.BaseConstant;
 import com.magicvector.domain.constant.udp.UdpDataType;
 

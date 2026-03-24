@@ -47,10 +47,6 @@ dependencyResolutionManagement {
 
 rootProject.name = "MagicVector"
 include(":app")
-include(":core:appcore")
-include(":core:baseutil")
-include("data:dao")
-include("data:domain")
 include("view:appview")
 include("vad:silero")
 include("vad:yamnet")

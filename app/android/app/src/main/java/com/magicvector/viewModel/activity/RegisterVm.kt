@@ -5,7 +5,7 @@ import android.graphics.Bitmap
 import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.core.baseutil.file.FileUtil
+import com.magicvector.utils.file.FileUtil
 import com.magicvector.domain.constant.BaseConstant
 import com.magicvector.MainApplication
 import com.magicvector.domain.exception.NetworkBusinessException

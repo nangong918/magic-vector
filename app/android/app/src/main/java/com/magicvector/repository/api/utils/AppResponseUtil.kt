@@ -1,8 +1,8 @@
 package com.magicvector.repository.api.utils
 
 import android.content.Context
-import com.core.baseutil.network.BaseResponse
-import com.core.baseutil.network.ResponseUtil
+import com.magicvector.utils.network.BaseResponse
+import com.magicvector.utils.network.ResponseUtil
 import com.magicvector.repository.api.handler.AsyncRequestCallback
 import com.magicvector.repository.api.handler.SyncRequestCallback
 

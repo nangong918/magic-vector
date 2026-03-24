@@ -11,9 +11,9 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
-import com.core.baseutil.permissions.GainPermissionCallback
-import com.core.baseutil.ui.ToastUtils
-import com.magicvector.domain.constant.VadChatState
+import com.magicvector.utils.permissions.GainPermissionCallback
+import com.magicvector.utils.ui.ToastUtils
+import com.magicvector.domain.constant.VADChatState
 import com.magicvector.MainApplication
 import com.magicvector.ui.theme.MagicVectorTheme
 import com.magicvector.ui.view.activity.ComposeAgentChatScreen
@@ -125,13 +125,13 @@ class AgentChatActivity : FragmentActivity() {
         }
     }
 
-    private fun mapPhaseText(phase: AgentVoiceOrbPhase, vadChatState: VadChatState): String {
+    private fun mapPhaseText(phase: AgentVoiceOrbPhase, vadChatState: VADChatState): String {
         val cameraText = if (MainApplication.getVisionManager().isUsingFrontCamera()) "前置摄像头" else "后置摄像头"
         val status = when (phase) {
             AgentVoiceOrbPhase.DISCONNECTED -> "未连接或已断开"
             AgentVoiceOrbPhase.ERROR -> "连接异常"
             AgentVoiceOrbPhase.READY -> {
-                if (vadChatState is VadChatState.Muted) "麦克风关闭" else "就绪，等待唤醒"
+                if (vadChatState is VADChatState.Muted) "麦克风关闭" else "就绪，等待唤醒"
             }
             AgentVoiceOrbPhase.USER_SPEAKING -> "用户正在说话"
             AgentVoiceOrbPhase.AGENT_REPLYING -> "Agent 正在回复"

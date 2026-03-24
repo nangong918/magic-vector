@@ -1,8 +1,8 @@
 package com.magicvector.repository.api.config
 
-import com.core.baseutil.network.BaseApiRequestProvider
-import com.core.baseutil.network.LoggingInterceptor
-import com.core.baseutil.network.TimeoutInterceptor
+import com.magicvector.utils.network.BaseApiRequestProvider
+import com.magicvector.utils.network.LoggingInterceptor
+import com.magicvector.utils.network.TimeoutInterceptor
 import com.magicvector.domain.constant.BaseConstant
 import com.magicvector.repository.api.ApiRequest
 import okhttp3.Interceptor

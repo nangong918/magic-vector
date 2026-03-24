@@ -3,7 +3,7 @@ package com.magicvector.manager.realtime
 
 import android.graphics.Bitmap
 import androidx.fragment.app.FragmentActivity
-import com.data.domain.ao.mixLLM.McpSwitch
+import com.magicvector.domain.model.mixLLM.McpSwitch
 import com.magicvector.domain.bo.AgentChatBO
 import kotlinx.coroutines.Job
 

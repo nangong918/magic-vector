@@ -59,8 +59,4 @@ dependencies {
     // 圆形的 ImageView 组件
     implementation(libs.circleimageview)
     implementation(libs.roundedimageview)
-
-    implementation(project(":data:domain"))
-    implementation(project(":core:baseutil"))
-    implementation(project(":core:appcore"))
 }

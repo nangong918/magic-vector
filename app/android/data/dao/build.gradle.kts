@@ -66,8 +66,4 @@ dependencies {
 
     // multidex
     implementation(libs.multidex)
-
-    implementation(project(":data:domain"))
-    implementation(project(":core:baseutil"))
-    implementation(project(":core:appcore"))
 }

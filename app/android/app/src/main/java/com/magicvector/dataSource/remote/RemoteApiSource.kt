@@ -1,6 +1,6 @@
 package com.magicvector.dataSource.remote
 
-import com.core.baseutil.network.BaseResponse
+import com.magicvector.utils.network.BaseResponse
 import com.magicvector.domain.constant.BaseConstant
 import com.magicvector.MainApplication
 import com.magicvector.domain.convertor.AgentChatConvertor
