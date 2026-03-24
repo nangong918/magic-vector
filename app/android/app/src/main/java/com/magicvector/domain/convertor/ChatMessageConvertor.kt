@@ -10,6 +10,7 @@ import com.magicvector.domain.vo.message.ChatBriefMessageVO
 import com.magicvector.domain.vo.message.ChatMessageVO
 
 object ChatMessageConvertor : BaseConvertor<ChatMessageModel, ChatMessageEntity, ChatMessageDto>() {
+    private fun String?.toLongOrZero(): Long = this?.toLongOrNull() ?: 0L
 
     override fun model2Entity(model: ChatMessageModel, id: Long?): ChatMessageEntity {
         return ChatMessageEntity(
@@ -48,11 +49,11 @@ object ChatMessageConvertor : BaseConvertor<ChatMessageModel, ChatMessageEntity,
 
     override fun model2Dto(model: ChatMessageModel): ChatMessageDto {
         return ChatMessageDto(
-            id = model.messageId,
-            agentId = model.agentId,
-            userId = model.userId,
-            messageId = model.messageId,
-            timestamp = model.timestamp,
+            id = model.messageId.toString(),
+            agentId = model.agentId.toString(),
+            userId = model.userId.toString(),
+            messageId = model.messageId.toString(),
+            timestamp = model.timestamp.toString(),
             imgUrl = model.chatMessageVo.imgUrl,
             messageType = model.chatMessageVo.messageType,
             content = model.chatMessageVo.briefMessageVo.content,
@@ -74,10 +75,10 @@ object ChatMessageConvertor : BaseConvertor<ChatMessageModel, ChatMessageEntity,
         )
         return ChatMessageModel(
             chatMessageVo = chatMessageVo,
-            agentId = dto.agentId,
-            userId = dto.userId,
-            messageId = dto.messageId,
-            timestamp = dto.timestamp
+            agentId = dto.agentId.toLongOrZero(),
+            userId = dto.userId.toLongOrZero(),
+            messageId = dto.messageId.toLongOrZero(),
+            timestamp = dto.timestamp.toLongOrZero()
         )
     }
 

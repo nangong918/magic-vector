@@ -10,6 +10,7 @@ import com.magicvector.domain.vo.agent.AgentVO
 import com.magicvector.domain.vo.message.ChatBriefMessageVO
 
 object AgentChatConvertor : BaseConvertor<AgentChatModel, AgentChatEntity, AgentChatDto>() {
+    private fun String?.toLongOrZero(): Long = this?.toLongOrNull() ?: 0L
 
     override fun model2Entity(model: AgentChatModel, id: Long?): AgentChatEntity {
         return AgentChatEntity(
@@ -56,10 +57,10 @@ object AgentChatConvertor : BaseConvertor<AgentChatModel, AgentChatEntity, Agent
 
     override fun model2Dto(model: AgentChatModel): AgentChatDto {
         return AgentChatDto(
-            agentId = model.agentId,
-            userId = model.userId,
-            lastChatTime = model.lastChatTime,
-            updatedAt = model.updatedAt,
+            agentId = model.agentId.toString(),
+            userId = model.userId.toString(),
+            lastChatTime = model.lastChatTime.toString(),
+            updatedAt = model.updatedAt.toString(),
             unreadCount = model.agentChatVo?.unreadCount ?: 0,
             name = model.agentChatVo?.agentVo?.name ?: "",
             description = model.agentChatVo?.agentVo?.description ?: "",
@@ -72,10 +73,10 @@ object AgentChatConvertor : BaseConvertor<AgentChatModel, AgentChatEntity, Agent
 
     override fun dto2Model(dto: AgentChatDto): AgentChatModel {
         return AgentChatModel().apply {
-            agentId = dto.agentId
-            userId = dto.userId
-            lastChatTime = dto.lastChatTime
-            updatedAt = dto.updatedAt
+            agentId = dto.agentId.toLongOrZero()
+            userId = dto.userId.toLongOrZero()
+            lastChatTime = dto.lastChatTime.toLongOrZero()
+            updatedAt = dto.updatedAt.toLongOrZero()
 
             val agentVo = AgentVO(
                 name = dto.name,

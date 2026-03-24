@@ -22,7 +22,6 @@ okhttp = "5.1.0"
 permissionsdispatcher = "4.9.2"
 permissionsdispatcherProcessor = "4.9.2"
 swiperefreshlayout = "1.1.0"
-permissionx = "1.8.1"
 ui = "1.9.2"
 activity = "1.8.0"
 circleimageview = "3.1.0"
@@ -70,7 +69,6 @@ okhttp-sse = { module = "com.squareup.okhttp3:okhttp-sse", version.ref = "okhttp
 permissionsdispatcher = { module = "com.github.permissions-dispatcher:permissionsdispatcher", version.ref = "permissionsdispatcher" }
 permissionsdispatcher-processor = { module = "com.github.permissions-dispatcher:permissionsdispatcher-processor", version.ref = "permissionsdispatcherProcessor" }
 swiperefreshlayout = { module = "androidx.swiperefreshlayout:swiperefreshlayout", version.ref = "swiperefreshlayout" }
-permissionx = { module = "com.guolindev.permissionx:permissionx", version.ref = "permissionx" }
 retrofit = { module = "com.squareup.retrofit2:retrofit", version.ref = "converterGson" }
 multidex = { module = "androidx.multidex:multidex", version.ref = "multidex" }
 roundedimageview = { module = "com.makeramen:roundedimageview", version.ref = "roundedimageview" }

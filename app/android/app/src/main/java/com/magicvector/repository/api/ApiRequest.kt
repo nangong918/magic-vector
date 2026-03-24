@@ -105,7 +105,7 @@ interface ApiRequest {
     @POST("/agent/delete")
     suspend fun deleteAgent(
         @Body request: AgentDeleteRequest
-    ): BaseResponse<AgentResponse>
+    ): BaseResponse<Boolean>
 
 
     //==========Chat

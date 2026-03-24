@@ -10,11 +10,11 @@ class ChatMessageListResponse {
 // 后端返回的数据类型
 data class ChatMessageDto(
     // ========== ChatMessageModel ==========
-    var id: Long = 0L,
-    var agentId: Long = 0L,
-    var userId: Long = 0L,
-    var messageId: Long = 0L,
-    var timestamp: Long = 0L,
+    var id: String = "0",
+    var agentId: String = "0",
+    var userId: String = "0",
+    var messageId: String = "0",
+    var timestamp: String = "0",
 
     // ========== ChatMessageVo ==========
     var imgUrl: String = "",

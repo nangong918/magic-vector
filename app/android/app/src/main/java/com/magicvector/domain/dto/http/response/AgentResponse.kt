@@ -14,10 +14,10 @@ data class AgentResponse(
 // 后端返回的数据类型
 data class AgentChatDto(
     // AgentChatModel
-    var agentId: Long = 0L,
-    var userId: Long = 0L,
-    var lastChatTime: Long = 0L,
-    var updatedAt: Long = 0L,
+    var agentId: String = "0",
+    var userId: String = "0",
+    var lastChatTime: String = "0",
+    var updatedAt: String = "0",
 
     // AgentChatVo
     val unreadCount: Int = 0,

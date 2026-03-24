@@ -12,7 +12,6 @@ import com.magicvector.domain.dto.http.request.UserPasswordUpdateRequest
 import com.magicvector.domain.dto.http.request.UserTokenVerifyRequest
 import com.magicvector.domain.dto.http.request.VideoUploadCompleteRequest
 import com.magicvector.domain.dto.http.request.VideoUploadInitRequest
-import com.magicvector.domain.dto.http.response.AgentResponse
 import com.magicvector.domain.dto.http.response.ControlAgentLogResponse
 import com.magicvector.domain.dto.http.response.ControlCommandResponse
 import com.magicvector.domain.dto.http.response.ControlStatusResponse
@@ -143,7 +142,7 @@ class RemoteApiSource(
         return AgentChatConvertor.dto2Model(response.agent)
     }
 
-    suspend fun deleteAgent(request: AgentDeleteRequest): AgentResponse {
+    suspend fun deleteAgent(request: AgentDeleteRequest): Boolean {
         return requestData(
             apiCall = { apiRequest.deleteAgent(request) },
             emptyDataMessage = "删除Agent响应为空"
