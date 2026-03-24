@@ -156,6 +156,12 @@ dependencies {
     implementation("androidx.camera:camera-lifecycle:${cameraxVersion}")
     implementation("androidx.camera:camera-view:${cameraxVersion}")
 
+    // ========== Glide ==========
+    // Glide 核心
+    implementation(libs.glide)
+    // Glide 注解处理器（必须）
+    kapt(libs.glide.compiler)
+
     // ========== 新增：MMKV ==========
     implementation(libs.mmkv)
 

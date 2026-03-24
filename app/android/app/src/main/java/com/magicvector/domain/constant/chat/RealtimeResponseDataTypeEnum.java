@@ -1,8 +1,6 @@
 package com.magicvector.domain.constant.chat;
 
 import com.magicvector.domain.model.mixLLM.MixLLMEvent;
-import com.data.domain.dto.ws.reponse.RealtimeChatTextResponse;
-import com.data.domain.dto.ws.reponse.SystemTextResponse;
 
 import org.jetbrains.annotations.NotNull;
 
@@ -33,17 +31,17 @@ public enum RealtimeResponseDataTypeEnum {
     EVENT_LIST("event_list"),
     /**
      * text_chat_response（user response、fragment回复）
-     * @see RealtimeChatTextResponse
+     * @see com.magicvector.domain.dto.ws.response.WsChatTextResponse
      */
     TEXT_CHAT_RESPONSE("text_chat_response"),
     /**
      * text_system_response
-     * @see SystemTextResponse
+     * @see com.magicvector.domain.dto.ws.response.SystemTextResponse
      */
     TEXT_SYSTEM_RESPONSE("text_system_response"),
     /**
      * whole_chat_response 整句回复
-     * @see RealtimeChatTextResponse
+     * @see com.magicvector.domain.dto.ws.response.WsChatTextResponse
      */
     WHOLE_CHAT_RESPONSE("whole_chat_response"),
     ;

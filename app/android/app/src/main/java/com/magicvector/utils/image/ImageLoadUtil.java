@@ -18,7 +18,6 @@ import com.bumptech.glide.load.engine.GlideException;
 import com.bumptech.glide.request.RequestListener;
 import com.bumptech.glide.request.RequestOptions;
 import com.bumptech.glide.request.target.Target;
-import com.core.baseutil.R;
 
 import java.io.File;
 import java.util.Optional;
@@ -61,8 +60,8 @@ public class ImageLoadUtil {
         Glide.with(imageView.getContext())
                 .load(url)
                 .apply(new RequestOptions()
-                        .placeholder(R.drawable.icon_default_acatar)
-                        .error(R.drawable.icon_default_acatar)
+                        .placeholder(com.view.appview.R.mipmap.logo)
+                        .error(com.view.appview.R.mipmap.logo)
                 )
                 .listener(new RequestListener<>() {
                     @Override
@@ -91,8 +90,8 @@ public class ImageLoadUtil {
                 .load(url)
                 .apply(
                         new RequestOptions()
-                                .placeholder(R.drawable.icon_default_acatar)
-                                .error(R.drawable.icon_default_acatar)
+                                .placeholder(com.view.appview.R.mipmap.logo)
+                                .error(com.view.appview.R.mipmap.logo)
                                 .diskCacheStrategy(DiskCacheStrategy.ALL)
                                 .format(DecodeFormat.PREFER_ARGB_8888)
                                 .override(Target.SIZE_ORIGINAL, Target.SIZE_ORIGINAL)
@@ -110,7 +109,7 @@ public class ImageLoadUtil {
             return;
         }
         if (TextUtils.isEmpty(urlOrUri)){
-            imageView.setImageResource(R.drawable.icon_default_acatar);
+            imageView.setImageResource(com.view.appview.R.mipmap.logo);
             Log.w(TAG, "urlOrUri is empty");
             return;
         }
@@ -134,7 +133,7 @@ public class ImageLoadUtil {
     public static void loadImageViewByNetWork(String url, ImageView imageView){
         Glide.with(imageView.getContext())
                 .load(url)
-                .error(R.mipmap.icon_dialog_loading)
+                .error(com.view.appview.R.mipmap.icon_dialog_loading)
                 .into(imageView);
     }
 
@@ -148,11 +147,11 @@ public class ImageLoadUtil {
         if (file.exists()) {
             Glide.with(imageView.getContext())
                     .load(file)
-                    .error(R.drawable.icon_default_acatar)
+                    .error(com.view.appview.R.mipmap.logo)
                     .into(imageView);
         } else {
             Glide.with(imageView.getContext())
-                    .load(R.mipmap.icon_dialog_loading)
+                    .load(com.view.appview.R.mipmap.icon_dialog_loading)
                     .into(imageView);
         }
     }
@@ -166,11 +165,11 @@ public class ImageLoadUtil {
         if (uri != null) {
             Glide.with(imageView.getContext())
                     .load(uri)
-                    .error(R.drawable.icon_default_acatar)
+                    .error(com.view.appview.R.mipmap.logo)
                     .into(imageView);
         } else {
             Glide.with(imageView.getContext())
-                    .load(R.mipmap.icon_dialog_loading)
+                    .load(com.view.appview.R.mipmap.icon_dialog_loading)
                     .into(imageView);
         }
     }

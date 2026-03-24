@@ -16,7 +16,7 @@ import android.util.Log;
 import android.widget.ImageView;
 
 
-import com.core.baseutil.file.FileUtil;
+import com.magicvector.utils.file.FileUtil;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
