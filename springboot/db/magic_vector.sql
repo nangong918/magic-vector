@@ -27,6 +27,7 @@ CREATE TABLE `agent`  (
   `description` text CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL,
   `oss_id` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL,
   `user_id` bigint NOT NULL,
+  `updated_at` bigint NOT NULL,
   PRIMARY KEY (`id`) USING BTREE,
   INDEX `user_index`(`user_id` ASC) USING BTREE
 ) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = DYNAMIC;
@@ -38,10 +39,13 @@ DROP TABLE IF EXISTS `chat_message`;
 CREATE TABLE `chat_message`  (
   `id` bigint NOT NULL,
   `agent_id` bigint NOT NULL,
+  `user_id` bigint NOT NULL,
+  `message_id` bigint NOT NULL,
+  `img_url` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT '',
+  `message_type` tinyint NOT NULL DEFAULT 0,
   `content` text CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL,
   `chat_time` datetime NOT NULL,
   `role` tinyint NOT NULL DEFAULT 0,
-  `user_id` bigint NOT NULL,
   `chat_timestamp` bigint NOT NULL,
   PRIMARY KEY (`id`) USING BTREE,
   INDEX `user_agent_index`(`user_id` ASC, `agent_id` ASC) USING BTREE,

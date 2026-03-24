@@ -12,4 +12,5 @@ public class AgentAo {
     private AgentVo agentVo;
     private String agentId;
     private String userId;
+    private String updatedAt;
 }

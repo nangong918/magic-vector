@@ -40,12 +40,26 @@ public class ChatMessageServiceImpl implements ChatMessageService {
         chatMessageDo.setRole(isUser ? 0 : 1);
         chatMessageDo.setUserId(userId);
         chatMessageDo.setChatTime(LocalDateTime.now());
+        chatMessageDo.setImgUrl("");
+        chatMessageDo.setMessageType(0);
         chatMessageMapper.insert(chatMessageDo);
+        if (chatMessageDo.getMessageId() == null) {
+            chatMessageDo.setMessageId(chatMessageDo.getId());
+        }
         return chatMessageDo.getId();
     }
 
     @Override
     public Long insertOne(@NotNull ChatMessageDo chatMessageDo){
+        if (chatMessageDo.getMessageId() == null) {
+            chatMessageDo.setMessageId(chatMessageDo.getId());
+        }
+        if (chatMessageDo.getImgUrl() == null) {
+            chatMessageDo.setImgUrl("");
+        }
+        if (chatMessageDo.getMessageType() == null) {
+            chatMessageDo.setMessageType(0);
+        }
         chatMessageMapper.insert(chatMessageDo);
         return chatMessageDo.getId();
     }
@@ -121,5 +135,10 @@ public class ChatMessageServiceImpl implements ChatMessageService {
                             .toList());
         }
         return chatMessageDosList;
+    }
+
+    @Override
+    public List<ChatMessageDo> getAllMessagesByAgentId(@NotNull Long agentId) {
+        return chatMessageMapper.getAllMessagesByAgentId(agentId);
     }
 }

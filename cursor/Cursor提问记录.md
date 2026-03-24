@@ -1322,8 +1322,47 @@ Chat消息订阅：MessageListPage（Agent最新消息变化之后，Item的最�
 其实dataSource层感觉有点冗余了
 
 
+### AgentEventManager
+
+
+我现在设计了AgentEventManager，
+大概设计思路是这样的，它的基类包括event和state，state（items）是给ui用的，state改变之后UI就自动变化。
+event是用于通知订阅者操作的。这个存在的意义是这样的，改变agent的数据源可能有很多，
+然后这些数据可能有很多订阅者，所以它是用来管理多数据源与多订阅者的。你可以理解为生产者消费者。
+第二，我做了缓存机制，也就是说在断网的情况下如果要继续加载数据，那么room就能将数据加出来展示，
+当网络恢复的时候就全量http请求并全量替换。
+第三，事件的订阅大概现在是这样的：目前的事件区分暂时只有一个用途，因为ui直接是根据state自动更新不需要event，
+所以event的用途只有持久化，比如说user，http，ws造成的list变化则需要同步到room，而如果本来就是断网情况下去加载导致的list数据变化，
+很明显不需要存储到room。所以当前的event的用途就是用于判断list的变化是什么数据源导致的并决定是否持久化。
+
+现在你需要做的是阅读我设计的AgentEventManager，并阅读[MessageListPage.kt](../app/android/app/src/main/java/com/magicvector/fragment/MessageListPage.kt)
+看看这里面的ui的消息列表怎么跟state（items）绑定，然后再看一下[MessageListMviVm.kt](../app/android/app/src/main/java/com/magicvector/viewModel/fragment/MessageListMviVm.kt)
+重构一下。
 
 
 
+### 兼容SpringBoot
 
+[ApiRequest.kt](../app/android/app/src/main/java/com/magicvector/repository/api/ApiRequest.kt)
+这是我Android的代码，现在修改了几个方法：
+/agent/create
+/agent/getInfo
+/agent/getListFull
+/agent/getListPage
+/agent/update
+/chat/getListFull
+/chat/getListPage
+
+你需要在SpringBoot兼容一下[open-api](../springboot/open-api)
+
+这几个接口的类型要跟Android的数据结构一致，也就是说你需要复制Android的这些相应数据结构然后组装数据。
+
+
+#### 补充
+首先类型转换你要放在[converter](../springboot/open-api/src/main/java/com/openapi/converter)
+不会写就抄袭Android的[convertor](../app/android/app/src/main/java/com/magicvector/domain/convertor)
+我认为你为了适配Android的这些字段可能需要修改数据库：[magic_vector.sql](../springboot/db/magic_vector.sql)
+然后修改了数据库就修改Do[Do](../springboot/open-api/src/main/java/com/openapi/domain/Do)
+然后需要修改Mapper[mapper](../springboot/open-api/src/main/java/com/openapi/mapper)[mybatis](../springboot/open-api/src/main/resources/mybatis)
+然后修改Service和Controller，注意我的id其实都是long，但是http传输的时候为了避免精度丢失采用了string
 

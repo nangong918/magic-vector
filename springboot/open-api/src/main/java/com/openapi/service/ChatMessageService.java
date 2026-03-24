@@ -40,4 +40,6 @@ public interface ChatMessageService {
     List<ChatMessageDo> getLast10Messages(@NotNull Long agentId);
 
     @NotNull List<List<ChatMessageDo>> getLast10MessagesByAgentIds(@NotNull List<Long> agentIds);
+
+    List<ChatMessageDo> getAllMessagesByAgentId(@NotNull Long agentId);
 }

@@ -14,6 +14,7 @@ public class AgentDo {
     private String name;
     private String description;
     private Long userId;
+    private Long updatedAt = System.currentTimeMillis();
     @Nullable
     private Long ossId;
 }

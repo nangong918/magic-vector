@@ -16,6 +16,10 @@ public class ChatMessageDo {
     private Long id; // 消息Id, 不自增，由RealtimeChatContextManager控制
     private Long agentId; // 也可也理解为sessionId
     private Long userId;
+    // 兼容 Android 字段，默认与 id 一致
+    private Long messageId;
+    private String imgUrl = "";
+    private Integer messageType = 0;
     private String content;
     // 时间(展示用)
     private LocalDateTime chatTime;

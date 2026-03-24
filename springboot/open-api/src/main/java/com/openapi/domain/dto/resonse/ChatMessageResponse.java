@@ -1,6 +1,5 @@
 package com.openapi.domain.dto.resonse;
 
-import com.openapi.domain.Do.ChatMessageDo;
 import lombok.Data;
 
 import java.util.List;
@@ -11,5 +10,5 @@ import java.util.List;
  */
 @Data
 public class ChatMessageResponse {
-    private List<ChatMessageDo> chatMessages;
+    private List<ChatMessageDto> messageList;
 }

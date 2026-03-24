@@ -2,10 +2,12 @@ package com.openapi.controller;
 
 import com.openapi.domain.ao.AgentAo;
 import com.openapi.domain.ao.AgentChatAo;
+import com.openapi.converter.AgentHttpConverter;
 import com.openapi.domain.constant.error.CommonExceptions;
 import com.openapi.domain.constant.error.UserExceptions;
 import com.openapi.domain.dto.BaseResponse;
 import com.openapi.domain.dto.request.AgentDeleteRequest;
+import com.openapi.domain.dto.resonse.AgentChatDto;
 import com.openapi.domain.dto.resonse.AgentLastChatListResponse;
 import com.openapi.domain.dto.resonse.AgentListResponse;
 import com.openapi.domain.dto.resonse.AgentResponse;
@@ -24,6 +26,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 
 /**
@@ -40,6 +44,7 @@ public class AgentController {
 
     private final AgentService agentService;
     private final UserService userService;
+    private final AgentHttpConverter agentHttpConverter;
 
     // 创建Agent
     @PostMapping("/create")
@@ -69,7 +74,7 @@ public class AgentController {
         AgentAo agentAo = agentService.createAgent(avatar, userIdLong, name, description);
 
         AgentResponse response = new AgentResponse();
-        response.setAgentAo(agentAo);
+        response.setAgent(agentHttpConverter.aoToDto(agentAo));
 
         return BaseResponse.getResponseEntitySuccess(response);
     }
@@ -96,7 +101,7 @@ public class AgentController {
             return BaseResponse.LogBackError(CommonExceptions.PARAM_ERROR);
         }
         AgentResponse response = new AgentResponse();
-        response.setAgentAo(agentAo);
+        response.setAgent(agentHttpConverter.aoToDto(agentAo));
         return BaseResponse.getResponseEntitySuccess(response);
     }
 
@@ -132,7 +137,7 @@ public class AgentController {
         }
         AgentAo agentAo = agentService.getAgentById(agentIdLong);
         AgentResponse response = new AgentResponse();
-        response.setAgentAo(agentAo);
+        response.setAgent(agentHttpConverter.aoToDto(agentAo));
         return BaseResponse.getResponseEntitySuccess(response);
     }
 
@@ -152,9 +157,60 @@ public class AgentController {
             return BaseResponse.LogBackError(UserExceptions.USER_NOT_EXIST);
         }
 
-        List<AgentAo> agentAos = agentService.getUserAgentsAo(userIdLong);
+        List<AgentChatAo> agentChatAos = agentService.getLastAgentChatList(userIdLong);
         AgentListResponse response = new AgentListResponse();
-        response.setAgentAos(agentAos);
+        response.setAgentList(agentChatAos.stream().map(agentHttpConverter::chatAoToDto).toList());
+        return BaseResponse.getResponseEntitySuccess(response);
+    }
+
+    @GetMapping("/getListFull")
+    public BaseResponse<AgentListResponse> getAgentListFull(
+            @RequestParam("userId") String userId
+    ){
+        return getAgentList(userId);
+    }
+
+    @GetMapping("/getListPage")
+    public BaseResponse<AgentListResponse> getAgentListPage(
+            @RequestParam("userId") String userId,
+            @RequestParam("sortField") String sortField,
+            @RequestParam("sortOrder") String sortOrder,
+            @RequestParam("pageDirection") String pageDirection,
+            @RequestParam("cursor") String cursor,
+            @RequestParam("limit") Integer limit
+    ) {
+        if (!StringUtils.hasText(sortField) || !StringUtils.hasText(sortOrder)
+                || !StringUtils.hasText(pageDirection) || limit == null || limit <= 0) {
+            return BaseResponse.LogBackError(CommonExceptions.PARAM_ERROR);
+        }
+        Long userIdLong = parseLong(userId);
+        if (userIdLong == null) {
+            return BaseResponse.LogBackError(CommonExceptions.PARAM_ERROR);
+        }
+        if (!userService.checkUserExistById(userIdLong)){
+            return BaseResponse.LogBackError(UserExceptions.USER_NOT_EXIST);
+        }
+
+        List<AgentChatDto> allAgents = new ArrayList<>(
+                agentService.getLastAgentChatList(userIdLong).stream().map(agentHttpConverter::chatAoToDto).toList()
+        );
+        Comparator<AgentChatDto> comparator = buildAgentComparator(sortField);
+        if (comparator == null) {
+            return BaseResponse.LogBackError(CommonExceptions.PARAM_ERROR);
+        }
+        allAgents.sort(comparator);
+        if ("DESC".equalsIgnoreCase(sortOrder)) {
+            allAgents.sort(comparator.reversed());
+        } else if (!"ASC".equalsIgnoreCase(sortOrder)) {
+            return BaseResponse.LogBackError(CommonExceptions.PARAM_ERROR);
+        }
+
+        List<AgentChatDto> filteredAgents = applyCursor(allAgents, sortField, pageDirection, cursor);
+        int end = Math.min(limit, filteredAgents.size());
+        List<AgentChatDto> pagedAgents = end > 0 ? filteredAgents.subList(0, end) : List.of();
+
+        AgentListResponse response = new AgentListResponse();
+        response.setAgentList(pagedAgents);
         return BaseResponse.getResponseEntitySuccess(response);
     }
 
@@ -189,6 +245,56 @@ public class AgentController {
             log.error("参数转换错误", e);
             return null;
         }
+    }
+
+    private Comparator<AgentChatDto> buildAgentComparator(String sortField) {
+        if ("agentId".equalsIgnoreCase(sortField)) {
+            return Comparator.comparing(agent -> parseLong(agent.getAgentId()), Comparator.nullsLast(Long::compareTo));
+        }
+        if ("name".equalsIgnoreCase(sortField)) {
+            return Comparator.comparing(AgentChatDto::getName, Comparator.nullsLast(String::compareTo));
+        }
+        if ("lastChatTime".equalsIgnoreCase(sortField)) {
+            return Comparator.comparing(agent -> parseLong(agent.getLastChatTime()), Comparator.nullsLast(Long::compareTo));
+        }
+        return null;
+    }
+
+    private List<AgentChatDto> applyCursor(
+            List<AgentChatDto> agents,
+            String sortField,
+            String pageDirection,
+            String cursor
+    ) {
+        if (!StringUtils.hasText(cursor)) {
+            return agents;
+        }
+        if ("after".equalsIgnoreCase(pageDirection)) {
+            return agents.stream().filter(agent -> compareByCursor(agent, sortField, cursor) > 0).toList();
+        }
+        if ("before".equalsIgnoreCase(pageDirection)) {
+            return agents.stream().filter(agent -> compareByCursor(agent, sortField, cursor) < 0).toList();
+        }
+        return List.of();
+    }
+
+    private int compareByCursor(AgentChatDto agent, String sortField, String cursor) {
+        if ("agentId".equalsIgnoreCase(sortField) || "lastChatTime".equalsIgnoreCase(sortField)) {
+            Long left = "agentId".equalsIgnoreCase(sortField) ? parseLong(agent.getAgentId()) : parseLong(agent.getLastChatTime());
+            Long right = parseLong(cursor);
+            if (left == null || right == null) {
+                return 0;
+            }
+            return left.compareTo(right);
+        }
+        if ("name".equalsIgnoreCase(sortField)) {
+            String left = agent.getName();
+            if (left == null) {
+                return -1;
+            }
+            return left.compareTo(cursor);
+        }
+        return 0;
     }
 
 }

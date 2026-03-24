@@ -42,6 +42,7 @@ public interface AgentConverter {
         ao.setAgentVo(vo);
         ao.setAgentId(agentDo.getId() == null ? null : String.valueOf(agentDo.getId()));
         ao.setUserId(agentDo.getUserId() == null ? null : String.valueOf(agentDo.getUserId()));
+        ao.setUpdatedAt(agentDo.getUpdatedAt() == null ? null : String.valueOf(agentDo.getUpdatedAt()));
         return ao;
     }
 

@@ -45,6 +45,7 @@ public class AgentServiceImpl implements AgentService {
         agentDo.setName(name);
         agentDo.setUserId(userId);
         agentDo.setDescription(description);
+        agentDo.setUpdatedAt(System.currentTimeMillis());
 
         if (avatar == null){
             agentMapper.insert(agentDo);
@@ -98,6 +99,7 @@ public class AgentServiceImpl implements AgentService {
 
         exist.setName(name);
         exist.setDescription(description);
+        exist.setUpdatedAt(System.currentTimeMillis());
 
         if (avatar != null) {
             // TODO MinIO 配置未完成时允许 avatar 为空；完成后可补充上传失败重试策略。

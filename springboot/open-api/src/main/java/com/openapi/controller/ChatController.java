@@ -2,11 +2,14 @@ package com.openapi.controller;
 
 
 import com.openapi.component.manager.realTimeChat.VLContext;
+import com.openapi.converter.ChatMessageHttpConverter;
+import com.openapi.domain.Do.ChatMessageDo;
 import com.openapi.domain.constant.ModelConstant;
 import com.openapi.domain.constant.error.AgentExceptions;
 import com.openapi.domain.constant.error.CommonExceptions;
 import com.openapi.domain.dto.BaseResponse;
 import com.openapi.domain.dto.request.ChatByAnchorRequest;
+import com.openapi.domain.dto.resonse.ChatMessageDto;
 import com.openapi.domain.dto.resonse.ChatMessageResponse;
 import com.openapi.service.ChatMessageService;
 import com.openapi.service.RealtimeChatService;
@@ -23,6 +26,8 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.concurrent.ConcurrentMap;
 
@@ -38,6 +43,7 @@ public class ChatController {
     private final SessionConfig sessionConfig;
     private final ThreadPoolTaskExecutor taskExecutor;
     private final RealtimeChatService realtimeChatService;
+    private final ChatMessageHttpConverter chatMessageHttpConverter;
 
 
     @GetMapping("/getLastChat")
@@ -54,7 +60,7 @@ public class ChatController {
         }
         val chatMessageDos = chatMessageService.getLast10Messages(agentIdLong);
         ChatMessageResponse response = new ChatMessageResponse();
-        response.setChatMessages(chatMessageDos);
+        response.setMessageList(chatMessageHttpConverter.doListToDtoList(chatMessageDos));
 
         return BaseResponse.getResponseEntitySuccess(response);
     }
@@ -93,7 +99,7 @@ public class ChatController {
 
         val chatMessageDos = chatMessageService.getMessagesByAgentIdDeadlineLimit(agentIdLong, time, limit);
         ChatMessageResponse response = new ChatMessageResponse();
-        response.setChatMessages(chatMessageDos);
+        response.setMessageList(chatMessageHttpConverter.doListToDtoList(chatMessageDos));
 
         return BaseResponse.getResponseEntitySuccess(response);
     }
@@ -111,7 +117,7 @@ public class ChatController {
         if (limit > ModelConstant.LIMIT_FETCH_CHAT_HISTORY_LENGTH) {
             limit = ModelConstant.LIMIT_FETCH_CHAT_HISTORY_LENGTH;
         }
-        List<com.openapi.domain.Do.ChatMessageDo> chatMessageDos;
+        List<ChatMessageDo> chatMessageDos;
         if (request.getBefore()) {
             chatMessageDos = chatMessageService.getMessagesBeforeAnchorLimit(
                     agentIdLong,
@@ -126,7 +132,79 @@ public class ChatController {
             );
         }
         ChatMessageResponse response = new ChatMessageResponse();
-        response.setChatMessages(chatMessageDos);
+        response.setMessageList(chatMessageHttpConverter.doListToDtoList(chatMessageDos));
+        return BaseResponse.getResponseEntitySuccess(response);
+    }
+
+    @GetMapping("/getListFull")
+    public BaseResponse<ChatMessageResponse> getChatListFull(
+            @RequestParam("agentId") String agentId,
+            @RequestParam("userId") String userId
+    ) {
+        Long agentIdLong = parseLong(agentId);
+        Long userIdLong = parseLong(userId);
+        if (agentIdLong == null || userIdLong == null) {
+            return BaseResponse.LogBackError(CommonExceptions.PARAM_ERROR);
+        }
+        List<ChatMessageDo> chatMessageDos = chatMessageService.getAllMessagesByAgentId(agentIdLong);
+        ChatMessageResponse response = new ChatMessageResponse();
+        response.setMessageList(chatMessageHttpConverter.doListToDtoList(chatMessageDos));
+        return BaseResponse.getResponseEntitySuccess(response);
+    }
+
+    @GetMapping("/getListPage")
+    public BaseResponse<ChatMessageResponse> getChatListPage(
+            @RequestParam("agentId") String agentId,
+            @RequestParam("userId") String userId,
+            @RequestParam("sortField") String sortField,
+            @RequestParam("sortOrder") String sortOrder,
+            @RequestParam("pageDirection") String pageDirection,
+            @RequestParam("cursor") String cursor,
+            @RequestParam("limit") Integer limit
+    ) {
+        Long agentIdLong = parseLong(agentId);
+        Long userIdLong = parseLong(userId);
+        if (agentIdLong == null || userIdLong == null || limit == null || limit <= 0) {
+            return BaseResponse.LogBackError(CommonExceptions.PARAM_ERROR);
+        }
+        if (!StringUtils.hasText(sortField) || !StringUtils.hasText(sortOrder) || !StringUtils.hasText(pageDirection)) {
+            return BaseResponse.LogBackError(CommonExceptions.PARAM_ERROR);
+        }
+
+        int safeLimit = Math.min(limit, ModelConstant.LIMIT_FETCH_CHAT_HISTORY_LENGTH);
+        long cursorValue = parseCursor(cursor, "after".equalsIgnoreCase(pageDirection) ? 0L : Long.MAX_VALUE);
+
+        List<ChatMessageDo> chatMessageDos;
+        if ("after".equalsIgnoreCase(pageDirection)) {
+            chatMessageDos = chatMessageService.getMessagesAfterAnchorLimit(agentIdLong, cursorValue, safeLimit);
+        } else if ("before".equalsIgnoreCase(pageDirection)) {
+            chatMessageDos = chatMessageService.getMessagesBeforeAnchorLimit(agentIdLong, cursorValue, safeLimit);
+        } else {
+            return BaseResponse.LogBackError(CommonExceptions.PARAM_ERROR);
+        }
+
+        List<ChatMessageDto> messageList = chatMessageHttpConverter.doListToDtoList(chatMessageDos);
+        Comparator<ChatMessageDto> comparator;
+        if ("messageId".equalsIgnoreCase(sortField)) {
+            comparator = Comparator.comparing(it -> parseLong(it.getMessageId()), Comparator.nullsLast(Long::compareTo));
+        } else if ("timestamp".equalsIgnoreCase(sortField)) {
+            comparator = Comparator.comparing(it -> parseLong(it.getTimestamp()), Comparator.nullsLast(Long::compareTo));
+        } else {
+            return BaseResponse.LogBackError(CommonExceptions.PARAM_ERROR);
+        }
+
+        if ("DESC".equalsIgnoreCase(sortOrder)) {
+            messageList = new ArrayList<>(messageList);
+            messageList.sort(comparator.reversed());
+        } else if ("ASC".equalsIgnoreCase(sortOrder)) {
+            messageList = new ArrayList<>(messageList);
+            messageList.sort(comparator);
+        } else {
+            return BaseResponse.LogBackError(CommonExceptions.PARAM_ERROR);
+        }
+
+        ChatMessageResponse response = new ChatMessageResponse();
+        response.setMessageList(messageList);
         return BaseResponse.getResponseEntitySuccess(response);
     }
 
@@ -179,6 +257,14 @@ public class ChatController {
         } catch (Exception ignore) {
             return null;
         }
+    }
+
+    private long parseCursor(String cursor, long defaultValue) {
+        if (!StringUtils.hasText(cursor)) {
+            return defaultValue;
+        }
+        Long parsed = parseLong(cursor);
+        return parsed == null ? defaultValue : parsed;
     }
 
 }
