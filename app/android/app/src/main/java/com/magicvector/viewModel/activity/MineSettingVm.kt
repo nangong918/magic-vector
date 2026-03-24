@@ -17,7 +17,7 @@ import kotlinx.coroutines.launch
  * Mine-Setting 页面 ViewModel（MVI）：
  * - 负责设置页输入状态与提交副作用，不承载入口导航逻辑。
  */
-class ComposeMineSettingVm : ViewModel() {
+class MineSettingVm : ViewModel() {
 
     /** MVI: UI 渲染状态（输入框/昵称等）。 */
     private val _uiState = MutableStateFlow(MineSettingState())

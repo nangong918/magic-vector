@@ -25,10 +25,10 @@ import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
-class ComposeAgentChatVm : ViewModel() {
+class AgentChatVm : ViewModel() {
 
     companion object {
-        val TAG: String = ComposeAgentChatVm::class.java.name
+        val TAG: String = AgentChatVm::class.java.name
         val application = MainApplication.getApp()
         private val chatEventMapManager = MainApplication.getChatEventMapManager()
     }

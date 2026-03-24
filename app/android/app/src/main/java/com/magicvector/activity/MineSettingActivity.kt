@@ -3,7 +3,6 @@ package com.magicvector.activity
 import android.content.Intent
 import android.os.Bundle
 import android.widget.Toast
-import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
@@ -14,14 +13,14 @@ import androidx.lifecycle.repeatOnLifecycle
 import com.magicvector.ui.theme.MagicVectorTheme
 import com.magicvector.ui.view.activity.ComposeMineSettingActivityScreen
 import com.magicvector.utils.activity.BaseComponentActivity
-import com.magicvector.viewModel.activity.ComposeMineSettingVm
+import com.magicvector.viewModel.activity.MineSettingVm
 import com.magicvector.viewModel.activity.MineSettingEffect
 import com.magicvector.viewModel.activity.MineSettingIntent
 import kotlinx.coroutines.launch
 
-class ComposeMineSettingActivity : BaseComponentActivity() {
+class MineSettingActivity : BaseComponentActivity() {
 
-    private val vm: ComposeMineSettingVm by viewModels()
+    private val vm: MineSettingVm by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -48,11 +47,11 @@ class ComposeMineSettingActivity : BaseComponentActivity() {
                 vm.effect.collect { effect ->
                     when (effect) {
                         MineSettingEffect.NavigateToLogin -> {
-                            startActivity(Intent(this@ComposeMineSettingActivity, ComposeLoginActivity::class.java))
+                            startActivity(Intent(this@MineSettingActivity, LoginActivity::class.java))
                             finish()
                         }
                         is MineSettingEffect.ShowToast -> {
-                            Toast.makeText(this@ComposeMineSettingActivity, effect.message, Toast.LENGTH_SHORT).show()
+                            Toast.makeText(this@MineSettingActivity, effect.message, Toast.LENGTH_SHORT).show()
                         }
                     }
                 }

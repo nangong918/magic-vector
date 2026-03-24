@@ -3,7 +3,7 @@ package com.magicvector.utils.auth
 import android.content.Context
 import com.core.baseutil.fragmentActivity.ActivityLaunchUtils
 import com.magicvector.MainApplication
-import com.magicvector.activity.ComposeLoginActivity
+import com.magicvector.activity.LoginActivity
 import com.magicvector.domain.exception.UserExceptions
 import com.magicvector.manager.user.UserManager
 import kotlinx.coroutines.CoroutineScope
@@ -32,7 +32,7 @@ object AuthTokenHandler {
     private fun navigateToLogin(context: Context) {
         ActivityLaunchUtils.launchNewTask(
             context = context,
-            activityClass = ComposeLoginActivity::class.java,
+            activityClass = LoginActivity::class.java,
             config = null
         )
     }

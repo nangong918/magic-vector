@@ -21,7 +21,7 @@ import kotlinx.coroutines.launch
  * Mine-Video 页面 ViewModel（MVI）：
  * - 承载云录播列表、本地播放、上传断点续传三类逻辑。
  */
-class ComposeMineVideoVm : ViewModel() {
+class MineVideoVm : ViewModel() {
 
     /** MVI: UI 渲染状态。 */
     private val _uiState = MutableStateFlow(MineVideoState())

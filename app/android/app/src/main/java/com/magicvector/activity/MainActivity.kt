@@ -135,7 +135,7 @@ class MainActivity : BaseComponentActivity() {
     }
 
     private fun openChatPage(agentBo: AgentChatBO) {
-        val intent = Intent(this, ComposeAgentChatActivity::class.java).apply {
+        val intent = Intent(this, AgentChatActivity::class.java).apply {
             putExtra(AgentChatBO::class.simpleName, agentBo)
         }
         startActivity(intent)

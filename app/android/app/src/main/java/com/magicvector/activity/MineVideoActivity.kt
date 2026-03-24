@@ -2,7 +2,6 @@ package com.magicvector.activity
 
 import android.os.Bundle
 import android.widget.Toast
-import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -15,14 +14,14 @@ import androidx.lifecycle.repeatOnLifecycle
 import com.magicvector.ui.theme.MagicVectorTheme
 import com.magicvector.ui.view.activity.ComposeMineVideoActivityScreen
 import com.magicvector.utils.activity.BaseComponentActivity
-import com.magicvector.viewModel.activity.ComposeMineVideoVm
+import com.magicvector.viewModel.activity.MineVideoVm
 import com.magicvector.viewModel.activity.MineVideoEffect
 import com.magicvector.viewModel.activity.MineVideoIntent
 import kotlinx.coroutines.launch
 
-class ComposeMineVideoActivity : BaseComponentActivity() {
+class MineVideoActivity : BaseComponentActivity() {
 
-    private val vm: ComposeMineVideoVm by viewModels()
+    private val vm: MineVideoVm by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -73,7 +72,7 @@ class ComposeMineVideoActivity : BaseComponentActivity() {
                             // 由 Activity Screen 直接触发 picker，此处不重复处理。
                         }
                         is MineVideoEffect.ShowToast -> {
-                            Toast.makeText(this@ComposeMineVideoActivity, effect.message, Toast.LENGTH_SHORT).show()
+                            Toast.makeText(this@MineVideoActivity, effect.message, Toast.LENGTH_SHORT).show()
                         }
                     }
                 }

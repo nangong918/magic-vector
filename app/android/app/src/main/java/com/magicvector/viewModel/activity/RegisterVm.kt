@@ -22,7 +22,7 @@ import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
 import okhttp3.RequestBody
 
-class ComposeRegisterVm : ViewModel() {
+class RegisterVm : ViewModel() {
     companion object {
         private val remoteApiSource = MainApplication.getRemoteApiSource()
         private val userManager = MainApplication.getUserManager()

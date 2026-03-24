@@ -28,9 +28,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.magicvector.activity.ComposeMineSettingActivity
-import com.magicvector.activity.ComposeMineVideoActivity
-import com.magicvector.activity.test.ComposeTestActivity
+import com.magicvector.activity.MineSettingActivity
+import com.magicvector.activity.MineVideoActivity
+import com.magicvector.activity.test.TestActivity
 import com.magicvector.viewModel.fragment.MineEffect
 import com.magicvector.viewModel.fragment.MineIntent
 import com.magicvector.viewModel.fragment.MineState
@@ -51,11 +51,11 @@ fun MineScreen(
     LaunchedEffect(Unit) {
         viewModel.effect.collect { effect ->
             when (effect) {
-                MineEffect.NavigateToSetting -> context.startActivity(Intent(context, ComposeMineSettingActivity::class.java))
-                MineEffect.NavigateToVideo -> context.startActivity(Intent(context, ComposeMineVideoActivity::class.java))
+                MineEffect.NavigateToSetting -> context.startActivity(Intent(context, MineSettingActivity::class.java))
+                MineEffect.NavigateToVideo -> context.startActivity(Intent(context, MineVideoActivity::class.java))
                 is MineEffect.NavigateToActivity -> {
-                    if (effect.activityClassName == ComposeTestActivity::class.java.name) {
-                        context.startActivity(Intent(context, ComposeTestActivity::class.java))
+                    if (effect.activityClassName == TestActivity::class.java.name) {
+                        context.startActivity(Intent(context, TestActivity::class.java))
                     }
                 }
                 is MineEffect.ShowToast -> Toast.makeText(context, effect.message, Toast.LENGTH_SHORT).show()

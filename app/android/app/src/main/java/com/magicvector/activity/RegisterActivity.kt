@@ -19,13 +19,13 @@ import com.magicvector.ui.theme.MagicVectorTheme
 import com.magicvector.ui.view.activity.ComposeRegisterScreen
 import com.magicvector.utils.activity.BaseComponentActivity
 import com.magicvector.utils.permissions.ComposePermissionUtils
-import com.magicvector.viewModel.activity.ComposeRegisterVm
+import com.magicvector.viewModel.activity.RegisterVm
 import com.magicvector.viewModel.activity.RegisterEffect
 import com.magicvector.viewModel.activity.RegisterIntent
 import kotlinx.coroutines.launch
 
-class ComposeRegisterActivity : BaseComponentActivity() {
-    private val vm: ComposeRegisterVm by viewModels()
+class RegisterActivity : BaseComponentActivity() {
+    private val vm: RegisterVm by viewModels()
     private val permissionUtils = ComposePermissionUtils()
 
     private val imagePickerLauncher = registerForActivityResult(
@@ -78,7 +78,7 @@ class ComposeRegisterActivity : BaseComponentActivity() {
                         RegisterEffect.NavigateToMain -> navigateToMain()
                         RegisterEffect.NavigateToLogin -> finish()
                         is RegisterEffect.ShowToast -> {
-                            Toast.makeText(this@ComposeRegisterActivity, effect.message, Toast.LENGTH_SHORT).show()
+                            Toast.makeText(this@RegisterActivity, effect.message, Toast.LENGTH_SHORT).show()
                         }
                     }
                 }
@@ -95,7 +95,7 @@ class ComposeRegisterActivity : BaseComponentActivity() {
                 }
 
                 override fun notGranted(notGrantedPermissions: Array<String?>?) {
-                    Toast.makeText(this@ComposeRegisterActivity, "请给予存储权限", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this@RegisterActivity, "请给予存储权限", Toast.LENGTH_SHORT).show()
                 }
 
                 override fun always() {}

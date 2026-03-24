@@ -2,7 +2,7 @@ package com.magicvector.viewModel.fragment
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.magicvector.activity.test.ComposeTestActivity
+import com.magicvector.activity.test.TestActivity
 import com.magicvector.MainApplication
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -29,7 +29,7 @@ class MineVm : ViewModel() {
             MineIntent.Initialize -> initialize()
             MineIntent.OpenSettingPage -> sendEffect(MineEffect.NavigateToSetting)
             MineIntent.OpenVideoPage -> sendEffect(MineEffect.NavigateToVideo)
-            MineIntent.TestButtonClick -> sendEffect(MineEffect.NavigateToActivity(ComposeTestActivity::class.java.name))
+            MineIntent.TestButtonClick -> sendEffect(MineEffect.NavigateToActivity(TestActivity::class.java.name))
         }
     }
 

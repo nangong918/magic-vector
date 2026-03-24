@@ -21,16 +21,16 @@ import com.magicvector.utils.permissions.ComposePermissionUtils
 import com.magicvector.viewModel.activity.AgentChatEffect
 import com.magicvector.viewModel.activity.AgentChatIntent
 import com.magicvector.viewModel.activity.AgentVoiceOrbPhase
-import com.magicvector.viewModel.activity.ComposeAgentChatVm
+import com.magicvector.viewModel.activity.AgentChatVm
 import com.magicvector.viewModel.fragment.AgentEmojiFragmentIntent
 import com.magicvector.viewModel.fragment.AgentEmojiFragmentVm
 import com.magicvector.viewModel.fragment.AgentTextChatFragmentIntent
 import com.magicvector.viewModel.fragment.AgentTextChatFragmentVm
 import kotlinx.coroutines.launch
 
-class ComposeAgentChatActivity : FragmentActivity() {
+class AgentChatActivity : FragmentActivity() {
 
-    private val vm: ComposeAgentChatVm by viewModels()
+    private val vm: AgentChatVm by viewModels()
     private val emojiVm: AgentEmojiFragmentVm by viewModels()
     private val textVm: AgentTextChatFragmentVm by viewModels()
     private val recordPermissionUtils = ComposePermissionUtils()
@@ -98,9 +98,9 @@ class ComposeAgentChatActivity : FragmentActivity() {
                     when (effect) {
                         AgentChatEffect.Finish -> finish()
                         AgentChatEffect.RequestRecordPermission -> {
-                            recordPermissionUtils.requestPermissions(this@ComposeAgentChatActivity, object : GainPermissionCallback {
+                            recordPermissionUtils.requestPermissions(this@AgentChatActivity, object : GainPermissionCallback {
                                 override fun allGranted() {
-                                    vm.processIntent(AgentChatIntent.CallPermissionGranted(this@ComposeAgentChatActivity))
+                                    vm.processIntent(AgentChatIntent.CallPermissionGranted(this@AgentChatActivity))
                                 }
 
                                 override fun notGranted(notGrantedPermissions: Array<String?>?) {
@@ -113,11 +113,11 @@ class ComposeAgentChatActivity : FragmentActivity() {
                         }
 
                         is AgentChatEffect.ShowToast -> {
-                            ToastUtils.showToastActivity(this@ComposeAgentChatActivity, effect.message)
+                            ToastUtils.showToastActivity(this@AgentChatActivity, effect.message)
                         }
 
                         is AgentChatEffect.ShowToastRes -> {
-                            ToastUtils.showToastActivity(this@ComposeAgentChatActivity, getString(effect.messageRes))
+                            ToastUtils.showToastActivity(this@AgentChatActivity, getString(effect.messageRes))
                         }
                     }
                 }

@@ -38,14 +38,6 @@
             android:enabled="true"
             android:exported="true" />
 
-<!--        <activity-->
-<!--            android:name=".activity.AgentEmojiActivity"-->
-<!--            android:exported="false"-->
-<!--            android:screenOrientation="landscape" /> &lt;!&ndash; 设置为不可旋转的横屏 &ndash;&gt;-->
-        <activity
-            android:name=".activity.ComposeAgentEmojiActivity"
-            android:exported="false"
-            android:screenOrientation="landscape" /> <!-- 设置为不可旋转的横屏 -->
         <activity
             android:name=".activity.test.AgentEmojiTestActivity"
             android:exported="false"
@@ -53,70 +45,40 @@
         <activity
             android:name=".activity.test.YOLOv8Activity"
             android:exported="false" />
-<!--        <activity-->
-<!--            android:name=".activity.AgentInfoActivity"-->
-<!--            android:exported="false" />-->
         <activity
-            android:name=".activity.ComposeAgentInfoActivity"
-            android:exported="false" />
-        <activity
-            android:name=".activity.ComposeCreateAgentActivity"
+            android:name=".activity.MineSettingActivity"
             android:exported="false"
             android:theme="@style/Theme.MagicVector"
             android:windowSoftInputMode="stateVisible|adjustPan" />
         <activity
-            android:name=".activity.ComposeMineSettingActivity"
+            android:name=".activity.MineVideoActivity"
             android:exported="false"
             android:theme="@style/Theme.MagicVector"
             android:windowSoftInputMode="stateVisible|adjustPan" />
         <activity
-            android:name=".activity.ComposeMineVideoActivity"
-            android:exported="false"
-            android:theme="@style/Theme.MagicVector"
-            android:windowSoftInputMode="stateVisible|adjustPan" />
-<!--        <activity-->
-<!--            android:name=".activity.CreateAgentActivity"-->
-<!--            android:exported="false"-->
-<!--            android:theme="@style/Theme.MagicVector"-->
-<!--            android:windowSoftInputMode="stateVisible|adjustPan" />-->
-        <activity
-            android:name=".activity.test.ComposeTestActivity"
+            android:name=".activity.test.TestActivity"
             android:exported="false"
             android:windowSoftInputMode="stateVisible|adjustPan" />
-<!--        <activity-->
-<!--            android:name=".activity.test.TestActivity"-->
-<!--            android:exported="false"-->
-<!--            android:windowSoftInputMode="stateVisible|adjustPan" />-->
         <activity
             android:name=".activity.test.VADMainActivity"
             android:exported="false" />
         <activity
-            android:name=".activity.ComposeAgentChatActivity"
+            android:name=".activity.AgentChatActivity"
             android:exported="false"
             android:theme="@style/Theme.MagicVector"
             android:windowSoftInputMode="stateVisible|adjustPan" />
-        <activity
-            android:name=".activity.ComposeChatActivity"
-            android:exported="false"
-            android:theme="@style/Theme.MagicVector"
-            android:windowSoftInputMode="stateVisible|adjustPan" />
-<!--        <activity-->
-<!--            android:name=".activity.ChatActivity"-->
-<!--            android:exported="false"-->
-<!--            android:theme="@style/Theme.MagicVector"-->
-<!--            android:windowSoftInputMode="stateVisible|adjustPan" />-->
         <activity
             android:name=".activity.MainActivity"
             android:exported="false"
             android:theme="@style/Theme.MagicVector"
             android:windowSoftInputMode="stateVisible|adjustPan" />
         <activity
-            android:name=".activity.ComposeLoginActivity"
+            android:name=".activity.LoginActivity"
             android:exported="false"
             android:theme="@style/Theme.MagicVector"
             android:windowSoftInputMode="stateVisible|adjustPan" />
         <activity
-            android:name=".activity.ComposeRegisterActivity"
+            android:name=".activity.RegisterActivity"
             android:exported="false"
             android:theme="@style/Theme.MagicVector"
             android:windowSoftInputMode="stateVisible|adjustPan" />

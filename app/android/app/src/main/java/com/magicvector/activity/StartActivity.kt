@@ -120,7 +120,7 @@ class StartActivity : BaseComponentActivity() {
     }
 
     private fun navigateToLogin() {
-        val intent = Intent(this@StartActivity, ComposeLoginActivity::class.java)
+        val intent = Intent(this@StartActivity, LoginActivity::class.java)
         ActivityLaunchUtils.launchNewTask(
             this@StartActivity,
             intent,

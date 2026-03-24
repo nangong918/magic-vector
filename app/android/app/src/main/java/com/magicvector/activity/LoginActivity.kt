@@ -15,12 +15,12 @@ import com.magicvector.ui.view.activity.ComposeLoginScreen
 import com.magicvector.utils.activity.BaseComponentActivity
 import com.magicvector.viewModel.activity.LoginEffect
 import com.magicvector.viewModel.activity.LoginIntent
-import com.magicvector.viewModel.activity.ComposeLoginVm
+import com.magicvector.viewModel.activity.LoginVm
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
-class ComposeLoginActivity : BaseComponentActivity() {
-    private val vm: ComposeLoginVm by viewModels()
+class LoginActivity : BaseComponentActivity() {
+    private val vm: LoginVm by viewModels()
 
     override fun onCreate(savedInstanceState: android.os.Bundle?) {
         super.onCreate(savedInstanceState)
@@ -53,7 +53,7 @@ class ComposeLoginActivity : BaseComponentActivity() {
                         LoginEffect.NavigateToMain -> navigateToMain()
                         LoginEffect.NavigateToRegister -> navigateToRegister()
                         is LoginEffect.ShowToast -> {
-                            Toast.makeText(this@ComposeLoginActivity, effect.message, Toast.LENGTH_SHORT).show()
+                            Toast.makeText(this@LoginActivity, effect.message, Toast.LENGTH_SHORT).show()
                         }
                     }
                 }
@@ -71,6 +71,6 @@ class ComposeLoginActivity : BaseComponentActivity() {
     }
 
     private fun navigateToRegister() {
-        startActivity(Intent(this, ComposeRegisterActivity::class.java))
+        startActivity(Intent(this, RegisterActivity::class.java))
     }
 }

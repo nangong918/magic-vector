@@ -18,7 +18,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-class ComposeLoginVm : ViewModel() {
+class LoginVm : ViewModel() {
     companion object {
         private val remoteApiSource = MainApplication.getRemoteApiSource()
         private val userManager = MainApplication.getUserManager()
