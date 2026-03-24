@@ -43,7 +43,7 @@ fun AgentTextChatFragment(
 
     LaunchedEffect(uiState.messages) {
         chatState.replaceMessages(uiState.messages)
-        if (uiState.messages.isNotEmpty()) {
+        if (!uiState.messages.isEmpty()) {
             chatState.scrollToBottomImmediate(coroutineScope)
         }
     }

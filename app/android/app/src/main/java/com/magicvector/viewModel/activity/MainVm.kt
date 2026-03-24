@@ -7,6 +7,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.magicvector.domain.dto.http.request.AgentDeleteRequest
 import com.magicvector.MainApplication
+import com.magicvector.domain.constant.MainSelectEnum
 import com.magicvector.manager.event.agent.AgentEventManager
 import com.magicvector.manager.realtime.RealtimeChatController
 import com.magicvector.viewModel.fragment.ControlVm
@@ -334,10 +335,10 @@ class MainVm : ViewModel() {
 // ========== Intent ==========
 sealed class MainIntent {
     /** 初始化意图 - 页面启动时调用，选中某个 Tab */
-    data class Initialize(val selected: MainSelectItemEnum) : MainIntent()
+    data class Initialize(val selected: MainSelectEnum) : MainIntent()
 
     /** 切换 Tab 意图 - 用户点击底部导航栏 */
-    data class SelectTab(val tab: MainSelectItemEnum) : MainIntent()
+    data class SelectTab(val tab: MainSelectEnum) : MainIntent()
 
     /** Service 绑定成功意图 - 系统回调 */
     data class ChatServiceBound(val handler: RealtimeChatController) : MainIntent()
@@ -369,7 +370,7 @@ sealed class MainIntent {
 
 // ========== State ==========
 data class MainState(
-    val currentSelected: MainSelectItemEnum = MainSelectItemEnum.HOME,
+    val currentSelected: MainSelectEnum = MainSelectEnum.AGENT,
     val agentEditor: AgentEditorState = AgentEditorState()
 )
 

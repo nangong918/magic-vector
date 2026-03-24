@@ -19,6 +19,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import com.magicvector.domain.bo.AgentChatBO
+import com.magicvector.domain.constant.MainSelectEnum
 import com.magicvector.service.ChatService
 import com.magicvector.ui.theme.MagicVectorTheme
 import com.magicvector.viewModel.activity.MainEffect
@@ -151,18 +152,18 @@ class MainActivity : BaseComponentActivity() {
             System.loadLibrary("magicvector")
         }
 
-        fun startWithSelection(context: Context, selection: MainSelectItemEnum) {
+        fun startWithSelection(context: Context, selection: MainSelectEnum) {
             val intent = Intent(context, MainActivity::class.java).apply {
-                putExtra(MainSelectItemEnum.INTENT_EXTRA_NAME, selection)
+                putExtra(MainSelectEnum::class.simpleName, selection)
             }
             context.startActivity(intent)
         }
 
         // 页面跳转
         @Suppress("unused")
-        fun startWithHome(context: Context) = startWithSelection(context, MainSelectItemEnum.HOME)
+        fun startWithHome(context: Context) = startWithSelection(context, MainSelectEnum.AGENT)
         @Suppress("unused")
-        fun startWithMine(context: Context) = startWithSelection(context, MainSelectItemEnum.MINE)
+        fun startWithMine(context: Context) = startWithSelection(context, MainSelectEnum.MINE)
     }
 
     //------------------------lifecycle------------------------
@@ -173,14 +174,14 @@ class MainActivity : BaseComponentActivity() {
         unbindAndStopChatService()
     }
 
-    private fun parseInitialSelection(): MainSelectItemEnum {
+    private fun parseInitialSelection(): MainSelectEnum {
         return try {
             @Suppress("DEPRECATION")
-            intent.getSerializableExtra(MainSelectItemEnum.INTENT_EXTRA_NAME) as? MainSelectItemEnum
-                ?: MainSelectItemEnum.HOME
+            intent.getSerializableExtra(MainSelectEnum::class.simpleName) as? MainSelectEnum
+                ?: MainSelectEnum.AGENT
         } catch (e: Exception) {
             Log.e(TAG, "parseInitialSelection: error", e)
-            MainSelectItemEnum.HOME
+            MainSelectEnum.AGENT
         }
     }
 }

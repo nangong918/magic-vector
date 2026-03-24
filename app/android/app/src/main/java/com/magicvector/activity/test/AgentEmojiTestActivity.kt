@@ -24,7 +24,6 @@ import androidx.core.graphics.createBitmap
 import androidx.lifecycle.LifecycleOwner
 import com.magicvector.utils.fragmentActivity.BaseAppCompatActivity
 import com.magicvector.utils.permissions.GainPermissionCallback
-import com.magicvector.utils.permissions.PermissionUtil
 import com.magicvector.domain.constant.BaseConstant
 import com.detection.yolov8.BoundingBox
 import com.detection.yolov8.Detector
@@ -36,6 +35,7 @@ import com.magicvector.databinding.ActivityAgentEmojiTestBinding
 import com.magicvector.manager.yolo.EyesMoveManager
 import com.magicvector.manager.yolo.OnResetCallback
 import com.magicvector.manager.yolo.TargetActivityDetectionManager
+import com.magicvector.utils.permissions.PermissionUtils
 import okio.IOException
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
@@ -74,6 +74,8 @@ class AgentEmojiTestActivity : BaseAppCompatActivity<ActivityAgentEmojiTestBindi
                 toast(it)
             }
         }
+
+        registerPermissionLauncher()
 
         startCamera()
 
@@ -367,22 +369,36 @@ class AgentEmojiTestActivity : BaseAppCompatActivity<ActivityAgentEmojiTestBindi
     // 添加一个变量来保存当前帧的Bitmap
     private var currentFrameBitmap: Bitmap? = null
     private val bitmapLock = Any()
-    fun takePhoto(){
-        PermissionUtil.requestPermissionSelectX(
-            this,
-            arrayOf(Manifest.permission.CAMERA),
-            arrayOf(Manifest.permission.WRITE_EXTERNAL_STORAGE),
-            object : GainPermissionCallback {
+
+    private val permissionUtils = PermissionUtils()
+
+    /**
+     * 注册权限请求启动器（需要在 Activity 创建时调用）
+     */
+    fun registerPermissionLauncher() {
+        permissionUtils.registerPermissionLauncher(
+            activity = this@AgentEmojiTestActivity,
+            mustPermissions = arrayOf(Manifest.permission.CAMERA),
+            optionalPermissions = arrayOf(Manifest.permission.WRITE_EXTERNAL_STORAGE)
+        )
+    }
+    /**
+     * 拍照
+     */
+    fun takePhoto() {
+        permissionUtils.requestPermissions(
+            activity = this@AgentEmojiTestActivity,
+            callback = object : GainPermissionCallback {
                 override fun allGranted() {
-                    // 保存当前帧用于拍照
                     savePhoto()
                 }
 
                 override fun notGranted(notGrantedPermissions: Array<String?>?) {
-                    println("$TAG 没有权限: ${notGrantedPermissions?.toList()}")
+                    Log.w(TAG, "没有权限: ${notGrantedPermissions?.toList()}")
                 }
 
                 override fun always() {
+                    // 可选：无论成功失败都执行
                 }
             }
         )

@@ -14,8 +14,8 @@ import com.magicvector.domain.constant.chat.RoleTypeEnum
 @Entity(
     tableName = "chat_message",
     indices = [
-        Index(value = ["agent_id", "timestamp", "id"], name = "idx_agent_time_id"),
-        Index(value = ["user_id", "agent_id"], name = "idx_user_agent")
+        Index(value = ["agent_id", "timestamp", "id"], name = "idx_chat_message_agent_time_id"),
+        Index(value = ["user_id", "agent_id"], name = "idx_chat_message_user_agent")
     ]
 )
 data class ChatMessageEntity(

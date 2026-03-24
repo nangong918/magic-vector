@@ -28,6 +28,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import com.magicvector.MainApplication
 import com.magicvector.domain.bo.AgentChatBO
+import com.magicvector.domain.constant.MainSelectEnum
 import com.magicvector.fragment.AgentEditorOverlay
 import com.magicvector.fragment.ControlScreen
 import com.magicvector.fragment.MessageListScreen
@@ -48,7 +49,7 @@ fun MainActivityScreen(
     messageListVm: MessageListVm,
     controlVm: ControlVm,
     mineVm: MineVm,
-    onSelectTab: (MainSelectItemEnum) -> Unit,
+    onSelectTab: (MainSelectEnum) -> Unit,
     onCreateAgent: () -> Unit,
     onOpenAgentEditor: (Long) -> Unit,
     onOpenChat: (AgentChatBO) -> Unit,
@@ -85,8 +86,8 @@ fun MainActivityScreen(
         bottomBar = {
             NavigationBar {
                 NavigationBarItem(
-                    selected = state.currentSelected == MainSelectItemEnum.HOME,
-                    onClick = { onSelectTab(MainSelectItemEnum.HOME) },
+                    selected = state.currentSelected == MainSelectEnum.AGENT,
+                    onClick = { onSelectTab(MainSelectEnum.AGENT) },
                     icon = {
                         Icon(
                             painter = painterResource(id = com.view.appview.R.drawable.home_24px),
@@ -96,8 +97,8 @@ fun MainActivityScreen(
                     label = { Text(stringResource(id = com.view.appview.R.string.home_messagelist)) }
                 )
                 NavigationBarItem(
-                    selected = state.currentSelected == MainSelectItemEnum.MEDIA,
-                    onClick = { onSelectTab(MainSelectItemEnum.MEDIA) },
+                    selected = state.currentSelected == MainSelectEnum.CONTROL,
+                    onClick = { onSelectTab(MainSelectEnum.CONTROL) },
                     icon = {
                         Icon(
                             painter = painterResource(id = com.view.appview.R.drawable.settings_24px),
@@ -107,8 +108,8 @@ fun MainActivityScreen(
                     label = { Text(stringResource(id = com.view.appview.R.string.home_option)) }
                 )
                 NavigationBarItem(
-                    selected = state.currentSelected == MainSelectItemEnum.MINE,
-                    onClick = { onSelectTab(MainSelectItemEnum.MINE) },
+                    selected = state.currentSelected == MainSelectEnum.MINE,
+                    onClick = { onSelectTab(MainSelectEnum.MINE) },
                     icon = {
                         Icon(
                             painter = painterResource(id = com.view.appview.R.drawable.person_24px),
@@ -127,14 +128,14 @@ fun MainActivityScreen(
                 modifier = Modifier.windowInsetsTopHeight(WindowInsets.statusBars).fillMaxWidth()
             )
             when (state.currentSelected) {
-                MainSelectItemEnum.HOME -> MessageListScreen(
+                MainSelectEnum.AGENT -> MessageListScreen(
                     viewModel = messageListVm,
                     onCreateAgentClick = { latestCreate.value.invoke() },
                     onOpenChat = onOpenChat,
                     onOpenAgentEditor = { latestEditor.value.invoke(it) }
                 )
-                MainSelectItemEnum.MEDIA -> ControlScreen(viewModel = controlVm)
-                MainSelectItemEnum.MINE -> MineScreen(viewModel = mineVm)
+                MainSelectEnum.CONTROL -> ControlScreen(viewModel = controlVm)
+                MainSelectEnum.MINE -> MineScreen(viewModel = mineVm)
             }
         }
 
@@ -154,7 +155,7 @@ fun MainActivityScreen(
 private fun MainActivityScreenPreview() {
     MagicVectorTheme {
         MainActivityScreen(
-            state = MainState(currentSelected = MainSelectItemEnum.HOME),
+            state = MainState(currentSelected = MainSelectEnum.AGENT),
             dataState = MainDataState(isChatServiceBound = true),
             messageListVm = MessageListVm(),
             controlVm = ControlVm(),

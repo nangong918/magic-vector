@@ -1,8 +1,5 @@
 package com.magicvector.ui.view.activity
 
-
-
-
 import android.annotation.SuppressLint
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -34,12 +31,16 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.constraintlayout.compose.ConstraintLayout
 import androidx.constraintlayout.compose.Dimension
+import com.magicvector.domain.constant.chat.RoleTypeEnum
+import com.magicvector.domain.model.chat.ChatMessageModel
+import com.magicvector.domain.vo.message.ChatBriefMessageVO
+import com.magicvector.domain.vo.message.ChatMessageVO
 import com.magicvector.ui.theme.*
 import com.magicvector.ui.view.chat.ChatListState
-import com.magicvector.ui.view.chat.MessageItem
 import com.magicvector.ui.view.chat.MessageListView
 import com.magicvector.ui.view.chat.SendMessageView
 import kotlinx.coroutines.CoroutineScope
+
 
 @Composable
 fun ChatToolbar(
@@ -88,14 +89,11 @@ fun ChatToolbar(
     }
 }
 
-
-
 @Preview
 @Composable
 private fun ChatToolbarPreview() {
     ChatToolbar(title = "鸦羽天下第一!")
 }
-
 
 // 返回一个Modifier添加的额外函数
 @SuppressLint("SuspiciousModifierThen")
@@ -128,7 +126,6 @@ fun BottomRoundedShapePreview() {
     }
 }
 
-
 // kotlin compose会执行 组合 和 重组，方法会被执行两次
 @Composable
 fun MessageList(chatState: ChatListState) {
@@ -140,18 +137,40 @@ fun MessageList(chatState: ChatListState) {
         println("🚀 LaunchedEffect 开始执行")
         val initialMessages = List(20) { index ->
             if (index % 2 == 0) {
-                MessageItem.Received(
-                    id = "received_$index",
-                    messageText = "这是收到的消息 $index",
-                    chatTime = "2025/10/9 ${10 + index % 10}:${index % 60}",
-                    isShowImage = index % 5 == 0
+                // 接收的消息
+                ChatMessageModel(
+                    chatMessageVo = ChatMessageVO(
+                        briefMessageVo = ChatBriefMessageVO(
+                            content = "这是收到的消息 $index",
+                            chatTime = "2025/10/9 ${10 + index % 10}:${index % 60}",
+                            role = RoleTypeEnum.AGENT.value
+                        ),
+                        imgUrl = if (index % 5 == 0) "image_url" else "",
+                        messageType = if (index % 5 == 0) com.magicvector.domain.constant.chat.MessageTypeEnum.IMAGE.value
+                        else com.magicvector.domain.constant.chat.MessageTypeEnum.TEXT.value
+                    ),
+                    agentId = 1L,
+                    userId = 1L,
+                    messageId = index.toLong(),
+                    timestamp = System.currentTimeMillis() - index * 60000L
                 )
             } else {
-                MessageItem.Sent(
-                    id = "sent_$index",
-                    messageText = "这是发送的消息 $index",
-                    timeText = "2025/10/9 ${10 + index % 10}:${index % 60}",
-                    isShowImage = index % 5 == 0
+                // 发送的消息
+                ChatMessageModel(
+                    chatMessageVo = ChatMessageVO(
+                        briefMessageVo = ChatBriefMessageVO(
+                            content = "这是发送的消息 $index",
+                            chatTime = "2025/10/9 ${10 + index % 10}:${index % 60}",
+                            role = RoleTypeEnum.USER.value
+                        ),
+                        imgUrl = if (index % 5 == 0) "image_url" else "",
+                        messageType = if (index % 5 == 0) com.magicvector.domain.constant.chat.MessageTypeEnum.IMAGE.value
+                        else com.magicvector.domain.constant.chat.MessageTypeEnum.TEXT.value
+                    ),
+                    agentId = 1L,
+                    userId = 1L,
+                    messageId = index.toLong(),
+                    timestamp = System.currentTimeMillis() - index * 60000L
                 )
             }
         }
@@ -173,29 +192,44 @@ fun MessageList(chatState: ChatListState) {
                 val moreMessages = List(10) { index ->
                     val newIndex = chatState.messages.size + index
                     if (newIndex % 2 == 0) {
-                        MessageItem.Received(
-                            id = "received_more_$newIndex",
-                            messageText = "加载的历史消息 $newIndex",
-                            chatTime = "2025/10/8 ${10 + newIndex % 10}:${newIndex % 60}",
-                            isShowImage = newIndex % 5 == 0
+                        // 接收的历史消息
+                        ChatMessageModel(
+                            chatMessageVo = ChatMessageVO(
+                                briefMessageVo = ChatBriefMessageVO(
+                                    content = "加载的历史消息 $newIndex",
+                                    chatTime = "2025/10/8 ${10 + newIndex % 10}:${newIndex % 60}",
+                                    role = RoleTypeEnum.AGENT.value
+                                ),
+                                imgUrl = if (newIndex % 5 == 0) "image_url" else "",
+                                messageType = if (newIndex % 5 == 0) com.magicvector.domain.constant.chat.MessageTypeEnum.IMAGE.value
+                                else com.magicvector.domain.constant.chat.MessageTypeEnum.TEXT.value
+                            ),
+                            agentId = 1L,
+                            userId = 1L,
+                            messageId = newIndex.toLong(),
+                            timestamp = System.currentTimeMillis() - newIndex * 60000L
                         )
                     } else {
-                        MessageItem.Sent(
-                            id = "sent_more_$newIndex",
-                            messageText = "加载的历史消息 $newIndex",
-                            timeText = "2025/10/8 ${10 + newIndex % 10}:${newIndex % 60}",
-                            isShowImage = newIndex % 5 == 0
+                        // 发送的历史消息
+                        ChatMessageModel(
+                            chatMessageVo = ChatMessageVO(
+                                briefMessageVo = ChatBriefMessageVO(
+                                    content = "加载的历史消息 $newIndex",
+                                    chatTime = "2025/10/8 ${10 + newIndex % 10}:${newIndex % 60}",
+                                    role = RoleTypeEnum.USER.value
+                                ),
+                                imgUrl = if (newIndex % 5 == 0) "image_url" else "",
+                                messageType = if (newIndex % 5 == 0) com.magicvector.domain.constant.chat.MessageTypeEnum.IMAGE.value
+                                else com.magicvector.domain.constant.chat.MessageTypeEnum.TEXT.value
+                            ),
+                            agentId = 1L,
+                            userId = 1L,
+                            messageId = newIndex.toLong(),
+                            timestamp = System.currentTimeMillis() - newIndex * 60000L
                         )
                     }
                 }
                 chatState.loadMoreMessages(moreMessages)
-            },
-            onMessageClick = { message ->
-                // 处理消息点击事件
-                println("点击了消息: ${when (message) {
-                    is MessageItem.Received -> "收到: ${message.messageText}"
-                    is MessageItem.Sent -> "发送: ${message.messageText}"
-                }}")
             }
         )
     }
@@ -211,17 +245,26 @@ fun MessageList(chatState: ChatListState) {
     }
 }
 
-
 @SuppressLint("SimpleDateFormat")
 @Composable
 fun SendMessagePlaceholder(chatState: ChatListState, coroutineScope: CoroutineScope) {
     SendMessageView(
         onSendClick = { message ->
             // 处理发送消息 - 插入到聊天列表
-            val newMessage = MessageItem.Sent(
-                id = System.currentTimeMillis().toString(),
-                messageText = message,
-                timeText = java.text.SimpleDateFormat("yyyy/MM/dd HH:mm").format(java.util.Date())
+            val newMessage = ChatMessageModel(
+                chatMessageVo = ChatMessageVO(
+                    briefMessageVo = ChatBriefMessageVO(
+                        content = message,
+                        chatTime = java.text.SimpleDateFormat("yyyy/MM/dd HH:mm").format(java.util.Date()),
+                        role = RoleTypeEnum.USER.value
+                    ),
+                    imgUrl = "",
+                    messageType = com.magicvector.domain.constant.chat.MessageTypeEnum.TEXT.value
+                ),
+                agentId = 0L,
+                userId = 0L,
+                messageId = System.currentTimeMillis(),
+                timestamp = System.currentTimeMillis()
             )
             chatState.insertMessageAndScroll(
                 message = newMessage,
@@ -250,15 +293,3 @@ fun SendMessagePlaceholder(chatState: ChatListState, coroutineScope: CoroutineSc
         }
     )
 }
-
-
-
-
-
-
-
-
-
-
-
-

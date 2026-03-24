@@ -3,7 +3,10 @@ package com.magicvector.viewModel.fragment
 import androidx.compose.runtime.Stable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.magicvector.ui.view.chat.MessageItem
+import com.magicvector.domain.constant.chat.RoleTypeEnum
+import com.magicvector.domain.model.chat.ChatMessageModel
+import com.magicvector.domain.vo.message.ChatBriefMessageVO
+import com.magicvector.domain.vo.message.ChatMessageVO
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -38,20 +41,40 @@ class AgentTextChatFragmentVm : ViewModel() {
                 val message = intent.message.trim()
                 if (message.isEmpty()) return
                 val now = nowText()
-                val sent = MessageItem.Sent(
-                    id = System.currentTimeMillis().toString(),
-                    messageText = message,
-                    timeText = now
+                val sent = ChatMessageModel(
+                    chatMessageVo = ChatMessageVO(
+                        briefMessageVo = ChatBriefMessageVO(
+                            content = message,
+                            chatTime = now,
+                            role = RoleTypeEnum.USER.value
+                        ),
+                        imgUrl = "",
+                        messageType = com.magicvector.domain.constant.chat.MessageTypeEnum.TEXT.value
+                    ),
+                    agentId = 0L,
+                    userId = 0L,
+                    messageId = System.currentTimeMillis(),
+                    timestamp = System.currentTimeMillis()
                 )
                 sendEffect(AgentTextChatFragmentEffect.AppendMessage(sent))
                 sendEffect(AgentTextChatFragmentEffect.ForwardSendText(message))
             }
             is AgentTextChatFragmentIntent.ReceiveAgentText -> {
                 if (intent.text.isBlank()) return
-                val receive = MessageItem.Received(
-                    id = "${System.currentTimeMillis()}_recv",
-                    messageText = intent.text,
-                    chatTime = nowText()
+                val receive = ChatMessageModel(
+                    chatMessageVo = ChatMessageVO(
+                        briefMessageVo = ChatBriefMessageVO(
+                            content = intent.text,
+                            chatTime = nowText(),
+                            role = RoleTypeEnum.AGENT.value
+                        ),
+                        imgUrl = "",
+                        messageType = com.magicvector.domain.constant.chat.MessageTypeEnum.TEXT.value
+                    ),
+                    agentId = 0L,
+                    userId = 0L,
+                    messageId = System.currentTimeMillis(),
+                    timestamp = System.currentTimeMillis()
                 )
                 sendEffect(AgentTextChatFragmentEffect.AppendMessage(receive))
             }
@@ -84,7 +107,7 @@ data class AgentTextChatFragmentState(
     /** 输入与按钮可用态。 */
     val isEnableSend: Boolean = false,
     /** 当前聊天记录快照。 */
-    val messages: List<MessageItem> = emptyList()
+    val messages: List<ChatMessageModel> = emptyList()
 )
 
 sealed class AgentTextChatFragmentIntent {
@@ -95,7 +118,7 @@ sealed class AgentTextChatFragmentIntent {
     data class UserSendText(val message: String) : AgentTextChatFragmentIntent()
 
     /** 同步历史记录和当前会话快照。 */
-    data class SyncMessages(val messages: List<MessageItem>) : AgentTextChatFragmentIntent()
+    data class SyncMessages(val messages: List<ChatMessageModel>) : AgentTextChatFragmentIntent()
 
     /** 收到 Agent 文本。 */
     data class ReceiveAgentText(val text: String) : AgentTextChatFragmentIntent()
@@ -108,7 +131,7 @@ sealed class AgentTextChatFragmentIntent {
 }
 
 sealed class AgentTextChatFragmentEffect {
-    data class AppendMessage(val message: MessageItem) : AgentTextChatFragmentEffect()
+    data class AppendMessage(val message: ChatMessageModel) : AgentTextChatFragmentEffect()
     data class ForwardSendText(val text: String) : AgentTextChatFragmentEffect()
     data object ForwardSwitchToEmojiPage : AgentTextChatFragmentEffect()
     data object ForwardStartSendVoice : AgentTextChatFragmentEffect()

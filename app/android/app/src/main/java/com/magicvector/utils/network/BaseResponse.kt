@@ -1,6 +1,6 @@
 package com.magicvector.utils.network
 
-import com.core.baseutil.json.GsonBean
+import com.magicvector.utils.json.GsonBean
 import java.io.Serializable
 
 class BaseResponse<T> : GsonBean, Serializable {

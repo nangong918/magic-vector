@@ -8,7 +8,7 @@ import androidx.room.PrimaryKey
 @Entity(
     tableName = "user_session",
     indices = [
-        Index(value = ["account"], unique = true)
+        Index(value = ["account"], unique = true, name = "idx_user_session_account")
     ]
 )
 data class UserEntity(

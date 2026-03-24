@@ -16,17 +16,17 @@ import com.magicvector.domain.constant.chat.RoleTypeEnum
         // 核心索引1：覆盖「user_id + last_chat_time」（匹配queryFull/queryPage）
         Index(
             value = ["user_id", "last_chat_time"],
-            name = "idx_user_last_chat_time"
+            name = "idx_agent_chat_user_last_chat_time"
         ),
         // 核心索引2：覆盖「user_id + agent_id」（匹配deleteByAgentId + 部分queryPage）
         Index(
             value = ["user_id", "agent_id"],
-            name = "idx_user_agent"
+            name = "idx_agent_chat_user_agent"
         ),
         // 核心索引3：覆盖「user_id + name」（匹配queryFullByName/queryPageByName）
         Index(
             value = ["user_id", "name"],
-            name = "idx_user_name"
+            name = "idx_agent_chat_user_name"
         )
     ]
 )

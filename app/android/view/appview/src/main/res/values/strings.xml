@@ -175,4 +175,5 @@
     <string name="home_messagelist">Agent</string>
     <string name="home_option">Control</string>
     <string name="home_mine">Mine</string>
+    <string name="loading_please_wait">请稍等</string>
 </resources>

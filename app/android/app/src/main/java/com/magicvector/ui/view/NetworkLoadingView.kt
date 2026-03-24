@@ -75,7 +75,7 @@ fun NetworkLoadingOverlay(
                 .background(Color(0xA8333333))
         ) {
             Image(
-                painter = painterResource(id = com.core.baseutil.R.mipmap.icon_dialog_loading),
+                painter = painterResource(id = com.view.appview.R.mipmap.icon_dialog_loading),
                 contentDescription = "network loading",
                 contentScale = ContentScale.Fit,
                 modifier = Modifier
@@ -100,6 +100,6 @@ fun NetworkLoadingOverlay(
 private fun NetworkLoadingOverlayPreview() {
     NetworkLoadingOverlay(
         isLoading = true,
-        message = stringResource(id = com.core.baseutil.R.string.loading_please_wait)
+        message = stringResource(id = com.view.appview.R.string.loading_please_wait)
     )
 }
