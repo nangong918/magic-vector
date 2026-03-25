@@ -1,8 +1,6 @@
 package com.magicvector.activity
 
 import android.Manifest
-import android.annotation.SuppressLint
-import android.app.ActivityManager
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
@@ -79,8 +77,6 @@ class MainActivity : BaseComponentActivity() {
 
     //------------------------Service------------------------
 
-    private var chatService: ChatService? = null
-
     private val serviceConnection = object : ServiceConnection {
         @RequiresPermission(Manifest.permission.RECORD_AUDIO)
         override fun onServiceConnected(
@@ -88,57 +84,36 @@ class MainActivity : BaseComponentActivity() {
             service: IBinder?
         ) {
             val binder = service as ChatService.ChatServiceBinder
-            chatService = binder.getService()
-
-            val handler = binder.getChatMessageHandler()
-            vm.processIntent(MainIntent.ChatServiceBound(handler))
+            // ✅ 只通过 Intent 传递给 ViewModel，Activity 不持有
+            vm.processIntent(MainIntent.ChatServiceBound(
+                chatController = binder.getChatController()
+            ))
         }
 
         @RequiresPermission(Manifest.permission.RECORD_AUDIO)
         override fun onServiceDisconnected(name: ComponentName?) {
+            // 仅在 Service 进程被系统杀死时调用，正常解绑不会触发
             vm.processIntent(MainIntent.ChatServiceUnbound)
-            chatService = null
         }
     }
 
-    // 修正后的绑定方法：先检查，再启动/绑定 检查Service是否已经启动了，如果没有启动Service就启动service
+    // ✅ 直接 bindService，不需要 startService 和检查运行状态
     private fun bindChatService() {
         val intent = Intent(this, ChatService::class.java)
-
-        // 检查服务是否已在运行
-        if (!isServiceRunning(ChatService::class.java)) {
-            // 服务未运行，使用 startService（不是 startForegroundService）
-            startService(intent)  // 普通后台服务
-        }
-
-        // 绑定服务
-        val flags = BIND_AUTO_CREATE or BIND_NOT_FOREGROUND
-        bindService(intent, serviceConnection, flags)
+        bindService(intent, serviceConnection, BIND_AUTO_CREATE)
     }
 
-    // 辅助方法
-    private fun <T> isServiceRunning(serviceClass: Class<T>): Boolean {
-        val manager = getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
-        return manager.getRunningServices(Integer.MAX_VALUE)
-            .any { it.service.className == serviceClass.name }
-    }
-
+    // ✅ 解绑时只需要 unbindService，不需要 stopService
     @RequiresPermission(Manifest.permission.RECORD_AUDIO)
-    private fun unbindAndStopChatService() {
+    private fun unbindChatService() {
         if (vm.dataState.value.isChatServiceBound) {
-            unbindService(serviceConnection)
+            try {
+                unbindService(serviceConnection)
+                vm.processIntent(MainIntent.ChatServiceUnbound)
+            } catch (e: Exception) {
+                Log.e(TAG, "unbindService error: ", e)
+            }
         }
-        val intent = Intent(this, ChatService::class.java)
-        stopService(intent)
-        chatService = null
-        vm.processIntent(MainIntent.ChatServiceUnbound)
-    }
-
-    private fun openChatPage(agentBo: AgentChatBO) {
-        val intent = Intent(this, AgentChatActivity::class.java).apply {
-            putExtra(AgentChatBO::class.simpleName, agentBo)
-        }
-        startActivity(intent)
     }
 
     /**
@@ -166,12 +141,11 @@ class MainActivity : BaseComponentActivity() {
         fun startWithMine(context: Context) = startWithSelection(context, MainSelectEnum.MINE)
     }
 
-    //------------------------lifecycle------------------------
-
-    @SuppressLint("MissingPermission")
-    override fun onDestroy() {
-        super.onDestroy()
-        unbindAndStopChatService()
+    private fun openChatPage(agentBo: AgentChatBO) {
+        val intent = Intent(this, AgentChatActivity::class.java).apply {
+            putExtra(AgentChatBO::class.simpleName, agentBo)
+        }
+        startActivity(intent)
     }
 
     private fun parseInitialSelection(): MainSelectEnum {
@@ -184,4 +158,18 @@ class MainActivity : BaseComponentActivity() {
             MainSelectEnum.AGENT
         }
     }
+
+    //------------------------lifecycle------------------------
+
+    override fun onStart() {
+        super.onStart()
+        bindChatService()
+    }
+
+    @RequiresPermission(Manifest.permission.RECORD_AUDIO)
+    override fun onStop() {
+        super.onStop()
+        unbindChatService()
+    }
+
 }

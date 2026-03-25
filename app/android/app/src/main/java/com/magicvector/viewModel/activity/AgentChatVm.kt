@@ -384,7 +384,7 @@ class AgentChatVm : ViewModel() {
 
     override fun onCleared() {
         super.onCleared()
-        realtimeChatController?.destroy()
+        realtimeChatController?.clearContext()
         realtimeChatController = null
     }
 }

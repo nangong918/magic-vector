@@ -105,7 +105,7 @@ class MainVm : ViewModel() {
             MainIntent.DeleteAgent -> deleteCurrentAgent()
 
             is MainIntent.ChatServiceBound -> {
-                _realtimeChatController = intent.handler
+                _realtimeChatController = intent.chatController
                 _realtimeChatController?.ensureUserConnection(MainApplication.getUserId())
                 MainApplication.getNetworkManager().bindWsReconnectAction {
                     _realtimeChatController?.reconnectUserConnectionIfNeeded()
@@ -341,7 +341,7 @@ sealed class MainIntent {
     data class SelectTab(val tab: MainSelectEnum) : MainIntent()
 
     /** Service 绑定成功意图 - 系统回调 */
-    data class ChatServiceBound(val handler: RealtimeChatController) : MainIntent()
+    data class ChatServiceBound(val chatController: RealtimeChatController) : MainIntent()
 
     /** Service 解绑意图 - 系统回调 */
     data object ChatServiceUnbound : MainIntent()

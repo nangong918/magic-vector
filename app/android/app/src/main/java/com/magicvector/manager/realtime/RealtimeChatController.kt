@@ -1,6 +1,7 @@
 package com.magicvector.manager.realtime
 
 import android.Manifest
+import android.util.Log
 import androidx.annotation.RequiresPermission
 import com.magicvector.domain.model.mixLLM.McpSwitch
 import com.magicvector.domain.constant.VADChatState
@@ -144,6 +145,10 @@ class RealtimeChatController : IsAudioRecording {
      */
     @RequiresPermission(Manifest.permission.RECORD_AUDIO)
     fun ensureUserConnection(userId: String): Boolean {
+        if (!::webSocketManager.isInitialized) {
+            Log.w(TAG, "ensureUserConnection: webSocketManager not initialized yet")
+            return false
+        }
         return webSocketManager.ensureUserConnection(userId)
     }
 
@@ -179,6 +184,22 @@ class RealtimeChatController : IsAudioRecording {
     }
 
     // ========== 生命周期 ==========
+
+    /**
+     * 清空当前 Agent 相关的所有缓存
+     * 在 ChatActivity 关闭时调用，释放资源并清理缓存
+     */
+    fun clearContext() {
+        agentChatBO = null
+        agentId = null
+        userId = null
+        chatEventManager = null
+
+        eventFlow.updateRealtimeState(RealtimeChatState.NotInitialized)
+        eventFlow.updateUiState { RealtimeChatUiState() }
+    }
+
+
     fun releaseAllResource() {
         agentChatBO = null
         eventFlow.updateRealtimeState(RealtimeChatState.NotInitialized)
