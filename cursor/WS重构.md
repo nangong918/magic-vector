@@ -45,30 +45,34 @@ flowchart TD
         B --> C[UnifiedWebSocketManager]
 
         C --> D[连接管理]
-        D --> E[发送队列]
+        D --> E[发送队列<br/>容量32]
         D --> F[重连机制]
+        D --> G[接收队列<br/>容量32]
 
-        C --> G[消息分发器]
-        G --> H{消息类型}
+        C --> H[消息分发器]
+        H --> I{消息类型}
 
-        H -->|chat_message| I[ChatEventMapManager]
-        H -->|control_response| J[ControlEventManager]
-        H -->|rk_status| K[DeviceStatusManager]
-        H -->|bind_ack| L[AgentEventManager]
+        I -->|chat_message| J[ChatEventMapManager]
+        I -->|control_response| K[ControlEventManager]
+        I -->|rk_status| L[DeviceStatusManager]
+        I -->|bind_ack| M[AgentEventManager]
 
-        I --> M[UI更新]
-        J --> M
-        K --> M
-        L --> M
+        J --> N[UI更新]
+        K --> N
+        L --> N
+        M --> N
 
-        N[用户操作] --> O{操作类型}
-        O -->|选择Agent| P[bind_agent]
-        O -->|发送消息| Q[chat_message]
-        O -->|控制RK| R[control_command]
+        O[用户操作] --> P{操作类型}
+        P -->|选择Agent| Q[bind_agent]
+        P -->|发送消息| R[chat_message]
+        P -->|控制RK| S[control_command]
 
-        P --> C
-        Q --> C
-        R --> C
+        Q -->|入队| E
+        R -->|入队| E
+        S -->|入队| E
+
+        E -->|出队| C
+        G -->|出队| H
     end
 ```
 
@@ -81,27 +85,45 @@ flowchart TD
 
         B --> C[Android连接池<br/>userId -> session]
         B --> D[RK连接池<br/>deviceId -> session]
+        B --> E[Android接收队列<br/>容量32]
+        B --> F[Android发送队列<br/>容量32]
+        B --> G[RK接收队列<br/>容量32]
+        B --> H[RK发送队列<br/>容量32]
 
-        A --> E[消息路由器]
+        A --> I[消息路由器]
 
-        E --> F{消息类型}
+        I --> J{消息类型}
 
-        F -->|connect| G[注册Android连接]
-        F -->|rk_connect| H[注册RK连接]
-        F -->|bind_agent| I[AgentBindingService]
-        F -->|chat_message| J[ChatForwardService]
-        F -->|control_command| K[ControlForwardService]
+        J -->|connect| K[注册Android连接]
+        J -->|rk_connect| L[注册RK连接]
+        J -->|bind_agent| M[AgentBindingService]
+        J -->|chat_message| N[ChatForwardService]
+        J -->|control_command| O[ControlForwardService]
+        J -->|command_result| P[结果回传]
+        J -->|status_report| Q[状态广播]
 
-        I --> L[存储 agentId -> userId]
+        M --> R[存储 agentId -> userId]
+        N --> S[根据agentId查userId]
+        S --> T[入队Android发送队列]
 
-        J --> M[根据agentId查userId]
-        M --> N[通过Android连接推送]
+        O --> U[根据deviceId查RK连接]
+        U --> V[入队RK发送队列]
 
-        K --> O[根据deviceId查RK连接]
-        O --> P[通过RK连接转发]
+        P --> W[根据userId查Android连接]
+        W --> X[入队Android发送队列]
 
-        Q[RK状态上报] --> R[根据deviceId查userId]
-        R --> S[通过Android连接推送]
+        Q --> Y[根据deviceId查userId]
+        Y --> Z[入队Android发送队列]
+
+        T --> F
+        V --> H
+        X --> F
+        Z --> F
+
+        E -->|出队| I
+        F -->|出队| A
+        G -->|出队| I
+        H -->|出队| A
     end
 ```
 
@@ -112,29 +134,38 @@ flowchart TD
 flowchart TD
     subgraph RK设备端
         A[RKControlService] --> B[RKWebSocketManager]
-        
+
         B --> C[连接管理]
         C --> D[心跳保活]
         C --> E[断线重连]
-        
-        B --> F[消息收发]
-        
-        F --> G{消息类型}
-        
-        G -->|control_command| H[命令执行器]
-        G -->|status_request| I[状态上报器]
-        
-        H --> J[马达控制]
-        H --> K[传感器读取]
-        H --> L[LED控制]
-        
-        I --> M[采集传感器数据]
-        M --> N[上报状态]
-        
-        O[硬件事件] --> P[传感器中断]
-        P --> I
-        O --> Q[按钮按下]
-        Q --> I
+        C --> F[发送队列<br/>容量32]
+        C --> G[接收队列<br/>容量32]
+
+        B --> H[消息收发]
+
+        H --> I{消息类型}
+
+        I -->|control_command| J[命令执行器]
+        I -->|status_request| K[状态上报器]
+
+        J --> L[马达控制]
+        J --> M[传感器读取]
+        J --> N[LED控制]
+
+        L --> O[入队发送队列]
+        M --> O
+        N --> O
+
+        K --> P[采集传感器数据]
+        P --> Q[入队发送队列]
+
+        R[硬件事件] --> S[传感器中断]
+        S --> K
+        R --> T[按钮按下]
+        T --> K
+
+        F -->|出队| B
+        G -->|出队| H
     end
 ```
 
@@ -143,52 +174,75 @@ flowchart TD
 graph LR
     subgraph Android
         A1[用户操作]
-        A2[WebSocket客户端]
-        A3[消息分发器]
-        A4[UI更新]
+        A2[发送队列<br/>容量32]
+        A3[WebSocket客户端]
+        A4[接收队列<br/>容量32]
+        A5[消息分发器]
+        A6[UI更新]
     end
 
     subgraph SpringBoot
         B1[WebSocket服务端]
-        B2[连接管理器]
+        B2[Android接收队列<br/>容量32]
         B3[消息路由器]
-        B4[Agent绑定服务]
-        B5[控制转发服务]
+        B4[Android发送队列<br/>容量32]
+        B5[RK接收队列<br/>容量32]
+        B6[RK发送队列<br/>容量32]
+        B7[连接管理器]
+        B8[Agent绑定服务]
+        B9[控制转发服务]
     end
 
     subgraph RK设备
-        C1[WebSocket客户端]
-        C2[命令执行器]
-        C3[状态采集器]
+        C1[发送队列<br/>容量32]
+        C2[WebSocket客户端]
+        C3[接收队列<br/>容量32]
+        C4[命令执行器]
+        C5[状态采集器]
     end
 
-    A1 -->|1. bind_agent| A2
-    A1 -->|2. chat_message| A2
-    A1 -->|3. control_command| A2
+    A1 -->|bind_agent| A2
+    A1 -->|chat_message| A2
+    A1 -->|control_command| A2
 
-    A2 <-->|WebSocket| B1
+    A2 -->|出队| A3
+    A3 -->|WebSocket| B1
 
-    B1 --> B2
-    B2 --> B3
+    B1 -->|入队| B2
+    B2 -->|出队| B3
 
-    B3 -->|bind_agent| B4
-    B3 -->|chat_message| B4
-    B3 -->|control_command| B5
+    B3 -->|bind_agent| B8
+    B3 -->|chat_message| B8
+    B3 -->|control_command| B9
 
-    B4 -->|转发聊天| B2
-    B5 -->|转发控制| B1
+    B8 -->|转发聊天| B4
+    B9 -->|转发控制| B6
 
-    B1 <-->|WebSocket| C1
+    B4 -->|出队| B1
+    B6 -->|出队| B1
 
-    C1 --> C2
-    C1 --> C3
+    B1 -->|WebSocket| C2
+    C2 -->|入队| C3
+    C3 -->|出队| C4
+    C3 -->|出队| C5
 
-    C2 -->|命令结果| C1
-    C3 -->|状态上报| C1
+    C4 -->|命令结果| C1
+    C5 -->|状态上报| C1
 
-    B2 -->|推送消息| A2
-    A2 --> A3
-    A3 -->|chat_message| A4
-    A3 -->|control_response| A4
-    A3 -->|rk_status| A4
+    C1 -->|出队| C2
+    C2 -->|WebSocket| B1
+
+    B1 -->|入队| B5
+    B5 -->|出队| B3
+    B3 -->|转发结果| B4
+    B3 -->|广播状态| B4
+
+    B4 -->|出队| B1
+    B1 -->|WebSocket| A3
+
+    A3 -->|入队| A4
+    A4 -->|出队| A5
+    A5 -->|chat_message| A6
+    A5 -->|control_response| A6
+    A5 -->|rk_status| A6
 ```
