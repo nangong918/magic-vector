@@ -1366,3 +1366,62 @@ event是用于通知订阅者操作的。这个存在的意义是这样的，改
 然后需要修改Mapper[mapper](../springboot/open-api/src/main/java/com/openapi/mapper)[mybatis](../springboot/open-api/src/main/resources/mybatis)
 然后修改Service和Controller，注意我的id其实都是long，但是http传输的时候为了避免精度丢失采用了string
 
+
+
+### WS设计图
+
+1. audio_chunk不一定是Android2SB呢，你看了我有TTS的功能，那就是SB给Android的audio_chunk，所以你现在要细分。
+2. start_tts，stop_tts在音频处理中并不够，我觉得需要把SPringBOot的大部分处理暴露出来，
+   我现在补充几个，我觉得你应该这样设计：TTS，STT，LLM语言模型，VL视觉理解模型的《启动，数据流，结束，异常》然后就这四个，
+   内部具体细分是启动还是结束，还是数据流，还是异常。其中TTS就是Springboot的audio_chunk，看看怎么设计数据结构合理。
+3. Agent绑定类：不要这么设计，这是历史遗留原因。现在不需要选择再绑定，而是直接：User接收Agent的数据变化，User操作Agent数据变化。
+   这个Agent消息只展示再MessageList这个页面了，不再是直接决定ChatActivity了。那个是由ChatMessage决定了。其实内部的数据结构你直接用我的dto就行；比如：
+   ```kotlin
+    // 后端返回的数据类型
+    data class AgentChatDto(
+        // AgentChatModel
+        var agentId: String = "0",
+        var userId: String = "0",
+        var lastChatTime: String = "0",
+        var updatedAt: String = "0",
+    
+        // AgentChatVo
+        val unreadCount: Int = 0,
+    
+        // AgentVo
+        // 名称/描述一般不修改 → 不可变val
+        val name: String,
+        val description: String,
+        // 头像URL可能动态修改 → 可变var + 可空
+        var avatarUrl: String? = null,
+    
+        // ChatMessageVo
+        // 内容
+        val content: String,
+        // 时间(展示用)
+        val chatTime: String,
+        // 发送方: 0: agent, 1: user (相当于isUser ? 0 : 1)
+        val role: Int = RoleTypeEnum.AGENT.value
+    )
+   ```
+   chat也是类似，我都封装好了：
+   ```kotlin
+    data class ChatMessageDto(
+        // ========== ChatMessageModel ==========
+        var id: String = "0",
+        var agentId: String = "0",
+        var userId: String = "0",
+        var messageId: String = "0",
+        var timestamp: String = "0",
+    
+        // ========== ChatMessageVo ==========
+        var imgUrl: String = "",
+        var messageType: Int = MessageTypeEnum.TEXT.value,
+    
+        // ========== ChatBriefMessageVo ==========
+        val content: String = "",
+        val chatTime: String = "",
+        val role: Int = RoleTypeEnum.AGENT.value
+    )
+   ```
+

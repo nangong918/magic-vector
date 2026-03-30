@@ -281,9 +281,9 @@ data class ServerEvent(
 )
 ```
 
-#### Channel 枚举设计
+## Channel 枚举设计
 
-##### 1. 连接管理类（三端通用）
+### 1. 连接管理类（三端通用）
 
 | Channel | 方向 | 说明 | data字段 |
 |---------|------|------|----------|
@@ -294,31 +294,42 @@ data class ServerEvent(
 | `ping` | 双向 | 心跳请求 | - |
 | `pong` | 双向 | 心跳响应 | - |
 
-##### 2. Agent绑定类（Android ↔ SB）
+### 2. Agent数据同步类（Android ↔ SB）
 
 | Channel | 方向 | 说明 | data字段 |
 |---------|------|------|----------|
-| `bind_agent` | Android→SB | 绑定Agent | `agentId` |
-| `bind_agent_ack` | SB→Android | 绑定确认 | `agentId`, `success`, `message` |
-| `unbind_agent` | Android→SB | 解绑Agent | `agentId` |
+| `agent_list_sync` | SB→Android | Agent列表变更推送 | `AgentChatDto` 列表 |
+| `agent_update` | Android→SB | 用户操作Agent（创建/更新/删除） | `AgentChatDto` |
 
-##### 3. 聊天消息类（Android ↔ SB）
-
-| Channel | 方向 | 说明 | data字段 |
-|---------|------|------|----------|
-| `chat_message` | 双向 | 聊天消息 | `agentId`, `messageId`, `content`, `role`, `timestamp` |
-
-##### 4. 音频流类（Android ↔ SB）
+### 3. 聊天消息类（Android ↔ SB）
 
 | Channel | 方向 | 说明 | data字段 |
 |---------|------|------|----------|
-| `start_audio_record` | Android→SB | 开始录音 | `agentId` |
-| `stop_audio_record` | Android→SB | 结束录音 | `agentId` |
-| `audio_chunk` | Android→SB | 音频数据块 | `agentId`, `base64Audio`, `isStart`, `isEnd` |
-| `start_tts` | SB→Android | 开始TTS播放 | `agentId` |
-| `stop_tts` | SB→Android | 结束TTS播放 | `agentId` |
+| `chat_message_sync` | SB→Android | 聊天消息推送 | `ChatMessageDto` |
+| `chat_message_send` | Android→SB | 用户发送消息 | `ChatMessageDto` |
 
-##### 5. 控制命令类（Android ↔ SB ↔ RK）
+### 4. 音频处理类（Android ↔ SB）
+
+| Channel | 方向 | 说明 | data字段 |
+|---------|------|------|----------|
+| `stt_start` | Android→SB | 开始语音识别（STT） | `agentId` |
+| `stt_data` | Android→SB | 语音数据流 | `agentId`, `base64Audio`, `seq` |
+| `stt_end` | Android→SB | 结束语音识别 | `agentId` |
+| `stt_error` | Android→SB | 语音识别异常 | `agentId`, `code`, `message` |
+| `llm_start` | SB→Android | 开始LLM处理 | `agentId` |
+| `llm_data` | SB→Android | LLM文本流 | `agentId`, `content`, `seq` |
+| `llm_end` | SB→Android | LLM处理结束 | `agentId` |
+| `llm_error` | SB→Android | LLM处理异常 | `agentId`, `code`, `message` |
+| `tts_start` | SB→Android | 开始语音合成（TTS） | `agentId` |
+| `tts_data` | SB→Android | TTS音频流 | `agentId`, `base64Audio`, `seq` |
+| `tts_end` | SB→Android | TTS合成结束 | `agentId` |
+| `tts_error` | SB→Android | TTS合成异常 | `agentId`, `code`, `message` |
+| `vl_start` | Android→SB | 开始视觉理解（VL） | `agentId`, `imageBase64` |
+| `vl_data` | SB→Android | 视觉理解结果流 | `agentId`, `content`, `seq` |
+| `vl_end` | SB→Android | 视觉理解结束 | `agentId` |
+| `vl_error` | SB→Android | 视觉理解异常 | `agentId`, `code`, `message` |
+
+### 5. 控制命令类（Android ↔ SB ↔ RK）
 
 | Channel | 方向 | 说明 | data字段 |
 |---------|------|------|----------|
@@ -327,7 +338,7 @@ data class ServerEvent(
 | `command_result` | RK→SB | 命令执行结果 | `commandId`, `success`, `message`, `result` |
 | `control_response` | SB→Android | 控制结果响应 | `deviceId`, `success`, `message`, `result` |
 
-##### 6. 设备状态类（RK ↔ SB ↔ Android）
+### 6. 设备状态类（RK ↔ SB ↔ Android）
 
 | Channel | 方向 | 说明 | data字段 |
 |---------|------|------|----------|
@@ -335,7 +346,7 @@ data class ServerEvent(
 | `rk_status` | RK→SB | 设备状态上报 | `deviceId`, `battery`, `obstacle`, `position`, `sensors` |
 | `rk_status` | SB→Android | 转发设备状态 | `deviceId`, `battery`, `obstacle`, `position`, `sensors` |
 
-##### 7. 系统消息类（三端通用）
+### 7. 系统消息类（三端通用）
 
 | Channel | 方向 | 说明 | data字段 |
 |---------|------|------|----------|
@@ -344,9 +355,9 @@ data class ServerEvent(
 
 ---
 
-##### 完整 Channel 枚举定义
+## 完整 Channel 枚举定义
 
-Kotlin 版本（Android / RK）
+### Kotlin 版本（Android / RK）
 
 ```kotlin
 enum class WsChannel(val value: String) {
@@ -357,35 +368,53 @@ enum class WsChannel(val value: String) {
     RK_CONNECT_ACK("rk_connect_ack"),
     PING("ping"),
     PONG("pong"),
-    
-    // Agent绑定
-    BIND_AGENT("bind_agent"),
-    BIND_AGENT_ACK("bind_agent_ack"),
-    UNBIND_AGENT("unbind_agent"),
-    
+
+    // Agent数据同步
+    AGENT_LIST_SYNC("agent_list_sync"),
+    AGENT_UPDATE("agent_update"),
+
     // 聊天消息
-    CHAT_MESSAGE("chat_message"),
-    
-    // 音频流
-    START_AUDIO_RECORD("start_audio_record"),
-    STOP_AUDIO_RECORD("stop_audio_record"),
-    AUDIO_CHUNK("audio_chunk"),
-    START_TTS("start_tts"),
-    STOP_TTS("stop_tts"),
-    
+    CHAT_MESSAGE_SYNC("chat_message_sync"),
+    CHAT_MESSAGE_SEND("chat_message_send"),
+
+    // STT 语音识别
+    STT_START("stt_start"),
+    STT_DATA("stt_data"),
+    STT_END("stt_end"),
+    STT_ERROR("stt_error"),
+
+    // LLM 语言模型
+    LLM_START("llm_start"),
+    LLM_DATA("llm_data"),
+    LLM_END("llm_end"),
+    LLM_ERROR("llm_error"),
+
+    // TTS 语音合成
+    TTS_START("tts_start"),
+    TTS_DATA("tts_data"),
+    TTS_END("tts_end"),
+    TTS_ERROR("tts_error"),
+
+    // VL 视觉理解
+    VL_START("vl_start"),
+    VL_DATA("vl_data"),
+    VL_END("vl_end"),
+    VL_ERROR("vl_error"),
+
     // 控制命令
     CONTROL_COMMAND("control_command"),
     COMMAND_RESULT("command_result"),
     CONTROL_RESPONSE("control_response"),
-    
+
     // 设备状态
     STATUS_REQUEST("status_request"),
     RK_STATUS("rk_status"),
-    
+
     // 系统消息
     ERROR("error"),
     SYSTEM_MESSAGE("system_message")
 }
+
 ```
 
 Java 版本（SpringBoot）
@@ -399,41 +428,58 @@ public enum WsChannel {
     RK_CONNECT_ACK("rk_connect_ack"),
     PING("ping"),
     PONG("pong"),
-    
-    // Agent绑定
-    BIND_AGENT("bind_agent"),
-    BIND_AGENT_ACK("bind_agent_ack"),
-    UNBIND_AGENT("unbind_agent"),
-    
+
+    // Agent数据同步
+    AGENT_LIST_SYNC("agent_list_sync"),
+    AGENT_UPDATE("agent_update"),
+
     // 聊天消息
-    CHAT_MESSAGE("chat_message"),
-    
-    // 音频流
-    START_AUDIO_RECORD("start_audio_record"),
-    STOP_AUDIO_RECORD("stop_audio_record"),
-    AUDIO_CHUNK("audio_chunk"),
-    START_TTS("start_tts"),
-    STOP_TTS("stop_tts"),
-    
+    CHAT_MESSAGE_SYNC("chat_message_sync"),
+    CHAT_MESSAGE_SEND("chat_message_send"),
+
+    // STT 语音识别
+    STT_START("stt_start"),
+    STT_DATA("stt_data"),
+    STT_END("stt_end"),
+    STT_ERROR("stt_error"),
+
+    // LLM 语言模型
+    LLM_START("llm_start"),
+    LLM_DATA("llm_data"),
+    LLM_END("llm_end"),
+    LLM_ERROR("llm_error"),
+
+    // TTS 语音合成
+    TTS_START("tts_start"),
+    TTS_DATA("tts_data"),
+    TTS_END("tts_end"),
+    TTS_ERROR("tts_error"),
+
+    // VL 视觉理解
+    VL_START("vl_start"),
+    VL_DATA("vl_data"),
+    VL_END("vl_end"),
+    VL_ERROR("vl_error"),
+
     // 控制命令
     CONTROL_COMMAND("control_command"),
     COMMAND_RESULT("command_result"),
     CONTROL_RESPONSE("control_response"),
-    
+
     // 设备状态
     STATUS_REQUEST("status_request"),
     RK_STATUS("rk_status"),
-    
+
     // 系统消息
     ERROR("error"),
     SYSTEM_MESSAGE("system_message");
-    
+
     private final String value;
-    
+
     WsChannel(String value) {
         this.value = value;
     }
-    
+
     public String getValue() {
         return value;
     }
