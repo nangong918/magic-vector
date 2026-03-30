@@ -246,3 +246,197 @@ graph LR
     A5 -->|control_response| A6
     A5 -->|rk_status| A6
 ```
+
+
+### 数据结构设计
+
+#### Event
+
+SpringBoot
+
+```java
+@Data
+public class ClientEvent {
+    private String channel;
+    private Map<String, String> data;
+}
+
+@Data
+public class ServerEvent {
+    private String channel;
+    private Map<String, String> data;
+}
+```
+
+Android (App/RK)
+
+```kotlin
+data class ClientEvent(
+    val channel: String,
+    val data: Map<String, String> = emptyMap()
+)
+data class ServerEvent(
+    val channel: String,
+    val data: Map<String, String> = emptyMap()
+)
+```
+
+#### Channel 枚举设计
+
+##### 1. 连接管理类（三端通用）
+
+| Channel | 方向 | 说明 | data字段 |
+|---------|------|------|----------|
+| `connect` | Android→SB | 建立用户连接 | `userId` |
+| `connect_ack` | SB→Android | 连接确认 | `success`, `message` |
+| `rk_connect` | RK→SB | RK设备注册 | `deviceId`, `firmware`, `model` |
+| `rk_connect_ack` | SB→RK | RK注册确认 | `success`, `message` |
+| `ping` | 双向 | 心跳请求 | - |
+| `pong` | 双向 | 心跳响应 | - |
+
+##### 2. Agent绑定类（Android ↔ SB）
+
+| Channel | 方向 | 说明 | data字段 |
+|---------|------|------|----------|
+| `bind_agent` | Android→SB | 绑定Agent | `agentId` |
+| `bind_agent_ack` | SB→Android | 绑定确认 | `agentId`, `success`, `message` |
+| `unbind_agent` | Android→SB | 解绑Agent | `agentId` |
+
+##### 3. 聊天消息类（Android ↔ SB）
+
+| Channel | 方向 | 说明 | data字段 |
+|---------|------|------|----------|
+| `chat_message` | 双向 | 聊天消息 | `agentId`, `messageId`, `content`, `role`, `timestamp` |
+
+##### 4. 音频流类（Android ↔ SB）
+
+| Channel | 方向 | 说明 | data字段 |
+|---------|------|------|----------|
+| `start_audio_record` | Android→SB | 开始录音 | `agentId` |
+| `stop_audio_record` | Android→SB | 结束录音 | `agentId` |
+| `audio_chunk` | Android→SB | 音频数据块 | `agentId`, `base64Audio`, `isStart`, `isEnd` |
+| `start_tts` | SB→Android | 开始TTS播放 | `agentId` |
+| `stop_tts` | SB→Android | 结束TTS播放 | `agentId` |
+
+##### 5. 控制命令类（Android ↔ SB ↔ RK）
+
+| Channel | 方向 | 说明 | data字段 |
+|---------|------|------|----------|
+| `control_command` | Android→SB | 控制RK设备 | `deviceId`, `command`, `params` |
+| `control_command` | SB→RK | 转发控制命令 | `commandId`, `command`, `params` |
+| `command_result` | RK→SB | 命令执行结果 | `commandId`, `success`, `message`, `result` |
+| `control_response` | SB→Android | 控制结果响应 | `deviceId`, `success`, `message`, `result` |
+
+##### 6. 设备状态类（RK ↔ SB ↔ Android）
+
+| Channel | 方向 | 说明 | data字段 |
+|---------|------|------|----------|
+| `status_request` | Android/SB→RK | 请求设备状态 | `deviceId` |
+| `rk_status` | RK→SB | 设备状态上报 | `deviceId`, `battery`, `obstacle`, `position`, `sensors` |
+| `rk_status` | SB→Android | 转发设备状态 | `deviceId`, `battery`, `obstacle`, `position`, `sensors` |
+
+##### 7. 系统消息类（三端通用）
+
+| Channel | 方向 | 说明 | data字段 |
+|---------|------|------|----------|
+| `error` | 双向 | 错误信息 | `code`, `message` |
+| `system_message` | SB→双向 | 系统通知 | `event`, `message` |
+
+---
+
+##### 完整 Channel 枚举定义
+
+Kotlin 版本（Android / RK）
+
+```kotlin
+enum class WsChannel(val value: String) {
+    // 连接管理
+    CONNECT("connect"),
+    CONNECT_ACK("connect_ack"),
+    RK_CONNECT("rk_connect"),
+    RK_CONNECT_ACK("rk_connect_ack"),
+    PING("ping"),
+    PONG("pong"),
+    
+    // Agent绑定
+    BIND_AGENT("bind_agent"),
+    BIND_AGENT_ACK("bind_agent_ack"),
+    UNBIND_AGENT("unbind_agent"),
+    
+    // 聊天消息
+    CHAT_MESSAGE("chat_message"),
+    
+    // 音频流
+    START_AUDIO_RECORD("start_audio_record"),
+    STOP_AUDIO_RECORD("stop_audio_record"),
+    AUDIO_CHUNK("audio_chunk"),
+    START_TTS("start_tts"),
+    STOP_TTS("stop_tts"),
+    
+    // 控制命令
+    CONTROL_COMMAND("control_command"),
+    COMMAND_RESULT("command_result"),
+    CONTROL_RESPONSE("control_response"),
+    
+    // 设备状态
+    STATUS_REQUEST("status_request"),
+    RK_STATUS("rk_status"),
+    
+    // 系统消息
+    ERROR("error"),
+    SYSTEM_MESSAGE("system_message")
+}
+```
+
+Java 版本（SpringBoot）
+
+```java
+public enum WsChannel {
+    // 连接管理
+    CONNECT("connect"),
+    CONNECT_ACK("connect_ack"),
+    RK_CONNECT("rk_connect"),
+    RK_CONNECT_ACK("rk_connect_ack"),
+    PING("ping"),
+    PONG("pong"),
+    
+    // Agent绑定
+    BIND_AGENT("bind_agent"),
+    BIND_AGENT_ACK("bind_agent_ack"),
+    UNBIND_AGENT("unbind_agent"),
+    
+    // 聊天消息
+    CHAT_MESSAGE("chat_message"),
+    
+    // 音频流
+    START_AUDIO_RECORD("start_audio_record"),
+    STOP_AUDIO_RECORD("stop_audio_record"),
+    AUDIO_CHUNK("audio_chunk"),
+    START_TTS("start_tts"),
+    STOP_TTS("stop_tts"),
+    
+    // 控制命令
+    CONTROL_COMMAND("control_command"),
+    COMMAND_RESULT("command_result"),
+    CONTROL_RESPONSE("control_response"),
+    
+    // 设备状态
+    STATUS_REQUEST("status_request"),
+    RK_STATUS("rk_status"),
+    
+    // 系统消息
+    ERROR("error"),
+    SYSTEM_MESSAGE("system_message");
+    
+    private final String value;
+    
+    WsChannel(String value) {
+        this.value = value;
+    }
+    
+    public String getValue() {
+        return value;
+    }
+}
+```
+
