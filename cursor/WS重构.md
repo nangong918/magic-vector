@@ -355,7 +355,7 @@ data class ServerEvent(
 | Channel | 方向 | 说明 | data字段 |
 |---------|------|------|----------|
 | `error` | 双向 | 错误信息 | `code`, `message` |
-| `system_message` | SB→双向 | 系统通知 | `event`, `message` |
+| `system_message` | SB→双向 | 系统通知 | `event`, `param`（Map<String, String>） |
 
 ---
 

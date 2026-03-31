@@ -8,4 +8,5 @@ import lombok.EqualsAndHashCode;
 @Data
 public class RkConnectRequest extends CommonResultDto {
     private String deviceId;
+    private String firmware;
 }

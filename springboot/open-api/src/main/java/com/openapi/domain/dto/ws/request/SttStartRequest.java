@@ -7,4 +7,5 @@ import lombok.EqualsAndHashCode;
 @EqualsAndHashCode(callSuper = true)
 @Data
 public class SttStartRequest extends CommonResultDto {
+    private String agentId;
 }
