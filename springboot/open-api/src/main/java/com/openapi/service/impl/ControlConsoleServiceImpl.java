@@ -2,9 +2,9 @@ package com.openapi.service.impl;
 
 import com.alibaba.fastjson.JSON;
 import com.openapi.component.manager.control.ControlSessionManager;
-import com.openapi.domain.dto.request.ControlCommandRequest;
-import com.openapi.domain.dto.resonse.ControlCommandResponse;
-import com.openapi.domain.dto.resonse.ControlStatusResponse;
+import com.openapi.domain.dto.http.request.ControlCommandRequest;
+import com.openapi.domain.dto.http.resonse.ControlCommandResponse;
+import com.openapi.domain.dto.http.resonse.ControlStatusResponse;
 import com.openapi.service.ControlAgentLogService;
 import com.openapi.service.ControlConsoleService;
 import lombok.RequiredArgsConstructor;

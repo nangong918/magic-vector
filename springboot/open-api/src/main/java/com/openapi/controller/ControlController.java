@@ -2,10 +2,10 @@ package com.openapi.controller;
 
 import com.openapi.domain.constant.error.CommonExceptions;
 import com.openapi.domain.dto.BaseResponse;
-import com.openapi.domain.dto.request.ControlCommandRequest;
-import com.openapi.domain.dto.resonse.ControlAgentLogResponse;
-import com.openapi.domain.dto.resonse.ControlCommandResponse;
-import com.openapi.domain.dto.resonse.ControlStatusResponse;
+import com.openapi.domain.dto.http.request.ControlCommandRequest;
+import com.openapi.domain.dto.http.resonse.ControlAgentLogResponse;
+import com.openapi.domain.dto.http.resonse.ControlCommandResponse;
+import com.openapi.domain.dto.http.resonse.ControlStatusResponse;
 import com.openapi.service.ControlAgentLogService;
 import com.openapi.service.ControlConsoleService;
 import jakarta.validation.Valid;

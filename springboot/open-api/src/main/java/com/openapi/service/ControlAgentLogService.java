@@ -1,6 +1,6 @@
 package com.openapi.service;
 
-import com.openapi.domain.dto.resonse.ControlAgentLogResponse;
+import com.openapi.domain.dto.http.resonse.ControlAgentLogResponse;
 
 public interface ControlAgentLogService {
     void saveControlLog(Long userId, Long agentId, String logContent, Long logTime);

@@ -11,7 +11,7 @@ import com.alibaba.dashscope.exception.NoApiKeyException;
 import com.alibaba.dashscope.exception.UploadFileException;
 import com.openapi.component.manager.OptimizedSentenceDetector;
 import com.openapi.config.ChatConfig;
-import com.openapi.domain.dto.request.ChatRequest;
+import com.openapi.domain.dto.http.request.ChatRequest;
 import io.reactivex.Flowable;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

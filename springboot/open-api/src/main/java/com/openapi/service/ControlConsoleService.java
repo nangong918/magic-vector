@@ -1,8 +1,8 @@
 package com.openapi.service;
 
-import com.openapi.domain.dto.request.ControlCommandRequest;
-import com.openapi.domain.dto.resonse.ControlCommandResponse;
-import com.openapi.domain.dto.resonse.ControlStatusResponse;
+import com.openapi.domain.dto.http.request.ControlCommandRequest;
+import com.openapi.domain.dto.http.resonse.ControlCommandResponse;
+import com.openapi.domain.dto.http.resonse.ControlStatusResponse;
 import org.springframework.web.socket.WebSocketSession;
 
 import java.util.Map;

@@ -1,7 +1,7 @@
 package com.openapi.converter;
 
 import com.openapi.domain.Do.ChatMessageDo;
-import com.openapi.domain.dto.resonse.ChatMessageDto;
+import com.openapi.domain.dto.http.resonse.ChatMessageDto;
 import com.openapi.utils.DateUtils;
 import org.springframework.stereotype.Component;
 

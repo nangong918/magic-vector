@@ -8,9 +8,9 @@ import com.openapi.domain.constant.ModelConstant;
 import com.openapi.domain.constant.error.AgentExceptions;
 import com.openapi.domain.constant.error.CommonExceptions;
 import com.openapi.domain.dto.BaseResponse;
-import com.openapi.domain.dto.request.ChatByAnchorRequest;
-import com.openapi.domain.dto.resonse.ChatMessageDto;
-import com.openapi.domain.dto.resonse.ChatMessageResponse;
+import com.openapi.domain.dto.http.request.ChatByAnchorRequest;
+import com.openapi.domain.dto.http.resonse.ChatMessageDto;
+import com.openapi.domain.dto.http.resonse.ChatMessageResponse;
 import com.openapi.service.ChatMessageService;
 import com.openapi.service.RealtimeChatService;
 import com.openapi.utils.FileUtils;
@@ -29,7 +29,6 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
-import java.util.concurrent.ConcurrentMap;
 
 
 @Slf4j

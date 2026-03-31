@@ -1,14 +1,14 @@
 package com.openapi.service;
 
-import com.openapi.domain.dto.request.VideoUploadCompleteRequest;
-import com.openapi.domain.dto.request.VideoUploadInitRequest;
-import com.openapi.domain.dto.request.VideoUploadChunkRequest;
-import com.openapi.domain.dto.resonse.VideoCloudListResponse;
-import com.openapi.domain.dto.resonse.VideoDownloadUrlResponse;
-import com.openapi.domain.dto.resonse.VideoPlayUrlResponse;
-import com.openapi.domain.dto.resonse.VideoUploadChunkResponse;
-import com.openapi.domain.dto.resonse.VideoUploadCompleteResponse;
-import com.openapi.domain.dto.resonse.VideoUploadInitResponse;
+import com.openapi.domain.dto.http.request.VideoUploadCompleteRequest;
+import com.openapi.domain.dto.http.request.VideoUploadInitRequest;
+import com.openapi.domain.dto.http.request.VideoUploadChunkRequest;
+import com.openapi.domain.dto.http.resonse.VideoCloudListResponse;
+import com.openapi.domain.dto.http.resonse.VideoDownloadUrlResponse;
+import com.openapi.domain.dto.http.resonse.VideoPlayUrlResponse;
+import com.openapi.domain.dto.http.resonse.VideoUploadChunkResponse;
+import com.openapi.domain.dto.http.resonse.VideoUploadCompleteResponse;
+import com.openapi.domain.dto.http.resonse.VideoUploadInitResponse;
 import org.springframework.web.multipart.MultipartFile;
 
 public interface VideoService {

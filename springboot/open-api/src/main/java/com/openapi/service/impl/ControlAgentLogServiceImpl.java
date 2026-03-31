@@ -2,7 +2,7 @@ package com.openapi.service.impl;
 
 import cn.hutool.core.util.IdUtil;
 import com.openapi.domain.Do.ControlAgentLogDo;
-import com.openapi.domain.dto.resonse.ControlAgentLogResponse;
+import com.openapi.domain.dto.http.resonse.ControlAgentLogResponse;
 import com.openapi.mapper.ControlAgentLogMapper;
 import com.openapi.service.ControlAgentLogService;
 import lombok.RequiredArgsConstructor;

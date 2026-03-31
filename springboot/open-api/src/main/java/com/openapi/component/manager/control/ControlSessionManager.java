@@ -1,6 +1,6 @@
 package com.openapi.component.manager.control;
 
-import com.openapi.domain.dto.resonse.ControlStatusResponse;
+import com.openapi.domain.dto.http.resonse.ControlStatusResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;

@@ -3,7 +3,7 @@ package com.openapi.converter;
 import com.openapi.domain.Do.ChatMessageDo;
 import com.openapi.domain.ao.AgentAo;
 import com.openapi.domain.ao.AgentChatAo;
-import com.openapi.domain.dto.resonse.AgentChatDto;
+import com.openapi.domain.dto.http.resonse.AgentChatDto;
 import com.openapi.utils.DateUtils;
 import org.springframework.stereotype.Component;
 

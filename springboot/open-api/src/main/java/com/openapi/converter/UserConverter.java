@@ -1,7 +1,7 @@
 package com.openapi.converter;
 
 import com.openapi.domain.Do.UserDo;
-import com.openapi.domain.dto.resonse.UserAuthResponse;
+import com.openapi.domain.dto.http.resonse.UserAuthResponse;
 import com.openapi.domain.module.user.UserModule;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
