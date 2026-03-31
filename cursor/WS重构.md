@@ -495,3 +495,507 @@ public enum WsChannel {
 }
 ```
 
+
+### 通信消息分发设计
+
+UnifiedWsHandler + MessageRouter (Channel分发器) + ChannelHandler + 线程池架构
+
+
+#### UnifiedWsHandler 类图
+
+```mermaid
+classDiagram
+    class UnifiedWsHandler {
+        -MessageRouter messageRouter
+        -ConnectionManager connectionManager
+        -ObjectMapper objectMapper
+        -Map~String, WebSocketSession~ pendingAuthSessions
+        +afterConnectionEstablished(session)
+        +handleTextMessage(session, message)
+        +afterConnectionClosed(session, status)
+        +handleTransportError(session, exception)
+        -authenticateSession(session, userId)
+        -sendError(session, code, message)
+    }
+    
+    class MessageRouter {
+        -Map~WsChannel, ChannelHandler~ handlers
+        -ExecutorService businessExecutor
+        -ExecutorService sttExecutor
+        -ExecutorService controlExecutor
+        -ExecutorService llmExecutor
+        -ExecutorService ttsExecutor
+        +registerHandler(channel, handler)
+        +route(session, event)
+        -selectExecutor(channel) ExecutorService
+        -getUserIdFromSession(session) String
+    }
+    
+    class ConnectionManager {
+        -ConcurrentHashMap~String, WebSocketSession~ androidSessions
+        -ConcurrentHashMap~String, WebSocketSession~ rkSessions
+        -ConcurrentHashMap~String, String~ deviceToUser
+        +registerAndroid(userId, session)
+        +registerRk(deviceId, session, userId)
+        +getAndroidSession(userId) WebSocketSession
+        +getRkSession(deviceId) WebSocketSession
+        +unregister(userId)
+        +unregisterRk(deviceId)
+        +getUserIdByDeviceId(deviceId) String
+    }
+    
+    class AgentBindingManager {
+        -ConcurrentHashMap~String, String~ agentToUser
+        -ConcurrentHashMap~String, Set~ userToAgents
+        +bindAgent(agentId, userId)
+        +unbindAgent(agentId, userId)
+        +getUserIdByAgentId(agentId) String
+        +getAgentsByUserId(userId) Set~String~
+    }
+    
+    UnifiedWsHandler --> MessageRouter
+    UnifiedWsHandler --> ConnectionManager
+    MessageRouter --> ConnectionManager
+    MessageRouter --> AgentBindingManager
+```
+
+
+#### ChannelHandler 全量划分
+
+```mermaid
+classDiagram
+    class ChannelHandler {
+        <<interface>>
+        +handle(session, event)
+        +getSupportedChannel() WsChannel
+    }
+    
+    class ConnectChannelHandler {
+        -ConnectionManager connectionManager
+        +handle(session, event)
+        -handleConnect(session, event)
+        -handleRkConnect(session, event)
+        -sendAck(session, channel, code, message)
+    }
+    
+    class PingChannelHandler {
+        +handle(session, event)
+        -handlePing(session)
+        -handlePong(session)
+    }
+    
+    class AgentChannelHandler {
+        -AgentBindingManager bindingManager
+        -AgentService agentService
+        +handle(session, event)
+        -handleAgentUpdate(session, event)
+        -broadcastAgentList(userId)
+    }
+    
+    class ChatChannelHandler {
+        -AgentBindingManager bindingManager
+        -ChatForwardService chatForwardService
+        +handle(session, event)
+        -handleChatMessageSend(session, event)
+    }
+    
+    class SttChannelHandler {
+        -SttService sttService
+        -AudioBufferManager bufferManager
+        +handle(session, event)
+        -handleSttStart(session, event)
+        -handleSttAudioData(session, event)
+        -handleSttEnd(session, event)
+        -handleSttError(session, event)
+    }
+    
+    class LlmChannelHandler {
+        -LlmService llmService
+        -LlmStreamManager streamManager
+        +handle(session, event)
+        -handleLlmStart(session, event)
+        -handleLlmData(session, event)
+        -handleLlmEnd(session, event)
+        -handleLlmError(session, event)
+    }
+    
+    class TtsChannelHandler {
+        -TtsService ttsService
+        -AudioStreamManager streamManager
+        +handle(session, event)
+        -handleTtsStart(session, event)
+        -handleTtsData(session, event)
+        -handleTtsEnd(session, event)
+        -handleTtsError(session, event)
+    }
+    
+    class VlChannelHandler {
+        -VlService vlService
+        +handle(session, event)
+        -handleVlStart(session, event)
+        -handleVlData(session, event)
+        -handleVlEnd(session, event)
+        -handleVlError(session, event)
+    }
+    
+    class ControlChannelHandler {
+        -ControlForwardService controlService
+        -ConnectionManager connectionManager
+        +handle(session, event)
+        -handleControlCommand(session, event)
+        -handleCommandResult(session, event)
+        -sendControlResponse(userId, deviceId, code, message)
+    }
+    
+    class StatusChannelHandler {
+        -StatusService statusService
+        -ConnectionManager connectionManager
+        +handle(session, event)
+        -handleStatusRequest(session, event)
+        -handleRkStatus(session, event)
+        -broadcastStatus(deviceId, status)
+    }
+    
+    class SystemChannelHandler {
+        -SystemMessageService systemService
+        +handle(session, event)
+        -handleError(session, event)
+        -handleSystemMessage(session, event)
+    }
+    
+    ChannelHandler <|.. ConnectChannelHandler
+    ChannelHandler <|.. PingChannelHandler
+    ChannelHandler <|.. AgentChannelHandler
+    ChannelHandler <|.. ChatChannelHandler
+    ChannelHandler <|.. SttChannelHandler
+    ChannelHandler <|.. LlmChannelHandler
+    ChannelHandler <|.. TtsChannelHandler
+    ChannelHandler <|.. VlChannelHandler
+    ChannelHandler <|.. ControlChannelHandler
+    ChannelHandler <|.. StatusChannelHandler
+    ChannelHandler <|.. SystemChannelHandler
+```
+
+
+#### MessageRouter 整体通信图
+
+```mermaid
+flowchart TB
+    subgraph WebSocket线程
+        A[UnifiedWsHandler<br/>接收消息] --> B[解析JSON为ClientEvent]
+        B --> C[MessageRouter.route]
+    end
+    
+    C --> D{选择线程池}
+    
+    D -->|connect/rk_connect/ping| E[businessExecutor]
+    D -->|agent_update/chat_message_send| E
+    D -->|control_command_an/command_result| F[controlExecutor]
+    D -->|stt_*| G[sttExecutor]
+    D -->|llm_*| H[llmExecutor]
+    D -->|tts_*| I[ttsExecutor]
+    D -->|vl_*| J[vlExecutor]
+    D -->|status_request/rk_status| E
+    D -->|error/system_message| E
+    
+    subgraph businessExecutor [业务线程池 - 核心10/最大20]
+        E --> K[ConnectChannelHandler]
+        E --> L[PingChannelHandler]
+        E --> M[AgentChannelHandler]
+        E --> N[ChatChannelHandler]
+        E --> O[StatusChannelHandler]
+        E --> P[SystemChannelHandler]
+    end
+    
+    subgraph controlExecutor [控制命令线程池 - 核心5/最大10]
+        F --> Q[ControlChannelHandler]
+    end
+    
+    subgraph sttExecutor [STT线程池 - 核心2/最大4]
+        G --> R[SttChannelHandler]
+    end
+    
+    subgraph llmExecutor [LLM线程池 - 核心3/最大6]
+        H --> S[LlmChannelHandler]
+    end
+    
+    subgraph ttsExecutor [TTS线程池 - 核心2/最大4]
+        I --> T[TtsChannelHandler]
+    end
+    
+    subgraph vlExecutor [VL线程池 - 核心1/最大2]
+        J --> U[VlChannelHandler]
+    end
+    
+    K --> V[更新ConnectionManager]
+    L --> W[发送pong响应]
+    M --> X[更新AgentBindingManager]
+    N --> Y[ChatForwardService]
+    O --> Z[StatusBroadcastService]
+    P --> AA[SystemMessageService]
+    Q --> AB[ControlForwardService]
+    R --> AC[SttService + 音频处理]
+    S --> AD[LlmService + 流式处理]
+    T --> AE[TtsService + 音频合成]
+    U --> AF[VlService + 视觉理解]
+    
+    Y --> AG[AndroidMessageQueue]
+    Z --> AG
+    AA --> AG
+    AB --> AH[RkMessageQueue]
+    
+    AG --> AI[发送给Android客户端]
+    AH --> AJ[发送给RK设备]
+```
+
+
+#### 线程池类图
+
+
+```mermaid
+classDiagram
+    class ThreadPoolConfig {
+        +businessExecutor() ExecutorService
+        +sttExecutor() ExecutorService
+        +controlExecutor() ExecutorService
+        +llmExecutor() ExecutorService
+        +ttsExecutor() ExecutorService
+        +vlExecutor() ExecutorService
+        +monitoringExecutor() ScheduledExecutorService
+    }
+    
+    class CustomThreadPool {
+        -String poolName
+        -ThreadPoolExecutor executor
+        -AtomicLong submittedCount
+        -AtomicLong completedCount
+        +submit(task) Future
+        +getActiveCount() int
+        +getQueueSize() int
+        +getPoolStatus() PoolStatus
+    }
+    
+    class PoolStatus {
+        +String poolName
+        +int corePoolSize
+        +int maxPoolSize
+        +int activeCount
+        +int poolSize
+        +int queueSize
+        +long completedTaskCount
+        +long submittedCount
+    }
+    
+    class ThreadPoolMonitor {
+        -List~CustomThreadPool~ pools
+        -AlertService alertService
+        +monitorPools()
+        +checkBackPressure()
+        +logPoolStatus()
+        +alertIfThresholdExceeded()
+    }
+    
+    class MessageRouter {
+        -ExecutorService businessExecutor
+        -ExecutorService sttExecutor
+        -ExecutorService controlExecutor
+        -ExecutorService llmExecutor
+        -ExecutorService ttsExecutor
+        -ExecutorService vlExecutor
+        +route(session, event)
+        -selectExecutor(channel) ExecutorService
+    }
+    
+    ThreadPoolConfig --> CustomThreadPool : creates
+    CustomThreadPool --> PoolStatus : exposes
+    ThreadPoolMonitor --> CustomThreadPool : monitors
+    MessageRouter --> CustomThreadPool : uses
+```
+
+#### 线程池对象图
+
+
+```mermaid
+graph TB
+    subgraph ThreadPoolConfig
+        A[ThreadPoolConfig]
+    end
+    
+    subgraph BusinessThreadPool [业务线程池]
+        B1[corePoolSize: 10]
+        B2[maxPoolSize: 20]
+        B3[queueCapacity: 1000]
+        B4[keepAliveTime: 60s]
+        B5[rejectPolicy: CallerRunsPolicy]
+        B6[threadName: business-%d]
+    end
+    
+    subgraph ControlThreadPool [控制命令线程池]
+        C1[corePoolSize: 5]
+        C2[maxPoolSize: 10]
+        C3[queueCapacity: 200]
+        C4[keepAliveTime: 60s]
+        C5[rejectPolicy: CallerRunsPolicy]
+        C6[threadName: control-%d]
+    end
+    
+    subgraph SttThreadPool [STT线程池]
+        D1[corePoolSize: 2]
+        D2[maxPoolSize: 4]
+        D3[queueCapacity: 100]
+        D4[keepAliveTime: 60s]
+        D5[rejectPolicy: DiscardOldestPolicy]
+        D6[threadName: stt-%d]
+    end
+    
+    subgraph LlmThreadPool [LLM线程池]
+        E1[corePoolSize: 3]
+        E2[maxPoolSize: 6]
+        E3[queueCapacity: 200]
+        E4[keepAliveTime: 60s]
+        E5[rejectPolicy: CallerRunsPolicy]
+        E6[threadName: llm-%d]
+    end
+    
+    subgraph TtsThreadPool [TTS线程池]
+        F1[corePoolSize: 2]
+        F2[maxPoolSize: 4]
+        F3[queueCapacity: 100]
+        F4[keepAliveTime: 60s]
+        F5[rejectPolicy: DiscardOldestPolicy]
+        F6[threadName: tts-%d]
+    end
+    
+    subgraph VlThreadPool [VL线程池]
+        G1[corePoolSize: 1]
+        G2[maxPoolSize: 2]
+        G3[queueCapacity: 50]
+        G4[keepAliveTime: 60s]
+        G5[rejectPolicy: DiscardOldestPolicy]
+        G6[threadName: vl-%d]
+    end
+    
+    A --> BusinessThreadPool
+    A --> ControlThreadPool
+    A --> SttThreadPool
+    A --> LlmThreadPool
+    A --> TtsThreadPool
+    A --> VlThreadPool
+```
+
+#### 异步处理层次设计
+
+```mermaid
+gantt
+    title WebSocket消息处理时序图
+    dateFormat HH:mm:ss.SSS
+    axisFormat %H:%M:%S
+    
+    section WebSocket线程
+    接收消息 :t0, 00:00:00.000, 1ms
+    JSON解析 :t1, after t0, 1ms
+    路由分发 :t2, after t1, 1ms
+    
+    section 业务线程池
+    ConnectHandler处理 :t3, after t2, 50ms
+    AgentHandler处理 :t4, after t2, 100ms
+    ChatHandler处理 :t5, after t2, 80ms
+    
+    section 控制线程池
+    ControlHandler处理 :t6, after t2, 30ms
+    转发给RK :t7, after t6, 20ms
+    
+    section STT线程池
+    STT开始 :t8, after t2, 10ms
+    音频循环处理 :t9, after t8, 500ms
+    STT结束 :t10, after t9, 10ms
+    
+    section LLM线程池
+    LLM开始 :t11, after t2, 10ms
+    LLM流式处理 :t12, after t11, 2000ms
+    LLM结束 :t13, after t12, 10ms
+    
+    section 发送队列
+    入队消息 :t14, after t3, 1ms
+    出队发送 :t15, after t14, 5ms
+```
+
+
+#### 线程池隔离设计原则
+
+```mermaid
+flowchart TB
+    subgraph WebSocket线程
+        A[WebSocket IO Thread]
+    end
+    
+    subgraph 线程池隔离层
+        B[业务线程池<br/>处理普通业务]
+        C[控制线程池<br/>高优先级快速响应]
+        D[STT线程池<br/>音频处理隔离]
+        E[LLM线程池<br/>流式处理隔离]
+        F[TTS线程池<br/>音频合成隔离]
+        G[VL线程池<br/>视觉处理隔离]
+    end
+    
+    subgraph 共享资源
+        H[(数据库连接池)]
+        I[(Redis)]
+        J[HTTP客户端池]
+    end
+    
+    A -->|1. 快速分发| B
+    A -->|2. 快速分发| C
+    A -->|3. 快速分发| D
+    A -->|4. 快速分发| E
+    A -->|5. 快速分发| F
+    A -->|6. 快速分发| G
+    
+    B -->|共享| H
+    C -->|共享| H
+    D -->|独占| J
+    E -->|独占| I
+    F -->|独占| J
+    G -->|独占| J
+    
+    subgraph 背压控制
+        K[队列容量监控]
+        L[拒绝策略]
+        M[动态调整线程数]
+    end
+    
+    B -.-> K
+    C -.-> K
+    D -.-> K
+    E -.-> K
+    F -.-> K
+    G -.-> K
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
