@@ -4,7 +4,7 @@ package com.openapi.domain.constant.ws;
 import lombok.Getter;
 import lombok.NonNull;
 
-public enum WsChannel {
+public enum WsEvent {
     /// None 值
     NONE("none"),
 
@@ -169,7 +169,7 @@ public enum WsChannel {
     @Getter
     private final String value;
 
-    WsChannel(String value) {
+    WsEvent(String value) {
         this.value = value;
     }
 
@@ -177,8 +177,8 @@ public enum WsChannel {
      * 根据字符串值获取枚举
      */
     @NonNull
-    public static WsChannel fromValue(String value) {
-        for (WsChannel channel : values()) {
+    public static WsEvent fromValue(String value) {
+        for (WsEvent channel : values()) {
             if (channel.value.equals(value)) {
                 return channel;
             }

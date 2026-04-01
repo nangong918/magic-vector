@@ -1,6 +1,6 @@
 package com.magicvector.domain.constant.ws
 
-enum class WsChannel(val value: String) {
+enum class WsEvent(val value: String) {
     // None 值
     NONE("none"),
 
@@ -167,7 +167,7 @@ enum class WsChannel(val value: String) {
         /**
          * 根据字符串值获取枚举
          */
-        fun fromValue(value: String): WsChannel {
+        fun fromValue(value: String): WsEvent {
             return entries.find { it.value == value } ?: NONE
         }
     }

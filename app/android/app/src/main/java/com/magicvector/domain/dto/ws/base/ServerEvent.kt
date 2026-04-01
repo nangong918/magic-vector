@@ -7,7 +7,7 @@ package com.magicvector.domain.dto.ws.base
 data class ServerEvent(
     /**
      * 事件路由，见 WsChannel 枚举
-     * @see com.magicvector.domain.constant.ws.WsChannel
+     * @see com.magicvector.domain.constant.ws.WsEvent
      */
     val channel: String,
 

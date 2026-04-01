@@ -281,11 +281,11 @@ data class ServerEvent(
 )
 ```
 
-#### Channel 枚举设计
+#### Event 枚举设计
 
 ##### 1. 连接管理类（三端通用）
 
-| Channel | 方向 | 说明 | data字段 |
+| Event | 方向 | 说明 | data字段 |
 |---------|------|------|----------|
 | `connect` | Android→SB | 建立用户连接 | `userId` |
 | `connect_ack` | SB→Android | 连接确认 | `code`, `message` |
@@ -298,21 +298,21 @@ data class ServerEvent(
 
 ##### 2. Agent数据同步类（Android ↔ SB）
 
-| Channel | 方向 | 说明 | data字段 |
+| Event | 方向 | 说明 | data字段 |
 |---------|------|------|----------|
 | `agent_list_sync` | SB→Android | Agent列表变更推送 | `AgentChatDto` 列表 |
 | `agent_update` | Android→SB | 用户操作Agent（创建/更新/删除） | `AgentChatDto` |
 
 ##### 3. 聊天消息类（Android ↔ SB）
 
-| Channel | 方向 | 说明 | data字段 |
+| Event | 方向 | 说明 | data字段 |
 |---------|------|------|----------|
 | `chat_message_sync` | SB→Android | 聊天消息推送 | `ChatMessageDto` |
 | `chat_message_send` | Android→SB | 用户发送消息 | `ChatMessageDto` |
 
 ##### 4. 音频处理类（Android ↔ SB）
 
-| Channel | 方向 | 说明 | data字段 |
+| Event | 方向 | 说明 | data字段 |
 |---------|------|------|----------|
 | `stt_start` | Android→SB | 开始语音识别（STT） | `agentId` |
 | `stt_start_ack` | SB→Android | 语音识别确认 | `agentId` |
@@ -335,7 +335,7 @@ data class ServerEvent(
 
 ##### 5. 控制命令类（Android ↔ SB ↔ RK）
 
-| Channel | 方向 | 说明 | data字段 |
+| Event | 方向 | 说明 | data字段 |
 |---------|------|------|----------|
 | `control_command_an` | Android→SB | 控制RK设备 | `deviceId`, `command`, `params`（Map<String, String>） |
 | `control_command_sb` | SB→RK | 转发控制命令 | `commandId`, `command`, `params`（Map<String, String>） |
@@ -344,7 +344,7 @@ data class ServerEvent(
 
 ##### 6. 设备状态类（RK ↔ SB ↔ Android）
 
-| Channel | 方向 | 说明 | data字段 |
+| Event | 方向 | 说明 | data字段 |
 |---------|------|------|----------|
 | `status_request` | Android/SB→RK | 请求设备状态 | `deviceId` |
 | `rk_status` | RK→SB | 设备状态上报 | `deviceId`, `battery`, `position` |
@@ -352,19 +352,19 @@ data class ServerEvent(
 
 ##### 7. 系统消息类（三端通用）
 
-| Channel | 方向 | 说明 | data字段 |
+| Event | 方向 | 说明 | data字段 |
 |---------|------|------|----------|
 | `error` | 双向 | 错误信息 | `code`, `message` |
 | `system_message` | SB→双向 | 系统通知 | `event`, `param`（Map<String, String>） |
 
 ---
 
-#### Channel 枚举定义
+#### Event 枚举定义
 
 ##### Kotlin 版本（Android / RK）
 
 ```kotlin
-enum class WsChannel(val value: String) {
+enum class WsEvent(val value: String) {
     // 连接管理
     CONNECT("connect"),
     CONNECT_ACK("connect_ack"),
@@ -426,7 +426,7 @@ enum class WsChannel(val value: String) {
 Java 版本（SpringBoot）
 
 ```java
-public enum WsChannel {
+public enum WsEvent {
     // 连接管理
     CONNECT("connect"),
     CONNECT_ACK("connect_ack"),
@@ -485,7 +485,7 @@ public enum WsChannel {
 
     private final String value;
 
-    WsChannel(String value) {
+    WsEvent(String value) {
         this.value = value;
     }
 
@@ -496,7 +496,9 @@ public enum WsChannel {
 ```
 
 
-### 通信消息分发设计
+### Channel设计
+
+Channel为一类Event的通道
 
 UnifiedWsHandler + MessageRouter (Channel分发器) + ChannelHandler + 线程池架构
 
@@ -519,7 +521,7 @@ classDiagram
     }
     
     class MessageRouter {
-        -Map~WsChannel, ChannelHandler~ handlers
+        -Map~WsEvent, ChannelHandler~ handlers
         -ExecutorService businessExecutor
         -ExecutorService sttExecutor
         -ExecutorService controlExecutor
@@ -567,7 +569,7 @@ classDiagram
     class ChannelHandler {
         <<interface>>
         +handle(session, event)
-        +getSupportedChannel() WsChannel
+        +getSupportedChannel() WsEvent
     }
     
     class ConnectChannelHandler {

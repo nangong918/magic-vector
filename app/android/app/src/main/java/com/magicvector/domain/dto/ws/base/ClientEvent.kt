@@ -7,7 +7,7 @@ package com.magicvector.domain.dto.ws.base
 open class ClientEvent(
     /**
      * 事件路由，见 WsChannel 枚举
-     * @see com.magicvector.domain.constant.ws.WsChannel
+     * @see com.magicvector.domain.constant.ws.WsEvent
      */
     open val channel: String,
 
