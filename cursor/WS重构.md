@@ -173,36 +173,64 @@ flowchart TD
         A[RKControlService] --> B[RKWebSocketManager]
 
         B --> C[连接管理]
-        C --> D[心跳保活]
-        C --> E[断线重连]
-        C --> F[发送队列<br/>容量32]
-        C --> G[接收队列<br/>容量32]
+        C --> D[发送队列<br/>容量32<br/>BlockingQueue<Message>]
+        C --> E[重连机制<br/>含ping/pong心跳]
+        C --> F[接收队列<br/>容量32<br/>BlockingQueue<Message>]
 
-        B --> H[消息收发]
+        B --> G[消息分发器<br/>按Channel路由]
 
-        H --> I{消息类型}
+        G --> H{接收Channel类型}
 
-        I -->|control_command| J[命令执行器]
-        I -->|status_request| K[状态上报器]
+        H -->|connection| I1[ConnectionEventHandler<br/>处理rk_connect_ack<br/>ping/pong]
+        H -->|control| I2[CommandExecutor<br/>处理control_command_sb<br/>解析command和params]
+        H -->|status| I3[StatusRequestHandler<br/>处理status_request]
+        H -->|system| I4[SystemEventHandler<br/>处理error/system_message]
 
-        J --> L[马达控制]
-        J --> M[传感器读取]
-        J --> N[LED控制]
+        I1 --> J[连接状态管理<br/>更新注册状态]
+        
+        I2 --> K{命令类型}
+        K -->|GPIO控制| L1[GPIOController<br/>执行GPIO指令]
+        K -->|LED控制| L2[LEDController<br/>执行LED指令]
+        K -->|传感器读取| L3[SensorReader<br/>读取传感器数据]
+        K -->|其他| L4[OtherController<br/>执行其他指令]
+        
+        L1 --> M[获取执行结果<br/>code/message]
+        L2 --> M
+        L3 --> M
+        L4 --> M
+        
+        M --> N[构造Message<br/>channel:control<br/>event:command_result<br/>data: commandId,code,message]
+        
+        I3 --> O[采集设备状态]
+        O --> P[构造Message<br/>channel:status<br/>event:rk_status<br/>data: deviceId,battery,position]
+        
+        I4 --> Q[系统消息处理<br/>记录日志/错误处理]
 
-        L --> O[入队发送队列]
-        M --> O
-        N --> O
+        N -->|offer| D
+        P -->|offer| D
 
-        K --> P[采集传感器数据]
-        P --> Q[入队发送队列]
+        R[硬件事件/定时任务] --> S{事件类型}
+        S -->|定时上报<br/>每30秒| T[定时器触发]
+        S -->|传感器中断| U[传感器数据变化]
+        S -->|按钮按下| V[按钮事件]
+        
+        T --> O
+        U --> O
+        V --> O
 
-        R[硬件事件] --> S[传感器中断]
-        S --> K
-        R --> T[按钮按下]
-        T --> K
-
-        F -->|出队| B
-        G -->|出队| H
+        D -->|poll| B
+        F -->|poll| G
+        
+        W[视频流发送<br/>V2版本] --> X{传输方式选择}
+        X -->|高速模式| Y[UDP推流<br/>直接发送到SpringBoot<br/>低延迟]
+        X -->|防花屏模式| Z[RTMP推流<br/>发送到Nginx-RTMP<br/>稳定可靠]
+        
+        Y --> AA[SpringBoot UDP服务]
+        Z --> AB[Nginx-RTMP服务器]
+        
+        AC[RK APP离线UDP推送] --> AD[Camera录制视频流]
+        AD --> AE["UDP直推<br/>RK → Android<br/>点对点传输"]
+        AE --> AF[Android端接收<br/>本地播放]
     end
 ```
 
