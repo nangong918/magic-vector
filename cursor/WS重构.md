@@ -118,49 +118,68 @@ flowchart TD
 ```mermaid
 flowchart TD
     subgraph SpringBoot端
-        A[UnifiedWsHandler] --> B[WebSocket连接管理]
+        A[UnifiedWsHandler<br/>WebSocket IO线程] --> B[WebSocket连接管理]
 
         B --> C[Android连接池<br/>userId -> session]
         B --> D[RK连接池<br/>deviceId -> session]
-        B --> E[Android接收队列<br/>容量32]
-        B --> F[Android发送队列<br/>容量32]
-        B --> G[RK接收队列<br/>容量32]
-        B --> H[RK发送队列<br/>容量32]
+        B --> E[Android接收队列<br/>容量32<br/>BlockingQueue<Message>]
+        B --> F[Android发送队列<br/>容量32<br/>BlockingQueue<Message>]
+        B --> G[RK接收队列<br/>容量32<br/>BlockingQueue<Message>]
+        B --> H[RK发送队列<br/>容量32<br/>BlockingQueue<Message>]
 
-        A --> I[消息路由器]
+        A --> I[消息路由器<br/>快速解析channel]
 
-        I --> J{消息类型}
+        I --> J{Channel类型<br/>线程池隔离}
 
-        J -->|connect| K[注册Android连接]
-        J -->|rk_connect| L[注册RK连接]
-        J -->|bind_agent| M[AgentBindingService]
-        J -->|chat_message| N[ChatForwardService]
-        J -->|control_command| O[ControlForwardService]
-        J -->|command_result| P[结果回传]
-        J -->|status_report| Q[状态广播]
+        J -->|connection| K1[ConnectionHandler<br/>业务线程池<br/>处理connect/connect_ack<br/>rk_connect/rk_connect_ack<br/>ping/pong]
+        J -->|agent| K2[AgentHandler<br/>业务线程池<br/>处理agent_update<br/>存储agentId->userId<br/>返回agent_update_ack]
+        J -->|chat| K3[ChatHandler<br/>业务线程池<br/>处理chat_message_send<br/>查agentId->userId<br/>构造chat_message_sync]
+        J -->|control| K4[ControlHandler<br/>控制线程池<br/>处理control_command_an<br/>生成commandId转发RK<br/>处理command_result<br/>返回control_response]
+        J -->|status| K5[StatusHandler<br/>业务线程池<br/>处理status_request转发RK<br/>处理rk_status转发Android]
+        J -->|stt| K6[STTHandler<br/>STT线程池<br/>处理stt_start/stt_audio_data<br/>stt_end/stt_error<br/>调用ASR引擎返回stt_text_data]
+        J -->|llm| K7[LLMHandler<br/>LLM线程池<br/>处理llm_start/llm_end<br/>流式生成llm_data<br/>异常返回llm_error]
+        J -->|tts| K8[TTSHandler<br/>TTS线程池<br/>处理tts_start/tts_end<br/>合成tts_data音频流<br/>异常返回tts_error]
+        J -->|vl<br/>⚠️废弃| K9[VLHandler<br/>VL线程池<br/>&#10060废弃通道<br/>处理vl_start/vl_data/vl_end<br/>向前兼容旧版本]
+        J -->|system| K10[SystemHandler<br/>业务线程池<br/>处理error/system_message<br/>记录日志/系统通知]
 
-        M --> R[存储 agentId -> userId]
-        N --> S[根据agentId查userId]
-        S --> T[入队Android发送队列]
+        K1 --> L1[入队Android发送队列<br/>connect_ack/pong等]
+        K2 --> L1
+        K3 --> L1
+        K4 --> L2[入队RK发送队列<br/>control_command_sb]
+        K5 --> L2
+        K4 --> L3[入队Android发送队列<br/>control_response]
+        K5 --> L3
+        K6 --> L3
+        K7 --> L3
+        K8 --> L3
+        K9 --> L3
+        K10 --> L3
 
-        O --> U[根据deviceId查RK连接]
-        U --> V[入队RK发送队列]
+        L1 --> F
+        L2 --> H
+        L3 --> F
 
-        P --> W[根据userId查Android连接]
-        W --> X[入队Android发送队列]
+        E -->|poll| I
+        G -->|poll| I
+        F -->|poll| A
+        H -->|poll| A
 
-        Q --> Y[根据deviceId查userId]
-        Y --> Z[入队Android发送队列]
+        M[视频流接收<br/>V2版本] --> N{传输协议}
+        N -->|UDP高速模式| O[UDPServer<br/>接收Android/RK推流]
+        N -->|RTMP防花屏| P[RTMPServer<br/>Nginx-RTMP]
 
-        T --> F
-        V --> H
-        X --> F
-        Z --> F
+        O --> Q[视频流处理]
+        P --> Q
 
-        E -->|出队| I
-        F -->|出队| A
-        G -->|出队| I
-        H -->|出队| A
+        R[HTTP API] --> S1[GET /api/agents<br/>返回Agent列表]
+        R --> S2[GET /api/chat/history<br/>返回聊天历史]
+        R --> S3[POST /api/agent<br/>创建/更新/删除Agent]
+
+        S1 --> T1[查询数据库]
+        S2 --> T2[查询数据库]
+        S3 --> T3[操作数据库<br/>广播agent_list_sync]
+
+        T3 --> L1
     end
 ```
 
