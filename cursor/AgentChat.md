@@ -89,13 +89,22 @@ flowchart TD
 通信图
 ```mermaid
 flowchart LR
-    subgraph Android端
+    subgraph AndroidAppRK上层
         A1[讯飞唤醒SDK]
         A2[录音模块]
         A3[音频推流WS]
         A4[视频推流UDP/RTMP]
         A5[播放器]
         A6[UI文本展示]
+        A7[指令队列执行器<br/>逐条执行List]
+        D1[指令解析与路由]
+    end
+    
+    subgraph RK下层
+        R1[指令队列执行器<br/>逐条执行List]
+        R2[GPIO控制器]
+        R3[舵机]
+        R4[LCD屏]
     end
     
     subgraph SpringBoot端
@@ -103,9 +112,9 @@ flowchart LR
         B2[音频转发]
         B3[视频转发]
         B4[VL拉流处理]
-        B5[结果同步器]
-        B6[文本解析器]
-        B7[指令分发器]
+        B5[结果同步器<br/>等待VL+STT]
+        B6[文本解析器<br/>句子+MCP指令List]
+        B7[批量指令下发器<br/>一次性发送完整List]
     end
     
     subgraph 外部服务
@@ -116,38 +125,67 @@ flowchart LR
         C5[TTS服务]
     end
     
-    subgraph RK端
-        D1[指令执行器]
-    end
-    
     subgraph 流媒体
         E1[Nginx-RTMP]
     end
 
-    A1 -->|唤醒| C1
-    A2 -->|音频流| A3
+    %% 唤醒流程
+    A1 -->|唤醒事件| C1
+
+    %% 录音与流媒体
+    A2 -->|原始音频| A3
     A3 -->|Base64/Byte流| B1
     B1 --> B2
-    B2 -->|音频| C2
-    C2 -->|碎片| B2
-    B2 -->|碎片| A6
     
-    A4 -->|UDP| B3
-    A4 -->|RTMP| E1
-    B3 -->|UDP视频| B4
+    A4 -->|UDP视频帧| B3
+    A4 -->|RTMP推流| E1
+    
+    %% 音频处理
+    B2 -->|实时音频流| C2
+    C2 -->|STT碎片实时返回| B2
+    B2 -.->|碎片实时转发| A6
+    
+    %% 视频处理
+    B3 -->|UDP视频帧| B4
     E1 -->|拉流| B4
     B4 -->|视频帧| C3
-    C3 -->|VL结果| B5
+    C3 -->|VL识别结果| B5
     
-    B2 -->|最终文本| B5
-    B5 -->|STT+VL| C4
-    C4 -->|整体输出| B6
-    B6 -->|句子| C5
-    B6 -->|MCP指令| B7
+    %% STT最终结果
+    B2 -->|STT最终文本| B5
     
-    C5 -->|音频| A5
-    B7 -->|Android指令| A6
-    B7 -->|RK指令| D1
+    %% 同步等待
+    B5 -->|STT+VL同步| C4
+    C4 -->|LLM整体输出| B6
+    
+    %% 解析与批量下发
+    B6 -->|句子列表| C5
+    B6 -->|MCP指令List| B7
+    
+    %% 批量发送完整List
+    B7 -->|完整List批量下发| D1
+    
+    %% TTS音频流
+    C5 -->|音频流| A5
+    
+    %% 指令解析与路由
+    D1 -->|Android指令| A7
+    D1 -->|RK指令| R1
+    
+    %% Android逐条执行
+    A7 -->|逐条执行句子| A5
+    A7 -->|执行完成| A7
+    
+    %% RK下层逐条执行
+    R1 -->|逐条执行| R2
+    R2 -->|控制| R3
+    R2 -->|控制| R4
+    R1 -->|执行完成| R1
+    
+    %% 全部执行完成通知
+    A7 -.->|全部执行完成| D1
+    R1 -.->|全部执行完成| D1
+    D1 -.->|全部执行完成| B7
 ```
 
 
