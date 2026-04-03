@@ -89,201 +89,236 @@ flowchart TD
 通信图
 ```mermaid
 flowchart LR
-    subgraph AndroidAppRK上层
-        A1[讯飞唤醒SDK]
-        A2[录音模块]
-        A3[音频推流WS]
-        A4[视频推流UDP/RTMP]
-        A5[播放器]
-        A6[UI文本展示]
-        A7[指令队列执行器<br/>逐条执行List]
-        D1[指令解析与路由]
-    end
-    
-    subgraph RK下层
-        R1[指令队列执行器<br/>逐条执行List]
-        R2[GPIO控制器]
-        R3[舵机]
-        R4[LCD屏]
-    end
-    
-    subgraph SpringBoot端
-        B1[WS消息路由]
-        B2[音频转发]
-        B3[视频转发]
-        B4[VL拉流处理]
-        B5[结果同步器<br/>等待VL+STT]
-        B6[文本解析器<br/>句子+MCP指令List]
-        B7[批量指令下发器<br/>一次性发送完整List]
-    end
-    
-    subgraph 外部服务
-        C1[讯飞唤醒]
-        C2[STT服务]
-        C3[VL服务]
-        C4[LLM服务]
-        C5[TTS服务]
-    end
-    
-    subgraph 流媒体
-        E1[Nginx-RTMP]
-    end
+  subgraph "Android(AppRK上层)"
+    A1[讯飞离线唤醒SDK]
+    A2[录音模块]
+    A3[音频推流WS]
+    A4[视频推流UDP/RTMP]
+    A5[播放器]
+    A6[UI文本展示]
+    A7[指令队列执行器<br/>逐条执行List]
+    D1[指令解析与路由]
+  end
 
-    %% 唤醒流程
-    A1 -->|唤醒事件| C1
+  subgraph RK下层
+    R1[指令队列执行器<br/>逐条执行List]
+    R2[GPIO控制器]
+    R3[舵机]
+    R4[LCD屏]
+  end
 
-    %% 录音与流媒体
-    A2 -->|原始音频| A3
-    A3 -->|Base64/Byte流| B1
-    B1 --> B2
-    
-    A4 -->|UDP视频帧| B3
-    A4 -->|RTMP推流| E1
-    
-    %% 音频处理
-    B2 -->|实时音频流| C2
-    C2 -->|STT碎片实时返回| B2
-    B2 -.->|碎片实时转发| A6
-    
-    %% 视频处理
-    B3 -->|UDP视频帧| B4
-    E1 -->|拉流| B4
-    B4 -->|视频帧| C3
-    C3 -->|VL识别结果| B5
-    
-    %% STT最终结果
-    B2 -->|STT最终文本| B5
-    
-    %% 同步等待
-    B5 -->|STT+VL同步| C4
-    C4 -->|LLM整体输出| B6
-    
-    %% 解析与批量下发
-    B6 -->|句子列表| C5
-    B6 -->|MCP指令List| B7
-    
-    %% 批量发送完整List
-    B7 -->|完整List批量下发| D1
-    
-    %% TTS音频流
-    C5 -->|音频流| A5
-    
-    %% 指令解析与路由
-    D1 -->|Android指令| A7
-    D1 -->|RK指令| R1
-    
-    %% Android逐条执行
-    A7 -->|逐条执行句子| A5
-    A7 -->|执行完成| A7
-    
-    %% RK下层逐条执行
-    R1 -->|逐条执行| R2
-    R2 -->|控制| R3
-    R2 -->|控制| R4
-    R1 -->|执行完成| R1
-    
-    %% 全部执行完成通知
-    A7 -.->|全部执行完成| D1
-    R1 -.->|全部执行完成| D1
-    D1 -.->|全部执行完成| B7
+  subgraph SpringBoot端
+    B1[WS消息路由]
+    B2[音频转发]
+    B3[视频转发]
+    B4[VL拉流处理]
+    B5[结果同步器<br/>等待VL+STT]
+    B6[文本解析器<br/>句子+MCP指令List]
+    B7[批量指令下发器<br/>一次性发送完整List]
+  end
+
+  subgraph 外部服务
+    C2[STT服务]
+    C3[VL服务]
+    C4[LLM服务]
+    C5[TTS服务]
+  end
+
+  subgraph 流媒体
+    E1[Nginx-RTMP]
+  end
+
+%% 唤醒后直接触发录音（不经过外部服务）
+  A1 -->|唤醒事件| A2
+
+%% 录音与流媒体
+  A2 -->|原始音频| A3
+  A3 -->|Base64/Byte流| B1
+  B1 --> B2
+
+  A4 -->|UDP视频帧| B3
+  A4 -->|RTMP推流| E1
+
+%% 音频处理
+  B2 -->|实时音频流| C2
+  C2 -->|STT碎片实时返回| B2
+  B2 -.->|碎片实时转发| A6
+
+%% 视频处理
+  B3 -->|UDP视频帧| B4
+  E1 -->|拉流| B4
+  B4 -->|视频帧| C3
+  C3 -->|VL识别结果| B5
+
+%% STT最终结果
+  B2 -->|STT最终文本| B5
+
+%% 同步等待
+  B5 -->|STT+VL同步| C4
+  C4 -->|LLM整体输出| B6
+
+%% 解析与批量下发
+  B6 -->|句子列表| C5
+  B6 -->|MCP指令List| B7
+
+%% 批量发送完整List
+  B7 -->|完整List批量下发| D1
+
+%% TTS音频流
+  C5 -->|音频流| A5
+
+%% 指令解析与路由
+  D1 -->|Android指令| A7
+  D1 -->|RK指令| R1
+
+%% Android逐条执行
+  A7 -->|逐条执行句子| A5
+  A7 -->|执行完成| A7
+
+%% RK下层逐条执行
+  R1 -->|逐条执行| R2
+  R2 -->|控制| R3
+  R2 -->|控制| R4
+  R1 -->|执行完成| R1
+
+%% 全部执行完成通知
+  A7 -.->|全部执行完成| D1
+  R1 -.->|全部执行完成| D1
+  D1 -.->|全部执行完成| B7
 ```
 
 
 时序图
 ```mermaid
 sequenceDiagram
-    participant User as 用户
-    participant Android as Android
-    participant RK as RK设备
-    participant SB as SpringBoot
-    participant STT as STT服务
-    participant VL as VL服务
-    participant LLM as LLM服务
-    participant TTS as TTS服务
+  participant User as 用户
+  participant Android as Android
+  participant RK as RK设备
+  participant SB as SpringBoot
+  participant STT as STT服务
+  participant VL as VL服务
+  participant LLM as LLM服务
+  participant TTS as TTS服务
 
-    Note over Android: 讯飞唤醒SDK唤醒
-    Android->>Android: 启动2s定时器 + VAD检测
-    
-    par 并行处理
-        Android->>SB: RTMP/UDP推流视频
-        SB->>VL: 转发视频帧
-    and
-        Android->>SB: WS音频流
-        SB->>STT: 实时音频
-        STT-->>SB: 识别碎片
-        SB-->>Android: 转发碎片
-        Android->>User: UI展示文本
+  Note over Android: 讯飞离线唤醒SDK唤醒
+  Android->>Android: 开始录音，启动2s定时器+VAD检测
+
+  par 并行处理（录音+视频+音频识别碎片）
+    Android->>SB: RTMP/UDP推流视频
+    SB->>VL: 转发视频帧
+  and
+    Android->>SB: WS音频流推送
+    SB->>STT: 实时音频流
+    loop 实时识别
+      STT-->>SB: STT识别碎片
+      SB-->>Android: 转发碎片
+      Android->>User: UI实时展示识别文本
     end
-    
-    Android->>Android: 说话停止，结束录音
-    SB->>STT: 获取最终结果
-    STT-->>SB: 最终文本
-    
-    VL-->>SB: VL结果
-    SB->>SB: 同步STT+VL结果
-    SB->>LLM: 发送完整上下文
-    LLM-->>SB: 整体输出(文本+指令)
-    
-    SB->>SB: 文本过滤解析
-    SB->>Android: Agent开始回复(关闭唤醒)
-    SB->>RK: Agent开始回复(关闭唤醒)
-    
-    loop 遍历句子+MCP指令
-        alt 句子
-            SB->>TTS: 发送句子
-            TTS-->>SB: 音频流
-            SB-->>Android: 音频流
-            Android->>User: 播放音频
-        else MCP指令
-            alt 目标Android
-                SB-->>Android: 发送指令
-            else 目标RK
-                SB-->>RK: 发送指令
-                RK->>RK: 执行指令
-            end
-        end
+  end
+
+  Note over Android: VAD检测到说话停止 或 2s超时
+  Android->>Android: 停止录音，停止推流
+
+  SB->>STT: 请求STT最终结果
+  STT-->>SB: STT最终文本
+
+  VL-->>SB: VL识别结果
+
+  SB->>SB: 同步等待STT+VL（含超时异常处理）
+  SB->>LLM: 发送STT+VL完整上下文
+  LLM-->>SB: LLM整体输出（文本 + MCP指令List）
+
+  SB->>SB: 文本过滤解析器（解析句子+MCP指令List）
+
+  SB-->>Android: 设置Agent开始回复（关闭唤醒/禁用录音）
+  SB-->>RK: 设置Agent开始回复（关闭唤醒）
+
+  Note over SB: 批量下发完整指令List
+
+  loop 逐条执行指令（前一条完成后执行下一条）
+    alt 句子指令
+      SB->>TTS: 发送句子文本
+      TTS-->>SB: TTS音频流
+      SB-->>Android: 转发TTS音频流
+      Android->>User: 播放音频
+    else MCP指令
+      alt 目标为Android
+        SB-->>Android: 发送MCP指令
+        Android->>Android: 执行Android指令
+      else 目标为RK
+        SB-->>RK: 发送MCP指令
+        RK->>RK: 逐条执行指令<br/>（GPIO/舵机/LCD屏）
+      end
     end
-    
-    SB->>Android: Agent结束回复(恢复唤醒)
-    SB->>RK: Agent结束回复(恢复唤醒)
+  end
+
+  Note over Android,RK: 全部指令执行完成
+
+  SB-->>Android: 设置Agent结束回复（恢复唤醒）
+  SB-->>RK: 设置Agent结束回复（恢复唤醒）
+
+  Android->>User: 等待下次唤醒
 ```
 
 甘特图
 ```mermaid
 gantt
-    title 语音聊天时序图
-    dateFormat HH:mm:ss.SSS
-    axisFormat %H:%M:%S
-    
-    section Android端
-    唤醒检测 :a1, 00:00:00.000, 500ms
-    2s定时器等待 :a2, after a1, 2000ms
-    VAD检测(说话中) :a3, after a1, 3000ms
-    录音推流音频 :a4, after a1, 3500ms
-    UI展示STT碎片 :a5, after a1, 100ms
-    RTMP/UDP推流视频 :a6, after a1, 3500ms
-    
-    播放TTS音频 :a7, 00:00:08.000, 3000ms
-    执行指令 :a8, 00:00:11.000, 500ms
-    
-    section SpringBoot
-    音频转发STT :b1, 00:00:00.500, 3500ms
-    视频转发VL :b2, 00:00:00.500, 3500ms
-    等待VL结果 :b3, after b2, 1500ms
-    同步STT+VL :b4, 00:00:04.000, 100ms
-    LLM处理 :b5, after b4, 2000ms
-    文本解析 :b6, after b5, 100ms
-    TTS合成 :b7, after b6, 1500ms
-    指令分发 :b8, after b7, 500ms
-    
-    section 外部服务
-    STT识别 :c1, 00:00:00.500, 3500ms
-    VL理解 :c2, 00:00:00.500, 4000ms
-    LLM生成 :c3, 00:00:04.100, 2000ms
-    TTS合成 :c4, 00:00:06.200, 1500ms
-    
-    section RK端
-    执行指令 :d1, 00:00:11.000, 500ms
+  title 语音聊天时序图
+  dateFormat HH:mm:ss.SSS
+  axisFormat %H:%M:%S
+
+  section Android端（主线程-协程）
+    唤醒检测(Default协程) :a1, 00:00:00.000, 500ms
+    开始录音 :a2, after a1, 10ms
+    设置Agent开始回复(关闭唤醒) :a3, 00:00:08.200, 50ms
+    设置Agent结束回复(恢复唤醒) :a4, after a17, 50ms
+
+  section Android端（录音线程池）
+    启动VAD检测(2s后拉起) :a5, 00:00:02.000, 1ms
+    录音推流音频 :a6, after a2, 4000ms
+    RTMP/UDP推流视频 :a7, after a2, 4000ms
+    UI展示STT碎片 :a8, 00:00:00.600, 3400ms
+
+  section Android端（播放+指令线程池）
+    TTS句子1播放 :a9, 00:00:08.600, 2000ms
+    MCP A指令执行 :a10, 00:00:08.600, 100ms
+    等待句子1+A完成 :a11, after a9, 0ms
+
+    TTS句子2播放 :a12, after a11, 2000ms
+    MCP B指令执行 :a13, after a11, 2600ms
+    等待句子2+B完成 :a14, after a13, 0ms
+
+    TTS句子3播放 :a15, after a14, 2200ms
+    MCP C指令执行 :a16, after a14, 400ms
+    等待句子3+C完成 :a17, after a15, 0ms
+
+  section SpringBoot
+    音频转发STT :b1, 00:00:00.510, 3500ms
+    视频转发VL :b2, 00:00:00.510, 3500ms
+    停止录音触发(VAD结束或2s超时) :b3, 00:00:04.000, 1ms
+    同步等待VL+STT :b4, 00:00:04.000, 1310ms
+    LLM请求 :b5, after b4, 50ms
+    文本解析 :b6, after c3, 50ms
+
+    TTS请求句子1 :b7, after b6, 10ms
+    TTS流式接收句子1 :b8, after b7, 1500ms
+    下发MCP A :b9, after b7, 10ms
+
+    TTS请求句子2 :b10, after b8, 10ms
+    TTS流式接收句子2 :b11, after b10, 1000ms
+    下发MCP B :b12, after b10, 10ms
+
+    TTS请求句子3 :b13, after b11, 10ms
+    TTS流式接收句子3 :b14, after b13, 1200ms
+    下发MCP C :b15, after b13, 10ms
+
+  section 外部服务
+    STT识别 :c1, 00:00:00.510, 4500ms
+    VL理解 :c2, 00:00:00.510, 4800ms
+    LLM生成 :c3, after b5, 2500ms
+    TTS合成句子1 :c4, after b7, 1500ms
+    TTS合成句子2 :c5, after b10, 1000ms
+    TTS合成句子3 :c6, after b13, 1200ms
 ```
 
 
