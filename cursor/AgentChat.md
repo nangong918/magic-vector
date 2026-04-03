@@ -1,19 +1,14 @@
 # AgentChat设计
 
 
-## 描述
 
-有一点你理解错了，我现现在这样吧。我来教你绘制Agent调用流程图：
+### 消息记录查看页面
 
+取消聊天功能：右滑查看具体聊天记录和指令信息，不能发送消息。
+取消二分插入：直接使用Java的Sort工具类。
 
+### Android（App，RK通用）语音聊天初步设计
 
-1.纯文本聊天：
-Android发送Text消息->SpringBoot
-SpringBoot交给LLM模型
-LLM产生StreamText
-Android直接展示Text流
-
-2.Android（App，RK通用）语音聊天：
 * 讯飞唤醒SDK唤醒->
 * 定时任务，2s之后启动VAD语音活动检测（Android2s没检测到语音则认为2s内说完了，停止录音。否则开始VAD检测，直到检测从说话变为停止，则结束录音）->
 * Android2s到录音结束期间会RTMP推流或者UDP发送视频帧，
@@ -39,114 +34,7 @@ Android直接展示Text流
 
 
 
-
-
-### 纯文本聊天
-
-活动图
-
-```mermaid
-flowchart TD
-    subgraph 纯文本聊天活动图
-        Start([用户输入文本]) --> Send[Android发送文本到SpringBoot]
-        Send --> Forward[SpringBoot转发给LLM]
-        Forward --> Stream[LLM产生StreamText流式输出]
-        Stream --> Push[SpringBoot推送文本流]
-        Push --> Display[Android实时展示文本]
-        Display --> End([结束])
-    end
-```
-
-通信图
-```mermaid
-flowchart LR
-    subgraph Android端
-        A1[用户输入]
-        A2[UI展示]
-    end
-
-    subgraph SpringBoot端
-        B1[消息路由]
-        B2[LLM客户端]
-    end
-
-    subgraph 外部服务
-        C1[LLM服务]
-    end
-
-    A1 -->|文本消息| B1
-    B1 -->|转发| B2
-    B2 -->|请求| C1
-    C1 -->|StreamText流| B2
-    B2 -->|流式推送| A2
-```
-
-时序图
-```mermaid
-sequenceDiagram
-    participant User as 用户
-    participant Android as Android
-    participant SB as SpringBoot
-    participant LLM as LLM服务
-
-    User->>Android: 输入文本
-    Android->>SB: chat_message_send
-    SB->>LLM: 转发文本请求
-    loop 流式输出
-        LLM-->>SB: StreamText碎片
-        SB-->>Android: 推送文本碎片
-        Android-->>User: 实时显示
-    end
-    LLM-->>SB: llm_end
-    SB-->>Android: 推送结束标识
-```
-
-甘特图
-```mermaid
-gantt
-    title 纯文本聊天时序图
-    dateFormat HH:mm:ss.SSS
-    axisFormat %H:%M:%S
-    
-    section Android
-    发送文本 :a1, 00:00:00.000, 50ms
-    
-    section SpringBoot
-    转发LLM :b1, 00:00:00.050, 20ms
-    
-    section LLM服务
-    LLM处理 :c1, 00:00:00.070, 2000ms
-    
-    section 流式推送
-    文本碎片1 :d1, 00:00:00.500, 10ms
-    文本碎片2 :d2, 00:00:01.000, 10ms
-    文本碎片3 :d3, 00:00:01.500, 10ms
-    文本碎片4 :d4, 00:00:02.000, 10ms
-```
-
-状态图
-```mermaid
-stateDiagram-v2
-    [*] --> 空闲
-    
-    空闲 --> 等待输入: 用户打开聊天界面
-    等待输入 --> 发送中: 用户输入并发送
-    
-    发送中 --> 流式接收中: 文本已发送
-    
-    state 流式接收中 {
-        [*] --> 接收碎片
-        接收碎片 --> 追加显示
-        追加显示 --> 接收碎片: 继续接收
-        接收碎片 --> [*]: 接收结束
-    }
-    
-    流式接收中 --> 等待输入: 显示完成
-    
-    等待输入 --> 等待输入: 继续等待下一轮输入
-```
-
-### 语音视频聊天
+### 语音视频聊天 UML图设计
 
 
 活动图
@@ -155,48 +43,45 @@ flowchart TD
     subgraph 语音聊天活动图
         Start([用户语音交互]) --> WakeUp[讯飞唤醒SDK唤醒]
         WakeUp --> StartRecord[开始录音]
-        StartRecord --> StartTimer[启动2s定时器]
         
-        StartTimer --> CheckVoice{2s内检测到语音?}
-        CheckVoice -->|否| StopRecord1[停止录音<br/>结束流程]
-        CheckVoice -->|是| VadStart[启动VAD检测]
+        %% 录音与流媒体并行
+        StartRecord --> ParallelStart{并行执行}
         
-        StartRecord --> PushAudio[音频流WS发送]
-        PushAudio --> STTProcess[STT实时识别]
-        STTProcess --> STTResult[返回识别碎片]
-        STTResult --> DisplayText[Android展示文本]
+        ParallelStart --> AudioStreamProcess[录音与流媒体模块<br/>━━━━━━━━━━━━━━━<br/>• 持续发送音频流WS→STT碎片→Android展示<br/>• 持续发送视频帧RTMP/UDP<br/>• VAD检测循环，条件：说话未停止且未超时]
         
-        VadStart --> VadDetect{VAD检测中}
-        VadDetect -->|正在说话| PushVideo[RTMP/UDP推流]
-        PushVideo --> VadDetect
-        VadDetect -->|说话停止| StopRecord2[停止录音]
+        ParallelStart --> TimeoutMonitor[2s超时监控]
         
-        StopRecord2 --> WaitVL[等待VL结果]
-        WaitVL --> GetFinalSTT[获取STT最终结果]
-        GetFinalSTT --> SyncResult[同步STT+VL结果]
-        SyncResult --> SendLLM[发送LLM]
+        AudioStreamProcess -->|VAD检测到说话停止或2s超时| StopRecord[停止录音，停止所有流媒体]
+        TimeoutMonitor -->|2s内无语音| StopRecord
+        
+        StopRecord --> SyncWait[同步等待<br/>━━━━━━━━━━━━━━━<br/>等待VL结果 + STT最终结果<br/>（含超时异常处理）]
+        
+        SyncWait -->|两者都到达| SendLLM[发送LLM]
         
         SendLLM --> LLMOutput[LLM整体输出<br/>文本+指令]
         LLMOutput --> ParseFilter[文本过滤分析器<br/>解析句子+MCP指令List]
         
         ParseFilter --> SetSpeaking[设置Agent开始回复<br/>关闭唤醒/禁用录音]
         
-        SetSpeaking --> ProcessList{遍历List}
+        SetSpeaking --> ProcessList[处理指令列表<br/>━━━━━━━━━━━━━━━<br/>通过消息队列接收<br/>逐条执行，等待前一条完成]
         
         ProcessList -->|句子| SendTTS[发送TTS]
         SendTTS --> AudioPlay[Android播放音频流]
-        AudioPlay --> ProcessList
+        AudioPlay -->|播放完成| ProcessList
         
-        ProcessList -->|MCP指令| CheckTarget{目标}
-        CheckTarget -->|Android| SendAndroid[发送Android指令]
-        CheckTarget -->|RK| SendRK[发送RK指令]
-        SendAndroid --> ProcessList
-        SendRK --> ProcessList
+        ProcessList -->|MCP指令| CheckTarget{目标设备}
+        CheckTarget -->|Android指令| SendAndroid[发送Android指令]
+        CheckTarget -->|RK指令| SendRK[发送RK指令]
         
-        ProcessList -->|结束| SetIdle[设置Agent结束回复<br/>恢复唤醒功能]
+        SendAndroid --> WaitAndroid[等待Android执行完成]
+        SendRK --> WaitRK[等待RK执行完成<br/>（RK的语音输出也由Android播放）]
         
-        StopRecord1 --> End([结束])
-        SetIdle --> End
+        WaitAndroid --> ProcessList
+        WaitRK --> ProcessList
+        
+        ProcessList -->|列表处理完成| SetIdle[设置Agent结束回复<br/>恢复唤醒功能]
+        
+        SetIdle --> End([结束])
     end
 ```
 

@@ -41,34 +41,34 @@ flowchart TD
 ```mermaid
 flowchart TD
     subgraph Android端
-        A[ChatService] --> B[UnifiedWebSocketManager]
+        A[WebSocketService<br/>创建CoroutineScope] --> B[UnifiedWebSocketManager]
 
-        B --> C[连接管理]
-        C --> D[发送队列<br/>容量32<br/>BlockingQueue<Message>]
+        B --> C[连接管理<br/>Dispatchers.IO]
+        C --> D[发送Channel<br/>容量32<br/>Channel<Message>]
         C --> E[重连机制<br/>含ping/pong心跳]
-        C --> F[接收队列<br/>容量32<br/>BlockingQueue<Message>]
+        C --> F[接收Channel<br/>容量32<br/>Channel<Message>]
 
-        B --> G[消息分发器<br/>按Channel路由]
+        B --> G[消息分发器<br/>Dispatchers.Default<br/>从接收Channel消费消息]
 
         G --> H{接收Channel类型}
 
-        H -->|agent| I1[AgentEventHandler<br/>处理agent_list_sync<br/>更新本地Agent缓存]
-        H -->|chat| I2[ChatEventHandler<br/>处理chat_message_sync<br/>通知UI新消息]
-        H -->|stt| I3[STTEventHandler<br/>处理stt_start_ack<br/>stt_text_data<br/>stt_error]
-        H -->|llm| I4[LLMEventHandler<br/>处理llm_start/llm_data<br/>llm_end/llm_error<br/>流式文本显示]
-        H -->|tts| I5[TTSEventHandler<br/>处理tts_start/tts_data<br/>tts_end/tts_error<br/>播放base64音频流]
-        H -->|vl<br/>⚠️废弃| I6[VLEventHandler<br/>处理vl_start/vl_data<br/>vl_end/vl_error<br/>&#10060废弃: 展示base64视频流<br/>V2版本改用UDP/RTMP]
-        H -->|control| I7[ControlEventHandler<br/>处理control_response]
-        H -->|status| I8[StatusEventHandler<br/>处理rk_status]
-        H -->|system| I9[SystemEventHandler<br/>处理error/system_message]
-        H -->|connection| I10[ConnectionEventHandler<br/>处理connect_ack<br/>rk_connect_ack<br/>ping/pong]
+        H -->|agent| I1[AgentEventHandler<br/>Dispatchers.Default<br/>处理agent_list_sync]
+        H -->|chat| I2[ChatEventHandler<br/>Dispatchers.Default<br/>处理chat_message_sync]
+        H -->|stt| I3[STTEventHandler<br/>Dispatchers.Default<br/>处理stt_start_ack<br/>stt_text_data<br/>stt_error]
+        H -->|llm| I4[LLMEventHandler<br/>Dispatchers.Default<br/>处理llm_start/llm_data<br/>llm_end/llm_error]
+        H -->|tts| I5[TTSEventHandler<br/>Dispatchers.Main<br/>处理tts_data<br/>调用AudioPlayer播放]
+        H -->|vl⚠️废弃| I6[VLEventHandler<br/>Dispatchers.Default<br/>处理vl_start/vl_data<br/>&#10060废弃通道]
+        H -->|control| I7[ControlEventHandler<br/>Dispatchers.Default<br/>处理control_response]
+        H -->|status| I8[StatusEventHandler<br/>Dispatchers.Default<br/>处理rk_status]
+        H -->|system| I9[SystemEventHandler<br/>Dispatchers.Default<br/>处理error/system_message]
+        H -->|connection| I10[ConnectionEventHandler<br/>Dispatchers.Default<br/>处理connect_ack/ping/pong]
 
-        I1 --> J[UI回调<br/>Agent列表更新]
+        I1 --> J[withContext Dispatchers.Main<br/>UI回调更新]
         I2 --> J
         I3 --> J
         I4 --> J
-        I5 --> K[AudioPlayer<br/>播放音频流]
-        I6 --> L[VideoPlayer<br/>&#10060废弃通道<br/>播放base64视频流]
+        I5 --> K[AudioPlayer<br/>AudioTrack播放音频流]
+        I6 --> L[VideoPlayer<br/>&#10060废弃通道]
         I7 --> J
         I8 --> J
         I9 --> J
@@ -76,40 +76,42 @@ flowchart TD
 
         M[用户操作] --> N{操作类型}
 
-        N -->|创建/删除/编辑Agent| O1[构造Message<br/>channel:agent<br/>event:agent_update<br/>data: AgentChatDto]
-        N -->|发送聊天消息| O2[构造Message<br/>channel:chat<br/>event:chat_message_send<br/>data: ChatMessageDto]
-        N -->|控制RK设备| O3[构造Message<br/>channel:control<br/>event:control_command_an<br/>data: deviceId,command,params]
-        N -->|发送语音消息| O4[构造Message<br/>channel:stt<br/>event:stt_start<br/>data: agentId]
-        N -->|发送视频流<br/>⚠️废弃| O5[构造Message<br/>channel:vl<br/>event:vl_start<br/>data: agentId<br/>&#10060逐帧发送base64字节流<br/>V2版本已废弃]
+        N -->|创建/删除/编辑Agent| O1[launch Dispatchers.Default<br/>构造Message<br/>channel:agent<br/>event:agent_update]
+        N -->|发送聊天消息| O2[launch Dispatchers.Default<br/>构造Message<br/>channel:chat<br/>event:chat_message_send]
+        N -->|控制RK设备| O3[launch Dispatchers.Default<br/>构造Message<br/>channel:control<br/>event:control_command_an]
+        N -->|发送语音消息| O4[launch Dispatchers.IO<br/>构造Message<br/>channel:stt<br/>event:stt_start]
 
-        O1 -->|offer| D
-        O2 -->|offer| D
-        O3 -->|offer| D
-        O4 -->|offer| D
-        O5 -->|offer| D
+        O1 -->|send| D
+        O2 -->|send| D
+        O3 -->|send| D
+        O4 -->|send| D
 
-        O4 --> P[语音数据流处理]
-        P --> Q[分片发送stt_audio_data<br/>每片带seq序列号]
-        Q -->|offer| D
+        O4 --> P[语音数据流处理<br/>Dispatchers.IO]
+        P --> Q[循环读取麦克风buffer<br/>分片发送stt_audio_data<br/>每片带seq序列号]
+        Q -->|send| D
 
         P --> R[发送stt_end结束识别]
-        R -->|offer| D
+        R -->|send| D
 
-        S[视频流发送<br/>V2版本] --> T{传输方式选择}
-        T -->|高速模式| U[UDP推流<br/>直接发送到SpringBoot<br/>低延迟]
-        T -->|防花屏模式| V[RTMP推流<br/>发送到Nginx-RTMP<br/>稳定可靠]
+        S[视频流发送<br/>V2版本] --> T{传输方式选择<br/>各自独立协程}
+        T -->|高速模式| U[launch Dispatchers.IO<br/>UDP推流到SpringBoot]
+        T -->|防花屏模式| V[launch Dispatchers.IO<br/>RTMP推流到Nginx]
 
         U --> W[SpringBoot UDP服务]
         V --> X[Nginx-RTMP服务器]
 
-        D -->|poll| B
-        F -->|poll| G
+        Y[UDP/RTMP播放<br/>V2版本] --> Z[launch Dispatchers.IO<br/>接收视频流]
+        Z --> AA[launch Dispatchers.Default<br/>解码视频帧]
+        AA --> AB[withContext Dispatchers.Main<br/>渲染到SurfaceView]
 
-        Y[HTTP请求] --> Z1[获取Agent列表<br/>GET /api/agents]
-        Y --> Z2[获取聊天历史<br/>GET /api/chat/history]
+        D -->|接收循环<br/>Dispatchers.IO| B
+        F -->|分发循环<br/>Dispatchers.Default| G
 
-        Z1 --> AA1[更新本地Agent缓存]
-        Z2 --> AA2[更新本地聊天缓存]
+        AC[HTTP请求] --> AD[launch Dispatchers.IO<br/>GET /api/agents]
+        AC --> AE[launch Dispatchers.IO<br/>GET /api/chat/history]
+
+        AD --> AF[withContext Dispatchers.Main<br/>更新本地Agent缓存]
+        AE --> AG[withContext Dispatchers.Main<br/>更新本地聊天缓存]
     end
 ```
 
