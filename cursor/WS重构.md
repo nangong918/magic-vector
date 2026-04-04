@@ -472,13 +472,15 @@ flowchart TD
 ### 整体数据流
 ```mermaid
 graph LR
-    subgraph Android
-        A1[用户操作]
+    subgraph Android（App，RK上层）
+        A1[用户操作/语音唤醒]
         A2[发送队列<br/>容量32]
         A3[WebSocket客户端]
         A4[接收队列<br/>容量32]
         A5[消息分发器]
         A6[UI更新]
+        A7[InstructionExecutor<br/>顺序执行器]
+        A8[AudioPlayer]
     end
 
     subgraph SpringBoot
@@ -489,11 +491,15 @@ graph LR
         B5[RK接收队列<br/>容量32]
         B6[RK发送队列<br/>容量32]
         B7[连接管理器]
-        B8[Agent绑定服务]
+        B8[Agent/聊天服务]
         B9[控制转发服务]
+        B10[STT/VL会话协调器]
+        B11[LLM/TTS服务调用]
+        B12[文本解析与批量下发]
+        B13[指令追踪器]
     end
 
-    subgraph RK设备
+    subgraph RK设备（RK下层）
         C1[发送队列<br/>容量32]
         C2[WebSocket客户端]
         C3[接收队列<br/>容量32]
@@ -501,50 +507,77 @@ graph LR
         C5[状态采集器]
     end
 
-    A1 -->|bind_agent| A2
-    A1 -->|chat_message| A2
-    A1 -->|control_command| A2
+    subgraph 外部服务
+        STT[STT服务]
+        VL[VL服务]
+        LLM[LLM服务]
+        TTS[TTS服务]
+    end
 
-    A2 -->|出队| A3
+    subgraph 流媒体
+        UDP[UDP Server]
+        RTMP[Nginx-RTMP]
+    end
+
+    %% Android → SpringBoot 消息
+    A1 -->|agent_update / chat_message_send / control_command_an / stt_start / stt_audio_data / stt_end| A2
+    A2 --> A3
     A3 -->|WebSocket| B1
+    B1 --> B2
+    B2 --> B3
 
-    B1 -->|入队| B2
-    B2 -->|出队| B3
+    %% SpringBoot 内部路由
+    B3 -->|agent/chat| B8
+    B3 -->|control| B9
+    B3 -->|stt| B10
+    B3 -->|instruction_result| B13
 
-    B3 -->|bind_agent| B8
-    B3 -->|chat_message| B8
-    B3 -->|control_command| B9
+    %% 外部服务调用
+    B10 -->|音频流| STT
+    STT -->|碎片| B10
+    B10 -->|最终文本| B11
+    B10 -->|视频帧| VL
+    VL -->|结果| B10
+    B11 -->|上下文| LLM
+    LLM -->|整体输出| B12
+    B12 -->|句子列表| TTS
+    TTS -->|音频流| B4
 
-    B8 -->|转发聊天| B4
-    B9 -->|转发控制| B6
-
-    B4 -->|出队| B1
-    B6 -->|出队| B1
-
+    %% 控制命令转发
+    B9 -->|control_command_sb| B6
+    B6 --> B1
     B1 -->|WebSocket| C2
-    C2 -->|入队| C3
-    C3 -->|出队| C4
-    C3 -->|出队| C5
 
-    C4 -->|命令结果| C1
-    C5 -->|状态上报| C1
-
-    C1 -->|出队| C2
+    %% RK 处理
+    C2 --> C3
+    C3 --> C4
+    C3 --> C5
+    C4 -->|command_result| C1
+    C5 -->|rk_status| C1
+    C1 --> C2
     C2 -->|WebSocket| B1
+    B1 --> B5
+    B5 --> B3
+    B3 -->|command_result / rk_status| B4
 
-    B1 -->|入队| B5
-    B5 -->|出队| B3
-    B3 -->|转发结果| B4
-    B3 -->|广播状态| B4
-
-    B4 -->|出队| B1
+    %% SpringBoot → Android 推送
+    B4 --> B1
     B1 -->|WebSocket| A3
+    A3 --> A4
+    A4 --> A5
+    A5 -->|agent_list_sync / chat_message_sync / control_response / rk_status / tts_data / instruction_list / system_message| A6
+    A5 -->|tts_data / instruction_list| A7
+    A7 -->|逐条执行| A8
+    A8 -->|播放完成| A7
+    A7 -->|instruction_result| A2
 
-    A3 -->|入队| A4
-    A4 -->|出队| A5
-    A5 -->|chat_message| A6
-    A5 -->|control_response| A6
-    A5 -->|rk_status| A6
+    %% 视频流独立通道
+    Android -.->|UDP/RTMP| UDP
+    Android -.->|UDP/RTMP| RTMP
+    RK -.->|UDP/RTMP| UDP
+    RK -.->|UDP/RTMP| RTMP
+    UDP -.-> B10
+    RTMP -.-> B10
 ```
 
 
@@ -650,7 +683,14 @@ data class ServerEvent(
 | `rk_status` | RK→SB | 设备状态上报 | `deviceId`, `battery`, `position` |
 | `rk_status` | SB→Android | 转发设备状态 | `deviceId`, `battery`, `position` |
 
-##### 7. 系统消息类（三端通用）
+##### 7. 指令批量处理类（三端通用）
+
+| Event | 方向 | 说明 | data字段 |
+|--------------------|------|----------------------------|----------|
+| `instruction_list`   | SB → Android | 批量下发指令列表（TTS句子 + MCP指令）| `requestId`, `instructions`（JSON数组字符串，每个元素含type、target、text/command/params等） |
+| `instruction_result` | Android → SB | 单条指令执行结果确认 | `requestId`, `index`, `type`, `status`, `code`, `message` |
+
+##### 8. 系统消息类（三端通用）
 
 | Event | 方向 | 说明 | data字段 |
 |---------|------|------|----------|
