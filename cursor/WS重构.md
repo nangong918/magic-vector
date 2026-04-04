@@ -40,149 +40,285 @@ flowchart TD
 
 ```mermaid
 flowchart TD
-    subgraph Android端
-        A[WebSocketService<br/>创建CoroutineScope] --> B[UnifiedWebSocketManager]
-
-        B --> C[连接管理<br/>Dispatchers.IO]
-        C --> D[发送Channel<br/>容量32<br/>Channel<Message>]
-        C --> E[重连机制<br/>含ping/pong心跳]
-        C --> F[接收Channel<br/>容量32<br/>Channel<Message>]
-
-        B --> G[消息分发器<br/>Dispatchers.Default<br/>从接收Channel消费消息]
-
-        G --> H{接收Channel类型}
-
-        H -->|agent| I1[AgentEventHandler<br/>Dispatchers.Default<br/>处理agent_list_sync]
-        H -->|chat| I2[ChatEventHandler<br/>Dispatchers.Default<br/>处理chat_message_sync]
-        H -->|stt| I3[STTEventHandler<br/>Dispatchers.Default<br/>处理stt_start_ack<br/>stt_text_data<br/>stt_error]
-        H -->|llm| I4[LLMEventHandler<br/>Dispatchers.Default<br/>处理llm_start/llm_data<br/>llm_end/llm_error]
-        H -->|tts| I5[TTSEventHandler<br/>Dispatchers.Main<br/>处理tts_data<br/>调用AudioPlayer播放]
-        H -->|vl⚠️废弃| I6[VLEventHandler<br/>Dispatchers.Default<br/>处理vl_start/vl_data<br/>&#10060废弃通道]
-        H -->|control| I7[ControlEventHandler<br/>Dispatchers.Default<br/>处理control_response]
-        H -->|status| I8[StatusEventHandler<br/>Dispatchers.Default<br/>处理rk_status]
-        H -->|system| I9[SystemEventHandler<br/>Dispatchers.Default<br/>处理error/system_message]
-        H -->|connection| I10[ConnectionEventHandler<br/>Dispatchers.Default<br/>处理connect_ack/ping/pong]
-
-        I1 --> J[withContext Dispatchers.Main<br/>UI回调更新]
-        I2 --> J
-        I3 --> J
-        I4 --> J
-        I5 --> K[AudioPlayer<br/>AudioTrack播放音频流]
-        I6 --> L[VideoPlayer<br/>&#10060废弃通道]
-        I7 --> J
-        I8 --> J
-        I9 --> J
-        I10 --> J
-
-        M[用户操作] --> N{操作类型}
-
-        N -->|创建/删除/编辑Agent| O1[launch Dispatchers.Default<br/>构造Message<br/>channel:agent<br/>event:agent_update]
-        N -->|发送聊天消息| O2[launch Dispatchers.Default<br/>构造Message<br/>channel:chat<br/>event:chat_message_send]
-        N -->|控制RK设备| O3[launch Dispatchers.Default<br/>构造Message<br/>channel:control<br/>event:control_command_an]
-        N -->|发送语音消息| O4[launch Dispatchers.IO<br/>构造Message<br/>channel:stt<br/>event:stt_start]
-
-        O1 -->|send| D
-        O2 -->|send| D
-        O3 -->|send| D
-        O4 -->|send| D
-
-        O4 --> P[语音数据流处理<br/>Dispatchers.IO]
-        P --> Q[循环读取麦克风buffer<br/>分片发送stt_audio_data<br/>每片带seq序列号]
-        Q -->|send| D
-
-        P --> R[发送stt_end结束识别]
-        R -->|send| D
-
-        S[视频流发送<br/>V2版本] --> T{传输方式选择<br/>各自独立协程}
-        T -->|高速模式| U[launch Dispatchers.IO<br/>UDP推流到SpringBoot]
-        T -->|防花屏模式| V[launch Dispatchers.IO<br/>RTMP推流到Nginx]
-
-        U --> W[SpringBoot UDP服务]
-        V --> X[Nginx-RTMP服务器]
-
-        Y[UDP/RTMP播放<br/>V2版本] --> Z[launch Dispatchers.IO<br/>接收视频流]
-        Z --> AA[launch Dispatchers.Default<br/>解码视频帧]
-        AA --> AB[withContext Dispatchers.Main<br/>渲染到SurfaceView]
-
-        D -->|接收循环<br/>Dispatchers.IO| B
-        F -->|分发循环<br/>Dispatchers.Default| G
-
-        AC[HTTP请求] --> AD[launch Dispatchers.IO<br/>GET /api/agents]
-        AC --> AE[launch Dispatchers.IO<br/>GET /api/chat/history]
-
-        AD --> AF[withContext Dispatchers.Main<br/>更新本地Agent缓存]
-        AE --> AG[withContext Dispatchers.Main<br/>更新本地聊天缓存]
+    subgraph 初始化与连接管理
+        Start([应用启动]) --> InitWS[初始化 WebSocketService<br/>创建 CoroutineScope]
+        InitWS --> CreateManager[创建 UnifiedWebSocketManager]
+        CreateManager --> ConnLoop{连接状态}
+        ConnLoop -->|未连接| Connect[connect 协程 IO<br/>建立 WS 连接]
+        Connect --> SendAuth[发送认证信息<br/>channel:connection, event:auth]
+        SendAuth --> WaitAck[等待 connect_ack]
+        WaitAck -->|成功| StartPing[启动 ping/pong 心跳]
+        WaitAck -->|失败/超时| ReconnDelay[延迟重连<br/>指数退避]
+        ReconnDelay --> Connect
+        StartPing --> ConnEstablished[连接已建立]
+        ConnEstablished --> DispatchLoop[启动接收分发循环<br/>Dispatchers.Default]
     end
+
+    subgraph 消息发送通道
+        UserAction[用户操作] --> ActionType{操作类型}
+        ActionType -->|创建/删除/编辑 Agent| AgentUpdate[构造 agent_update 消息<br/>channel:agent]
+        ActionType -->|发送聊天文本| ChatSend[构造 chat_message_send<br/>channel:chat]
+        ActionType -->|控制 RK 设备| ControlCmd[构造 control_command<br/>channel:control]
+        ActionType -->|开始语音交互| VoiceStart[启动语音交互流程]
+        ActionType -->|HTTP 请求| HttpReq[协程 IO 请求<br/>GET /api/agents 或 /api/chat/history]
+        HttpReq --> UpdateCache[更新本地缓存<br/>withContext Main]
+
+        AgentUpdate --> SendMsg[发送到发送 Channel<br/>容量 32]
+        ChatSend --> SendMsg
+        ControlCmd --> SendMsg
+
+        SendMsg --> WsSend[WebSocket 发送<br/>协程 IO]
+    end
+
+    subgraph 语音交互详细流程
+        VoiceStart --> CheckAgentState{isAgentReplying?}
+        CheckAgentState -->|是| RejectVoice[忽略本次唤醒/录音<br/>提示忙碌]
+        RejectVoice --> EndVoice([结束])
+        CheckAgentState -->|否| WakeUp[讯飞离线唤醒 SDK 唤醒]
+        WakeUp --> StartRecord[开始录音<br/>启动 2s 超时定时器]
+        StartRecord --> ParallelVoice{并行执行}
+
+        ParallelVoice --> AudioPush[循环读取麦克风 buffer<br/>发送 stt_audio_data 分片<br/>含 seq 序列号]
+        AudioPush --> WsSend
+
+        ParallelVoice --> VideoPush[视频推流独立协程<br/>UDP/RTMP 发送视频帧]
+        VideoPush --> VideoOut[视频流输出]
+
+        ParallelVoice --> VadTimer[2s 超时检测]
+        VadTimer -->|2s 内无语音| StopRec1[停止录音<br/>发送 stt_end]
+        VadTimer -->|2s 内检测到语音| VadLoop[VAD 循环检测]
+        VadLoop -->|静音超过阈值| StopRec2[停止录音<br/>发送 stt_end]
+
+        StopRec1 --> WaitReply[等待服务器回复]
+        StopRec2 --> WaitReply
+    end
+
+    subgraph 消息接收与分发
+        DispatchLoop --> RecvMsg[从接收 Channel 取消息<br/>容量 32]
+        RecvMsg --> ParseChannel{解析 channel 字段}
+
+        ParseChannel -->|agent| AgentHandler[AgentEventHandler<br/>处理 agent_list_sync]
+        ParseChannel -->|chat| ChatHandler[ChatEventHandler<br/>处理 chat_message_sync]
+        ParseChannel -->|stt| SttHandler[STTEventHandler<br/>处理 stt_start_ack, stt_text_data, stt_error]
+        ParseChannel -->|llm| LlmHandler[LLMEventHandler<br/>处理 llm_start/llm_data/llm_end]
+        ParseChannel -->|tts| TtsHandler[TTSEventHandler<br/>收到 tts_data]
+        ParseChannel -->|control| CtrlHandler[ControlEventHandler<br/>收到 control_command / control_response]
+        ParseChannel -->|system| SysHandler[SystemEventHandler<br/>处理 error, system_message]
+        ParseChannel -->|status| StatusHandler[StatusEventHandler<br/>处理 rk_status]
+        ParseChannel -->|connection| ConnHandler[ConnectionEventHandler<br/>处理 ping/pong/connect_ack]
+
+        AgentHandler --> UiUpdate[更新 UI<br/>withContext Main]
+        ChatHandler --> UiUpdate
+        SttHandler --> UiUpdate
+        LlmHandler --> UiUpdate
+        StatusHandler --> UiUpdate
+        ConnHandler --> Heartbeat[更新心跳时间]
+
+        SysHandler --> CheckAgentStateChange{是否为 agent_start_reply<br/>或 agent_end_reply?}
+        CheckAgentStateChange -->|agent_start_reply| SetReplying[设置 isAgentReplying = true<br/>关闭唤醒 + 禁用录音]
+        CheckAgentStateChange -->|agent_end_reply| SetIdle[设置 isAgentReplying = false<br/>恢复唤醒 + 恢复录音]
+        CheckAgentStateChange -->|其他| LogError[记录错误或忽略]
+
+        CtrlHandler --> CheckMcp{是否为 MCP 指令?}
+        CheckMcp -->|是| SubmitInstruction[提交到 InstructionExecutor 队列]
+        CheckMcp -->|否| ForwardControl[转发给普通控制处理器]
+
+        TtsHandler --> SubmitTts[提交 TTS 音频数据到 InstructionExecutor 队列]
+    end
+
+    subgraph 顺序指令执行器
+        InstructionExecutor[InstructionExecutor<br/>单线程协程 Dispatchers.Main.immediate] --> QueueLoop[循环从队列取指令]
+        QueueLoop --> InstType{指令类型}
+        InstType -->|TTS 音频| PlayTTS[调用 AudioPlayer 播放]
+        PlayTTS --> WaitPlay[等待播放完成回调]
+        WaitPlay --> SendComplete[发送 instruction_complete<br/>channel:control, event:instruction_result<br/>携带 request_id 和 status]
+        InstType -->|MCP 指令| ExecMcp{目标设备?}
+        ExecMcp -->|Android| ExecLocal[执行本地指令<br/>如 GPIO/舵机/LCD]
+        ExecMcp -->|RK| ForwardRk[通过 WebSocket 转发给 RK<br/>等待 RK 回复确认]
+        ExecLocal --> WaitLocalDone[等待执行完成]
+        ForwardRk --> WaitRkAck[等待 RK 的 instruction_result]
+        WaitLocalDone --> SendComplete
+        WaitRkAck --> SendComplete
+        SendComplete --> QueueLoop
+    end
+
+    subgraph 视频推流独立模块
+        VideoPush --> VideoMode{传输模式}
+        VideoMode -->|高速模式| UdpSend[UDP 推流到 SpringBoot UDP 服务]
+        VideoMode -->|防花屏模式| RtmpSend[RTMP 推流到 Nginx-RTMP]
+        UdpSend --> VideoEnd[持续推流直至停止]
+        RtmpSend --> VideoEnd
+
+        VideoPlay[拉流播放] --> PlayMode{播放来源}
+        PlayMode -->|UDP| UdpRecv[UDP 接收协程 IO]
+        PlayMode -->|RTMP| RtmpRecv[RTMP 拉流协程 IO]
+        UdpRecv --> Decode[解码视频帧 Dispatchers.Default]
+        RtmpRecv --> Decode
+        Decode --> Render[渲染到 SurfaceView<br/>withContext Main]
+    end
+
+    subgraph 异常与状态恢复
+    AnyError["何环节发生异常<br/>如 WS 断开、超时、解析失败"] --> ResetIdle[调用 resetToIdle]
+    ResetIdle --> StopPlaying[停止当前 TTS 播放]
+    ResetIdle --> ClearQueue[清空 InstructionExecutor 队列]
+    ResetIdle --> SetIdleState[设置 isAgentReplying = false<br/>恢复唤醒 + 恢复录音]
+    SetIdleState --> NotifyServer[发送 error_reset 通知服务器]
+    NotifyServer --> ReconnectWs[触发 WebSocket 重连]
+    ReconnectWs --> ConnLoop
+    end
+    
+    %% 连接关系补全
+    WsSend -.-> RecvMsg
+    SendComplete -.-> WsSend
+    NotifyServer -.-> WsSend
+    SetReplying -.-> CheckAgentState
+    SetIdle -.-> CheckAgentState
+    InstructionExecutor -.-> UiUpdate
+    ExecLocal -.-> UiUpdate
 ```
 
 ### 优化后的SpringBoot WS架构
 
 ```mermaid
 flowchart TD
-    subgraph SpringBoot端
-        A[UnifiedWsHandler<br/>WebSocket IO线程] --> B[WebSocket连接管理]
+    subgraph SpringBoot端完整活动图
+        Start([SpringBoot启动]) --> Init[初始化组件<br/>WebSocket Server<br/>UDPServer/RTMPServer<br/>线程池等]
 
-        B --> C[Android连接池<br/>userId -> session]
-        B --> D[RK连接池<br/>deviceId -> session]
-        B --> E[Android接收队列<br/>容量32<br/>BlockingQueue<Message>]
-        B --> F[Android发送队列<br/>容量32<br/>BlockingQueue<Message>]
-        B --> G[RK接收队列<br/>容量32<br/>BlockingQueue<Message>]
-        B --> H[RK发送队列<br/>容量32<br/>BlockingQueue<Message>]
+        %% 主循环：WebSocket消息处理
+        Init --> WsLoop[WebSocket IO线程<br/>持续接收消息]
+        WsLoop --> ParseMsg[解析消息<br/>提取channel和event]
+        
+        ParseMsg --> RouteChannel{Channel路由}
+        
+        %% 各Handler处理
+        RouteChannel -->|connection| ConnHandler[ConnectionHandler<br/>处理connect/rk_connect/ping/pong]
+        ConnHandler --> SendAck[发送connect_ack/pong]
+        SendAck --> WsLoop
+        
+        RouteChannel -->|agent| AgentHandler[AgentHandler<br/>处理agent_update]
+        AgentHandler --> StoreAgent[存储agentId->userId]
+        StoreAgent --> BroadcastList[广播agent_list_sync给所有Android]
+        BroadcastList --> WsLoop
+        
+        RouteChannel -->|chat| ChatHandler[ChatHandler<br/>处理chat_message_send]
+        ChatHandler --> QueryAgent[查询agentId对应的userId]
+        QueryAgent --> SendSync[构造chat_message_sync<br/>发送给目标Android]
+        SendSync --> WsLoop
+        
+        RouteChannel -->|control| CtrlHandler[ControlHandler<br/>处理control_command_an]
+        CtrlHandler --> GenCmdId[生成commandId]
+        GenCmdId --> ForwardToRk[转发给RK设备]
+        ForwardToRk --> WaitResult[等待command_result]
+        WaitResult --> SendResponse[返回control_response给Android]
+        SendResponse --> WsLoop
+        
+        RouteChannel -->|control_result| CtrlResultHandler[ControlHandler<br/>处理instruction_result]
+        CtrlResultHandler --> UpdateTracker[更新InstructionTracker<br/>标记指令完成]
+        UpdateTracker --> CheckAllDone{所有指令完成?}
+        CheckAllDone -->|是| TriggerEndReply[触发发送agent_end_reply]
+        CheckAllDone -->|否| WsLoop
+        
+        RouteChannel -->|status| StatusHandler[StatusHandler<br/>处理status_request]
+        StatusHandler --> QueryRk[转发给RK获取状态]
+        QueryRk --> SendStatus[转发rk_status给Android]
+        SendStatus --> WsLoop
+        
+        RouteChannel -->|stt| SttHandler[STTHandler<br/>处理stt_start/stt_audio_data/stt_end]
+        SttHandler --> SttStart[stt_start: 创建会话<br/>初始化SessionCoordinator]
+        SttHandler --> SttData[stt_audio_data: 转发音频流到STT服务]
+        SttData --> SttFragment[STT碎片实时返回<br/>转发给Android UI]
+        SttHandler --> SttEnd[stt_end: 获取STT最终结果]
+        SttEnd --> SetSttResult[设置SessionCoordinator.sttResult]
+        
+        RouteChannel -->|vl| VlHandler[VLHandler 重新激活<br/>处理vl_start/vl_data/vl_end]
+        VlHandler --> VlProcess["接收视频帧，调用VL服务"]
+        VlProcess --> SetVlResult[设置SessionCoordinator.vlResult]
+        
+        RouteChannel -->|llm| LlmHandler[LLMHandler<br/>处理llm_start/llm_end]
+        LlmHandler --> LlmCall["调用LLM服务（非流式）"]
+        LlmCall --> LlmOutput[接收LLM整体输出]
+        LlmOutput --> TriggerParse[触发文本解析]
+        
+        RouteChannel -->|tts| TtsHandler[TTSHandler<br/>处理tts_start/tts_end]
+        TtsHandler --> TtsCall[调用TTS服务合成音频]
+        TtsCall --> SendAudio[返回tts_data音频流给Android]
+        SendAudio --> WsLoop
+        
+        RouteChannel -->|system| SysHandler[SystemHandler<br/>处理system_message/error]
+        SysHandler --> LogEvent[记录日志/系统通知]
+        LogEvent --> WsLoop
 
-        A --> I[消息路由器<br/>快速解析channel]
+        %% 会话协调模块（异步）
+        subgraph 会话协调与LLM触发
+            SessionCoord[SessionCoordinator<br/>每个语音会话独立实例]
+            SetSttResult --> SessionCoord
+            SetVlResult --> SessionCoord
+            SessionCoord --> CheckSync{STT和VL都到达?<br/>或超时}
+            CheckSync -->|是| BuildContext[构建STT+VL上下文]
+            BuildContext --> SendToLlm[通过LLMHandler发送给LLM]
+            CheckSync -->|超时| TimeoutFallback[仅使用已有结果]
+            TimeoutFallback --> BuildContext
+        end
 
-        I --> J{Channel类型<br/>线程池隔离}
+        %% 文本解析与批量下发模块
+        subgraph 文本解析与批量下发
+            TriggerParse --> TextParser[文本过滤分析器<br/>解析句子+MCP指令List]
+            TextParser --> GenList["生成有序指令列表<br/>如: [TTS文本, MCP指令, TTS文本, ...]"]
+            GenList --> SendStartReply[通过SystemHandler<br/>发送agent_start_reply给Android/RK]
+            SendStartReply --> BatchDispatcher[批量指令下发器]
+            BatchDispatcher --> SendList[一次性发送完整指令List<br/>通过control或instruction通道]
+            SendList --> InitTracker[初始化InstructionTracker<br/>记录所有指令pending状态]
+        end
 
-        J -->|connection| K1[ConnectionHandler<br/>业务线程池<br/>处理connect/connect_ack<br/>rk_connect/rk_connect_ack<br/>ping/pong]
-        J -->|agent| K2[AgentHandler<br/>业务线程池<br/>处理agent_update<br/>存储agentId->userId<br/>返回agent_update_ack]
-        J -->|chat| K3[ChatHandler<br/>业务线程池<br/>处理chat_message_send<br/>查agentId->userId<br/>构造chat_message_sync]
-        J -->|control| K4[ControlHandler<br/>控制线程池<br/>处理control_command_an<br/>生成commandId转发RK<br/>处理command_result<br/>返回control_response]
-        J -->|status| K5[StatusHandler<br/>业务线程池<br/>处理status_request转发RK<br/>处理rk_status转发Android]
-        J -->|stt| K6[STTHandler<br/>STT线程池<br/>处理stt_start/stt_audio_data<br/>stt_end/stt_error<br/>调用ASR引擎返回stt_text_data]
-        J -->|llm| K7[LLMHandler<br/>LLM线程池<br/>处理llm_start/llm_end<br/>流式生成llm_data<br/>异常返回llm_error]
-        J -->|tts| K8[TTSHandler<br/>TTS线程池<br/>处理tts_start/tts_end<br/>合成tts_data音频流<br/>异常返回tts_error]
-        J -->|vl<br/>⚠️废弃| K9[VLHandler<br/>VL线程池<br/>&#10060废弃通道<br/>处理vl_start/vl_data/vl_end<br/>向前兼容旧版本]
-        J -->|system| K10[SystemHandler<br/>业务线程池<br/>处理error/system_message<br/>记录日志/系统通知]
-
-        K1 --> L1[入队Android发送队列<br/>connect_ack/pong等]
-        K2 --> L1
-        K3 --> L1
-        K4 --> L2[入队RK发送队列<br/>control_command_sb]
-        K5 --> L2
-        K4 --> L3[入队Android发送队列<br/>control_response]
-        K5 --> L3
-        K6 --> L3
-        K7 --> L3
-        K8 --> L3
-        K9 --> L3
-        K10 --> L3
-
-        L1 --> F
-        L2 --> H
-        L3 --> F
-
-        E -->|poll| I
-        G -->|poll| I
-        F -->|poll| A
-        H -->|poll| A
-
-        M[视频流接收<br/>V2版本] --> N{传输协议}
-        N -->|UDP高速模式| O[UDPServer<br/>接收Android/RK推流]
-        N -->|RTMP防花屏| P[RTMPServer<br/>Nginx-RTMP]
-
-        O --> Q[视频流处理]
-        P --> Q
-
-        R[HTTP API] --> S1[GET /api/agents<br/>返回Agent列表]
-        R --> S2[GET /api/chat/history<br/>返回聊天历史]
-        R --> S3[POST /api/agent<br/>创建/更新/删除Agent]
-
-        S1 --> T1[查询数据库]
-        S2 --> T2[查询数据库]
-        S3 --> T3[操作数据库<br/>广播agent_list_sync]
-
-        T3 --> L1
+        %% 指令追踪与完成通知
+        subgraph 指令追踪与完成通知
+            InitTracker --> WaitResults[等待instruction_result]
+            UpdateTracker --> WaitResults
+            TriggerEndReply --> SendEndReplyMsg[发送agent_end_reply给Android/RK]
+            SendEndReplyMsg --> CleanSession[清理SessionCoordinator和Tracker]
+        end
+        
+        %% 视频流独立处理（非WebSocket）
+        subgraph 视频流处理
+            VideoStart[UDP或RTMP视频流到达] --> VideoReceive[UDPServer/RTMPServer接收]
+            VideoReceive --> ExtractFrame[提取视频帧]
+            ExtractFrame --> VlHandler
+        end
+        
+        %% HTTP API处理
+        subgraph HTTP API
+            HttpReq[HTTP请求到达] --> HttpRoute{路径路由}
+            HttpRoute -->|GET /api/agents| QueryAgents[查询数据库Agent列表]
+            HttpRoute -->|GET /api/chat/history| QueryHistory[查询聊天历史]
+            HttpRoute -->|POST /api/agent| ModifyAgent[创建/更新/删除Agent]
+            ModifyAgent --> BroadcastAgentSync[广播agent_list_sync给所有Android]
+            QueryAgents --> HttpResp[返回JSON]
+            QueryHistory --> HttpResp
+            BroadcastAgentSync --> HttpResp
+        end
+    
+        %% 异常与恢复
+        subgraph 异常处理与恢复
+            AnyException[任何环节发生异常<br/>超时/服务调用失败/解析错误] --> LogError[记录错误日志]
+            LogError --> SendErrorToAndroid[发送error/system_message给Android]
+            SendErrorToAndroid --> ResetSession[重置会话状态<br/>清理SessionCoordinator和Tracker]
+            ResetSession --> SendEndReplyOnError[发送agent_end_reply<br/>确保设备恢复唤醒和录音]
+            SendEndReplyOnError --> WsLoop
+        end
+    
+        %% 连接断开处理
+        subgraph 连接断开处理
+            Disconnect[Android或RK断开连接] --> RemoveFromPool[从连接池移除]
+            RemoveFromPool --> CleanSessionOnDisconnect[清理该设备相关的会话]
+            CleanSessionOnDisconnect --> WsLoop
+        end
     end
+    
+    %% 外部服务调用标注
+    SttData -.->|调用| STT[STT服务]
+    VlProcess -.->|调用| VL[VL服务]
+    LlmCall -.->|调用| LLM[LLM服务]
+    TtsCall -.->|调用| TTS[TTS服务]
 ```
 
 
@@ -190,69 +326,147 @@ flowchart TD
 
 ```mermaid
 flowchart TD
-    subgraph RK设备端
-        A[RKControlService] --> B[RKWebSocketManager]
-
-        B --> C[连接管理]
-        C --> D[发送队列<br/>容量32<br/>BlockingQueue<Message>]
-        C --> E[重连机制<br/>含ping/pong心跳]
-        C --> F[接收队列<br/>容量32<br/>BlockingQueue<Message>]
-
-        B --> G[消息分发器<br/>按Channel路由]
-
-        G --> H{接收Channel类型}
-
-        H -->|connection| I1[ConnectionEventHandler<br/>处理rk_connect_ack<br/>ping/pong]
-        H -->|control| I2[CommandExecutor<br/>处理control_command_sb<br/>解析command和params]
-        H -->|status| I3[StatusRequestHandler<br/>处理status_request]
-        H -->|system| I4[SystemEventHandler<br/>处理error/system_message]
-
-        I1 --> J[连接状态管理<br/>更新注册状态]
+    subgraph RK设备端完整活动图
+        Start([RK设备启动]) --> Init[初始化组件<br/>RKControlService<br/>RKWebSocketManager<br/>GPIO/LED/传感器驱动<br/>视频采集模块]
         
-        I2 --> K{命令类型}
-        K -->|GPIO控制| L1[GPIOController<br/>执行GPIO指令]
-        K -->|LED控制| L2[LEDController<br/>执行LED指令]
-        K -->|传感器读取| L3[SensorReader<br/>读取传感器数据]
-        K -->|其他| L4[OtherController<br/>执行其他指令]
+        %% WebSocket 连接与重连
+        Init --> WsConnect[建立WebSocket连接<br/>协程IO]
+        WsConnect --> SendRegister[发送rk_connect注册信息<br/>携带deviceId]
+        SendRegister --> WaitAck[等待rk_connect_ack]
+        WaitAck -->|成功| SetConnected[连接状态=已注册<br/>启动心跳ping/pong]
+        WaitAck -->|失败/超时| ReconnectDelay[延迟重连<br/>指数退避]
+        ReconnectDelay --> WsConnect
         
-        L1 --> M[获取执行结果<br/>code/message]
-        L2 --> M
-        L3 --> M
-        L4 --> M
+        SetConnected --> StartDispatch[启动消息接收分发循环<br/>独立协程]
+        StartDispatch --> RecvLoop[从接收队列取消息<br/>容量32]
         
-        M --> N[构造Message<br/>channel:control<br/>event:command_result<br/>data: commandId,code,message]
+        %% 消息分发
+        RecvLoop --> ParseMsg[解析消息channel]
+        ParseMsg --> RouteChannel{Channel路由}
         
-        I3 --> O[采集设备状态]
-        O --> P[构造Message<br/>channel:status<br/>event:rk_status<br/>data: deviceId,battery,position]
+        RouteChannel -->|connection| ConnHandler[ConnectionEventHandler]
+        ConnHandler --> HandlePing[处理ping/pong<br/>更新心跳时间]
+        HandlePing --> RecvLoop
         
-        I4 --> Q[系统消息处理<br/>记录日志/错误处理]
-
-        N -->|offer| D
-        P -->|offer| D
-
-        R[硬件事件/定时任务] --> S{事件类型}
-        S -->|定时上报<br/>每30秒| T[定时器触发]
-        S -->|传感器中断| U[传感器数据变化]
-        S -->|按钮按下| V[按钮事件]
+        RouteChannel -->|control| CtrlHandler[CommandExecutor]
+        CtrlHandler --> ParseCommand[解析control_command_sb<br/>提取commandId, type, params]
+        ParseCommand --> ExecType{命令类型}
         
-        T --> O
-        U --> O
-        V --> O
-
-        D -->|poll| B
-        F -->|poll| G
+        ExecType -->|GPIO控制| GpioExec[GPIOController<br/>设置高低电平/PWM]
+        ExecType -->|LED控制| LedExec[LEDController<br/>控制LED亮灭/颜色]
+        ExecType -->|舵机控制| ServoExec[ServoController<br/>控制角度/速度]
+        ExecType -->|LCD显示| LcdExec[LCDController<br/>显示文本/图标]
+        ExecType -->|传感器读取| SensorExec[SensorReader<br/>读取温度/湿度/距离等]
+        ExecType -->|其他| OtherExec[OtherController<br/>执行其他定制指令]
         
-        W[视频流发送<br/>V2版本] --> X{传输方式选择}
-        X -->|高速模式| Y[UDP推流<br/>直接发送到SpringBoot<br/>低延迟]
-        X -->|防花屏模式| Z[RTMP推流<br/>发送到Nginx-RTMP<br/>稳定可靠]
+        GpioExec --> GetResult[获取执行结果<br/>code, message]
+        LedExec --> GetResult
+        ServoExec --> GetResult
+        LcdExec --> GetResult
+        SensorExec --> GetResult
+        OtherExec --> GetResult
         
-        Y --> AA[SpringBoot UDP服务]
-        Z --> AB[Nginx-RTMP服务器]
+        GetResult --> BuildResult[构造command_result消息<br/>channel:control, event:command_result<br/>携带commandId, code, message]
+        BuildResult --> SendResult[将结果放入发送队列]
+        SendResult --> RecvLoop
         
-        AC[RK APP离线UDP推送] --> AD[Camera录制视频流]
-        AD --> AE["UDP直推<br/>RK → Android<br/>点对点传输"]
-        AE --> AF[Android端接收<br/>本地播放]
+        RouteChannel -->|status| StatusHandler[StatusRequestHandler]
+        StatusHandler --> CollectStatus[采集设备状态<br/>电池电量/网络信号/各传感器值]
+        CollectStatus --> BuildStatus[构造rk_status消息<br/>channel:status, event:rk_status<br/>携带deviceId, statusMap]
+        BuildStatus --> SendStatus[将状态放入发送队列]
+        SendStatus --> RecvLoop
+        
+        RouteChannel -->|system| SysHandler[SystemEventHandler]
+        SysHandler --> HandleSysMsg[处理error/system_message<br/>记录日志/执行系统动作]
+        HandleSysMsg --> RecvLoop
+        
+        RouteChannel -->|其他| Ignore[忽略或记录警告]
+        Ignore --> RecvLoop
+        
+        %% 主动事件上报（定时/中断）
+        subgraph 主动事件上报
+            TimerEvent[定时器 每30秒] --> TriggerStatus[触发状态采集]
+            SensorInterrupt[传感器中断<br/>如人体红外] --> TriggerStatus
+            ButtonPress[按钮按下] --> TriggerEvent[触发按钮事件]
+            
+            TriggerStatus --> CollectStatus
+            TriggerEvent --> BuildButtonMsg[构造button_event消息<br/>channel:status, event:button_pressed]
+            BuildButtonMsg --> SendStatus
+        end
+        
+        %% 发送队列处理
+        subgraph 消息发送
+            SendQueueLoop[发送队列处理协程<br/>从发送队列取消息] --> WsSend[通过WebSocket发送<br/>协程IO]
+            WsSend --> CheckSendResult{发送成功?}
+            CheckSendResult -->|是| SendQueueLoop
+            CheckSendResult -->|否| MarkDisconnect[标记连接断开<br/>触发重连]
+            MarkDisconnect --> ReconnectDelay
+        end
+        
+        %% 视频推流独立模块
+        subgraph 视频推流
+            CameraInit[初始化摄像头] --> VideoLoop[循环采集视频帧]
+            VideoLoop --> ChooseMode{传输模式选择<br/>可配置}
+            ChooseMode -->|高速模式| UdpPush[UDP推流<br/>直接发送到SpringBoot UDP服务]
+            ChooseMode -->|防花屏模式| RtmpPush[RTMP推流<br/>推送到Nginx-RTMP服务器]
+            ChooseMode -->|点对点模式| P2pPush[UDP直推<br/>RK → Android 本地推流]
+            
+            UdpPush --> CheckUdpResult{推流正常?}
+            RtmpPush --> CheckRtmpResult{推流正常?}
+            P2pPush --> CheckP2pResult{推流正常?}
+            
+            CheckUdpResult -->|失败| RetryPush[重试/切换模式]
+            CheckRtmpResult -->|失败| RetryPush
+            CheckP2pResult -->|失败| RetryPush
+            RetryPush --> VideoLoop
+            CheckUdpResult -->|成功| VideoLoop
+            CheckRtmpResult -->|成功| VideoLoop
+            CheckP2pResult -->|成功| VideoLoop
+        end
+        
+        %% 指令执行超时与异常处理
+        subgraph 指令执行超时
+            ParseCommand --> StartTimeout[启动超时定时器<br/>例如5秒]
+            StartTimeout --> ExecType
+            GetResult --> CancelTimeout[取消超时定时器]
+            CancelTimeout --> BuildResult
+            StartTimeout -->|超时未返回| TimeoutHandler[构造超时错误结果<br/>code=TIMEOUT]
+            TimeoutHandler --> BuildResult
+        end
+        
+        %% 连接断开与恢复
+        subgraph 连接断开处理
+            WsDisconnect[WebSocket断开] --> ClearQueues[清空发送/接收队列]
+            ClearQueues --> SetDisconnected[连接状态=未注册]
+            SetDisconnected --> StopHeartbeat[停止心跳]
+            StopHeartbeat --> ReconnectDelay
+        end
+        
+        %% 异常处理与状态恢复
+        subgraph 全局异常处理
+            AnyError[任何未捕获异常<br/>如指令执行崩溃/内存不足] --> LogError[记录错误日志]
+            LogError --> SendErrorReport[发送error_report消息给SpringBoot]
+            SendErrorReport --> ResetHardware[复位相关硬件<br/>GPIO恢复安全状态]
+            ResetHardware --> ReconnectWs[触发WebSocket重连]
+            ReconnectWs --> ReconnectDelay
+        end
+        
+        %% 空闲状态维护
+        subgraph 空闲状态
+            IdleCheck[定期检查连接状态] -->|连接正常且无任务| WaitEvent[等待新指令或事件]
+            WaitEvent --> RecvLoop
+            WaitEvent --> TimerEvent
+            WaitEvent --> SensorInterrupt
+            WaitEvent --> ButtonPress
+        end
     end
+    
+    %% 外部连接
+    SendResult -.->|WebSocket| SpringBoot[SpringBoot]
+    SendStatus -.->|WebSocket| SpringBoot
+    UdpPush -.->|UDP| SpringBootUdp[SpringBoot UDP服务]
+    RtmpPush -.->|RTMP| Nginx[Nginx-RTMP服务器]
+    P2pPush -.->|UDP| Android[Android端]
 ```
 
 ### 整体数据流
