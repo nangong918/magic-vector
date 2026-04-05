@@ -43,6 +43,11 @@ enum class WsChannel(val value: String) {
     CONTROL("control"),
 
     /**
+     * 指令批量编排（TTS + MCP 有序列表，与 [WsEvent.INSTRUCTION_RESULT] 成对）
+     */
+    INSTRUCTION_LIST("instruction_list"),
+
+    /**
      * 设备状态上报与查询
      */
     STATUS("status"),

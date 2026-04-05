@@ -733,7 +733,7 @@ public class StreamSeqDto {
 | Event | Channel | 方向 | 说明 | data字段 |
 |--------------------|-------------|------|----------------------------|----------|
 | `instruction_list`   | `instruction_list` | SB → Android / RK（及需同步的下发面） | 一次下发完整有序列表（TTS 片段 + MCP 项） | 见下「载荷结构」 |
-| `instruction_result` | `instruction_list` | Android / RK → SB | 列表内**单条**执行结果（按 index 推进追踪） | `requestId`, `index`, `type`, `status`, `code`, `message` |
+| `instruction_result` | `instruction_list` | Android / RK → SB | 列表内**单条**执行结果（按 index 推进追踪） | `requestId`, `index`, `type`（`Instruction` 枚举）, `status`, `code`, `message` |
 
 **列表项与现有 DTO 对齐规则**
 
@@ -742,24 +742,30 @@ public class StreamSeqDto {
 | TTS | **`StreamSeqDto` ← `TtsDataResponse`** | `TtsDataResponse`（`base64AudioStream`） | 一项 = 一条可播放分片；`seq` / `isLast` 与同批内多块音频一致 |
 | MCP | **`CommonResultDto` ← `ControlCommandResponse`** | `ControlCommandResponse`（`commandId`、`command`、`params`） | 一项 = 一条控制语义；`requestId`/`code`/`message` 继承自 `CommonResultDto` |
 
+**列表项 DTO（`type` 字段使用 `Instruction`，禁止魔法字符串）**
+
 ```java
-// 在 TtsDataResponse（extends StreamSeqDto，含 base64AudioStream）上增加列表编排字段
+// 在 TtsDataResponse（extends StreamSeqDto，含 base64AudioStream、text）上增加列表编排字段
 @Data
 @EqualsAndHashCode(callSuper = true)
 public class InstructionTtsItem extends TtsDataResponse {
-    private String type = "tts"; // 枚举Instruction.TTS
+    private Instruction type = Instruction.TTS;
     private Integer index;
 }
 
-// 在 ControlCommandResponse（extends CommonResultDto，含 commandId/command/params）上增加列表编排字段
+// 在 ControlCommandResponse（extends CommonResultDto，含 commandId/command/params/target）上增加列表编排字段
 @Data
 @EqualsAndHashCode(callSuper = true)
 public class InstructionMcpItem extends ControlCommandResponse {
-    private String type = "mcp"; // 枚举Instruction.MCP
+    private Instruction type = Instruction.MCP;
     private Integer index;
-    private String target;
+    /** 执行侧路由（与下行 push 的 target 语义不同，见实现注释） */
+    private String executionTarget;
+    private String deviceId;
 }
 ```
+
+> 实现说明：若工程里 `InstructionMcpItem` 暂不继承 `ControlCommandResponse`（避免与 SB 下行 `target` 字段语义混用），则保持「继承 `CommonResultDto` + 与 `ControlCommandResponse` 同名字段」即可，**`type` 仍须为 `Instruction` 枚举**。
 
 ##### 8. 系统消息类（三端通用）
 

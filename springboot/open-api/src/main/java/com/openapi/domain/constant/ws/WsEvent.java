@@ -98,7 +98,7 @@ public enum WsEvent {
      */
     TTS_START("tts_start", WsChannel.TTS),
     /**
-     * @see com.openapi.domain.dto.ws.response.TtsDataResponse
+     * 载荷见 {@link com.openapi.domain.dto.ws.response.TtsDataResponse}（含字幕字段 {@link com.openapi.domain.dto.ws.response.TtsDataResponse#getText()}）。
      */
     TTS_DATA("tts_data", WsChannel.TTS),
     /**
@@ -134,6 +134,9 @@ public enum WsEvent {
      */
     CONTROL_COMMAND_AN("control_command_an", WsChannel.CONTROL),
     /**
+     * 服务端发往 Android / RK；由 {@link com.openapi.domain.dto.ws.response.ControlCommandResponse#target}
+     * 区分推送目标，取值见 {@link WsPushTarget}。
+     *
      * @see com.openapi.domain.dto.ws.response.ControlCommandResponse
      */
     CONTROL_COMMAND_SB("control_command_sb", WsChannel.CONTROL),
@@ -145,6 +148,20 @@ public enum WsEvent {
      * @see com.openapi.domain.dto.ws.response.ControlResponse
      */
     CONTROL_RESPONSE("control_response", WsChannel.CONTROL),
+
+    /// 指令批量编排
+    /**
+     * @see com.openapi.domain.dto.ws.response.InstructionListResponse
+     * @see com.openapi.domain.dto.ws.response.InstructionTtsItem
+     * @see com.openapi.domain.dto.ws.response.InstructionMcpItem
+     * @see com.openapi.domain.constant.ws.Instruction
+     */
+    INSTRUCTION_LIST("instruction_list", WsChannel.INSTRUCTION_LIST),
+    /**
+     * @see com.openapi.domain.dto.ws.request.InstructionResultRequest
+     * @see com.openapi.domain.constant.ws.Instruction
+     */
+    INSTRUCTION_RESULT("instruction_result", WsChannel.INSTRUCTION_LIST),
 
     /// 设备状态
     /**

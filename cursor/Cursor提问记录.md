@@ -1425,3 +1425,13 @@ event是用于通知订阅者操作的。这个存在的意义是这样的，改
     )
    ```
 
+
+### 重构Agent设计和WS设计
+
+我现在已经设计了WS重构和Agent重构。
+大概改动：取消Chat发消息聊天，而是只能语音，ChatActivity的右滑页面只能观看历史消息不能发送消息，发送要左滑来语音唤醒聊天。
+
+我本次修改的内容很多，Agent设计文档基本设计完毕：[AgentChat.md](AgentChat.md)
+WS设计文档也设计完毕：[WS重构.md](WS重构.md)
+
+现在我需要你重构我的Android（App，RK先不管）和SpringBoot，要根据我的设计文档来实现。
