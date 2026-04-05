@@ -48,14 +48,14 @@ flowchart TD
         %% 录音与流媒体并行
         StartRecord --> ParallelStart{并行执行}
         
-        ParallelStart --> AudioStreamProcess[录音与流媒体模块<br/>━━━━━━━━━━━━━━━<br/>• 持续发送音频流WS→STT碎片→Android展示<br/>• 持续发送视频帧RTMP/UDP<br/>• VAD检测循环，条件：说话未停止且未超时]
+        ParallelStart --> AudioStreamProcess["录音与流媒体模块<br/>━━━━━━━━━━━━━━━<br/>• 持续发送音频流WS→STT碎片→Android展示<br/>• 持续发送视频帧RTMP/UDP<br/>• VAD检测循环，条件：说话未停止且未超时"]
         
         ParallelStart --> TimeoutMonitor[2s超时监控]
         
-        AudioStreamProcess -->|VAD检测到说话停止或2s超时| StopRecord[停止录音，停止所有流媒体]
+        AudioStreamProcess -->|VAD检测到说话停止或2s超时| StopRecord["停止录音，停止所有流媒体"]
         TimeoutMonitor -->|2s内无语音| StopRecord
         
-        StopRecord --> SyncWait[同步等待<br/>━━━━━━━━━━━━━━━<br/>等待VL结果 + STT最终结果<br/>（含超时异常处理）]
+        StopRecord --> SyncWait["同步等待<br/>━━━━━━━━━━━━━━━<br/>等待VL结果 + STT最终结果<br/>（含超时异常处理）"]
         
         SyncWait -->|两者都到达| SendLLM[发送LLM]
         
@@ -64,7 +64,7 @@ flowchart TD
         
         ParseFilter --> SetSpeaking[设置Agent开始回复<br/>关闭唤醒/禁用录音]
         
-        SetSpeaking --> ProcessList[处理指令列表<br/>━━━━━━━━━━━━━━━<br/>通过消息队列接收<br/>逐条执行，等待前一条完成]
+        SetSpeaking --> ProcessList["处理指令列表<br/>━━━━━━━━━━━━━━━<br/>通过消息队列接收<br/>逐条执行，等待前一条完成"]
         
         ProcessList -->|句子| SendTTS[发送TTS]
         SendTTS --> AudioPlay[Android播放音频流]
@@ -75,7 +75,7 @@ flowchart TD
         CheckTarget -->|RK指令| SendRK[发送RK指令]
         
         SendAndroid --> WaitAndroid[等待Android执行完成]
-        SendRK --> WaitRK[等待RK执行完成<br/>（RK的语音输出也由Android播放）]
+        SendRK --> WaitRK["等待RK执行完成<br/>（RK的语音输出也由Android播放）"]
         
         WaitAndroid --> ProcessList
         WaitRK --> ProcessList

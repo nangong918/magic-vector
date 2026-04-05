@@ -409,7 +409,7 @@ flowchart TD
             VideoLoop --> ChooseMode{传输模式选择<br/>可配置}
             ChooseMode -->|高速模式| UdpPush[UDP推流<br/>直接发送到SpringBoot UDP服务]
             ChooseMode -->|防花屏模式| RtmpPush[RTMP推流<br/>推送到Nginx-RTMP服务器]
-            ChooseMode -->|点对点模式| P2pPush[UDP直推<br/>RK → Android 本地推流]
+            ChooseMode -->|点对点模式| P2pPush["UDP直推<br/>RK → Android 本地推流"]
             
             UdpPush --> CheckUdpResult{推流正常?}
             RtmpPush --> CheckRtmpResult{推流正常?}
