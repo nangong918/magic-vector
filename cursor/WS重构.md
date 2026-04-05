@@ -101,7 +101,8 @@ flowchart TD
         ParseChannel -->|chat| ChatHandler[ChatEventHandler<br/>处理 chat_message_sync]
         ParseChannel -->|stt| SttHandler[STTEventHandler<br/>处理 stt_start_ack, stt_text_data, stt_error]
         ParseChannel -->|llm| LlmHandler[LLMEventHandler<br/>处理 llm_start/llm_data/llm_end]
-        ParseChannel -->|tts| TtsHandler[TTSEventHandler<br/>收到 tts_data]
+        ParseChannel -->|tts| TtsHandler[TTSEventHandler<br/>流式 tts_*, 非批量回复路径]
+        ParseChannel -->|instruction_list| InstListHandler[InstructionListEventHandler<br/>收到 instruction_list, 展开入队]
         ParseChannel -->|control| CtrlHandler[ControlEventHandler<br/>收到 control_command / control_response]
         ParseChannel -->|system| SysHandler[SystemEventHandler<br/>处理 error, system_message]
         ParseChannel -->|status| StatusHandler[StatusEventHandler<br/>处理 rk_status]
@@ -111,6 +112,7 @@ flowchart TD
         ChatHandler --> UiUpdate
         SttHandler --> UiUpdate
         LlmHandler --> UiUpdate
+        InstListHandler --> UiUpdate
         StatusHandler --> UiUpdate
         ConnHandler --> Heartbeat[更新心跳时间]
 
@@ -119,11 +121,12 @@ flowchart TD
         CheckAgentStateChange -->|agent_end_reply| SetIdle[设置 isAgentReplying = false<br/>恢复唤醒 + 恢复录音]
         CheckAgentStateChange -->|其他| LogError[记录错误或忽略]
 
-        CtrlHandler --> CheckMcp{是否为 MCP 指令?}
-        CheckMcp -->|是| SubmitInstruction[提交到 InstructionExecutor 队列]
+        CtrlHandler --> CheckMcp{是否为 MCP 指令?<br/>且非 instruction_list 编排内}
+        CheckMcp -->|是| SubmitInstruction[提交到 InstructionExecutor 队列<br/>独立控制通道场景]
         CheckMcp -->|否| ForwardControl[转发给普通控制处理器]
 
-        TtsHandler --> SubmitTts[提交 TTS 音频数据到 InstructionExecutor 队列]
+        TtsHandler --> SubmitTtsStream[流式路径: 提交 TTS 分片到播放或缓冲<br/>与批量 instruction_list 互斥由会话状态约定]
+        InstListHandler --> SubmitBatch[批量路径: 按序提交列表项到 InstructionExecutor 队列]
     end
 
     subgraph 顺序指令执行器
@@ -131,12 +134,12 @@ flowchart TD
         QueueLoop --> InstType{指令类型}
         InstType -->|TTS 音频| PlayTTS[调用 AudioPlayer 播放]
         PlayTTS --> WaitPlay[等待播放完成回调]
-        WaitPlay --> SendComplete[发送 instruction_complete<br/>channel:control, event:instruction_result<br/>携带 request_id 和 status]
+        WaitPlay --> SendComplete["发送 instruction_result<br/>channel:instruction_list, event:instruction_result<br/>携带 request_id、index、type、status"]
         InstType -->|MCP 指令| ExecMcp{目标设备?}
         ExecMcp -->|Android| ExecLocal[执行本地指令<br/>如 GPIO/舵机/LCD]
         ExecMcp -->|RK| ForwardRk[通过 WebSocket 转发给 RK<br/>等待 RK 回复确认]
         ExecLocal --> WaitLocalDone[等待执行完成]
-        ForwardRk --> WaitRkAck[等待 RK 的 instruction_result]
+        ForwardRk --> WaitRkAck[等待 RK command_result<br/>本地聚合后再发 instruction_result]
         WaitLocalDone --> SendComplete
         WaitRkAck --> SendComplete
         SendComplete --> QueueLoop
@@ -205,15 +208,15 @@ flowchart TD
         QueryAgent --> SendSync[构造chat_message_sync<br/>发送给目标Android]
         SendSync --> WsLoop
         
-        RouteChannel -->|control| CtrlHandler[ControlHandler<br/>处理control_command_an]
+        RouteChannel -->|control| CtrlHandler[ControlHandler<br/>处理control_command_an / command_result]
         CtrlHandler --> GenCmdId[生成commandId]
         GenCmdId --> ForwardToRk[转发给RK设备]
         ForwardToRk --> WaitResult[等待command_result]
         WaitResult --> SendResponse[返回control_response给Android]
         SendResponse --> WsLoop
         
-        RouteChannel -->|control_result| CtrlResultHandler[ControlHandler<br/>处理instruction_result]
-        CtrlResultHandler --> UpdateTracker[更新InstructionTracker<br/>标记指令完成]
+        RouteChannel -->|instruction_list| InstListSbHandler[InstructionListChannelHandler<br/>处理 instruction_result]
+        InstListSbHandler --> UpdateTracker[更新InstructionTracker<br/>标记指令完成]
         UpdateTracker --> CheckAllDone{所有指令完成?}
         CheckAllDone -->|是| TriggerEndReply[触发发送agent_end_reply]
         CheckAllDone -->|否| WsLoop
@@ -241,7 +244,7 @@ flowchart TD
         
         RouteChannel -->|tts| TtsHandler[TTSHandler<br/>处理tts_start/tts_end]
         TtsHandler --> TtsCall[调用TTS服务合成音频]
-        TtsCall --> SendAudio[返回tts_data音频流给Android]
+        TtsCall --> SendAudio["返回tts_data音频流给Android<br/>流式场景; 批量回复由 BatchDispatcher 走 instruction_list 通道"]
         SendAudio --> WsLoop
         
         RouteChannel -->|system| SysHandler[SystemHandler<br/>处理system_message/error]
@@ -266,7 +269,7 @@ flowchart TD
             TextParser --> GenList["生成有序指令列表<br/>如: [TTS文本, MCP指令, TTS文本, ...]"]
             GenList --> SendStartReply[通过SystemHandler<br/>发送agent_start_reply给Android/RK]
             SendStartReply --> BatchDispatcher[批量指令下发器]
-            BatchDispatcher --> SendList[一次性发送完整指令List<br/>通过control或instruction通道]
+            BatchDispatcher --> SendList[一次性发送 instruction_list<br/>channel:instruction_list]
             SendList --> InitTracker[初始化InstructionTracker<br/>记录所有指令pending状态]
         end
 
@@ -348,7 +351,12 @@ flowchart TD
         ConnHandler --> HandlePing[处理ping/pong<br/>更新心跳时间]
         HandlePing --> RecvLoop
         
-        RouteChannel -->|control| CtrlHandler[CommandExecutor]
+        RouteChannel -->|instruction_list| InstListRkHandler[InstructionListEventHandler<br/>解析 instruction_list<br/>按序执行本设备相关项]
+        InstListRkHandler --> RkSeqLoop["RK 顺序执行循环<br/>TTS 项 → 音频线程 / MCP 项 → 硬件执行"]
+        RkSeqLoop --> RkInstResult["发送 instruction_result<br/>channel:instruction_list<br/>含 requestId、index、status"]
+        RkInstResult --> RecvLoop
+
+        RouteChannel -->|control| CtrlHandler[CommandExecutor<br/>单条 control_command_sb]
         CtrlHandler --> ParseCommand[解析control_command_sb<br/>提取commandId, type, params]
         ParseCommand --> ExecType{命令类型}
         
@@ -530,7 +538,7 @@ graph LR
     B3 -->|agent/chat| B8
     B3 -->|control| B9
     B3 -->|stt| B10
-    B3 -->|instruction_result| B13
+    B3 -->|instruction_list：Android/RK→SB instruction_result| B13
 
     %% 外部服务调用
     B10 -->|音频流| STT
@@ -540,13 +548,14 @@ graph LR
     VL -->|结果| B10
     B11 -->|上下文| LLM
     LLM -->|整体输出| B12
-    B12 -->|句子列表| TTS
-    TTS -->|音频流| B4
+    B12 -->|逐条合成或拼装| TTS
+    TTS -->|嵌入 instruction 项| B12
+    B12 -->|instruction_list| B4
 
     %% 控制命令转发
     B9 -->|control_command_sb| B6
     B6 --> B1
-    B1 -->|WebSocket| C2
+    B1 -->|WebSocket：control / instruction_list 等| C2
 
     %% RK 处理
     C2 --> C3
@@ -566,10 +575,11 @@ graph LR
     A3 --> A4
     A4 --> A5
     A5 -->|agent_list_sync / chat_message_sync / control_response / rk_status / tts_data / instruction_list / system_message| A6
-    A5 -->|tts_data / instruction_list| A7
+    A5 -->|instruction_list| A7
+    A5 -->|tts_data 流式非批量| A6
     A7 -->|逐条执行| A8
     A8 -->|播放完成| A7
-    A7 -->|instruction_result| A2
+    A7 -->|instruction_result channel:instruction_list| A2
 
     %% 视频流独立通道
     Android -.->|UDP/RTMP| UDP
@@ -614,6 +624,37 @@ data class ServerEvent(
 )
 ```
 
+
+三端消息体复用同一套字段语义时，以 **`CommonResultDto`**（请求追踪 + 结果码 + 描述）、**`StreamSeqDto`**（流式分片：agent、序号、末帧、时间戳）为基类；具体 Event 的 Request/Response 再继承其一。实现位置：
+
+**CommonResultDto**
+
+```java
+@Data
+public class CommonResultDto {
+    private String requestId;    // 请求追踪ID
+    private Integer code;        // 200=成功
+    private String message;      // 描述信息
+}
+```
+
+**StreamSeqDto**
+
+```java
+@Data
+public class StreamSeqDto {
+    private String agentId;
+    private String seq;          // 流序号
+    private Boolean isLast;      // 是否最后一帧
+    private Long timestamp;      // 时间戳
+}
+```
+
+**与现有类型的关系（示例）**
+
+- 流式 TTS 分片：**`TtsDataResponse` extends `StreamSeqDto`**，子类字段见 `springboot/.../response/TtsDataResponse.java`（`base64AudioStream`）；Android 同形 `TtsDataResponse.kt`。
+- 控制命令载荷：**`ControlCommandResponse` extends `CommonResultDto`**，子类字段 `commandId`、`command`、`params`；Android 同形 `ControlCommandResponse.kt`。
+
 #### Event 枚举设计
 
 ##### 1. 连接管理类（三端通用）
@@ -645,35 +686,35 @@ data class ServerEvent(
 
 ##### 4. 音频处理类（Android ↔ SB）
 
-| Event | 方向 | 说明 | data字段 |
-|---------|------|------|----------|
-| `stt_start` | Android→SB | 开始语音识别（STT） | `agentId` |
-| `stt_start_ack` | SB→Android | 语音识别确认 | `agentId` |
-| `stt_audio_data` | Android→SB | 语音数据流 | `agentId`, `base64AudioStream`, `seq` |
-| `stt_text_data` | SB→Android | 识别的文本结果流 | `agentId`, `textStream`, `seq` |
-| `stt_end` | Android→SB | 结束语音识别 | `agentId` |
-| `stt_error` | Android→SB | 语音识别异常 | `agentId`, `code`, `message` |
-| `llm_start` | SB→Android | 开始LLM处理 | `agentId` |
-| `llm_data` | SB→Android | LLM文本流 | `agentId`, `textStream`, `seq` |
-| `llm_end` | SB→Android | LLM处理结束 | `agentId` |
-| `llm_error` | SB→Android | LLM处理异常 | `agentId`, `code`, `message` |
-| `tts_start` | SB→Android | 开始语音合成（TTS） | `agentId` |
-| `tts_data` | SB→Android | TTS音频流 | `agentId`, `base64AudioStream`, `seq` |
-| `tts_end` | SB→Android | TTS合成结束 | `agentId` |
-| `tts_error` | SB→Android | TTS合成异常 | `agentId`, `code`, `message` |
+| Event | 方向 | 说明 | data字段                                          |
+|---------|------|------|-------------------------------------------------|
+| `stt_start` | Android→SB | 开始语音识别（STT） | `agentId`                                       |
+| `stt_start_ack` | SB→Android | 语音识别确认 | `agentId`                                       |
+| `stt_audio_data` | Android→SB | 语音数据流 | `agentId`, `base64AudioStream`, `seq`           |
+| `stt_text_data` | SB→Android | 识别的文本结果流 | `agentId`, `textStream`, `seq`                  |
+| `stt_end` | Android→SB | 结束语音识别 | `agentId`                                       |
+| `stt_error` | Android→SB | 语音识别异常 | `agentId`, `code`, `message`                    |
+| `llm_start` | SB→Android | 开始LLM处理 | `agentId`                                       |
+| `llm_data` | SB→Android | LLM文本流 | `agentId`, `textStream`, `seq`                  |
+| `llm_end` | SB→Android | LLM处理结束 | `agentId`                                       |
+| `llm_error` | SB→Android | LLM处理异常 | `agentId`, `code`, `message`                    |
+| `tts_start` | SB→Android | 开始语音合成（TTS） | `agentId`                                       |
+| `tts_data` | SB→Android | TTS音频流 | `agentId`, `base64AudioStream`, `text`, `seq`         |
+| `tts_end` | SB→Android | TTS合成结束 | `agentId`                                       |
+| `tts_error` | SB→Android | TTS合成异常 | `agentId`, `code`, `message`                    |
 | `vl_start` | Android→SB | 开始视觉理解（VL） | `agentId`（v2版本中获取视频源的方式只有两种：Udp推流SB或SB主动拉取RTMP） |
-| `vl_data` | SB→Android | 视觉理解结果 | `agentId`, `content` |
-| `vl_end` | SB→Android | 视觉理解结束 | `agentId` |
-| `vl_error` | SB→Android | 视觉理解异常 | `agentId`, `code`, `message` |
+| `vl_data` | SB→Android | 视觉理解结果 | `agentId`, `content`                            |
+| `vl_end` | SB→Android | 视觉理解结束 | `agentId`                                       |
+| `vl_error` | SB→Android | 视觉理解异常 | `agentId`, `code`, `message`                    |
 
 ##### 5. 控制命令类（Android ↔ SB ↔ RK）
 
-| Event | 方向 | 说明 | data字段 |
-|---------|------|------|----------|
-| `control_command_an` | Android→SB | 控制RK设备 | `deviceId`, `command`, `params`（Map<String, String>） |
-| `control_command_sb` | SB→RK | 转发控制命令 | `commandId`, `command`, `params`（Map<String, String>） |
-| `command_result` | RK→SB | 命令执行结果 | `commandId`, `code`, `message` |
-| `control_response` | SB→Android | 控制结果响应 | `deviceId`, `code`, `message` |
+| Event | 方向            | 说明 | data字段                                                  |
+|---------|---------------|------|---------------------------------------------------------|
+| `control_command_an` | Android→SB    | 控制RK设备 | `deviceId`, `command`, `params`（Map<String, String>）    |
+| `control_command_sb` | SB→RK/Android | 转发控制命令 | `commandId`, `target`, `command`, `params`（Map<String, String>） |
+| `command_result` | RK→SB         | 命令执行结果 | `commandId`, `code`, `message`                          |
+| `control_response` | SB→Android    | 控制结果响应 | `deviceId`, `code`, `message`                           |
 
 ##### 6. 设备状态类（RK ↔ SB ↔ Android）
 
@@ -685,10 +726,40 @@ data class ServerEvent(
 
 ##### 7. 指令批量处理类（三端通用）
 
-| Event | 方向 | 说明 | data字段 |
-|--------------------|------|----------------------------|----------|
-| `instruction_list`   | SB → Android | 批量下发指令列表（TTS句子 + MCP指令）| `requestId`, `instructions`（JSON数组字符串，每个元素含type、target、text/command/params等） |
-| `instruction_result` | Android → SB | 单条指令执行结果确认 | `requestId`, `index`, `type`, `status`, `code`, `message` |
+**设计说明**：`instruction_list` / `instruction_result` 独占 **`instruction_list` 通道**，
+由 **`InstructionListChannelHandler`（SB）** 与 **`InstructionListEventHandler`（Android / RK）** 处理，
+用于把「TTS 与 MCP」绑定为**同一有序批次**，与 **`tts` 通道 + `TTSEventHandler`（流式预览）**、**`control` 通道 + `ControlEventHandler`（单条控制）** 解耦，避免两路消息在客户端自行拼时序。
+
+| Event | Channel | 方向 | 说明 | data字段 |
+|--------------------|-------------|------|----------------------------|----------|
+| `instruction_list`   | `instruction_list` | SB → Android / RK（及需同步的下发面） | 一次下发完整有序列表（TTS 片段 + MCP 项） | 见下「载荷结构」 |
+| `instruction_result` | `instruction_list` | Android / RK → SB | 列表内**单条**执行结果（按 index 推进追踪） | `requestId`, `index`, `type`, `status`, `code`, `message` |
+
+**列表项与现有 DTO 对齐规则**
+
+| 项类型 | 基类链 | 对齐的已有类型 | 说明 |
+|--------|--------|----------------|------|
+| TTS | **`StreamSeqDto` ← `TtsDataResponse`** | `TtsDataResponse`（`base64AudioStream`） | 一项 = 一条可播放分片；`seq` / `isLast` 与同批内多块音频一致 |
+| MCP | **`CommonResultDto` ← `ControlCommandResponse`** | `ControlCommandResponse`（`commandId`、`command`、`params`） | 一项 = 一条控制语义；`requestId`/`code`/`message` 继承自 `CommonResultDto` |
+
+```java
+// 在 TtsDataResponse（extends StreamSeqDto，含 base64AudioStream）上增加列表编排字段
+@Data
+@EqualsAndHashCode(callSuper = true)
+public class InstructionTtsItem extends TtsDataResponse {
+    private String type = "tts"; // 枚举Instruction.TTS
+    private Integer index;
+}
+
+// 在 ControlCommandResponse（extends CommonResultDto，含 commandId/command/params）上增加列表编排字段
+@Data
+@EqualsAndHashCode(callSuper = true)
+public class InstructionMcpItem extends ControlCommandResponse {
+    private String type = "mcp"; // 枚举Instruction.MCP
+    private Integer index;
+    private String target;
+}
+```
 
 ##### 8. 系统消息类（三端通用）
 
@@ -699,25 +770,25 @@ data class ServerEvent(
 
 ---
 
-
 #### Channel设计
 
 Channel为一类Event的通道
 
 UnifiedWsHandler + MessageRouter (Channel分发器) + ChannelHandler + 线程池架构
 
-| Channel | 包含Event | 方向 | 说明                       |
-|---------|----------|------|--------------------------|
-| connection | connect, connect_ack, rk_connect, rk_connect_ack, ping, pong | 三端双向 | 连接管理、心跳保活                |
-| agent | agent_list_sync, agent_update | Android ↔ SB | Agent配置同步                |
-| chat | chat_message_sync, chat_message_send | Android ↔ SB | 聊天消息传输                   |
-| stt | stt_start, stt_start_ack, stt_audio_data, stt_text_data, stt_end, stt_error | Android ↔ SB | 语音识别数据流                  |
-| llm | llm_start, llm_data, llm_end, llm_error | SB → Android | LLM文本流                   |
-| tts | tts_start, tts_data, tts_end, tts_error | SB → Android | TTS音频流                   |
-| vl | vl_start, vl_data, vl_end, vl_error | Android ↔ SB | 视觉理解数据流（V2版本由UDP或RTMP替代） |
-| control | control_command_an, control_command_sb, command_result, control_response | Android → SB → RK → SB → Android | 设备控制命令                   |
-| status | status_request, rk_status | RK ↔ SB ↔ Android | 设备状态上报与查询                |
-| system | error, system_message | 三端双向 | 系统消息与错误通知                |
+| Channel | 包含Event | 方向 | 说明                                               |
+|---------|----------|------|--------------------------------------------------|
+| connection | connect, connect_ack, rk_connect, rk_connect_ack, ping, pong | 三端双向 | 连接管理、心跳保活                                        |
+| agent | agent_list_sync, agent_update | Android ↔ SB | Agent配置同步                                        |
+| chat | chat_message_sync, chat_message_send | Android ↔ SB | 聊天消息传输                                           |
+| stt | stt_start, stt_start_ack, stt_audio_data, stt_text_data, stt_end, stt_error | Android ↔ SB | 语音识别数据流                                          |
+| llm | llm_start, llm_data, llm_end, llm_error | SB → Android | LLM文本流                                           |
+| tts | tts_start, tts_data, tts_end, tts_error | SB → Android | TTS 音频流（**流式 / 非混合时序**；混合时序回复走 `instruction_list`） |
+| instruction_list | instruction_list, instruction_result | SB ↔ Android / RK | **混合时序编排**：有序 TTS+MCP，与 `instruction_result` 成对追踪  |
+| vl | vl_start, vl_data, vl_end, vl_error | Android ↔ SB | 视觉理解数据流（V2版本由UDP或RTMP替代）                         |
+| control | control_command_an, control_command_sb, command_result, control_response | Android → SB → RK → SB → Android | **单条**设备控制（非混合时序 `instruction_list` 编排内）             |
+| status | status_request, rk_status | RK ↔ SB ↔ Android | 设备状态上报与查询                                        |
+| system | error, system_message | 三端双向 | 系统消息与错误通知                                        |
 
 #### UnifiedWsHandler 类图
 
@@ -741,6 +812,7 @@ classDiagram
         -ExecutorService businessExecutor
         -ExecutorService sttExecutor
         -ExecutorService controlExecutor
+        -ExecutorService instructionListExecutor
         -ExecutorService llmExecutor
         -ExecutorService ttsExecutor
         -ExecutorService vlExecutor
@@ -861,12 +933,19 @@ classDiagram
     class ControlChannelHandler {
         -ControlForwardService controlService
         -ConnectionManager connectionManager
-        -InstructionTracker instructionTracker
         +handle(session, event)
         -handleControlCommand(session, event)
         -handleCommandResult(session, event)
-        -handleInstructionResult(session, event)
         -sendControlResponse(userId, deviceId, code, message)
+    }
+
+    class InstructionListChannelHandler {
+        -InstructionTracker instructionTracker
+        -BatchDispatchService batchDispatchService
+        -ConnectionManager connectionManager
+        +handle(session, event)
+        -handleInstructionResult(session, event)
+        -onAllInstructionsDone(requestId)
     }
 
     class StatusChannelHandler {
@@ -894,6 +973,7 @@ classDiagram
     ChannelHandler <|.. TtsChannelHandler
     ChannelHandler <|.. VlChannelHandler
     ChannelHandler <|.. ControlChannelHandler
+    ChannelHandler <|.. InstructionListChannelHandler
     ChannelHandler <|.. StatusChannelHandler
     ChannelHandler <|.. SystemChannelHandler
 ```
@@ -912,7 +992,8 @@ flowchart TB
 
     D -->|connect/rk_connect/ping| E[businessExecutor]
     D -->|agent_update/chat_message_send| E
-    D -->|control_command_an/command_result/instruction_result| F[controlExecutor]
+    D -->|control_command_an/command_result| F[controlExecutor]
+    D -->|instruction_list/instruction_result| IL[instructionList 线程池]
     D -->|stt_*| G[sttExecutor]
     D -->|llm_*| H[llmExecutor]
     D -->|tts_*| I[ttsExecutor]
@@ -931,6 +1012,10 @@ flowchart TB
 
     subgraph controlExecutor [控制命令线程池 - 核心5/最大10]
         F --> Q[ControlChannelHandler]
+    end
+
+    subgraph instListExecPool [指令批量线程池 - 核心2/最大4]
+        IL --> QIL[InstructionListChannelHandler]
     end
 
     subgraph sttExecutor [STT线程池 - 核心2/最大4]
@@ -955,7 +1040,8 @@ flowchart TB
     N --> Y[ChatForwardService]
     O --> Z[StatusBroadcastService]
     P --> AA[SystemMessageService]
-    Q --> AB[ControlForwardService + InstructionTracker]
+    Q --> AB[ControlForwardService]
+    QIL --> ABIL[InstructionTracker + BatchDispatch回写]
     R --> AC[SttService + SessionCoordinator]
     S --> AD[LlmService + 流式处理]
     T --> AE[TtsService + 音频合成]
@@ -964,6 +1050,7 @@ flowchart TB
     Y --> AG[AndroidMessageQueue]
     Z --> AG
     AA --> AG
+    QIL --> AG
     AB --> AH[RkMessageQueue]
 
     AG --> AI[发送给Android客户端]
@@ -980,6 +1067,7 @@ classDiagram
         +businessExecutor() ExecutorService
         +sttExecutor() ExecutorService
         +controlExecutor() ExecutorService
+        +instructionListExecutor() ExecutorService
         +llmExecutor() ExecutorService
         +ttsExecutor() ExecutorService
         +vlExecutor() ExecutorService
@@ -1021,6 +1109,7 @@ classDiagram
         -ExecutorService businessExecutor
         -ExecutorService sttExecutor
         -ExecutorService controlExecutor
+        -ExecutorService instructionListExecutor
         -ExecutorService llmExecutor
         -ExecutorService ttsExecutor
         -ExecutorService vlExecutor
@@ -1097,12 +1186,22 @@ graph TB
         G6[threadName: vl-%d]
     end
 
+    subgraph InstructionListThreadPool [指令批量线程池]
+        H1[corePoolSize: 2]
+        H2[maxPoolSize: 4]
+        H3[queueCapacity: 200]
+        H4[keepAliveTime: 60s]
+        H5[rejectPolicy: CallerRunsPolicy]
+        H6[threadName: inst-list-%d]
+    end
+
     A --> BusinessThreadPool
     A --> ControlThreadPool
     A --> SttThreadPool
     A --> LlmThreadPool
     A --> TtsThreadPool
     A --> VlThreadPool
+    A --> InstructionListThreadPool
 ```
 
 
@@ -1120,7 +1219,7 @@ flowchart TB
 
     subgraph Default [Dispatchers.Default - CPU密集型]
         direction TB
-        D1[消息分发器<br/>接收Channel消费]
+        D1[消息分发器<br/>接收Channel消费<br/>含 InstructionListEventHandler]
         D2[JSON解析]
         D3[指令解析]
         D4[视频解码]
@@ -1244,6 +1343,7 @@ flowchart TB
     subgraph 线程池隔离层
         B[业务线程池<br/>处理普通业务]
         C[控制线程池<br/>高优先级快速响应]
+        IL[指令批量线程池<br/>instruction_list / Tracker]
         D[STT线程池<br/>音频处理隔离]
         E[LLM线程池<br/>流式处理隔离]
         F[TTS线程池<br/>音频合成隔离]
@@ -1258,13 +1358,15 @@ flowchart TB
 
     A -->|1. 快速分发| B
     A -->|2. 快速分发| C
-    A -->|3. 快速分发| D
-    A -->|4. 快速分发| E
-    A -->|5. 快速分发| F
-    A -->|6. 快速分发| G
+    A -->|3. 快速分发| IL
+    A -->|4. 快速分发| D
+    A -->|5. 快速分发| E
+    A -->|6. 快速分发| F
+    A -->|7. 快速分发| G
 
     B -->|共享| H
     C -->|共享| H
+    IL -->|共享| H
     D -->|独占| J
     E -->|独占| I
     F -->|独占| J
@@ -1278,6 +1380,7 @@ flowchart TB
 
     B -.-> K
     C -.-> K
+    IL -.-> K
     D -.-> K
     E -.-> K
     F -.-> K
@@ -1392,6 +1495,9 @@ stateDiagram-v2
     state 已注册 {
         [*] --> 等待指令
         等待指令 --> 执行指令: 收到 control_command_sb
+        等待指令 --> 批量编排中: 收到 instruction_list
+        批量编排中 --> 批量编排中: 顺序执行下一项并发送 instruction_result
+        批量编排中 --> 等待指令: 本批全部完成
         执行指令 --> 等待指令: 指令完成并发送 command_result
         执行指令 --> 执行指令: 多指令并发（不同硬件）
     }
