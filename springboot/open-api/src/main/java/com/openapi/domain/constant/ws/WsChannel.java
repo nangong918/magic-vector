@@ -1,8 +1,14 @@
 package com.openapi.domain.constant.ws;
 
 import lombok.Getter;
+import lombok.NonNull;
 
 public enum WsChannel {
+
+    /**
+     * none
+     */
+    NONE("none"),
 
     /**
      * 连接管理、心跳保活
@@ -64,5 +70,20 @@ public enum WsChannel {
 
     WsChannel(String value) {
         this.value = value;
+    }
+
+    /**
+     * 根据字符串值获取枚举，若未找到则返回 {@link #NONE}。
+     * @param value 字符串值，不能为 null
+     * @return 对应的枚举，若未匹配则返回 NONE
+     */
+    @NonNull
+    public static WsChannel fromValue(@NonNull String value) {
+        for (WsChannel channel : values()) {
+            if (channel.value.equals(value)) {
+                return channel;
+            }
+        }
+        return NONE;
     }
 }

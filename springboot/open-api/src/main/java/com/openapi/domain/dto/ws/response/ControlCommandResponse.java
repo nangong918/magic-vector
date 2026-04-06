@@ -13,7 +13,7 @@ public class ControlCommandResponse extends CommonResultDto {
      * 服务端下行 {@code control_command_sb} 时的推送目标，与 {@link com.openapi.domain.constant.ws.WsPushTarget#getValue()} 一致，
      * 例如发往 App 或 RK，由客户端校验后处理。
      */
-    private String target;
+    public String target;
 
     private String commandId;
     private String command;

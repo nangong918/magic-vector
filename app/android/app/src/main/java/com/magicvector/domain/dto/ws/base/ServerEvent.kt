@@ -10,7 +10,11 @@ data class ServerEvent(
      * @see com.magicvector.domain.constant.ws.WsEvent
      */
     val channel: String,
-
+    /**
+     * 事件ID，用于标识事件
+     * @see com.magicvector.domain.constant.ws.WsEvent
+     */
+    val eventId: String,
     /**
      * 业务数据，key-value 格式
      */

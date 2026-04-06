@@ -1,14 +1,6 @@
 package com.openapi.connect.websocket.config;
 
-import com.openapi.config.SessionConfig;
-import com.openapi.config.ThreadPoolConfig;
-import com.openapi.connect.websocket.handler.ControlWsHandler;
-import com.openapi.connect.websocket.handler.WsChatHandler;
-import com.openapi.service.ControlConsoleService;
-import com.openapi.service.PersistentConnectionService;
-import com.openapi.service.test.OmniRealTimeNoVADTestService;
-import com.openapi.connect.websocket.handler.test.OmniRealTimeNoVADTestChannel;
-import com.openapi.connect.websocket.handler.test.TestChannel;
+import com.openapi.connect.websocket.handler.base.UnifiedWsHandler;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.socket.config.annotation.EnableWebSocket;
@@ -24,11 +16,7 @@ import org.springframework.web.socket.config.annotation.WebSocketHandlerRegistry
 @EnableWebSocket
 public class WebSocketConfig implements WebSocketConfigurer {
 
-    private final OmniRealTimeNoVADTestService omniRealTimeNoVADTestService;
-    private final ThreadPoolConfig threadPoolConfig;
-    private final SessionConfig sessionConfig;
-    private final PersistentConnectionService persistentConnectionService;
-    private final ControlConsoleService controlConsoleService;
+    private final UnifiedWsHandler unifiedWsHandler;
 
     /**
      * 注册 WebSocket 处理器
@@ -36,33 +24,9 @@ public class WebSocketConfig implements WebSocketConfigurer {
      */
     @Override
     public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
-        registry.addHandler(new TestChannel(), "/test-channel")
-                .addHandler(new OmniRealTimeNoVADTestChannel(
-                        omniRealTimeNoVADTestService,
-                        threadPoolConfig.taskExecutor()
-                ), "/realtime-no-vad-test")
-//                .addHandler(new RealTimeTestChannel(
-//                                realTimeTestServiceService,
-//                                threadPoolConfig.taskExecutor(),
-//                                dashScopeChatModel,
-//                                new RealtimeChatContextManager(webSocketMessageManager)
-//                        ),
-//                        "/realtime-test")
-//                .addHandler(new RealtimeChatChannel(
-//                                threadPoolConfig.taskExecutor(),
-//                                realtimeChatService,
-//                                dashScopeChatModel,
-//                                sessionConfig,
-//                                webSocketMessageManager
-//                        ),
-//                        "/agent/realtime/chat")
-                .addHandler(new WsChatHandler(
-                                sessionConfig,
-                                persistentConnectionService
-                        ),
-                        "/agent/realtime/chat")
-                .addHandler(new ControlWsHandler(controlConsoleService), "/control/ws")
-                .setAllowedOrigins("*"); // 根据需要设置允许的源
+        registry.addHandler(unifiedWsHandler, "/unified")
+                .setAllowedOrigins("*");
+        // 其他测试端点可保留，但正式建议只保留统一端点
     }
 
 

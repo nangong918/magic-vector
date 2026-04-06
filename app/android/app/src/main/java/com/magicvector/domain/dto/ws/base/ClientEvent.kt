@@ -10,7 +10,11 @@ open class ClientEvent(
      * @see com.magicvector.domain.constant.ws.WsEvent
      */
     open val channel: String,
-
+    /**
+     * 事件名称，见 WsEvent 枚举
+     * @see com.magicvector.domain.constant.ws.WsEvent
+     */
+    open val event: String,
     /**
      * 业务数据，key-value 格式
      */
