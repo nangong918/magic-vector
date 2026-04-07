@@ -38,16 +38,6 @@ public enum WsEvent {
      */
     AGENT_UPDATE("agent_update", WsChannel.AGENT),
 
-    /// 聊天消息
-    /**
-     * @see com.openapi.domain.dto.http.resonse.ChatMessageResponse
-     */
-    CHAT_MESSAGE_SYNC("chat_message_sync", WsChannel.CHAT),
-    /**
-     * @see com.openapi.domain.dto.http.resonse.ChatMessageDto
-     */
-    CHAT_MESSAGE_SEND("chat_message_send", WsChannel.CHAT),
-
     /// STT 语音识别
     /**
      * @see com.openapi.domain.dto.ws.request.SttStartRequest

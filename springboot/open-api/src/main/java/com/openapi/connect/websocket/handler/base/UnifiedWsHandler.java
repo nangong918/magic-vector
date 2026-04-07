@@ -2,6 +2,7 @@ package com.openapi.connect.websocket.handler.base;
 
 import com.google.gson.Gson;
 import com.openapi.connect.websocket.manager.ConnectionManager;
+import com.openapi.connect.websocket.manager.WsMessageQueueManager;
 import com.openapi.connect.websocket.router.MessageRouter;
 import com.openapi.domain.constant.ws.WsChannel;
 import com.openapi.domain.constant.ws.WsEvent;
@@ -28,6 +29,7 @@ public class UnifiedWsHandler extends TextWebSocketHandler {
 
     private final MessageRouter messageRouter;
     private final ConnectionManager connectionManager;
+    private final WsMessageQueueManager wsMessageQueueManager;
     private final Gson gson;// 注入 Gson bean
 
     private final Map<String, WebSocketSession> pendingAuthSessions = new ConcurrentHashMap<>();
@@ -35,6 +37,7 @@ public class UnifiedWsHandler extends TextWebSocketHandler {
     @Override
     public void afterConnectionEstablished(@NotNull WebSocketSession session) {
         pendingAuthSessions.put(session.getId(), session);
+        wsMessageQueueManager.registerSession(session);
     }
 
     @Override
@@ -50,6 +53,7 @@ public class UnifiedWsHandler extends TextWebSocketHandler {
     @Override
     public void afterConnectionClosed(@NotNull WebSocketSession session, @NotNull CloseStatus status) {
         connectionManager.unregisterBySession(session);
+        wsMessageQueueManager.unregisterSession(session);
         pendingAuthSessions.remove(session.getId());
     }
 

@@ -21,11 +21,6 @@ public enum WsChannel {
     AGENT("agent"),
 
     /**
-     * 聊天消息传输
-     */
-    CHAT("chat"),
-
-    /**
      * 语音识别数据流
      */
     STT("stt"),

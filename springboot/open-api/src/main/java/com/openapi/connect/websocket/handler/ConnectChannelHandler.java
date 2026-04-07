@@ -2,16 +2,15 @@ package com.openapi.connect.websocket.handler;
 
 import com.google.gson.Gson;
 import com.openapi.connect.websocket.manager.ConnectionManager;
+import com.openapi.connect.websocket.manager.WsMessageSenderManager;
 import com.openapi.domain.constant.ws.WsChannel;
 import com.openapi.domain.constant.ws.WsEvent;
 import com.openapi.domain.dto.ws.base.ClientEvent;
 import com.openapi.domain.dto.ws.base.ServerEvent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 
-import java.io.IOException;
 import java.util.Map;
 
 @Slf4j
@@ -20,6 +19,7 @@ public class ConnectChannelHandler implements ChannelHandler {
 
     private final ConnectionManager connectionManager;
     private final Gson gson;
+    private final WsMessageSenderManager wsMessageSender;
 
     @Override
     public void handle(WebSocketSession session, ClientEvent event) {
@@ -62,16 +62,12 @@ public class ConnectChannelHandler implements ChannelHandler {
     }
 
     private void handlePing(WebSocketSession session) {
-        try {
-            ServerEvent pong = new ServerEvent(
-                    WsChannel.CONNECTION.getValue(),
-                    WsEvent.PONG.getValue(),
-                    Map.of()
-            );
-            session.sendMessage(new TextMessage(gson.toJson(pong)));
-        } catch (IOException e) {
-            log.error("Failed to send pong", e);
-        }
+        ServerEvent pong = new ServerEvent(
+                WsChannel.CONNECTION.getValue(),
+                WsEvent.PONG.getValue(),
+                Map.of()
+        );
+        wsMessageSender.send(session, pong);
     }
 
     private void handlePong(WebSocketSession session) {
@@ -80,15 +76,11 @@ public class ConnectChannelHandler implements ChannelHandler {
     }
 
     private void sendAck(WebSocketSession session, WsEvent ackEvent, int code, String message) {
-        try {
-            ServerEvent ack = new ServerEvent(
-                    WsChannel.CONNECTION.getValue(),
-                    ackEvent.getValue(),
-                    Map.of("code", String.valueOf(code), "message", message)
-            );
-            session.sendMessage(new TextMessage(gson.toJson(ack)));
-        } catch (IOException e) {
-            log.error("Failed to send ack", e);
-        }
+        ServerEvent ack = new ServerEvent(
+                WsChannel.CONNECTION.getValue(),
+                ackEvent.getValue(),
+                Map.of("code", String.valueOf(code), "message", message)
+        );
+        wsMessageSender.send(session, ack);
     }
 }

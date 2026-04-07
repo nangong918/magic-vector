@@ -15,4 +15,5 @@ public class AgentChatDto {
     private String content = "";
     private String chatTime = "";
     private Integer role = 0;
+    private Boolean online = false;
 }
