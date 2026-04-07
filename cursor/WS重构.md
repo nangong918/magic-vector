@@ -57,14 +57,12 @@ flowchart TD
     subgraph 消息发送通道
         UserAction[用户操作] --> ActionType{操作类型}
         ActionType -->|创建/删除/编辑 Agent| AgentUpdate[构造 agent_update 消息<br/>channel:agent]
-        ActionType -->|发送聊天文本| ChatSend[构造 chat_message_send<br/>channel:chat]
         ActionType -->|控制 RK 设备| ControlCmd[构造 control_command<br/>channel:control]
         ActionType -->|开始语音交互| VoiceStart[启动语音交互流程]
         ActionType -->|HTTP 请求| HttpReq[协程 IO 请求<br/>GET /api/agents 或 /api/chat/history]
         HttpReq --> UpdateCache[更新本地缓存<br/>withContext Main]
 
         AgentUpdate --> SendMsg[发送到发送 Channel<br/>容量 32]
-        ChatSend --> SendMsg
         ControlCmd --> SendMsg
 
         SendMsg --> WsSend[WebSocket 发送<br/>协程 IO]
@@ -98,10 +96,9 @@ flowchart TD
         RecvMsg --> ParseChannel{解析 channel 字段}
 
         ParseChannel -->|agent| AgentHandler[AgentEventHandler<br/>处理 agent_list_sync]
-        ParseChannel -->|chat| ChatHandler[ChatEventHandler<br/>处理 chat_message_sync]
-        ParseChannel -->|stt| SttHandler[STTEventHandler<br/>处理 stt_start_ack, stt_text_data, stt_error]
+        ParseChannel -->|stt| SttHandler[STTEventHandler<br/>处理 stt_start_ack, stt_text_data, stt_error（用户侧文本）]
         ParseChannel -->|llm| LlmHandler[LLMEventHandler<br/>处理 llm_start/llm_data/llm_end]
-        ParseChannel -->|tts| TtsHandler[TTSEventHandler<br/>流式 tts_*, 非批量回复路径]
+        ParseChannel -->|tts| TtsHandler[TTSEventHandler<br/>处理 agent回复文本+音频（文本来源于TTS text）]
         ParseChannel -->|instruction_list| InstListHandler[InstructionListEventHandler<br/>收到 instruction_list, 展开入队]
         ParseChannel -->|control| CtrlHandler[ControlEventHandler<br/>收到 control_command / control_response]
         ParseChannel -->|system| SysHandler[SystemEventHandler<br/>处理 error, system_message]
@@ -109,7 +106,6 @@ flowchart TD
         ParseChannel -->|connection| ConnHandler[ConnectionEventHandler<br/>处理 ping/pong/connect_ack]
 
         AgentHandler --> UiUpdate[更新 UI<br/>withContext Main]
-        ChatHandler --> UiUpdate
         SttHandler --> UiUpdate
         LlmHandler --> UiUpdate
         InstListHandler --> UiUpdate
@@ -199,14 +195,10 @@ flowchart TD
         SendAck --> WsLoop
         
         RouteChannel -->|agent| AgentHandler[AgentHandler<br/>处理agent_update]
-        AgentHandler --> StoreAgent[存储agentId->userId]
-        StoreAgent --> BroadcastList[广播agent_list_sync给所有Android]
+        AgentHandler --> QueryAgentDb[查询MySQL中的Agent配置与存在性]
+        QueryAgentDb --> FillOnlineField[读取ConnectionManager在线Map并填充online字段]
+        FillOnlineField --> BroadcastList[广播agent_list_sync给所有Android]
         BroadcastList --> WsLoop
-        
-        RouteChannel -->|chat| ChatHandler[ChatHandler<br/>处理chat_message_send]
-        ChatHandler --> QueryAgent[查询agentId对应的userId]
-        QueryAgent --> SendSync[构造chat_message_sync<br/>发送给目标Android]
-        SendSync --> WsLoop
         
         RouteChannel -->|control| CtrlHandler[ControlHandler<br/>处理control_command_an / command_result]
         CtrlHandler --> GenCmdId[生成commandId]
@@ -292,7 +284,7 @@ flowchart TD
         subgraph HTTP API
             HttpReq[HTTP请求到达] --> HttpRoute{路径路由}
             HttpRoute -->|GET /api/agents| QueryAgents[查询数据库Agent列表]
-            HttpRoute -->|GET /api/chat/history| QueryHistory[查询聊天历史]
+            HttpRoute -->|GET /api/chat/history| QueryHistory[查询历史聊天记录（user=STT, agent=TTS.text）]
             HttpRoute -->|POST /api/agent| ModifyAgent[创建/更新/删除Agent]
             ModifyAgent --> BroadcastAgentSync[广播agent_list_sync给所有Android]
             QueryAgents --> HttpResp[返回JSON]
@@ -499,7 +491,7 @@ graph LR
         B5[RK接收队列<br/>容量32]
         B6[RK发送队列<br/>容量32]
         B7[连接管理器]
-        B8[Agent/聊天服务]
+        B8[Agent服务]
         B9[控制转发服务]
         B10[STT/VL会话协调器]
         B11[LLM/TTS服务调用]
@@ -528,14 +520,14 @@ graph LR
     end
 
     %% Android → SpringBoot 消息
-    A1 -->|agent_update / chat_message_send / control_command_an / stt_start / stt_audio_data / stt_end| A2
+    A1 -->|agent_update / control_command_an / stt_start / stt_audio_data / stt_end| A2
     A2 --> A3
     A3 -->|WebSocket| B1
     B1 --> B2
     B2 --> B3
 
     %% SpringBoot 内部路由
-    B3 -->|agent/chat| B8
+    B3 -->|agent| B8
     B3 -->|control| B9
     B3 -->|stt| B10
     B3 -->|instruction_list：Android/RK→SB instruction_result| B13
@@ -543,12 +535,12 @@ graph LR
     %% 外部服务调用
     B10 -->|音频流| STT
     STT -->|碎片| B10
-    B10 -->|最终文本| B11
+    B10 -->|最终文本（落库为user）| B11
     B10 -->|视频帧| VL
     VL -->|结果| B10
     B11 -->|上下文| LLM
-    LLM -->|整体输出| B12
-    B12 -->|逐条合成或拼装| TTS
+    LLM -->|整体输出（过滤chatText）| B12
+    B12 -->|逐条合成或拼装（text落库为agent）| TTS
     TTS -->|嵌入 instruction 项| B12
     B12 -->|instruction_list| B4
 
@@ -574,7 +566,7 @@ graph LR
     B1 -->|WebSocket| A3
     A3 --> A4
     A4 --> A5
-    A5 -->|agent_list_sync / chat_message_sync / control_response / rk_status / tts_data / instruction_list / system_message| A6
+    A5 -->|agent_list_sync / control_response / rk_status / tts_data / instruction_list / system_message| A6
     A5 -->|instruction_list| A7
     A5 -->|tts_data 流式非批量| A6
     A7 -->|逐条执行| A8
@@ -674,17 +666,13 @@ public class StreamSeqDto {
 
 | Event | 方向 | 说明 | data字段 |
 |---------|------|------|----------|
-| `agent_list_sync` | SB→Android | Agent列表变更推送 | `AgentChatDto` 列表 |
-| `agent_update` | Android→SB | 用户操作Agent（创建/更新/删除） | `AgentChatDto` |
+| `agent_list_sync` | SB→Android | Agent列表变更推送 | `AgentDto` 列表（含 `exists` / `online`） |
+| `agent_update` | Android→SB | 用户操作Agent（创建/更新/删除） | `AgentDto` |
 
-##### 3. 聊天消息类（Android ↔ SB）
+> Agent状态定义：`exists` 来自 SpringBoot MySQL 查询；`online` 来自 `ConnectionManager` 内存Map（当前连接态）。
+##### 3. 音频处理类（Android ↔ SB）
 
-| Event | 方向 | 说明 | data字段 |
-|---------|------|------|----------|
-| `chat_message_sync` | SB→Android | 聊天消息推送 | `ChatMessageDto` |
-| `chat_message_send` | Android→SB | 用户发送消息 | `ChatMessageDto` |
-
-##### 4. 音频处理类（Android ↔ SB）
+> 聊天记录落库约束：不再使用 ChatChannel。`user` 侧内容来自 `stt_text_data` / STT最终文本；`agent` 侧内容来自 LLM结果中过滤出的 `chatText`（通过 `tts_data.text` / instruction_list 中的 TTS 文本下发并同步持久化）。
 
 | Event | 方向 | 说明 | data字段                                          |
 |---------|------|------|-------------------------------------------------|
@@ -707,7 +695,7 @@ public class StreamSeqDto {
 | `vl_end` | SB→Android | 视觉理解结束 | `agentId`                                       |
 | `vl_error` | SB→Android | 视觉理解异常 | `agentId`, `code`, `message`                    |
 
-##### 5. 控制命令类（Android ↔ SB ↔ RK）
+##### 4. 控制命令类（Android ↔ SB ↔ RK）
 
 | Event | 方向            | 说明 | data字段                                                  |
 |---------|---------------|------|---------------------------------------------------------|
@@ -716,7 +704,7 @@ public class StreamSeqDto {
 | `command_result` | RK→SB         | 命令执行结果 | `commandId`, `code`, `message`                          |
 | `control_response` | SB→Android    | 控制结果响应 | `deviceId`, `code`, `message`                           |
 
-##### 6. 设备状态类（RK ↔ SB ↔ Android）
+##### 5. 设备状态类（RK ↔ SB ↔ Android）
 
 | Event | 方向 | 说明 | data字段 |
 |---------|------|------|----------|
@@ -724,7 +712,7 @@ public class StreamSeqDto {
 | `rk_status` | RK→SB | 设备状态上报 | `deviceId`, `battery`, `position` |
 | `rk_status` | SB→Android | 转发设备状态 | `deviceId`, `battery`, `position` |
 
-##### 7. 指令批量处理类（三端通用）
+##### 6. 指令批量处理类（三端通用）
 
 **设计说明**：`instruction_list` / `instruction_result` 独占 **`instruction_list` 通道**，
 由 **`InstructionListChannelHandler`（SB）** 与 **`InstructionListEventHandler`（Android / RK）** 处理，
@@ -767,7 +755,7 @@ public class InstructionMcpItem extends ControlCommandResponse {
 
 > 实现说明：若工程里 `InstructionMcpItem` 暂不继承 `ControlCommandResponse`（避免与 SB 下行 `target` 字段语义混用），则保持「继承 `CommonResultDto` + 与 `ControlCommandResponse` 同名字段」即可，**`type` 仍须为 `Instruction` 枚举**。
 
-##### 8. 系统消息类（三端通用）
+##### 7. 系统消息类（三端通用）
 
 | Event | 方向 | 说明 | data字段 |
 |---------|------|------|----------|
@@ -782,14 +770,15 @@ Channel为一类Event的通道
 
 UnifiedWsHandler + MessageRouter (Channel分发器) + ChannelHandler + 线程池架构
 
+> 语音主链路约束：`stt` 通道负责收发（上行音频、下行识别文本），`llm` 通道仅下发LLM文本，`tts` 通道仅下发音频分片；实际语音回复编排以 `instruction_list` 为主，避免客户端自行拼接时序。
+
 | Channel | 包含Event | 方向 | 说明                                               |
 |---------|----------|------|--------------------------------------------------|
 | connection | connect, connect_ack, rk_connect, rk_connect_ack, ping, pong | 三端双向 | 连接管理、心跳保活                                        |
-| agent | agent_list_sync, agent_update | Android ↔ SB | Agent配置同步                                        |
-| chat | chat_message_sync, chat_message_send | Android ↔ SB | 聊天消息传输                                           |
+| agent | agent_list_sync, agent_update | Android ↔ SB | Agent配置同步（存在性来自MySQL，在线态来自内存Map）                |
 | stt | stt_start, stt_start_ack, stt_audio_data, stt_text_data, stt_end, stt_error | Android ↔ SB | 语音识别数据流                                          |
-| llm | llm_start, llm_data, llm_end, llm_error | SB → Android | LLM文本流                                           |
-| tts | tts_start, tts_data, tts_end, tts_error | SB → Android | TTS 音频流（**流式 / 非混合时序**；混合时序回复走 `instruction_list`） |
+| llm | llm_start, llm_data, llm_end, llm_error | SB → Android | LLM文本下发（并持久化到SpringBoot）                             |
+| tts | tts_start, tts_data, tts_end, tts_error | SB → Android | TTS 音频下发（语音主路径由 `instruction_list` 编排）                |
 | instruction_list | instruction_list, instruction_result | SB ↔ Android / RK | **混合时序编排**：有序 TTS+MCP，与 `instruction_result` 成对追踪  |
 | vl | vl_start, vl_data, vl_end, vl_error | Android ↔ SB | 视觉理解数据流（V2版本由UDP或RTMP替代）                         |
 | control | control_command_an, control_command_sb, command_result, control_response | Android → SB → RK → SB → Android | **单条**设备控制（非混合时序 `instruction_list` 编排内）             |
@@ -841,19 +830,18 @@ classDiagram
         +getUserIdByDeviceId(deviceId) String
     }
 
-    class AgentBindingManager {
-        -ConcurrentHashMap~String, String~ agentToUser
-        -ConcurrentHashMap~String, Set~ userToAgents
-        +bindAgent(agentId, userId)
-        +unbindAgent(agentId, userId)
-        +getUserIdByAgentId(agentId) String
-        +getAgentsByUserId(userId) Set~String~
+    class AgentService {
+        -AgentRepository agentRepository
+        -ConnectionManager connectionManager
+        +listAgentsWithOnline(userId) List~AgentStateDto~
+        +existsInDb(agentId) boolean
+        +isOnline(agentId) boolean
     }
 
     UnifiedWsHandler --> MessageRouter
     UnifiedWsHandler --> ConnectionManager
     MessageRouter --> ConnectionManager
-    MessageRouter --> AgentBindingManager
+    MessageRouter --> AgentService
 ```
 
 
@@ -882,18 +870,10 @@ classDiagram
     }
 
     class AgentChannelHandler {
-        -AgentBindingManager bindingManager
         -AgentService agentService
         +handle(session, event)
         -handleAgentUpdate(session, event)
         -broadcastAgentList(userId)
-    }
-
-    class ChatChannelHandler {
-        -AgentBindingManager bindingManager
-        -ChatForwardService chatForwardService
-        +handle(session, event)
-        -handleChatMessageSend(session, event)
     }
 
     class SttChannelHandler {
@@ -973,7 +953,6 @@ classDiagram
     ChannelHandler <|.. ConnectChannelHandler
     ChannelHandler <|.. PingChannelHandler
     ChannelHandler <|.. AgentChannelHandler
-    ChannelHandler <|.. ChatChannelHandler
     ChannelHandler <|.. SttChannelHandler
     ChannelHandler <|.. LlmChannelHandler
     ChannelHandler <|.. TtsChannelHandler
@@ -997,7 +976,7 @@ flowchart TB
     C --> D{选择线程池}
 
     D -->|connect/rk_connect/ping| E[businessExecutor]
-    D -->|agent_update/chat_message_send| E
+    D -->|agent_update| E
     D -->|control_command_an/command_result| F[controlExecutor]
     D -->|instruction_list/instruction_result| IL[instructionList 线程池]
     D -->|stt_*| G[sttExecutor]
@@ -1011,7 +990,6 @@ flowchart TB
         E --> K[ConnectChannelHandler]
         E --> L[PingChannelHandler]
         E --> M[AgentChannelHandler]
-        E --> N[ChatChannelHandler]
         E --> O[StatusChannelHandler]
         E --> P[SystemChannelHandler]
     end
@@ -1042,8 +1020,7 @@ flowchart TB
 
     K --> V[更新ConnectionManager]
     L --> W[发送pong响应]
-    M --> X[更新AgentBindingManager]
-    N --> Y[ChatForwardService]
+    M --> X[查询DB并填充online字段]
     O --> Z[StatusBroadcastService]
     P --> AA[SystemMessageService]
     Q --> AB[ControlForwardService]
@@ -1053,7 +1030,6 @@ flowchart TB
     T --> AE[TtsService + 音频合成]
     U --> AF[VlService + 视觉理解]
 
-    Y --> AG[AndroidMessageQueue]
     Z --> AG
     AA --> AG
     QIL --> AG
@@ -1268,8 +1244,7 @@ gantt
     section 业务线程池
         ConnectHandler处理 :t2, after t1, 30ms
         AgentHandler处理 :t3, after t1, 80ms
-        ChatHandler处理 :t4, after t1, 60ms
-        StatusHandler处理 :t5, after t1, 40ms
+        StatusHandler处理 :t4, after t1, 40ms
 
     section 控制线程池
         ControlHandler处理 :t6, after t1, 20ms

@@ -1435,3 +1435,16 @@ event是用于通知订阅者操作的。这个存在的意义是这样的，改
 WS设计文档也设计完毕：[WS重构.md](WS重构.md)
 
 现在我需要你重构我的Android（App，RK先不管）和SpringBoot，要根据我的设计文档来实现。
+
+
+
+### 重构WS
+
+@cursor/AgentChat.md 这是我的AgentChat设计文档，我大致审核过了，没有问题。现在需要修改@cursor/WS重构.md 。
+这里面我发现几点有问题：
+第一：我已经取消了Chat，直接把STT的文本和LLM的回复存储到SpringBoot的数据库。
+所以我觉得应该从架构上取消Chat相关的数据， 包括Android，SpringBoot的WS全部相关。
+第二：AgentChannelHandler：AgentBindingManager，AgentBinding??? 真的有这个逻辑吗？
+我记得SpringAI的Agent进行chat的时候会维护一个ChatClient，所以我觉得应该给前端展示两个：
+Agent是否存在就是直接查询SpringBoot的MySQL，第二个是Agent是否在线，这个是通过SpringBoot内部的Map来存储的。我记得现在Android不是打开Agent再建立跟Agent的WS连接了，现在改成了全量WS，Agent只是其中的一个功能。然后我的设计好像不用BindingManager了，现在设计图中还是绑定逻辑，我认为是不对的。
+第三：注意Channel的设计，MessageRouter：确认STT业务逻辑，STT(收发) -> LLM(发) -> TTS(发，并且被INSTRUCTION_LIST替代)
