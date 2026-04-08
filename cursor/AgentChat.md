@@ -22,11 +22,11 @@
 - 停止录音后：
   - SpringBoot等待VL识别结果
   - 同步（STT最终结果 + VL结果）→ 发送给LLM
-  - LLM产生整体输出（非流式，包含文本 + MCP指令List）
-- 文本交给文本过滤分析器，解析为 `[句子, MCP指令, 句子, MCP指令, ...]` 的List格式
+  - LLM产生整体输出（非流式，包含文本 + MCP事件）
+- 文本交给文本过滤分析器，生成 `tts_event` 与 `mcp_event`
 - 给Android和RK设置 `Agent开始回复`：关闭唤醒词唤醒功能 + 禁用录音
-- 批量下发完整指令List
-- 逐条执行指令，前一条完成后执行下一条：
+- 服务端碎片化下发 `tts_event` / `mcp_event`
+- 客户端按 `instructionTiming + index` 排序执行：
   - 句子：发送给TTS服务 → 获取音频流 → Android播放
   - MCP指令：区分目标设备（Android/RK）→ 发送执行 → 等待执行完成
 - 全部指令执行完成后 → 给Android和RK设置 `Agent结束回复`：恢复唤醒词唤醒功能 + 恢复录音功能
@@ -60,11 +60,11 @@ flowchart TD
         SyncWait -->|两者都到达| SendLLM[发送LLM]
         
         SendLLM --> LLMOutput[LLM整体输出<br/>文本+指令]
-        LLMOutput --> ParseFilter[文本过滤分析器<br/>解析句子+MCP指令List]
+        LLMOutput --> ParseFilter[文本过滤分析器<br/>生成 tts_event + mcp_event]
         
         ParseFilter --> SetSpeaking[设置Agent开始回复<br/>关闭唤醒/禁用录音]
         
-        SetSpeaking --> ProcessList["处理指令列表<br/>━━━━━━━━━━━━━━━<br/>通过消息队列接收<br/>逐条执行，等待前一条完成"]
+        SetSpeaking --> ProcessList["处理事件流<br/>━━━━━━━━━━━━━━━<br/>服务端碎片化下发<br/>客户端按 instructionTiming+index 执行"]
         
         ProcessList -->|句子| SendTTS[发送TTS]
         SendTTS --> AudioPlay[Android播放音频流]
@@ -97,12 +97,12 @@ flowchart LR
     A4[视频推流UDP/RTMP]
     A5[播放器]
     A6[UI文本展示]
-    A7[指令队列执行器<br/>逐条执行List]
+    A7[事件执行器<br/>按 instructionTiming+index 执行]
     D1[指令解析与路由]
   end
 
   subgraph RK下层
-    R1[指令队列执行器<br/>逐条执行List]
+    R1[事件执行器<br/>按 instructionTiming+index 执行]
     R2[GPIO控制器]
     R3[舵机]
     R4[LCD屏]
@@ -114,8 +114,8 @@ flowchart LR
     B3[视频转发]
     B4[VL拉流处理]
     B5[结果同步器<br/>等待VL+STT]
-    B6[文本解析器<br/>句子+MCP指令List]
-    B7[批量指令下发器<br/>一次性发送完整List]
+    B6[文本解析器<br/>生成 tts_event + mcp_event]
+    B7[事件下发器<br/>碎片化发送]
   end
 
   subgraph 外部服务
@@ -158,12 +158,12 @@ flowchart LR
   B5 -->|STT+VL同步| C4
   C4 -->|LLM整体输出| B6
 
-%% 解析与批量下发
+%% 解析与事件下发
   B6 -->|句子列表| C5
-  B6 -->|MCP指令List| B7
+  B6 -->|MCP事件| B7
 
-%% 批量发送完整List
-  B7 -->|完整List批量下发| D1
+%% 服务端碎片化发送
+  B7 -->|tts_event / mcp_event| D1
 
 %% TTS音频流
   C5 -->|音频流| A5
@@ -227,14 +227,14 @@ sequenceDiagram
 
   SB->>SB: 同步等待STT+VL（含超时异常处理）
   SB->>LLM: 发送STT+VL完整上下文
-  LLM-->>SB: LLM整体输出（文本 + MCP指令List）
+  LLM-->>SB: LLM整体输出（文本 + MCP事件）
 
-  SB->>SB: 文本过滤解析器（解析句子+MCP指令List）
+  SB->>SB: 文本过滤解析器（生成 tts_event / mcp_event）
 
   SB-->>Android: 设置Agent开始回复（关闭唤醒/禁用录音）
   SB-->>RK: 设置Agent开始回复（关闭唤醒）
 
-  Note over SB: 批量下发完整指令List
+  Note over SB: 碎片化下发 tts_event / mcp_event
 
   loop 逐条执行指令（前一条完成后执行下一条）
     alt 句子指令
@@ -385,13 +385,75 @@ stateDiagram-v2
   Agent回复中 --> 空闲状态: 异常发生
 ```
 
+### Instruction 事件流
 
+服务端直接碎片化下发：
+- `tts_event`（`tts` 通道）
+- `mcp_event`（`control` 通道）
 
+客户端（Android / RK）本地按 `instructionTiming` + `index` 排序执行。
+其中 `tts_event.text` 为该音频分片对应的文本碎片（用于字幕/落库对齐）。
 
+#### 服务端下发示例
 
+```json
+{
+  "channel": "tts",
+  "event": "tts_event",
+  "data": {
+    "requestId": "req_20260408_001",
+    "agentId": "10001",
+    "type": "tts",
+    "index": 0,
+    "instructionTiming": 0,
+    "text": "你好，我先执行第一阶段。",
+    "seq": "0",
+    "isLast": false,
+    "timestamp": 1710000000000,
+    "base64AudioStream": "ejkcviifri23kwrn42njbj242524df..."
+  }
+}
+```
 
+```json
+{
+  "channel": "control",
+  "event": "mcp_event",
+  "data": {
+    "requestId": "req_20260408_001",
+    "type": "mcp",
+    "index": 1,
+    "instructionTiming": 0,
+    "target": "rk_device",
+    "deviceId": "rk-001",
+    "commandId": "cmd_gpio_001",
+    "command": "GPIO_SET",
+    "params": { "pin": "1", "value": "1" }
+  }
+}
+```
 
+#### 客户端执行规则
 
+- 同一 `requestId` 内：先按 `instructionTiming` 升序，再按 `index` 升序。
+- 同一 `instructionTiming` 阶段内：TTS 和 MCP 可并行。
+- 阶段 `N` 全部完成后，才执行阶段 `N+1`。
 
+#### 回执（单条结果）
 
+```json
+{
+  "channel": "system",
+  "event": "instruction_event_result",
+  "data": {
+    "requestId": "req_20260408_001",
+    "index": 1,
+    "type": "mcp",
+    "instructionTiming": 0,
+    "status": "success",
+    "code": 200,
+    "message": "GPIO_SET done"
+  }
+}
+```
 

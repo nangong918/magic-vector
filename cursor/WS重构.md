@@ -672,7 +672,7 @@ public class StreamSeqDto {
 > Agent状态定义：`exists` 来自 SpringBoot MySQL 查询；`online` 来自 `ConnectionManager` 内存Map（当前连接态）。
 ##### 3. 音频处理类（Android ↔ SB）
 
-> 聊天记录落库约束：不再使用 ChatChannel。`user` 侧内容来自 `stt_text_data` / STT最终文本；`agent` 侧内容来自 LLM结果中过滤出的 `chatText`（通过 `tts_data.text` / instruction_list 中的 TTS 文本下发并同步持久化）。
+> 聊天记录落库约束：不再使用 ChatChannel。`user` 侧内容来自 `stt_text_data` / STT最终文本；`agent` 侧内容来自 LLM结果中过滤出的 `chatText`（通过 `tts_data.text` / `tts_event.text` 下发并同步持久化）。
 
 | Event | 方向 | 说明 | data字段                                          |
 |---------|------|------|-------------------------------------------------|
@@ -714,46 +714,49 @@ public class StreamSeqDto {
 
 ##### 6. 指令批量处理类（三端通用）
 
-**设计说明**：`instruction_list` / `instruction_result` 独占 **`instruction_list` 通道**，
-由 **`InstructionListChannelHandler`（SB）** 与 **`InstructionListEventHandler`（Android / RK）** 处理，
-用于把「TTS 与 MCP」绑定为**同一有序批次**，与 **`tts` 通道 + `TTSEventHandler`（流式预览）**、**`control` 通道 + `ControlEventHandler`（单条控制）** 解耦，避免两路消息在客户端自行拼时序。
+**设计说明**：取消 `instruction_list` 大包模式，改为事件流模式：
+服务端直接下发 `tts_event`（`tts` 通道）和 `mcp_event`（`control` 通道），
+客户端按 `instructionTiming` + `index` 本地排序执行。这样可避免单条 WS 大 payload 的 IO 限制问题。
 
 | Event | Channel | 方向 | 说明 | data字段 |
 |--------------------|-------------|------|----------------------------|----------|
-| `instruction_list`   | `instruction_list` | SB → Android / RK（及需同步的下发面） | 一次下发完整有序列表（TTS 片段 + MCP 项） | 见下「载荷结构」 |
-| `instruction_result` | `instruction_list` | Android / RK → SB | 列表内**单条**执行结果（按 index 推进追踪） | `requestId`, `index`, `type`（`Instruction` 枚举）, `status`, `code`, `message` |
+| `tts_event` | `tts` | SB → Android / RK | TTS 事件碎片下发 | `requestId`, `agentId`, `type=tts`, `index`, `instructionTiming`, `text`（对应音频分片的文本碎片）, `seq`, `isLast`, `timestamp`, `base64AudioStream` |
+| `mcp_event` | `control` | SB → Android / RK | MCP 事件碎片下发 | `requestId`, `type=mcp`, `index`, `instructionTiming`, `target`, `deviceId`, `commandId`, `command`, `params` |
+| `instruction_event_result` | `system` | Android / RK → SB | 单条事件执行结果回执 | `requestId`, `index`, `type`, `instructionTiming`, `status`, `code`, `message` |
 
-**列表项与现有 DTO 对齐规则**
+**事件项与现有 DTO 对齐规则**
 
 | 项类型 | 基类链 | 对齐的已有类型 | 说明 |
 |--------|--------|----------------|------|
-| TTS | **`StreamSeqDto` ← `TtsDataResponse`** | `TtsDataResponse`（`base64AudioStream`） | 一项 = 一条可播放分片；`seq` / `isLast` 与同批内多块音频一致 |
-| MCP | **`CommonResultDto` ← `ControlCommandResponse`** | `ControlCommandResponse`（`commandId`、`command`、`params`） | 一项 = 一条控制语义；`requestId`/`code`/`message` 继承自 `CommonResultDto` |
+| TTS Event | **`StreamSeqDto` ← `TtsDataResponse`** | `TtsDataResponse`（`base64AudioStream` + `text`） | 事件碎片，新增 `requestId`、`index`、`instructionTiming` 作为排序键；`text` 为该音频分片对应的文本碎片 |
+| MCP Event | **`CommonResultDto` ← `ControlCommandResponse`** | `ControlCommandResponse`（`commandId`、`command`、`params`） | 事件碎片，新增 `requestId`、`index`、`instructionTiming` 作为排序键 |
 
-**列表项 DTO（`type` 字段使用 `Instruction`，禁止魔法字符串）**
+**事件 DTO（`type` 字段使用 `Instruction`，禁止魔法字符串）**
 
 ```java
-// 在 TtsDataResponse（extends StreamSeqDto，含 base64AudioStream、text）上增加列表编排字段
+// 在 TtsDataResponse（extends StreamSeqDto，含 base64AudioStream、text）上增加事件排序字段
 @Data
 @EqualsAndHashCode(callSuper = true)
-public class InstructionTtsItem extends TtsDataResponse {
+public class TtsEventResponse extends TtsDataResponse {
     private Instruction type = Instruction.TTS;
+    private String requestId;
     private Integer index;
+    private Integer instructionTiming;
+    // text 字段overload继承自 TtsDataResponse，语义为“当前音频分片对应的文本碎片”
 }
 
-// 在 ControlCommandResponse（extends CommonResultDto，含 commandId/command/params/target）上增加列表编排字段
+// 在 ControlCommandResponse（extends CommonResultDto，含 commandId/command/params/target）上增加事件排序字段
 @Data
 @EqualsAndHashCode(callSuper = true)
-public class InstructionMcpItem extends ControlCommandResponse {
+public class McpEventResponse extends ControlCommandResponse {
     private Instruction type = Instruction.MCP;
+    private String requestId;
     private Integer index;
-    /** 执行侧路由（与下行 push 的 target 语义不同，见实现注释） */
-    private String executionTarget;
-    private String deviceId;
+    private Integer instructionTiming;
 }
 ```
 
-> 实现说明：若工程里 `InstructionMcpItem` 暂不继承 `ControlCommandResponse`（避免与 SB 下行 `target` 字段语义混用），则保持「继承 `CommonResultDto` + 与 `ControlCommandResponse` 同名字段」即可，**`type` 仍须为 `Instruction` 枚举**。
+> 实现说明：若工程里 `McpEventResponse` 暂不继承 `ControlCommandResponse`，则保持「继承 `CommonResultDto` + 与 `ControlCommandResponse` 同名字段」即可，**`type` 仍须为 `Instruction` 枚举**。
 
 ##### 7. 系统消息类（三端通用）
 
@@ -770,7 +773,7 @@ Channel为一类Event的通道
 
 UnifiedWsHandler + MessageRouter (Channel分发器) + ChannelHandler + 线程池架构
 
-> 语音主链路约束：`stt` 通道负责收发（上行音频、下行识别文本），`llm` 通道仅下发LLM文本，`tts` 通道仅下发音频分片；实际语音回复编排以 `instruction_list` 为主，避免客户端自行拼接时序。
+> 语音主链路约束：`stt` 通道负责收发（上行音频、下行识别文本），`llm` 通道仅下发LLM文本；回复阶段采用 `tts_event` / `mcp_event` 事件流，由客户端按 `instructionTiming` 排序执行。
 
 | Channel | 包含Event | 方向 | 说明                                               |
 |---------|----------|------|--------------------------------------------------|
@@ -778,12 +781,11 @@ UnifiedWsHandler + MessageRouter (Channel分发器) + ChannelHandler + 线程池
 | agent | agent_list_sync, agent_update | Android ↔ SB | Agent配置同步（存在性来自MySQL，在线态来自内存Map）                |
 | stt | stt_start, stt_start_ack, stt_audio_data, stt_text_data, stt_end, stt_error | Android ↔ SB | 语音识别数据流                                          |
 | llm | llm_start, llm_data, llm_end, llm_error | SB → Android | LLM文本下发（并持久化到SpringBoot）                             |
-| tts | tts_start, tts_data, tts_end, tts_error | SB → Android | TTS 音频下发（语音主路径由 `instruction_list` 编排）                |
-| instruction_list | instruction_list, instruction_result | SB ↔ Android / RK | **混合时序编排**：有序 TTS+MCP，与 `instruction_result` 成对追踪  |
+| tts | tts_start, tts_data, tts_end, tts_error, tts_event | SB → Android | TTS 音频下发 + TTS 事件流（主路径）                |
 | vl | vl_start, vl_data, vl_end, vl_error | Android ↔ SB | 视觉理解数据流（V2版本由UDP或RTMP替代）                         |
-| control | control_command_an, control_command_sb, command_result, control_response | Android → SB → RK → SB → Android | **单条**设备控制（非混合时序 `instruction_list` 编排内）             |
+| control | control_command_an, control_command_sb, command_result, control_response, mcp_event | Android → SB → RK → SB → Android | 单条设备控制 + MCP 事件流             |
 | status | status_request, rk_status | RK ↔ SB ↔ Android | 设备状态上报与查询                                        |
-| system | error, system_message | 三端双向 | 系统消息与错误通知                                        |
+| system | error, system_message, instruction_event_result | 三端双向 | 系统消息、错误通知与事件执行回执                                        |
 
 #### UnifiedWsHandler 类图
 
