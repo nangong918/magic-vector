@@ -20,6 +20,9 @@ public class InstructionMcpItem extends CommonResultDto {
 
     private Integer index;
 
+    /** 客户端排序阶段号：同 timing 可并行，跨 timing 串行。 */
+    private Integer instructionTiming;
+
     /**
      * 执行侧路由，如 android_local / rk_device（与 {@link ControlCommandResponse#getTarget()} 的推送目标语义不同）。
      */

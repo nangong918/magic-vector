@@ -27,4 +27,7 @@ public class InstructionResultRequest extends CommonResultDto {
      * 业务态，如 success / fail（具体取值由实现约定）。
      */
     private String status;
+
+    /** 回执对应的执行阶段号。 */
+    private Integer instructionTiming;
 }

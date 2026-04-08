@@ -1,8 +1,12 @@
 package com.openapi.connect.websocket.service;
 
 import com.google.gson.Gson;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
 import com.google.gson.reflect.TypeToken;
 import com.openapi.connect.websocket.manager.ConnectionManager;
+import com.openapi.connect.websocket.manager.WsAgentSyncManager;
 import com.openapi.connect.websocket.manager.WsInstructionTrackerManager;
 import com.openapi.connect.websocket.manager.WsMessageSenderManager;
 import com.openapi.domain.ao.mixLLM.McpSwitch;
@@ -13,7 +17,6 @@ import com.openapi.domain.constant.ws.WsChannel;
 import com.openapi.domain.constant.ws.WsEvent;
 import com.openapi.domain.dto.ws.base.ServerEvent;
 import com.openapi.domain.dto.ws.request.InstructionResultRequest;
-import com.openapi.domain.dto.ws.response.InstructionListResponse;
 import com.openapi.domain.dto.ws.response.InstructionMcpItem;
 import com.openapi.domain.dto.ws.response.InstructionTtsItem;
 import com.openapi.domain.dto.ws.response.LlmDataResponse;
@@ -36,6 +39,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Collections;
 import java.util.Map;
+import java.util.HashMap;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -66,10 +70,11 @@ public class WsConversationService {
     private final Gson gson;
 
     /**
-     * 语音主链路编排：
-     * STT最终文本 -> 落库(user) -> LLM -> 提取chatText并落库(agent) -> instruction_list 下发。
+     * 语音主链路编排（与 {@link WsAgentSyncManager} 配合）：
+     * STT 最终文本落库(user，仅存语音识别内容) → 将 STT+可选 VL 拼成 LLM 用户侧上下文 →
+     * LLM → 解析为 tts_event / mcp_event 逐条下发（客户端按 instructionTiming+index 排序执行）。
      */
-    public void handleSttFinal(WebSocketSession session, String agentId, String sttFinalText) {
+    public void handleSyncedUserTurn(WebSocketSession session, String agentId, String sttFinalText, String vlText) {
         if (agentId == null || agentId.isBlank()) {
             return;
         }
@@ -86,14 +91,16 @@ public class WsConversationService {
             return;
         }
 
-        String userText = sttFinalText == null ? "" : sttFinalText.trim();
-        if (!userText.isEmpty()) {
-            chatMessageService.insertOne(agentIdLong, userText, true, userIdLong);
+        String sttStored = sttFinalText == null ? "" : sttFinalText.trim();
+        if (!sttStored.isEmpty()) {
+            chatMessageService.insertOne(agentIdLong, sttStored, true, userIdLong);
         }
+
+        String llmUserPayload = buildLlmUserPayload(sttStored, vlText);
 
         sendLlmStart(session, agentId);
 
-        String llmRaw = callLlm(agentId, userId, userText);
+        String llmRaw = callLlm(agentId, userId, llmUserPayload);
         String chatText = extractChatText(llmRaw);
 
         if (!chatText.isEmpty()) {
@@ -113,17 +120,29 @@ public class WsConversationService {
         sendAgentStartReply(session);
 
         String requestId = UUID.randomUUID().toString();
-        InstructionListResponse response = new InstructionListResponse();
-        response.setRequestId(requestId);
-        response.setAgentId(agentId);
-        response.setInstructions(gson.toJson(instructionItems));
-
+        bindRequestId(instructionItems, requestId);
         trackerManager.register(requestId, session, userId, instructionItems.size());
-        wsMessageSender.send(session, new ServerEvent(
-                WsChannel.INSTRUCTION_LIST.getValue(),
-                WsEvent.INSTRUCTION_LIST.getValue(),
-                Map.of("payload", gson.toJson(response))
-        ));
+        sendInstructionEvents(session, instructionItems);
+    }
+
+    /** STT 单路（无 VL 等待）的兼容入口，测试或旧调用方可直接用。 */
+    public void handleSttFinal(WebSocketSession session, String agentId, String sttFinalText) {
+        handleSyncedUserTurn(session, agentId, sttFinalText, "");
+    }
+
+    /**
+     * LLM 用户消息：有 VL 时在 STT 后附加 {@code [视觉]} 段；历史库仍只存纯 STT。
+     */
+    private static String buildLlmUserPayload(String stt, String vl) {
+        String v = vl == null ? "" : vl.trim();
+        String s = stt == null ? "" : stt.trim();
+        if (v.isEmpty()) {
+            return s;
+        }
+        if (s.isEmpty()) {
+            return "[视觉]\n" + v;
+        }
+        return s + "\n[视觉]\n" + v;
     }
 
     public void handleInstructionResult(WebSocketSession session, InstructionResultRequest request) {
@@ -191,9 +210,9 @@ public class WsConversationService {
     }
 
     /**
-     * 构建 instruction_list 混合编排：
-     * - 优先按 MixLLMResult 顺序生成 [TTS, MCP, TTS, ...]；
-     * - 解析失败时回退为纯 TTS 列表。
+     * 构建事件流（tts_event/mcp_event）：
+     * - 优先按 MixLLMResult 顺序分配 instructionTiming（结果项序号即阶段号）；
+     * - 解析失败时回退为 timing=0 的纯 TTS 事件。
      */
     private List<Object> buildInstructions(String agentId, String llmRaw, String chatText) {
         List<MixLLMResult> parsed = parseMixResults(llmRaw);
@@ -201,15 +220,20 @@ public class WsConversationService {
         List<Object> result = new ArrayList<>();
 
         if (!parsed.isEmpty()) {
+            int instructionTiming = 0;
             for (MixLLMResult item : parsed) {
                 if (item == null) {
                     continue;
                 }
-                appendTtsItems(result, indexGen, agentId, item.chatSentence);
-                appendMcpItems(result, indexGen, item.eventList);
+                int timing = item.instructionTiming == null ? instructionTiming : item.instructionTiming;
+                appendTtsItems(result, indexGen, agentId, item.chatSentence, timing);
+                appendMcpItems(result, indexGen, item.eventList, timing);
+                instructionTiming++;
             }
+        } else if (appendFromTimingBlocks(result, indexGen, agentId, llmRaw)) {
+            // 已按分组 JSON（含 instructionTiming）完成解析
         } else {
-            appendTtsItems(result, indexGen, agentId, chatText);
+            appendTtsItems(result, indexGen, agentId, chatText, 0);
         }
 
         if (!result.isEmpty() && result.get(result.size() - 1) instanceof InstructionTtsItem last) {
@@ -230,7 +254,7 @@ public class WsConversationService {
         }
     }
 
-    private void appendTtsItems(List<Object> target, AtomicInteger indexGen, String agentId, String text) {
+    private void appendTtsItems(List<Object> target, AtomicInteger indexGen, String agentId, String text, int instructionTiming) {
         if (text == null || text.isBlank()) {
             return;
         }
@@ -238,16 +262,16 @@ public class WsConversationService {
         for (String fragment : fragments) {
             List<String> audioChunks = synthesizeAudioChunks(fragment);
             if (audioChunks.isEmpty()) {
-                target.add(buildTtsItem(indexGen.getAndIncrement(), agentId, fragment, ""));
+                target.add(buildTtsItem(indexGen.getAndIncrement(), instructionTiming, agentId, fragment, ""));
                 continue;
             }
             for (String chunk : audioChunks) {
-                target.add(buildTtsItem(indexGen.getAndIncrement(), agentId, fragment, chunk));
+                target.add(buildTtsItem(indexGen.getAndIncrement(), instructionTiming, agentId, fragment, chunk));
             }
         }
     }
 
-    private void appendMcpItems(List<Object> target, AtomicInteger indexGen, List<MixLLMEvent> events) {
+    private void appendMcpItems(List<Object> target, AtomicInteger indexGen, List<MixLLMEvent> events, int instructionTiming) {
         if (events == null || events.isEmpty()) {
             return;
         }
@@ -258,7 +282,7 @@ public class WsConversationService {
             InstructionMcpItem item = new InstructionMcpItem();
             item.setType(Instruction.MCP);
             item.setIndex(indexGen.getAndIncrement());
-            item.setRequestId(UUID.randomUUID().toString());
+            item.setInstructionTiming(instructionTiming);
             item.setCode(200);
             item.setMessage("PENDING");
             item.setTarget("android_local");
@@ -270,10 +294,110 @@ public class WsConversationService {
         }
     }
 
-    private InstructionTtsItem buildTtsItem(int index, String agentId, String text, String base64AudioStream) {
+    /**
+     * 兼容 LLM 直接返回的分组结构：
+     * [
+     *   [{"text":"...","instructionTiming":0}],
+     *   [{"command":"GPIO_SET","target":"rk","params":{"k":"v"},"instructionTiming":1}]
+     * ]
+     */
+    private boolean appendFromTimingBlocks(List<Object> target, AtomicInteger indexGen, String agentId, String llmRaw) {
+        if (llmRaw == null || llmRaw.isBlank()) {
+            return false;
+        }
+        try {
+            JsonElement root = gson.fromJson(llmRaw, JsonElement.class);
+            if (root == null || !root.isJsonArray()) {
+                return false;
+            }
+            JsonArray blocks = root.getAsJsonArray();
+            boolean appended = false;
+            for (int blockIdx = 0; blockIdx < blocks.size(); blockIdx++) {
+                JsonElement blockEl = blocks.get(blockIdx);
+                if (blockEl == null || !blockEl.isJsonArray()) {
+                    continue;
+                }
+                JsonArray block = blockEl.getAsJsonArray();
+                for (JsonElement itemEl : block) {
+                    if (itemEl == null || !itemEl.isJsonObject()) {
+                        continue;
+                    }
+                    JsonObject item = itemEl.getAsJsonObject();
+                    int timing = readInt(item, "instructionTiming", blockIdx);
+
+                    String text = readString(item, "text");
+                    if (!text.isBlank()) {
+                        appendTtsItems(target, indexGen, agentId, text, timing);
+                        appended = true;
+                    }
+
+                    String command = readString(item, "command");
+                    if (!command.isBlank()) {
+                        InstructionMcpItem mcp = new InstructionMcpItem();
+                        mcp.setType(Instruction.MCP);
+                        mcp.setIndex(indexGen.getAndIncrement());
+                        mcp.setInstructionTiming(timing);
+                        mcp.setCode(200);
+                        mcp.setMessage("PENDING");
+                        String targetRaw = readString(item, "target");
+                        mcp.setTarget("rk".equalsIgnoreCase(targetRaw) ? "rk_device" : "android_local");
+                        mcp.setDeviceId(readString(item, "deviceId"));
+                        mcp.setCommandId(UUID.randomUUID().toString());
+                        mcp.setCommand(command);
+                        mcp.setParams(readStringMap(item, "params"));
+                        target.add(mcp);
+                        appended = true;
+                    }
+                }
+            }
+            return appended;
+        } catch (Exception ignore) {
+            return false;
+        }
+    }
+
+    private static String readString(JsonObject obj, String key) {
+        if (obj == null || !obj.has(key) || obj.get(key).isJsonNull()) {
+            return "";
+        }
+        try {
+            return obj.get(key).getAsString().trim();
+        } catch (Exception ignore) {
+            return "";
+        }
+    }
+
+    private static int readInt(JsonObject obj, String key, int defaultVal) {
+        if (obj == null || !obj.has(key) || obj.get(key).isJsonNull()) {
+            return defaultVal;
+        }
+        try {
+            return obj.get(key).getAsInt();
+        } catch (Exception ignore) {
+            return defaultVal;
+        }
+    }
+
+    private Map<String, String> readStringMap(JsonObject obj, String key) {
+        if (obj == null || !obj.has(key) || obj.get(key).isJsonNull() || !obj.get(key).isJsonObject()) {
+            return Collections.emptyMap();
+        }
+        Map<String, String> result = new HashMap<>();
+        JsonObject raw = obj.getAsJsonObject(key);
+        for (Map.Entry<String, JsonElement> e : raw.entrySet()) {
+            if (e.getValue() == null || e.getValue().isJsonNull()) {
+                continue;
+            }
+            result.put(e.getKey(), e.getValue().getAsString());
+        }
+        return result;
+    }
+
+    private InstructionTtsItem buildTtsItem(int index, int instructionTiming, String agentId, String text, String base64AudioStream) {
         InstructionTtsItem item = new InstructionTtsItem();
         item.setType(Instruction.TTS);
         item.setIndex(index);
+        item.setInstructionTiming(instructionTiming);
         item.setAgentId(agentId);
         item.setText(text);
         item.setSeq(String.valueOf(index));
@@ -281,6 +405,73 @@ public class WsConversationService {
         item.setTimestamp(System.currentTimeMillis());
         item.setBase64AudioStream(base64AudioStream);
         return item;
+    }
+
+    /** 统一回填 requestId 到每条事件。 */
+    private void bindRequestId(List<Object> items, String requestId) {
+        for (Object item : items) {
+            if (item instanceof InstructionTtsItem tts) {
+                tts.setRequestId(requestId);
+            } else if (item instanceof InstructionMcpItem mcp) {
+                mcp.setRequestId(requestId);
+            }
+        }
+    }
+
+    /** 逐条下发 tts_event / mcp_event，客户端按 instructionTiming+index 排序执行。 */
+    private void sendInstructionEvents(WebSocketSession session, List<Object> instructionItems) {
+        for (Object item : instructionItems) {
+            if (item instanceof InstructionTtsItem tts) {
+                wsMessageSender.send(session, new ServerEvent(
+                        WsChannel.TTS.getValue(),
+                        WsEvent.TTS_EVENT.getValue(),
+                        toFlatTtsEventData(tts)
+                ));
+            } else if (item instanceof InstructionMcpItem mcp) {
+                wsMessageSender.send(session, new ServerEvent(
+                        WsChannel.CONTROL.getValue(),
+                        WsEvent.MCP_EVENT.getValue(),
+                        toFlatMcpEventData(mcp)
+                ));
+            }
+        }
+    }
+
+    /** tts_event 扁平 data（去掉 payload 包装）。 */
+    private Map<String, String> toFlatTtsEventData(InstructionTtsItem tts) {
+        Map<String, String> data = new HashMap<>();
+        data.put("requestId", nullToEmpty(tts.getRequestId()));
+        data.put("agentId", nullToEmpty(tts.getAgentId()));
+        data.put("type", tts.getType() == null ? "" : tts.getType().getValue());
+        data.put("index", String.valueOf(tts.getIndex()));
+        data.put("instructionTiming", String.valueOf(tts.getInstructionTiming()));
+        data.put("text", nullToEmpty(tts.getText()));
+        data.put("seq", nullToEmpty(tts.getSeq()));
+        data.put("isLast", String.valueOf(Boolean.TRUE.equals(tts.getIsLast())));
+        data.put("timestamp", String.valueOf(tts.getTimestamp()));
+        data.put("base64AudioStream", nullToEmpty(tts.getBase64AudioStream()));
+        return data;
+    }
+
+    /** mcp_event 扁平 data（去掉 payload 包装）。 */
+    private Map<String, String> toFlatMcpEventData(InstructionMcpItem mcp) {
+        Map<String, String> data = new HashMap<>();
+        data.put("requestId", nullToEmpty(mcp.getRequestId()));
+        data.put("type", mcp.getType() == null ? "" : mcp.getType().getValue());
+        data.put("index", String.valueOf(mcp.getIndex()));
+        data.put("instructionTiming", String.valueOf(mcp.getInstructionTiming()));
+        data.put("target", nullToEmpty(mcp.getTarget()));
+        data.put("deviceId", nullToEmpty(mcp.getDeviceId()));
+        data.put("commandId", nullToEmpty(mcp.getCommandId()));
+        data.put("command", nullToEmpty(mcp.getCommand()));
+        data.put("params", gson.toJson(mcp.getParams() == null ? Collections.emptyMap() : mcp.getParams()));
+        data.put("code", String.valueOf(mcp.getCode()));
+        data.put("message", nullToEmpty(mcp.getMessage()));
+        return data;
+    }
+
+    private static String nullToEmpty(String s) {
+        return s == null ? "" : s;
     }
 
     /**

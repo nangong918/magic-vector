@@ -43,6 +43,14 @@ public class WsInstructionTrackerManager {
         trackers.remove(requestId);
     }
 
+    /** 连接断开时移除该会话上未完成的 instruction_list 批次，避免内存泄漏。 */
+    public void removeAllForWebSocketSession(WebSocketSession session) {
+        if (session == null) {
+            return;
+        }
+        trackers.entrySet().removeIf(e -> session.equals(e.getValue().getSession()));
+    }
+
     @Data
     @AllArgsConstructor
     public static class Tracker {

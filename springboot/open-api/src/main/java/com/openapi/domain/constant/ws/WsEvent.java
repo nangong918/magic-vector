@@ -91,6 +91,8 @@ public enum WsEvent {
      * 载荷见 {@link com.openapi.domain.dto.ws.response.TtsDataResponse}（含字幕字段 {@link com.openapi.domain.dto.ws.response.TtsDataResponse#getText()}）。
      */
     TTS_DATA("tts_data", WsChannel.TTS),
+    /** 事件流 TTS 分片（带 instructionTiming/index）。 */
+    TTS_EVENT("tts_event", WsChannel.TTS),
     /**
      * @see com.openapi.domain.dto.ws.response.TtsEndResponse
      */
@@ -138,6 +140,8 @@ public enum WsEvent {
      * @see com.openapi.domain.dto.ws.response.ControlResponse
      */
     CONTROL_RESPONSE("control_response", WsChannel.CONTROL),
+    /** 事件流 MCP 事件（带 instructionTiming/index）。 */
+    MCP_EVENT("mcp_event", WsChannel.CONTROL),
 
     /// 指令批量编排
     /**
@@ -171,7 +175,9 @@ public enum WsEvent {
     /**
      * @see com.openapi.domain.dto.ws.response.SystemMessageResponse
      */
-    SYSTEM_MESSAGE("system_message", WsChannel.SYSTEM);
+    SYSTEM_MESSAGE("system_message", WsChannel.SYSTEM),
+    /** 事件流单条执行回执。 */
+    INSTRUCTION_EVENT_RESULT("instruction_event_result", WsChannel.SYSTEM);
 
     @Getter
     private final String value;

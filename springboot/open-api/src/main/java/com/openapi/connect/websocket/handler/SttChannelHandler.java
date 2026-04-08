@@ -1,6 +1,7 @@
 package com.openapi.connect.websocket.handler;
 
 import com.google.gson.Gson;
+import com.openapi.connect.websocket.manager.WsAgentSyncManager;
 import com.openapi.connect.websocket.manager.WsMessageSenderManager;
 import com.openapi.connect.websocket.service.WsConversationService;
 import com.openapi.domain.constant.ws.WsChannel;
@@ -20,6 +21,7 @@ import io.reactivex.disposables.Disposable;
 import io.reactivex.processors.PublishProcessor;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.jetbrains.annotations.NotNull;
 import org.springframework.web.socket.WebSocketSession;
 
 import java.nio.ByteBuffer;
@@ -34,8 +36,10 @@ public class SttChannelHandler implements ChannelHandler {
 
     /** STT 模型服务：消费音频流并回调识别结果。 */
     private final STTServiceService sttServiceService;
-    /** 语音会话编排器：STT 完成后进入 LLM / instruction_list 链路。 */
+    /** 语音会话编排器：STT+VL 同步后进入 LLM / tts_event+mcp_event 链路。 */
     private final WsConversationService wsConversationService;
+    /** 单轮 STT/VL 同步状态（可选等待 VL 管道）。 */
+    private final WsAgentSyncManager wsAgentSyncManager;
     /** 统一 WS 下行发送器（带出站队列）。 */
     private final WsMessageSenderManager wsMessageSender;
     /** DTO <-> Map 序列化工具。 */
@@ -68,6 +72,8 @@ public class SttChannelHandler implements ChannelHandler {
         if (request == null || request.getAgentId() == null || request.getAgentId().isBlank()) {
             return;
         }
+        // stt_start 可显式指定 needVl；未传时保持兼容（仍可通过 vl_start 声明）。
+        wsAgentSyncManager.onSttStart(session.getId(), request.getAgentId(), request.getNeedVl());
         String key = buildKey(session.getId(), request.getAgentId());
         // 重复 start 时先清理旧上下文，避免同一 agent 出现双流并发。
         SttContext old = sttContexts.remove(key);
@@ -110,7 +116,12 @@ public class SttChannelHandler implements ChannelHandler {
 
             @Override
             public void onRecognitionComplete() {
-                wsConversationService.handleSttFinal(session, context.agentId, context.finalText.toString());
+                /// 完成
+                // 同步 VL 状态
+                WsAgentSyncManager.UtteranceSnapshot snap = wsAgentSyncManager.finishSttAndSyncVl(
+                        session.getId(), context.agentId, context.finalText.toString());
+                // 统一处理
+                wsConversationService.handleSyncedUserTurn(session, context.agentId, snap.getSttText(), snap.getVlText());
                 cleanup(session.getId(), context.agentId);
             }
 
@@ -140,6 +151,7 @@ public class SttChannelHandler implements ChannelHandler {
         };
 
         StreamCallErrorCallback errorCallback = new StreamCallErrorCallback() {
+            @NotNull
             @Override
             public int[] addCountAndCheckIsOverLimit() {
                 int current = context.retry.incrementAndGet();
@@ -203,13 +215,26 @@ public class SttChannelHandler implements ChannelHandler {
         if (context == null) {
             return;
         }
-        // 明确结束输入流，触发 STT onRecognitionComplete 回调。
+        // 这里只做“正常收尾”信号，真正释放由 onRecognitionComplete/onSTTError 统一 cleanup，
+        // 避免过早 remove 导致最终识别文本丢失。
         context.processor.onComplete();
     }
 
     /** 客户端主动上报 stt_error 的兜底日志入口。 */
     private void handleSttError(WebSocketSession session, ClientEvent event) {
         log.warn("Receive stt_error from client, sessionId={}, payload={}", session.getId(), event.getData());
+        // 客户端明确上报错误时，当前轮次不再继续，立即释放 STT 上下文避免滞留。
+        String agentId = extractAgentId(event);
+        if (agentId != null && !agentId.isBlank()) {
+            cleanup(session.getId(), agentId);
+        }
+    }
+
+    private String extractAgentId(ClientEvent event) {
+        if (event == null || event.getData() == null) {
+            return null;
+        }
+        return event.getData().get("agentId");
     }
 
     /** 推送 STT 实时文本碎片（stt_text_data）。 */

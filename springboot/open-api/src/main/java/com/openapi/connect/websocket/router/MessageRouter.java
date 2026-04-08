@@ -12,6 +12,7 @@ import com.openapi.connect.websocket.handler.SttChannelHandler;
 import com.openapi.connect.websocket.handler.SystemChannelHandler;
 import com.openapi.connect.websocket.handler.VlChannelHandler;
 import com.openapi.connect.websocket.manager.ConnectionManager;
+import com.openapi.connect.websocket.manager.WsAgentSyncManager;
 import com.openapi.connect.websocket.manager.WsMessageQueueManager;
 import com.openapi.connect.websocket.manager.WsMessageSenderManager;
 import com.openapi.connect.websocket.service.WsConversationService;
@@ -46,6 +47,7 @@ public class MessageRouter {
     private final AgentHttpConverter agentHttpConverter;
     private final STTServiceService sttServiceService;
     private final WsConversationService wsConversationService;
+    private final WsAgentSyncManager wsAgentSyncManager;
     private final Gson gson;
 
     // 线程池（从 ThreadPoolConfig 获取）
@@ -88,15 +90,15 @@ public class MessageRouter {
                 agentService, agentHttpConverter, connectionManager, gson, wsMessageSender
         ));
         registerHandler(WsChannel.STT.getValue(), new SttChannelHandler(
-                sttServiceService, wsConversationService, wsMessageSender, gson
+                sttServiceService, wsConversationService, wsAgentSyncManager, wsMessageSender, gson
         ));
-        registerHandler(WsChannel.VL.getValue(), new VlChannelHandler());
+        registerHandler(WsChannel.VL.getValue(), new VlChannelHandler(wsAgentSyncManager, gson));
         registerHandler(WsChannel.CONTROL.getValue(), new ControlChannelHandler());
         registerHandler(WsChannel.INSTRUCTION_LIST.getValue(), new InstructionListChannelHandler(
                 wsConversationService, gson
         ));
         registerHandler(WsChannel.STATUS.getValue(), new StatusChannelHandler());
-        registerHandler(WsChannel.SYSTEM.getValue(), new SystemChannelHandler());
+        registerHandler(WsChannel.SYSTEM.getValue(), new SystemChannelHandler(wsConversationService, gson));
         // 注意：没有 WsChannel.PING，因为 ping/pong 是 connection 通道的 event
     }
 

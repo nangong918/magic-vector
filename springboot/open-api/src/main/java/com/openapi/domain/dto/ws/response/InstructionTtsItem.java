@@ -14,5 +14,11 @@ public class InstructionTtsItem extends TtsDataResponse {
 
     private Instruction type = Instruction.TTS;
 
+    /** 本轮事件流批次id。 */
+    private String requestId;
+
     private Integer index;
+
+    /** 客户端排序阶段号：同 timing 可并行，跨 timing 串行。 */
+    private Integer instructionTiming;
 }
