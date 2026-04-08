@@ -7,20 +7,20 @@ import com.openapi.connect.websocket.handler.ChannelHandler;
 import com.openapi.connect.websocket.handler.ControlChannelHandler;
 import com.openapi.connect.websocket.handler.ConnectChannelHandler;
 import com.openapi.connect.websocket.handler.InstructionListChannelHandler;
-import com.openapi.connect.websocket.handler.LlmChannelHandler;
 import com.openapi.connect.websocket.handler.StatusChannelHandler;
 import com.openapi.connect.websocket.handler.SttChannelHandler;
 import com.openapi.connect.websocket.handler.SystemChannelHandler;
-import com.openapi.connect.websocket.handler.TtsChannelHandler;
 import com.openapi.connect.websocket.handler.VlChannelHandler;
 import com.openapi.connect.websocket.manager.ConnectionManager;
 import com.openapi.connect.websocket.manager.WsMessageQueueManager;
 import com.openapi.connect.websocket.manager.WsMessageSenderManager;
+import com.openapi.connect.websocket.service.WsConversationService;
 import com.openapi.converter.AgentHttpConverter;
 import com.openapi.domain.constant.ws.WsChannel;
 import com.openapi.domain.dto.ws.base.ClientEvent;
 import com.openapi.domain.dto.ws.base.ServerEvent;
 import com.openapi.service.AgentService;
+import com.openapi.service.model.STTServiceService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -28,6 +28,7 @@ import org.springframework.web.socket.WebSocketSession;
 
 import javax.annotation.PostConstruct;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 
@@ -43,6 +44,8 @@ public class MessageRouter {
     private final ThreadPoolConfig threadPoolConfig;
     private final AgentService agentService;
     private final AgentHttpConverter agentHttpConverter;
+    private final STTServiceService sttServiceService;
+    private final WsConversationService wsConversationService;
     private final Gson gson;
 
     // 线程池（从 ThreadPoolConfig 获取）
@@ -53,6 +56,20 @@ public class MessageRouter {
     private ExecutorService llmExecutor;
     private ExecutorService ttsExecutor;
     private ExecutorService vlExecutor;
+
+    /**
+     * 客户端允许上行的通道；LLM/TTS 只做服务端下行推送，禁止客户端直发。
+     */
+    private static final Set<WsChannel> INBOUND_SUPPORTED_CHANNELS = Set.of(
+            WsChannel.CONNECTION,
+            WsChannel.AGENT,
+            WsChannel.STT,
+            WsChannel.VL,
+            WsChannel.CONTROL,
+            WsChannel.INSTRUCTION_LIST,
+            WsChannel.STATUS,
+            WsChannel.SYSTEM
+    );
 
     @PostConstruct
     public void init() {
@@ -70,12 +87,14 @@ public class MessageRouter {
         registerHandler(WsChannel.AGENT.getValue(), new AgentChannelHandler(
                 agentService, agentHttpConverter, connectionManager, gson, wsMessageSender
         ));
-        registerHandler(WsChannel.STT.getValue(), new SttChannelHandler());
-        registerHandler(WsChannel.LLM.getValue(), new LlmChannelHandler());
-        registerHandler(WsChannel.TTS.getValue(), new TtsChannelHandler());
+        registerHandler(WsChannel.STT.getValue(), new SttChannelHandler(
+                sttServiceService, wsConversationService, wsMessageSender, gson
+        ));
         registerHandler(WsChannel.VL.getValue(), new VlChannelHandler());
         registerHandler(WsChannel.CONTROL.getValue(), new ControlChannelHandler());
-        registerHandler(WsChannel.INSTRUCTION_LIST.getValue(), new InstructionListChannelHandler());
+        registerHandler(WsChannel.INSTRUCTION_LIST.getValue(), new InstructionListChannelHandler(
+                wsConversationService, gson
+        ));
         registerHandler(WsChannel.STATUS.getValue(), new StatusChannelHandler());
         registerHandler(WsChannel.SYSTEM.getValue(), new SystemChannelHandler());
         // 注意：没有 WsChannel.PING，因为 ping/pong 是 connection 通道的 event
@@ -91,6 +110,11 @@ public class MessageRouter {
             return;
         }
         String channel = event.getChannel();
+        WsChannel wsChannel = WsChannel.fromValue(channel);
+        if (!INBOUND_SUPPORTED_CHANNELS.contains(wsChannel)) {
+            sendError(session, "UNSUPPORTED_DIRECTION", "Client inbound not allowed for channel: " + channel);
+            return;
+        }
         ChannelHandler handler = handlers.get(channel);
         if (handler == null) {
             log.warn("No handler for channel: {}", channel);
@@ -101,13 +125,15 @@ public class MessageRouter {
             sendError(session, "QUEUE_FULL", "Inbound queue is full");
             return;
         }
+        // 按通道选择线程池，避免 STT/控制/普通业务互相阻塞。
         ExecutorService executor = selectExecutor(channel);
         executor.submit(() -> drainInbound(session, handler, channel));
     }
 
     private void drainInbound(WebSocketSession session, ChannelHandler handler, String channel) {
         ClientEvent queuedEvent;
-        while ((queuedEvent = wsMessageQueueManager.pollInbound(session)) != null) {
+        // 同一 session + channel 顺序消费，避免跨 channel 错 handler。
+        while ((queuedEvent = wsMessageQueueManager.pollInbound(session, channel)) != null) {
             try {
                 handler.handle(session, queuedEvent);
             } catch (Exception e) {

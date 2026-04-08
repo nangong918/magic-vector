@@ -40,6 +40,15 @@ public class ConnectionManager {
         return deviceToUser.get(deviceId);
     }
 
+    public String getAndroidUserIdBySession(WebSocketSession session) {
+        for (var entry : androidSessions.entrySet()) {
+            if (entry.getValue().equals(session)) {
+                return entry.getKey();
+            }
+        }
+        return null;
+    }
+
     public void unregisterBySession(WebSocketSession session) {
         androidSessions.entrySet().removeIf(entry -> entry.getValue().equals(session));
         rkSessions.entrySet().removeIf(entry -> entry.getValue().equals(session));
