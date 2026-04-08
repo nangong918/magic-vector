@@ -387,6 +387,31 @@ stateDiagram-v2
 
 ### Instruction 事件流
 
+
+提示词会要求Agent回复是一个list，里面包含MCP和TTS的指令。
+```json
+[
+  {
+    "chatSentence": "你好，我先执行第一阶段。",
+    "instructionTiming": 0
+  },
+  {
+    "chatSentence": "向左转。",
+    "instructionTiming": 1,
+    "eventList": [
+      {
+        "eventType": "motion",
+        "event": {
+          "type": "左转",
+          "value": "90"
+        }
+      }
+    ]
+  }
+]
+```
+
+
 服务端直接碎片化下发：
 - `tts_event`（`tts` 通道）
 - `mcp_event`（`control` 通道）
@@ -424,7 +449,7 @@ stateDiagram-v2
     "type": "mcp",
     "index": 1,
     "instructionTiming": 0,
-    "target": "rk_device",
+    "target": "rk",
     "deviceId": "rk-001",
     "commandId": "cmd_gpio_001",
     "command": "GPIO_SET",

@@ -15,17 +15,21 @@ public class MixLLMResult {
     public String chatSentence;
     // eventList
     public List<MixLLMEvent> eventList;
+    // 客户端阶段排序：同 timing 并行，跨 timing 串行
+    public Integer instructionTiming;
 
     @JsonIgnore
     public static String getInvocationRules() {
         return """
-                响应结构是JSON格式，需要根据句子进行拆分为JSONList，如果该句没有事件就只写chatSentence，
-                如果该句话包括多个事件就需要将事件添加到eventList中。
-                生成事件和调用tool要注意用户设定的权限。
+                响应结构是 JSONList, 且必须按「MCP 事件」做模块切分：
+                1) 含 MCP 的句子: 该句单独一个模块(chatSentence + eventList)。
+                2) 不含 MCP 的句子：连续无 MCP 的句子合并为一个模块，直到下一个 MCP 前结束。
+                3) 每个模块都要有 instructionTiming, 必须从 0 递增。
                 [
-                    {"chatSentence":"xxx。"},
+                    {"chatSentence":"xxx。","instructionTiming":0},
                     {
                         "chatSentence":"xxx。",
+                        "instructionTiming":1,
                         "eventList":[
                             {
                                 "eventType":"motion",
