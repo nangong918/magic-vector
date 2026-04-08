@@ -1,0 +1,1 @@
+CREATE DATABASE magic_vector;

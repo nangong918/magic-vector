@@ -1,0 +1,284 @@
+**Cursor**
+====
+
+
+### 设计模式检查
+
+我的这个项目你看一下大概是什么设计模式？
+MVC？MVP，MVVM？MVI？
+现代化的设计模式有MVVM和MVI吧？
+然后我直到Jetpack Compose的出现让MVVM设计模式变成了如呼吸一样，
+本身就是mvvm视图绑定，
+那么你看看我这个项目如果要往基于jetpack compose的mvi设计模式改造应该怎么改？
+
+
+
+
+
+### 设计模式改造
+
+现在我用的设计模式基本上的mvvm设计模式，
+现在我想要改为基于jetpack compose的mvi设计模式，
+你可以先了解一下mvi设计模式的准则是什么。
+我的初步理解是意图驱动，
+MVI vs MVVM对比
+
+| 特性         | MVVM                  | MVI                      |
+| ------------ | --------------------- | ------------------------ |
+| 数据流       | 双向                  | 单向（单向数据流）|
+| 状态管理     | 分散多个LiveData      | 单一State                |
+| Compose适配  | 需要手动适配          | 天生适配                 |
+
+改为MVI
+
+- 单一数据源 （Single Source of Truth）
+- 单向数据流 （Unidirectional Data Flow）
+- 不可变状态 （Immutable State）
+- 意图驱动 （Intent-Driven）
+好像要定义什么用户意图，定义UI状态，定义一次性副作用。
+viewmodel的livedata改为：状态流，副作用流
+还要有意图处理
+比方说：
+```kotlin
+// ChatIntent.kt - 定义用户意图
+sealed class ChatIntent {
+    data class SendMessage(val text: String) : ChatIntent()
+    data class SelectImage(val uri: Uri) : ChatIntent()
+    object StartRecording : ChatIntent()
+    object StopRecording : ChatIntent()
+    object StartCall : ChatIntent()
+    object EndCall : ChatIntent()
+    data class LoadHistory(val agentId: String) : ChatIntent()
+}
+
+// ChatState.kt - 定义UI状态
+data class ChatState(
+    val isLoading: Boolean = false,
+    val messages: List<ChatMessage> = emptyList(),
+    val inputText: String = "",
+    val agentName: String = "",
+    val agentAvatar: String = "",
+    val chatState: RealtimeChatState = RealtimeChatState.NotInitialized,
+    val isRecording: Boolean = false,
+    val isInCall: Boolean = false,
+    val errorMessage: String? = null
+)
+
+// ChatEffect.kt - 定义一次性副作用
+sealed class ChatEffect {
+    data class ShowToast(val message: String) : ChatEffect()
+    data class NavigateTo(val destination: String) : ChatEffect()
+    object FinishActivity : ChatEffect()
+}
+```
+
+#### 2. 创建MVI ViewModel
+
+
+````kotlin
+class ChatMviViewModel(
+    private val repository: ChatRepository
+) : ViewModel() {
+
+    // 状态流
+    private val _uiState = MutableStateFlow(ChatState())
+    val uiState: StateFlow<ChatState> = _uiState.asStateFlow()
+
+    // 副作用流
+    private val _effect = Channel<ChatEffect>()
+    val effect: Flow<ChatEffect> = _effect.receiveAsFlow()
+
+    // 处理意图
+    fun processIntent(intent: ChatIntent) {
+        when (intent) {
+            is ChatIntent.SendMessage -> handleSendMessage(intent.text)
+            is ChatIntent.SelectImage -> handleSelectImage(intent.uri)
+            is ChatIntent.StartRecording -> handleStartRecording()
+            is ChatIntent.StopRecording -> handleStopRecording()
+            is ChatIntent.StartCall -> handleStartCall()
+            is ChatIntent.EndCall -> handleEndCall()
+            is ChatIntent.LoadHistory -> handleLoadHistory(intent.agentId)
+        }
+    }
+
+    private fun handleSendMessage(text: String) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true) }
+            try {
+                repository.sendMessage(text)
+                _uiState.update { it.copy(isLoading = false, inputText = "") }
+            } catch (e: Exception) {
+                _uiState.update {
+                    it.copy(
+                        isLoading = false,
+                        errorMessage = e.message
+                    )
+                }
+                _effect.send(ChatEffect.ShowToast("发送失败"))
+            }
+        }
+    }
+
+    // 其他处理函数...
+}
+````
+我现在不需要你全部都修改，你就按照当前已有的MainActivity进行MVI + Compose化改造
+先改一版我看看效果。
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#### 
+
+
+
+
+
+### 修改MainActivity
+
+我运行了你的修改，确实运行起来了，但是你这不是把我原先的UI给改没了吗？
+我现在需要你能用compose展示我原先的UI，如果你觉得我的MessageListFragment和MineFragment无法适配MainActivity的
+MVI + Compose化你就应该把他们也改了。当然如果能够适配更好，能适配你就不用改。
+现在用MVI + Compose还原我之前的UI（如果这俩Fragment能直接适配就不改这两个Fragment）
+
+### 放弃使用fragment
+
+是我理解错了不好意思，我才查了资料，好像有了Compose就可以不用Fragment了，
+那你看看我现在怎么完成把我的页面用Compose实现我之前的功能，
+我之前是用AndroidX + Navigation实现底部的导航栏 + 两个页面的，现在如果不需要fragment，
+用compose怎么直接实现？你参考我MessageListFragment和MineFragment和我原先MainActivity的逻辑实现
+
+
+
+### 组合函数Fragment
+
+
+你理解错我的意思了，我都删掉了，我跟你说，
+现在我在把项目从MVVM设计模式的AndroidX改为MVI设计模式的Compose，
+我已经了一部分MainActivity，但是它的Navigation是虚假的，现在需要改为真实的。
+第一个原先是MessageListFragment，
+把这个：D:\code\vector\app\android\app\src\main\java\com\magicvector\fragment\MessageListFragment.kt
+改为MessageListPage，里面是compose，还要有预览函数。
+对了你注意它的xml，MessageListPage原先使用的是RecyclerView，现在需要使用Compose的View。
+然后关于自定义View，任何本次修改涉及到的自定义View全都都改为Compose的View，而且要写预览函数。
+原先自定义view在哪就写在哪个文件夹下如果命名重复就前缀加Compose。
+MessageListPage实现之后也需要写预览函数。
+另一个是MineFragment：D:\code\vector\app\android\app\src\main\java\com\magicvector\fragment\MineFragment.kt
+这个很简单，你看xml里面就一个按钮，你随便改改，写个预览函数就行。
+然后最重要的是，把这两个写好的交给MainActivity去调用。
+
+
+
+
+### 组合函数Fragment2
+现在我在把项目从MVVM设计模式的AndroidX改为MVI设计模式的Compose，
+我已经了一部分MainActivity，但是MessageList还没改完。因为现在用来Compose，所以要取消使用Fragment。
+现在MessageListFragment还是一个AndroidX的写法，现在你要参考我如何把MineFragment改为MinePage的方式实现
+MessageListPage，然后向我已经实现的方式一样写道MainActivity。
+对了你注意它的xml，MessageListPage原先使用的是RecyclerView，现在需要使用Compose的View。
+然后关于自定义View，任何本次修改涉及到的自定义View全都都改为Compose的View，而且要写预览函数。
+原先我是MessageContactAdapter，数据结构你可以继续用MessageContactItemAo逻辑可以参考MessageCardItemViewHolder，
+但是现在要改成Compose的list，大概就是这些任务。
+
+
+
+
+### ChatActivity
+
+我现在正在把AndroidX转为Compose，并且使用MVI设计模式，
+现在正在重构ChatActivity，Compose的View我已经画好并验证了，
+现在就是设计viewModel。
+现在是这样的，我重构都需要放在Compose前置的文件进行重构，而不能直接修改，
+就比如我在重构ChatActivity就写了一个ComposeChatActivity，
+ChatVm就是ComposeChatVm。
+然后这些逻辑你直接参考原先的MVVM设计模式修改成MVI就好，很简单。
+复杂的是你会遇到一个拨打电话的弹窗，还有一个打视频的功能。
+现在大视频功能你能实现跳转就行，因为我记得他们没有强耦合。
+但是call页面是强耦合的，所以现在你需要把call弹窗改为一个compose的组合函数，
+这个view要放在ui.view.call下面，
+然后组合到activity中进行使用，原先的业务逻辑不修改，架构逻辑也是改为mvi。
+开始重构吧。
+
+
+
+### AgentEmojiActivity
+
+现在重构整个项目中最重要的部分，AgentEmojiActivity。
+还是跟刚刚一样，补充个源代码而是创建ComposeAgentEmojiActivity和
+ComposeAgentEmojiVm，然后把原先的逻辑复制过来，然后改为MVI。
+特别要注意的是：AgentEmojiActivity中原先的眼睛是可以动的，
+我并不知道Compose怎么实现，你好好想一想然后实现。
+现在你的任务：
+创建ComposeAgentEmojiActivity和ComposeAgentEmojiVm，
+思考并设计ui的State，思考用户的intent以及副作用流effect。
+绘制最新的composeUI
+使用原先的业务逻辑，并设计mvi架构逻辑。
+最后写preview预览函数，你可以参考我刚刚补充在chat页面的预览函数。
+但是我的chatPage的预览函数好像编译不出来，你如果有空可以顺便帮我看看为什么
+编译不出来预览view（不是编译不通过）正好有利于你写新的预览函数。
+
+#### 代码审核
+
+我刚刚审核了一版本你写的代码，我要指出几点问题：
+1. 关于state，effect和intent以及核心函数要写注释。
+2. 关于权限获取，我忘了告诉吗requestPermissionSelectX是我原先封装的方法，
+ 即便是PermissionUtils也是针对于AndroidX的，我不知道现在你能不能用。反正PermissionUtil
+ 不要使用了，因为入参是FragmentActivity。如果可以你参考PermissionUtils封装一个Compose下的申请权限的Utils
+ 然后使用他。
+3.  bindRealtimeCallbacksOnce()这个函数有编译错误，检查一下
+
+
+
+我审核了一下代码，我把你遗留的FragmentActivity改为了Compose中的ComponentActivity，
+但是我没改完，因为我发现你的ComposeTestVm竟然还敢用TestVm引用？
+我不是跟你说了吗，让你业务复制，而不是让你直接用TestVm，我现在没让你删除TestVm是因为我要审核代码，而不是给你用的。
+
+
+### 网络请求失败持续转圈Bug
+
+现在有个Bug，就是网络请求超时之后，持续转圈。
+我发现主要原因就是因为MessageListScreen页面的viewModel的uiState的isLoading只是设置了但是并未使用。
+我并不想引入livedata和观察者，因为在compose开发中，ui本来就支持状态流自动更新到UI，
+没必要写effect然后去取消NetworkLoadUtils.dismissDialogSafety(context);
+我现在的想法是这样的，NetworkLoadUtils是我之前写的AndroidX的网络加载view，
+现在你帮我改为Compose的，然后最好在page中绘制在顶层，关于是否显示和旋转也就是加载中状态由uiState的isLoading来控制。
+取消使用Compose中的全部的NetworkLoadUtils，注意是Compose，AndroidX的代码就别改了。
+
+
+看下我现在的NetworkLoadingOverlay，好像不太对，我之前是使用的NetworkLoadUtils
+这是我写的一个未AndroidX提供的全局请求的旋转UI，
+但是我发现我写的NetworkLoadingOverlay只会在在当前的view上旋转，不会全屏旋转，你看看怎么用Compose实现跟我写的NetworkLoadUtils
+在业务上相似的逻辑。修改代码。
+
+
+
+

@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.minio.mapper.OssMapper">
+
+    <sql id="table">
+        oss
+    </sql>
+
+    <sql id="columns">
+        id, user_id, bucket_name, object_name, origin_file_name, content_type, file_size, idempotent_key, created_at, updated_at
+    </sql>
+
+    <insert id="insert">
+        insert into
+        <include refid="table"/>
+        (
+        <include refid="columns"/>
+        )
+        values(
+        #{id}, #{userId}, #{bucketName}, #{objectName}, #{originFileName}, #{contentType}, #{fileSize}, #{idempotentKey}, #{createdAt}, #{updatedAt}
+        )
+    </insert>
+
+    <select id="getById" resultType="com.minio.domain.Do.OssDo">
+        select
+        <include refid="columns"/>
+        from
+        <include refid="table"/>
+        where id = #{id}
+    </select>
+
+    <select id="getByIds" resultType="com.minio.domain.Do.OssDo">
+        <if test="list != null and list.size() > 0">
+            select
+            <include refid="columns"/>
+            from
+            <include refid="table"/>
+            where id in
+            <foreach item="item" index="index" collection="list" separator="," open="(" close=")">
+                #{item}
+            </foreach>
+        </if>
+    </select>
+
+    <select id="getByIdempotentKey" resultType="com.minio.domain.Do.OssDo">
+        select
+        <include refid="columns"/>
+        from
+        <include refid="table"/>
+        where idempotent_key = #{idempotentKey}
+    </select>
+
+    <select id="queryByUserIdOrderByCreatedAt" resultType="com.minio.domain.Do.OssDo">
+        select
+        <include refid="columns"/>
+        from
+        <include refid="table"/>
+        where user_id = #{userId}
+        order by created_at desc, id desc
+        limit #{offset}, #{size}
+    </select>
+
+    <select id="queryByUserIdOrderByFileSize" resultType="com.minio.domain.Do.OssDo">
+        select
+        <include refid="columns"/>
+        from
+        <include refid="table"/>
+        where user_id = #{userId}
+        order by file_size desc, id desc
+        limit #{offset}, #{size}
+    </select>
+
+    <delete id="deleteById">
+        delete from
+        <include refid="table"/>
+        where id = #{id}
+    </delete>
+</mapper>

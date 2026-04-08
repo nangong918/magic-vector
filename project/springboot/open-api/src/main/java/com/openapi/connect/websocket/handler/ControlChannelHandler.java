@@ -1,0 +1,13 @@
+package com.openapi.connect.websocket.handler;
+
+import com.openapi.domain.dto.ws.base.ClientEvent;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.web.socket.WebSocketSession;
+
+@Slf4j
+public class ControlChannelHandler implements ChannelHandler {
+    @Override
+    public void handle(WebSocketSession session, ClientEvent event) {
+        log.debug("Handle control event: sessionId={}, event={}", session.getId(), event.getEvent());
+    }
+}

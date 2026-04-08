@@ -1,0 +1,186 @@
+plugins {
+    alias(libs.plugins.android.application)
+    alias(libs.plugins.kotlin.android)
+    alias(libs.plugins.kotlin.compose)
+    kotlin("kapt")
+}
+
+android {
+    namespace = "com.magicvector"
+    compileSdk = 36
+
+    defaultConfig {
+        applicationId = "com.magicvector"
+        minSdk = 28
+        targetSdk = 36
+        versionCode = 1
+        versionName = "1.0"
+
+        setProperty("archivesBaseName", "Android-VAD-v$versionName")
+
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        externalNativeBuild {
+            cmake {
+                cppFlags += "-std=c++11"
+            }
+        }
+
+        // 新增：确保Java版本兼容（Room 2.8+ 需要Java 11+）
+        javaCompileOptions {
+            annotationProcessorOptions {
+                arguments["room.schemaLocation"] = "$projectDir/schemas"
+            }
+        }
+    }
+
+    // ========== 新增：Room Schema 配置（Kotlin + kapt 场景） ==========
+    kapt {
+        arguments {
+            // 指定 Room 架构文件（Schema）的导出目录
+            arg("room.schemaLocation", "$projectDir/schemas")
+        }
+    }
+
+    buildTypes {
+        release {
+            // 混淆
+            isMinifyEnabled = true
+            // 兼容多Dex
+            multiDexEnabled = true
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro"
+            )
+        }
+        debug {
+            isMinifyEnabled = false
+            multiDexEnabled = true
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro"
+            )
+        }
+    }
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_11
+        targetCompatibility = JavaVersion.VERSION_11
+    }
+    kotlinOptions {
+        jvmTarget = "11"
+    }
+    externalNativeBuild {
+        cmake {
+            path = file("src/main/cpp/CMakeLists.txt")
+            version = "3.22.1"
+        }
+    }
+    buildFeatures {
+        viewBinding = true
+        compose = true
+    }
+}
+
+dependencies {
+
+    implementation(fileTree(mapOf("dir" to "libs", "include" to listOf("*.jar"))))
+
+    // 基础
+    implementation(libs.androidx.core.ktx)
+    implementation(libs.androidx.appcompat)
+    implementation(libs.material)
+    implementation(libs.androidx.constraintlayout)
+    implementation(libs.androidx.compose.ui)
+    implementation(libs.androidx.activity)
+
+    // constraintlayout
+    implementation(libs.androidx.constraintlayout.compose)
+    // Compose:Coil
+    implementation(libs.coil.compose)
+
+    // 测试
+    testImplementation(libs.junit)
+    androidTestImplementation(libs.androidx.junit)
+    androidTestImplementation(libs.androidx.espresso.core)
+
+    // jetpack compose
+    implementation(libs.androidx.lifecycle.runtime.ktx)
+    implementation(libs.androidx.activity.compose)
+    implementation(platform(libs.androidx.compose.bom))
+    implementation(libs.androidx.ui)
+    implementation(libs.androidx.ui.graphics)
+    implementation(libs.androidx.ui.tooling.preview)
+    implementation(libs.androidx.material3)
+    androidTestImplementation(platform(libs.androidx.compose.bom))
+    androidTestImplementation(libs.androidx.ui.test.junit4)
+    debugImplementation(libs.androidx.ui.tooling)
+    debugImplementation(libs.androidx.ui.test.manifest)
+
+    //navigation
+    implementation(libs.androidx.navigation.fragment.ktx)
+    implementation(libs.androidx.navigation.ui.ktx)
+
+    // 圆形的 ImageView 组件
+    implementation(libs.circleimageview)
+    implementation(libs.roundedimageview)
+
+    // OkHttp3 / WebSocket支持
+    implementation(libs.okhttp)
+    // OkHttp的日志
+    implementation(libs.logging.interceptor)
+    // SSE支持
+    implementation(libs.okhttp.sse)
+
+    // Retrofit
+    implementation(libs.retrofit)
+    implementation(libs.converter.gson)
+
+    // event bus
+    implementation(libs.eventbus)
+
+    // Gson
+    implementation(libs.gson)
+
+    // multidex
+    implementation(libs.multidex)
+
+    // permission
+    implementation(libs.permissionsdispatcher)
+    kapt(libs.permissionsdispatcher.processor)
+
+    // 下拉刷新
+    implementation(libs.swiperefreshlayout)
+
+    // camera
+    val cameraxVersion = "1.4.0-beta02"
+    implementation("androidx.camera:camera-camera2:${cameraxVersion}")
+    implementation("androidx.camera:camera-lifecycle:${cameraxVersion}")
+    implementation("androidx.camera:camera-view:${cameraxVersion}")
+
+    // ========== Glide ==========
+    // Glide 核心
+    implementation(libs.glide)
+    // Glide 注解处理器（必须）
+    kapt(libs.glide.compiler)
+
+    // ========== 新增：MMKV ==========
+    implementation(libs.mmkv)
+
+    // ========== 新增：Room ==========
+    implementation(libs.androidx.room.runtime)
+    implementation(libs.androidx.room.ktx)
+    // todo 切换为ksp
+    kapt(libs.androidx.room.compiler)
+    // 可选：Room测试依赖
+    androidTestImplementation(libs.androidx.room.testing)
+
+
+    implementation(project(":view:appview"))
+
+    // vad库
+    implementation(project(":vad:silero"))
+    implementation(project(":vad:yamnet"))
+    // 不迁移到VAD文件夹中：1.文件夹过长NDK无法编译 2.文件夹变化需要配置全部的JNI名称变化和Cpp头文件路径
+    implementation(project(":webrtc"))
+    // YOLOv8
+    implementation(project(":yolov8"))
+}
