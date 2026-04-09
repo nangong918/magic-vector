@@ -96,9 +96,9 @@ flowchart TD
         RecvMsg --> ParseChannel{解析 channel 字段}
 
         ParseChannel -->|agent| AgentHandler[AgentEventHandler<br/>处理 agent_list_sync]
-        ParseChannel -->|stt| SttHandler[STTEventHandler<br/>处理 stt_start_ack, stt_text_data, stt_error（用户侧文本）]
+        ParseChannel -->|stt| SttHandler["STTEventHandler<br/>处理 stt_start_ack, stt_text_data, stt_error（用户侧文本）"]
         ParseChannel -->|llm| LlmHandler[LLMEventHandler<br/>处理 llm_start/llm_data/llm_end]
-        ParseChannel -->|tts| TtsHandler[TTSEventHandler<br/>处理 agent回复文本+音频（文本来源于TTS text）]
+        ParseChannel -->|tts| TtsHandler["TTSEventHandler<br/>处理 agent回复文本+音频（文本来源于TTS text）"]
         ParseChannel -->|instruction_list| InstListHandler[InstructionListEventHandler<br/>收到 instruction_list, 展开入队]
         ParseChannel -->|control| CtrlHandler[ControlEventHandler<br/>收到 control_command / control_response]
         ParseChannel -->|system| SysHandler[SystemEventHandler<br/>处理 error, system_message]
@@ -284,7 +284,7 @@ flowchart TD
         subgraph HTTP API
             HttpReq[HTTP请求到达] --> HttpRoute{路径路由}
             HttpRoute -->|GET /api/agents| QueryAgents[查询数据库Agent列表]
-            HttpRoute -->|GET /api/chat/history| QueryHistory[查询历史聊天记录（user=STT, agent=TTS.text）]
+            HttpRoute -->|GET /api/chat/history| QueryHistory["查询历史聊天记录（user=STT, agent=TTS.text）"]
             HttpRoute -->|POST /api/agent| ModifyAgent[创建/更新/删除Agent]
             ModifyAgent --> BroadcastAgentSync[广播agent_list_sync给所有Android]
             QueryAgents --> HttpResp[返回JSON]
