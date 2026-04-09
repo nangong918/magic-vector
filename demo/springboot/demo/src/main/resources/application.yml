@@ -1,0 +1,85 @@
+# 通用配置（所有环境共享）
+server:
+  port: 58888
+
+alikey: ${ALI_API_KEY}
+
+spring:
+  application:
+    name: demo
+  ai:
+    dashscope:
+      api-key: ${ALI_API_KEY}
+      chat:
+        options:
+          model: deepseek-v3.1 # 经过测试发现qwen-flash蠢到无法调用mcp; qwen-flash百万token1.5元，qwen-plus2元
+      embedding:
+        options:
+          model: "text-embedding-v3"
+      tts:
+        model: "qwen3-tts-flash"  # 模型名称（必填）
+        voice: "CHERRY"  # 声音名称（对应 SDK 的 voice 字段，必填）
+        language: "Chinese"  # 语言类型（对应 languageType）
+        speed: 1.0  # 语速（0.5~2.0，对应 SDK 的 speed 字段）
+        volume: 50  # 音量（0~100，默认50）
+        pitch: 1.0  # 音调（0.5~2.0，默认1.0）
+        sample-rate: 48000  # 采样率（默认48000）
+        response-format: "MP3"  # 音频格式（默认MP3）
+    openai:
+      api-key: ${ALI_API_KEY}
+      base-url: https://dashscope.aliyuncs.com/compatible-mode
+      chat:
+        options:
+          model: qwen-max
+  # 数据库
+  jpa:
+    hibernate:
+      ddl-auto: none  # 不自动创建数据库表，初始时可设置为 none
+    show-sql: true  # 显示 SQL 语句
+
+  #-------------------------database Setting-------------------------
+  # 数据源配置 - Spring Boot 3.4 标准方式
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://localhost:3306/vector_demo?serverTimezone=Asia/Shanghai&useUnicode=true&characterEncoding=utf8&useSSL=false&allowPublicKeyRetrieval=true
+    username: root
+    password: 123456
+    type: com.alibaba.druid.pool.DruidDataSource
+
+    # Druid 特定配置放在这里
+    druid:
+      initial-size: 5
+      max-active: 20
+      min-idle: 5
+      max-wait: 60000
+      time-between-eviction-runs-millis: 60000
+      min-evictable-idle-time-millis: 300000
+      validation-query: SELECT 1
+      test-while-idle: true
+      test-on-borrow: false
+      test-on-return: false
+      pool-prepared-statements: true
+      max-pool-prepared-statement-per-connection-size: 20
+      filters: stat,wall
+
+      # 过滤器配置
+      filter:
+        stat:
+          enabled: true
+          log-slow-sql: true
+          slow-sql-millis: 1000
+        wall:
+          enabled: true
+          config:
+            multi-statement-allow: true
+
+#-------------------------Mybatis-plus setting-------------------------
+
+mybatis-plus:
+  type-aliases-package: com.demo.domain.Do # ,com.minio.domain.Do # 扫描实体类
+  mapper-locations: classpath*:mybatis/*Mapper.xml, classpath*:mybatis-plus/*Mapper.xml #指定多个 Mapper XML 文件的路径
+  global-config:
+    db-config:
+      id-type: auto # 数据库主键策略配置
+  configuration:
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
