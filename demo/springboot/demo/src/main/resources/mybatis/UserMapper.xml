@@ -52,14 +52,14 @@
         where account = #{account}
     </delete>
 
-    <select id="selectById" resultType="com.demo.domain.Do.UserDo">
+    <select id="selectById" resultType="com.demo.domain.entity.UserEntity">
         select
         <include refid="columns"/>
         from
         <include refid="table"/>
         where id = #{id}
     </select>
-    <select id="selectByAccount" resultType="com.demo.domain.Do.UserDo">
+    <select id="selectByAccount" resultType="com.demo.domain.entity.UserEntity">
         select
         <include refid="columns"/>
         from

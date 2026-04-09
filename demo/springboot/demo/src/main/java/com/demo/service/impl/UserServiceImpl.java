@@ -2,7 +2,7 @@ package com.demo.service.impl;
 
 import com.demo.config.UserConfig;
 import com.demo.converter.UserConverter;
-import com.demo.domain.Do.UserDo;
+import com.demo.domain.entity.UserEntity;
 import com.demo.domain.module.user.UserModule;
 import com.demo.mapper.UserMapper;
 import com.demo.service.UserService;
@@ -37,15 +37,15 @@ public class UserServiceImpl implements UserService {
             @NotNull String name,
             @NotNull String account,
             @NotNull String password){
-        UserDo userDo = new UserDo();
-        userDo.setName(name);
-        userDo.setAccount(account);
-        userDo.setPassword(password);
+        UserEntity userEntity = new UserEntity();
+        userEntity.setName(name);
+        userEntity.setAccount(account);
+        userEntity.setPassword(password);
         if (avatar != null) {
             val files = List.of(avatar);
             BatchUploadResult result = ossService.uploadFiles(
                     files,
-                    userDo.getId(),
+                    userEntity.getId(),
                     userConfig.getBucketName()
             );
             Long ossId = Optional.ofNullable(result.getItems())
@@ -54,10 +54,10 @@ public class UserServiceImpl implements UserService {
                     .filter(UploadItemResult::isSuccess)
                     .map(UploadItemResult::getFileId)
                     .orElse(null);
-            userDo.setOssId(ossId);
+            userEntity.setOssId(ossId);
         }
-        if (userMapper.insert(userDo) > 0){
-            return userDo.getId();
+        if (userMapper.insert(userEntity) > 0){
+            return userEntity.getId();
         }
         else {
             return null;
@@ -76,20 +76,20 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public boolean checkPassword(@NotNull String account, @NotNull String password){
-        UserDo userDo = userMapper.selectByAccount(account);
-        if (userDo == null || userDo.getId() == null){
+        UserEntity userEntity = userMapper.selectByAccount(account);
+        if (userEntity == null || userEntity.getId() == null){
             return false;
         }
-        return password.equals(userDo.getPassword());
+        return password.equals(userEntity.getPassword());
     }
 
     @Override
     public boolean updatePasswordById(@NotNull Long userId, @NotNull String oldPassword, @NotNull String newPassword) {
-        UserDo userDo = userMapper.selectById(userId);
-        if (userDo == null || userDo.getId() == null) {
+        UserEntity userEntity = userMapper.selectById(userId);
+        if (userEntity == null || userEntity.getId() == null) {
             return false;
         }
-        if (!oldPassword.equals(userDo.getPassword())) {
+        if (!oldPassword.equals(userEntity.getPassword())) {
             return false;
         }
         return userMapper.updatePasswordById(userId, newPassword) > 0;
@@ -98,14 +98,14 @@ public class UserServiceImpl implements UserService {
     @Nullable
     @Override
     public UserModule getUserModuleById(@NotNull Long id) {
-        UserDo userDo = userMapper.selectById(id);
-        return userDo == null ? null : userConverter.doToModule(userDo);
+        UserEntity userEntity = userMapper.selectById(id);
+        return userEntity == null ? null : userConverter.doToModule(userEntity);
     }
 
     @Nullable
     @Override
     public UserModule getUserModuleByAccount(@NotNull String account) {
-        UserDo userDo = userMapper.selectByAccount(account);
-        return userDo == null ? null : userConverter.doToModule(userDo);
+        UserEntity userEntity = userMapper.selectByAccount(account);
+        return userEntity == null ? null : userConverter.doToModule(userEntity);
     }
 }

@@ -1,17 +1,11 @@
-package com.minio.domain.Do;
+package com.minio.domain.entity;
 
 import cn.hutool.core.util.IdUtil;
 import lombok.Data;
 import org.springframework.data.annotation.Id;
 
-import java.time.LocalDateTime;
-
-/**
- * @author 13225
- * @date 2025/9/29 16:03
- */
 @Data
-public class OssDo {
+public class OssEntity {
     @Id
     private Long id = IdUtil.getSnowflake().nextId();
     private Long userId;

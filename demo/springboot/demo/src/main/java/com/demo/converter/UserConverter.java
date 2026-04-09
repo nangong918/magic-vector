@@ -1,6 +1,6 @@
 package com.demo.converter;
 
-import com.demo.domain.Do.UserDo;
+import com.demo.domain.entity.UserEntity;
 import com.demo.domain.dto.http.resonse.UserAuthResponse;
 import com.demo.domain.module.user.UserModule;
 import org.mapstruct.Mapper;
@@ -12,7 +12,7 @@ public interface UserConverter {
 
     @Mapping(source = "id", target = "userId")
     @Mapping(source = "ossId", target = "avatarOssId")
-    UserModule doToModule(UserDo userDo);
+    UserModule doToModule(UserEntity userEntity);
 
     @Mapping(target = "avatarUrl", ignore = true)
     @Mapping(target = "accessToken", ignore = true)

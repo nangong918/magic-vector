@@ -1,7 +1,7 @@
 package com.minio.service.impl;
 
 import cn.hutool.core.util.IdUtil;
-import com.minio.domain.Do.OssDo;
+import com.minio.domain.entity.OssEntity;
 import com.minio.domain.dto.BatchUploadResult;
 import com.minio.domain.dto.UploadItemResult;
 import com.minio.mapper.OssMapper;
@@ -30,7 +30,7 @@ public class OssServiceImpl implements OssService {
     private final MinioUtils minioUtils;
 
     @Override
-    public OssDo getFileInfoByFileId(Long fileId) {
+    public OssEntity getFileInfoByFileId(Long fileId) {
         return ossMapper.getById(fileId);
     }
 
@@ -54,7 +54,7 @@ public class OssServiceImpl implements OssService {
                 minioUtils.createBucket(bucketName);
                 String originFileName = file.getOriginalFilename();
                 String idempotentKey = buildIdempotentKey(userId, originFileName, file.getSize());
-                OssDo existed = ossMapper.getByIdempotentKey(idempotentKey);
+                OssEntity existed = ossMapper.getByIdempotentKey(idempotentKey);
                 if (existed != null && existed.getId() != null) {
                     item.setSuccess(true);
                     item.setDuplicated(true);
@@ -70,21 +70,21 @@ public class OssServiceImpl implements OssService {
                 minioUtils.uploadFile(bucketName, file, objectName, file.getContentType());
 
                 long now = System.currentTimeMillis();
-                OssDo ossDo = new OssDo();
-                ossDo.setId(IdUtil.getSnowflakeNextId());
-                ossDo.setUserId(userId);
-                ossDo.setBucketName(bucketName);
-                ossDo.setObjectName(objectName);
-                ossDo.setOriginFileName(originFileName);
-                ossDo.setContentType(file.getContentType());
-                ossDo.setFileSize(file.getSize());
-                ossDo.setIdempotentKey(idempotentKey);
-                ossDo.setCreatedAt(now);
-                ossDo.setUpdatedAt(now);
-                ossMapper.insert(ossDo);
+                OssEntity ossEntity = new OssEntity();
+                ossEntity.setId(IdUtil.getSnowflakeNextId());
+                ossEntity.setUserId(userId);
+                ossEntity.setBucketName(bucketName);
+                ossEntity.setObjectName(objectName);
+                ossEntity.setOriginFileName(originFileName);
+                ossEntity.setContentType(file.getContentType());
+                ossEntity.setFileSize(file.getSize());
+                ossEntity.setIdempotentKey(idempotentKey);
+                ossEntity.setCreatedAt(now);
+                ossEntity.setUpdatedAt(now);
+                ossMapper.insert(ossEntity);
 
                 item.setSuccess(true);
-                item.setFileId(ossDo.getId());
+                item.setFileId(ossEntity.getId());
                 item.setUrl(getSafeUrl(bucketName, objectName));
                 item.setMessage("ok");
                 result.getItems().add(item);
@@ -119,7 +119,7 @@ public class OssServiceImpl implements OssService {
             try {
                 minioUtils.createBucket(bucketName);
                 String idempotentKey = buildIdempotentKey(userId, file.getName(), file.length());
-                OssDo existed = ossMapper.getByIdempotentKey(idempotentKey);
+                OssEntity existed = ossMapper.getByIdempotentKey(idempotentKey);
                 if (existed != null && existed.getId() != null) {
                     item.setSuccess(true);
                     item.setDuplicated(true);
@@ -135,21 +135,21 @@ public class OssServiceImpl implements OssService {
                 minioUtils.uploadLocalFile(bucketName, objectName, file.getAbsolutePath());
 
                 long now = System.currentTimeMillis();
-                OssDo ossDo = new OssDo();
-                ossDo.setId(IdUtil.getSnowflakeNextId());
-                ossDo.setUserId(userId);
-                ossDo.setBucketName(bucketName);
-                ossDo.setObjectName(objectName);
-                ossDo.setOriginFileName(file.getName());
-                ossDo.setContentType(null);
-                ossDo.setFileSize(file.length());
-                ossDo.setIdempotentKey(idempotentKey);
-                ossDo.setCreatedAt(now);
-                ossDo.setUpdatedAt(now);
-                ossMapper.insert(ossDo);
+                OssEntity ossEntity = new OssEntity();
+                ossEntity.setId(IdUtil.getSnowflakeNextId());
+                ossEntity.setUserId(userId);
+                ossEntity.setBucketName(bucketName);
+                ossEntity.setObjectName(objectName);
+                ossEntity.setOriginFileName(file.getName());
+                ossEntity.setContentType(null);
+                ossEntity.setFileSize(file.length());
+                ossEntity.setIdempotentKey(idempotentKey);
+                ossEntity.setCreatedAt(now);
+                ossEntity.setUpdatedAt(now);
+                ossMapper.insert(ossEntity);
 
                 item.setSuccess(true);
-                item.setFileId(ossDo.getId());
+                item.setFileId(ossEntity.getId());
                 item.setUrl(getSafeUrl(bucketName, objectName));
                 item.setMessage("ok");
                 result.getItems().add(item);
@@ -166,7 +166,7 @@ public class OssServiceImpl implements OssService {
     }
 
     @Override
-    public List<OssDo> listUserFiles(Long userId, String sortBy, Integer offset, Integer size) {
+    public List<OssEntity> listUserFiles(Long userId, String sortBy, Integer offset, Integer size) {
         if (userId == null) {
             return new ArrayList<>();
         }
@@ -189,12 +189,12 @@ public class OssServiceImpl implements OssService {
                 urls.add(null);
                 continue;
             }
-            OssDo ossDo = ossMapper.getById(fileId);
-            if (ossDo == null) {
+            OssEntity ossEntity = ossMapper.getById(fileId);
+            if (ossEntity == null) {
                 urls.add(null);
                 continue;
             }
-            urls.add(getSafeUrl(ossDo.getBucketName(), ossDo.getObjectName()));
+            urls.add(getSafeUrl(ossEntity.getBucketName(), ossEntity.getObjectName()));
         }
         return urls;
     }
@@ -204,12 +204,12 @@ public class OssServiceImpl implements OssService {
         if (fileId == null) {
             return false;
         }
-        OssDo ossDo = ossMapper.getById(fileId);
-        if (ossDo == null) {
+        OssEntity ossEntity = ossMapper.getById(fileId);
+        if (ossEntity == null) {
             return false;
         }
         try {
-            minioUtils.removeFile(ossDo.getBucketName(), ossDo.getObjectName());
+            minioUtils.removeFile(ossEntity.getBucketName(), ossEntity.getObjectName());
             return ossMapper.deleteById(fileId) > 0;
         } catch (Exception e) {
             log.warn("[oss] delete failed, fileId={}", fileId, e);

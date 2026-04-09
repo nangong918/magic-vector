@@ -1,6 +1,6 @@
 package com.minio.service;
 
-import com.minio.domain.Do.OssDo;
+import com.minio.domain.entity.OssEntity;
 import com.minio.domain.dto.BatchUploadResult;
 import lombok.NonNull;
 import org.springframework.web.multipart.MultipartFile;
@@ -14,13 +14,13 @@ import java.util.List;
  */
 public interface OssService {
 
-    OssDo getFileInfoByFileId(Long ossId);
+    OssEntity getFileInfoByFileId(Long ossId);
 
     BatchUploadResult uploadFiles(List<MultipartFile> files, Long userId, String bucketName);
 
     BatchUploadResult uploadLocalFiles(List<File> files, Long userId, String bucketName);
 
-    List<OssDo> listUserFiles(Long userId, String sortBy, Integer offset, Integer size);
+    List<OssEntity> listUserFiles(Long userId, String sortBy, Integer offset, Integer size);
 
     /**
      * 通过fileIds获取图片List<Url>

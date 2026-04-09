@@ -1,12 +1,12 @@
 package com.demo.mapper;
 
-import com.demo.domain.Do.UserDo;
+import com.demo.domain.entity.UserEntity;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
 @Mapper
 public interface UserMapper {
-    Integer insert(UserDo userDo);
+    Integer insert(UserEntity userEntity);
 
     Integer deleteById(Long id);
     Integer deleteByAccount(String account);
@@ -24,6 +24,6 @@ public interface UserMapper {
             @Param("ossId") Long ossId
     );
 
-    UserDo selectById(Long id);
-    UserDo selectByAccount(String account);
+    UserEntity selectById(Long id);
+    UserEntity selectByAccount(String account);
 }
