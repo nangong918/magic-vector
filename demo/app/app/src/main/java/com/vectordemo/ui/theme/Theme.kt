@@ -1,4 +1,4 @@
-package com.vectordemo.theme
+package com.vectordemo.ui.theme
 
 import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
