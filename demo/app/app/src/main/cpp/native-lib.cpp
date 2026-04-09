@@ -2,9 +2,9 @@
 #include <string>
 
 extern "C" JNIEXPORT jstring JNICALL
-Java_com_magicvector_demo_StartActivity_stringFromJNI(
+Java_com_vectordemo_MainActivity_stringFromJNI(
         JNIEnv* env,
         jobject /* this */) {
-    std::string hello = "Hello From JNI C++";
+    std::string hello = "Hello from C++";
     return env->NewStringUTF(hello.c_str());
 }

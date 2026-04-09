@@ -5,11 +5,11 @@ plugins {
 }
 
 android {
-    namespace = "com.magicvector.demo"
+    namespace = "com.vectordemo"
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "com.magicvector.demo"
+        applicationId = "com.vectordemo"
         minSdk = 28
         targetSdk = 36
         versionCode = 1
@@ -46,20 +46,17 @@ android {
         }
     }
     buildFeatures {
-//        viewBinding = true
+        viewBinding = true
         compose = true
     }
 }
 
 dependencies {
 
-    // AndroidX
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)
     implementation(libs.material)
     implementation(libs.androidx.constraintlayout)
-
-    // Compose
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)
     implementation(platform(libs.androidx.compose.bom))
@@ -67,17 +64,9 @@ dependencies {
     implementation(libs.androidx.compose.ui.graphics)
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.compose.material3)
-    implementation(libs.androidx.constraintlayout.compose)
-    implementation(libs.androidx.compose.foundation)
-    // Compose:Coil
-    implementation("io.coil-kt:coil-compose:2.6.0")
-
-    // AndroidX Test
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
-
-    // Compose Test
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
     debugImplementation(libs.androidx.compose.ui.tooling)

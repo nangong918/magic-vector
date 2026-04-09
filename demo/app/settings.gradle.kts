@@ -45,6 +45,6 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "AppDemo"
+rootProject.name = "vectorDemo"
 include(":app")
  
