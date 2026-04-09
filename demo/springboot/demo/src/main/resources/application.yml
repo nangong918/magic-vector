@@ -1,6 +1,6 @@
 # 通用配置（所有环境共享）
 server:
-  port: 58888
+  port: 48888
 
 alikey: ${ALI_API_KEY}
 
