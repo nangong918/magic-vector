@@ -96,3 +96,7 @@ buildNumber.properties
 # Ignore virtual machine crash logs (Java specific)
 hs_err_pid*
 /demo/flutter/.vscode/**
+/app/android/app/**
+/app/android/.gradle/**
+/app/android/buildSrc/.gradle/**
+/app/android/local.properties
