@@ -8,6 +8,8 @@ import org.springframework.web.socket.config.annotation.EnableWebSocket;
 
 // mybatis-plus
 @MapperScan({
+        // minio
+        "com.minio.mapper",
         // demo
         "com.demo.mapper",
 })
@@ -16,6 +18,8 @@ import org.springframework.web.socket.config.annotation.EnableWebSocket;
         scanBasePackages = {
                 // 本地
                 "com.demo",
+                // minio
+                "com.minio",
         }
 )
 @EnableWebSocket

@@ -73,13 +73,39 @@ spring:
           config:
             multi-statement-allow: true
 
+#============ oss：minIO
+minio:
+  endpoint: "http://127.0.0.1:9000"
+  access-key: "minioadmin"
+  secret-key: "minioadmin"
+  use-gateway-proxy: true
+  gateway-port: 8888
+  minio-url: "/oss-minio"
+
 #-------------------------Mybatis-plus setting-------------------------
 
 mybatis-plus:
-  type-aliases-package: com.demo.domain.Do # ,com.minio.domain.Do # 扫描实体类
+  type-aliases-package: com.demo.domain.Do,com.minio.domain.Do # 扫描实体类
   mapper-locations: classpath*:mybatis/*Mapper.xml, classpath*:mybatis-plus/*Mapper.xml #指定多个 Mapper XML 文件的路径
   global-config:
     db-config:
       id-type: auto # 数据库主键策略配置
   configuration:
     log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+
+demo:
+  auth:
+    include-paths:
+      - /agent/**
+      - /chat/**
+    exclude-paths:
+      - /user/login
+      - /user/register
+      - /user/token/verify
+      - /test/**
+      - /error
+    user-id-header: user_id
+    access-token-header: access_token
+  debug:
+    enabled: false
+    token-verify-log-enabled: false

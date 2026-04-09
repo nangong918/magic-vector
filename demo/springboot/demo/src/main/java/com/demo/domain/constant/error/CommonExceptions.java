@@ -1,0 +1,26 @@
+package com.demo.domain.constant.error;
+
+import com.demo.domain.constant.ExceptionEnums;
+import lombok.Getter;
+
+@Getter
+public enum CommonExceptions implements ExceptionEnums {
+    PARAM_ERROR("C_10001", "参数错误、不全"),
+    SYSTEM_ERROR("C_10002", "系统异常"),
+    SYSTEM_SQL_ERROR("C_10002.1", "系统异常-SQL异常"),
+    SYSTEM_IO_ERROR("C_10002.2", "系统异常-IO异常"),
+    SYSTEM_REDIS_ERROR("C_10002.3", "系统异常-Redis异常"),
+    FREQUENTLY_CLICK("C_10003", "频繁点击，请稍后再试"),
+    SORT_TYPE_NOT_FOUND("C_10004", "排序方式未找到"),
+    SYSTEM_PARAM_ERROR("C_10005", "系统内参数错误"),
+    MULTIPART_FILE_TO_BASE64_ERROR("C_10006", "MultipartFile转换Base64异常"),
+    ;
+
+    private final String code;
+    private final String message;
+
+    CommonExceptions(String code, String message) {
+        this.code = code;
+        this.message = message;
+    }
+}
