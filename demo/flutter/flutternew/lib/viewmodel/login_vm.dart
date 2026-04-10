@@ -30,6 +30,11 @@ class LoginGoRegister extends LoginIntent {
   const LoginGoRegister();
 }
 
+class LoginSelectSavedAccount extends LoginIntent {
+  final String account;
+  const LoginSelectSavedAccount(this.account);
+}
+
 class LoginTouristAccess extends LoginIntent {
   const LoginTouristAccess();
 }
@@ -110,6 +115,8 @@ class LoginVm extends ChangeNotifier {
     } else if (intent is LoginUpdatePassword) {
       _state = _state.copyWith(password: intent.password);
       notifyListeners();
+    } else if (intent is LoginSelectSavedAccount) {
+      _selectSavedAccount(intent.account);
     } else if (intent is LoginSubmit) {
       _submit();
     } else if (intent is LoginGoRegister) {
@@ -120,7 +127,9 @@ class LoginVm extends ChangeNotifier {
   }
 
   Future<void> _loadSavedAccounts() async {
-    final list = await _userManager.getAllUsers();
+    final list = (await _userManager.getAllUsers())
+        .where((e) => !(e.accessToken == 'tourist' || e.account == 'tourist' || e.userId == 1))
+        .toList();
     _state = _state.copyWith(savedSessions: list);
     if (list.isNotEmpty) {
       _state = _state.copyWith(
@@ -128,6 +137,14 @@ class LoginVm extends ChangeNotifier {
         password: _state.password.isEmpty ? list.first.password : _state.password,
       );
     }
+    notifyListeners();
+  }
+
+  void _selectSavedAccount(String account) {
+    final hit = _state.savedSessions.where((e) => e.account == account).toList();
+    if (hit.isEmpty) return;
+    final selected = hit.first;
+    _state = _state.copyWith(account: selected.account, password: selected.password);
     notifyListeners();
   }
 

@@ -4,6 +4,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -15,10 +16,14 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -26,6 +31,10 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.Alignment
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import com.vectordemo.domain.model.demo.DemoCatalogItem
 import com.vectordemo.domain.model.demo.DemoRoute
 import com.vectordemo.ui.theme.VectorDemoTheme
@@ -36,8 +45,10 @@ import com.vectordemo.viewModel.activity.MainState
 fun MainScreen(
     state: MainState,
     onQueryChange: (String) -> Unit,
-    onClickItem: (DemoCatalogItem) -> Unit
+    onClickItem: (DemoCatalogItem) -> Unit,
+    onLogout: () -> Unit
 ) {
+    var showLogoutDialog by remember { mutableStateOf(false) }
     Scaffold(
         topBar = {
             TopAppBar(title = { Text("Demo Catalog") })
@@ -48,6 +59,22 @@ fun MainScreen(
                 .fillMaxSize()
                 .padding(innerPadding)
         ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "当前用户：${state.displayUserName}",
+                    modifier = Modifier.weight(1f),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Medium
+                )
+                IconButton(onClick = { showLogoutDialog = true }) {
+                    Text("登出")
+                }
+            }
             OutlinedTextField(
                 value = state.query,
                 onValueChange = onQueryChange,
@@ -72,6 +99,22 @@ fun MainScreen(
                 }
             }
         }
+    }
+    if (showLogoutDialog) {
+        AlertDialog(
+            onDismissRequest = { showLogoutDialog = false },
+            title = { Text("确认登出") },
+            text = { Text("是否退出当前账号并返回登录页？") },
+            confirmButton = {
+                TextButton(onClick = {
+                    showLogoutDialog = false
+                    onLogout()
+                }) { Text("登出") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showLogoutDialog = false }) { Text("取消") }
+            }
+        )
     }
 }
 
@@ -125,7 +168,8 @@ private fun MainScreenPreview() {
                 )
             ),
             onQueryChange = {},
-            onClickItem = {}
+            onClickItem = {},
+            onLogout = {}
         )
     }
 }

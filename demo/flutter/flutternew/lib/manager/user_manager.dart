@@ -8,6 +8,17 @@ class UserManager {
   UserSessionModel? _cachedCurrent;
 
   Future<void> saveCurrentUser(UserSessionModel session) async {
+    final isTourist =
+        session.userId == 1 ||
+        session.account == 'tourist' ||
+        session.accessToken == 'tourist';
+    if (isTourist) {
+      _cachedCurrent = session.copyWith(
+        isCurrent: true,
+        lastLoginAt: DateTime.now().millisecondsSinceEpoch,
+      );
+      return;
+    }
     final loginAt = DateTime.now().millisecondsSinceEpoch;
     final current = session.copyWith(isCurrent: true, lastLoginAt: loginAt);
     final db = UserSessionDb.instance;
@@ -28,7 +39,10 @@ class UserManager {
 
   Future<List<UserSessionModel>> getAllUsers() async {
     final rows = await UserSessionDb.instance.getAll();
-    return rows.map(_fromRow).toList();
+    return rows
+        .map(_fromRow)
+        .where((e) => !(e.userId == 1 || e.account == 'tourist' || e.accessToken == 'tourist'))
+        .toList();
   }
 
   Future<void> clearCurrentUser() async {

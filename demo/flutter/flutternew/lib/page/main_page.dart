@@ -2,7 +2,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutternew/manager/catalog_manager.dart';
 
+import '../config/app_route.dart';
 import '../domain/vo/catalog_item.dart';
+import '../domain/model/user_session_model.dart';
+import '../manager/app_session.dart';
+import '../manager/user_manager.dart';
 import '../ui/catalog_item_list.dart';
 import '../l10n/app_localizations.dart';
 import 'package:flutter/services.dart';
@@ -16,6 +20,7 @@ class MainPage extends StatefulWidget {
 
 class _MainPageState extends State<MainPage> {
   String _searchText = '';
+  String _displayUserName = '游客';
   final TextEditingController _searchController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
 
@@ -36,11 +41,60 @@ class _MainPageState extends State<MainPage> {
     print('txt文本长度：${txtContent.length} \ntxt文件内容：\n$txtContent');
   }
 
+  Future<void> _loadCurrentUser() async {
+    final current = await UserManager.instance.getCurrentUser();
+    if (!mounted) return;
+    setState(() {
+      _displayUserName = _resolveDisplayName(current);
+    });
+  }
+
+  String _resolveDisplayName(UserSessionModel? user) {
+    if (user == null) return '游客';
+    final isTourist = user.accessToken == 'tourist' || user.account == 'tourist' || user.userId == 1;
+    if (isTourist) return '游客';
+    final name = user.name.trim();
+    return name.isNotEmpty ? name : user.account;
+  }
+
+  Future<void> _confirmLogout() async {
+    final shouldLogout = await showDialog<bool>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('确认登出'),
+          content: const Text('是否退出当前账号并返回登录页？'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('取消'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('登出'),
+            ),
+          ],
+        );
+      },
+    );
+    if (shouldLogout == true) {
+      await UserManager.instance.clearCurrentUser();
+      AppSession.instance.clearUserId();
+      if (!mounted) return;
+      Navigator.pushNamedAndRemoveUntil(
+        context,
+        AppRoutes.login,
+        (route) => false,
+      );
+    }
+  }
+
   @override
   void initState() {
     super.initState();
     // 注意：initState 本身不能加 async，所以用匿名异步函数包裹
     _loadAndPrintTxt();
+    _loadCurrentUser();
   }
 
   // 处理列表项点击
@@ -86,6 +140,29 @@ class _MainPageState extends State<MainPage> {
       body: SafeArea(
         child: Column(
           children: [
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              color: Colors.pink.shade50,
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      '当前用户：$_displayUserName',
+                      style: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                  TextButton.icon(
+                    onPressed: _confirmLogout,
+                    icon: const Icon(Icons.logout, size: 18),
+                    label: const Text('登出'),
+                  ),
+                ],
+              ),
+            ),
             // 搜索栏区域
             // _buildSearchBar(theme),
 

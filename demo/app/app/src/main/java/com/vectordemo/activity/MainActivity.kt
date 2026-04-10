@@ -30,7 +30,8 @@ class MainActivity : BaseComponentActivity() {
                 MainScreen(
                     state = state,
                     onQueryChange = { vm.processIntent(MainIntent.UpdateQuery(it)) },
-                    onClickItem = { vm.processIntent(MainIntent.ClickDemo(it.route)) }
+                    onClickItem = { vm.processIntent(MainIntent.ClickDemo(it.route)) },
+                    onLogout = { vm.processIntent(MainIntent.Logout) }
                 )
             }
         }
@@ -43,6 +44,12 @@ class MainActivity : BaseComponentActivity() {
                     when (effect) {
                         is MainEffect.NavigateToHello -> {
                             startActivity(Intent(this@MainActivity, HelloActivity::class.java))
+                        }
+                        MainEffect.NavigateToLogin -> {
+                            startActivity(Intent(this@MainActivity, LoginActivity::class.java).apply {
+                                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                            })
+                            finish()
                         }
                     }
                 }

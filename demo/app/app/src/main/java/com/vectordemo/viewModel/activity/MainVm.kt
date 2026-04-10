@@ -2,6 +2,7 @@ package com.vectordemo.viewModel.activity
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.vectordemo.MainApplication
 import com.vectordemo.domain.model.demo.DemoCatalogItem
 import com.vectordemo.domain.model.demo.DemoRoute
 import kotlinx.coroutines.channels.Channel
@@ -34,10 +35,15 @@ class MainVm : ViewModel() {
     private val _effect = Channel<MainEffect>(Channel.BUFFERED)
     val effect: Flow<MainEffect> = _effect.receiveAsFlow()
 
+    init {
+        loadCurrentUserDisplayName()
+    }
+
     fun processIntent(intent: MainIntent) {
         when (intent) {
             is MainIntent.UpdateQuery -> updateQuery(intent.query)
             is MainIntent.ClickDemo -> onClickDemo(intent.route)
+            MainIntent.Logout -> logout()
         }
     }
 
@@ -59,6 +65,27 @@ class MainVm : ViewModel() {
         }
     }
 
+    private fun logout() {
+        viewModelScope.launch {
+            MainApplication.getUserManager().clearCurrentUser()
+            MainApplication.clearUserId()
+            sendEffect(MainEffect.NavigateToLogin)
+        }
+    }
+
+    private fun loadCurrentUserDisplayName() {
+        viewModelScope.launch {
+            val currentUser = MainApplication.getUserManager().getCurrentUser()
+            val displayName = when {
+                currentUser == null -> "游客"
+                currentUser.accessToken == "tourist" || currentUser.account == "tourist" || currentUser.userId == 1L -> "游客"
+                currentUser.name.isNotBlank() -> currentUser.name
+                else -> currentUser.account
+            }
+            _uiState.update { it.copy(displayUserName = displayName) }
+        }
+    }
+
     private fun sendEffect(effect: MainEffect) {
         viewModelScope.launch {
             _effect.send(effect)
@@ -69,13 +96,16 @@ class MainVm : ViewModel() {
 sealed class MainIntent {
     data class UpdateQuery(val query: String) : MainIntent()
     data class ClickDemo(val route: DemoRoute) : MainIntent()
+    data object Logout : MainIntent()
 }
 
 data class MainState(
     val query: String,
-    val items: List<DemoCatalogItem>
+    val items: List<DemoCatalogItem>,
+    val displayUserName: String = "游客"
 )
 
 sealed class MainEffect {
     data object NavigateToHello : MainEffect()
+    data object NavigateToLogin : MainEffect()
 }
