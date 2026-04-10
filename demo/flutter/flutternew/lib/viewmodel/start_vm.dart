@@ -4,7 +4,7 @@ import 'package:flutter/foundation.dart';
 
 import '../constant/auth_constant.dart';
 import '../data/remote/auth_remote_api_source.dart';
-import '../domain/dto/auth/user_token_verify_request.dart';
+import '../domain/dto/req/user_token_verify_request.dart';
 import '../manager/app_session.dart';
 import '../manager/user_manager.dart';
 

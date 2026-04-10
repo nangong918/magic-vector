@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 
 import '../data/remote/auth_remote_api_source.dart';
-import '../domain/dto/auth/user_login_request.dart';
+import '../domain/dto/req/user_login_request.dart';
 import '../domain/model/user_session_model.dart';
 import '../manager/app_session.dart';
 import '../manager/user_manager.dart';

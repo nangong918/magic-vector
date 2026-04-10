@@ -2,10 +2,10 @@ import 'package:dio/dio.dart';
 
 import '../../constant/network_constant.dart';
 import '../../domain/dto/base_response.dart';
-import '../../domain/dto/auth/user_auth_response.dart';
-import '../../domain/dto/auth/user_login_request.dart';
-import '../../domain/dto/auth/user_token_verify_request.dart';
-import '../../domain/dto/auth/user_token_verify_response.dart';
+import '../../domain/dto/resp/user_auth_response.dart';
+import '../../domain/dto/req/user_login_request.dart';
+import '../../domain/dto/req/user_token_verify_request.dart';
+import '../../domain/dto/resp/user_token_verify_response.dart';
 
 class AuthRemoteApiSource {
   AuthRemoteApiSource({Dio? dio}) : _dio = dio ?? Dio(

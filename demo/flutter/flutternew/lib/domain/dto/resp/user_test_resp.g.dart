@@ -7,9 +7,9 @@ part of 'user_test_resp.dart';
 // **************************************************************************
 
 UserTestResp _$UserTestRespFromJson(Map<String, dynamic> json) => UserTestResp(
-      account: json['account'] as String?,
-      loginToken: json['loginToken'] as String?,
-    );
+  account: json['account'] as String?,
+  loginToken: json['loginToken'] as String?,
+);
 
 Map<String, dynamic> _$UserTestRespToJson(UserTestResp instance) =>
     <String, dynamic>{

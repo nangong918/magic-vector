@@ -1,0 +1,21 @@
+// GENERATED CODE - DO NOT MODIFY BY HAND
+
+part of 'user_token_verify_request.dart';
+
+// **************************************************************************
+// JsonSerializableGenerator
+// **************************************************************************
+
+UserTokenVerifyRequest _$UserTokenVerifyRequestFromJson(
+  Map<String, dynamic> json,
+) => UserTokenVerifyRequest(
+  userId: (json['userId'] as num).toInt(),
+  accessToken: json['accessToken'] as String,
+);
+
+Map<String, dynamic> _$UserTokenVerifyRequestToJson(
+  UserTokenVerifyRequest instance,
+) => <String, dynamic>{
+  'userId': instance.userId,
+  'accessToken': instance.accessToken,
+};

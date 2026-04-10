@@ -12,7 +12,7 @@ part of 'api_request.dart';
 
 class _ApiRequest implements ApiRequest {
   _ApiRequest(this._dio, {this.baseUrl, this.errorLogger}) {
-    baseUrl ??= 'http://192.168.3.140:58888';
+    baseUrl ??= 'http://192.168.3.140:48888';
   }
 
   final Dio _dio;
