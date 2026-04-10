@@ -2,9 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutternew/page/native_call_page.dart';
 import 'package:flutternew/page/network_page.dart';
 import 'package:flutternew/page/offline_ivw_page.dart';
+import 'package:flutternew/page/register_page.dart';
+import 'package:flutternew/page/start_page.dart';
 import 'package:flutternew/page/vad_page.dart';
 import 'package:flutternew/page/voice_agent_page.dart';
 import 'package:flutternew/page/xfyun_stt_page.dart';
+import 'package:flutternew/page/login_page.dart';
 
 import '../page/chat_page.dart';
 import '../page/main_page.dart';
@@ -12,6 +15,9 @@ import '../page/main_page.dart';
 class AppRoutes {
   // 路由名称常量（避免字符串硬编码）
   static const String main = '/';         // 主页面（根路由）
+  static const String start = '/start';
+  static const String login = '/login';
+  static const String register = '/register';
   static const String chat = '/chat';     // 聊天页
   static const String network = '/network'; // 网络页
   static const String native = '/native'; // 原生页
@@ -24,6 +30,18 @@ class AppRoutes {
 
 // 核心：路由Map（替代onGenerateRoute，对应你要的appRoutes形式）
 final Map<String, WidgetBuilder> appRoutes = {
+  AppRoutes.start: (BuildContext context) {
+    return const StartPage();
+  },
+
+  AppRoutes.login: (BuildContext context) {
+    return const LoginPage();
+  },
+
+  AppRoutes.register: (BuildContext context) {
+    return const RegisterPage();
+  },
+
   // 主页面（无参数）
   AppRoutes.main: (BuildContext context) {
     return const MainPage();

@@ -42,6 +42,8 @@ dependencies:
   flutter_easyloading: ^3.0.5 # 全局加载/提示框
   connectivity_plus: ^6.0.5   # 网络状态检测
   logger: ^2.6.0              # 日志打印工具
+  sqflite: ^2.4.2
+  path: ^1.9.1
 
 # 开发期依赖（仅编译/代码生成使用，不打包到最终应用）
 dev_dependencies:

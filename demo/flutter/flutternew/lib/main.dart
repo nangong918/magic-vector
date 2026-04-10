@@ -20,8 +20,8 @@ class MyApp extends StatelessWidget {
       supportedLocales: AppLocalizations.supportedLocales,
       // 核心：使用routes映射表（替代onGenerateRoute）
       routes: appRoutes,
-      // 初始路由（对应appRoutes中的AppRoutes.main）
-      initialRoute: AppRoutes.main,
+      // 初始路由：先走启动页鉴权，再决定去主页面或登录页
+      initialRoute: AppRoutes.start,
       // 可选：兜底处理未知路由（如果需要）
       onUnknownRoute: unknownRoute,
       theme: ThemeData(
