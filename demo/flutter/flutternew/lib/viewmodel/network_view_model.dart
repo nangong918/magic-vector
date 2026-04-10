@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 
-import '../domain/dto/BaseResponse.dart';
-import '../domain/dto/req/UserTestReq.dart';
-import '../domain/dto/resp/UserTestResp.dart';
-import '../network/ApiRequestImpl.dart';
+import '../domain/dto/base_response.dart';
+import '../domain/dto/req/user_test_req.dart';
+import '../domain/dto/resp/user_test_resp.dart';
+import '../network/api_request_impl.dart';
 
 class NetworkViewModel extends ChangeNotifier {
   NetworkViewModel({ApiRequestImpl? api}) : _api = api ?? ApiRequestImpl();

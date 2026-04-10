@@ -1,7 +1,7 @@
 import 'package:dio/dio.dart';
 
-import '../../constant/NetworkConstant.dart';
-import '../../domain/dto/BaseResponse.dart';
+import '../../constant/network_constant.dart';
+import '../../domain/dto/base_response.dart';
 import '../../domain/dto/auth/user_auth_response.dart';
 import '../../domain/dto/auth/user_login_request.dart';
 import '../../domain/dto/auth/user_token_verify_request.dart';

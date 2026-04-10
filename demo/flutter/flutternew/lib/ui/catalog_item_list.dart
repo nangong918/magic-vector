@@ -1,12 +1,10 @@
 // 懒加载列表组件 - 对应 Compose 的 LazyColumn
 
-
-
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
-import '../domain/vo/CatalogItem.dart';
-import 'SelectItemView.dart';
+import '../domain/vo/catalog_item.dart';
+import 'select_item_view.dart';
 
 class CatalogItemList extends StatelessWidget {
   final List<CatalogItem> items;
@@ -26,26 +24,20 @@ class CatalogItemList extends StatelessWidget {
   Widget build(BuildContext context) {
     const pink40 = Color(0xFFF48FB1);
 
-    // 使用 ListView.separated 实现懒加载列表
-    // 对应 Compose 的 LazyColumn + items + key
     return ListView.separated(
       controller: scrollController,
       padding: padding ?? EdgeInsets.zero,
-      // 为每个项目设置唯一 key
       itemCount: items.length,
-      // 通过 itemBuilder 实现懒加载
       itemBuilder: (context, index) {
         final item = items[index];
 
-        // 使用 Key 来优化列表性能（对应 Compose 的 key = { it.id }）
         return _CatalogListItem(
-          key: ValueKey(item.id), // 重要：为每个item设置唯一key
+          key: ValueKey(item.id),
           item: item,
           pink40: pink40,
           onItemClick: () => onItemClick(item),
         );
       },
-      // 分割线生成器
       separatorBuilder: (context, index) => Divider(
         height: 1,
         thickness: 1.0,
@@ -56,16 +48,12 @@ class CatalogItemList extends StatelessWidget {
     );
   }
 
-  // 计算分割线缩进（让分割线与图标对齐）
   double iconIndentForItem(int index) {
     final item = items[index];
-    // 如果该项有图标，分割线从图标右侧开始
-    return item.iconRes != null ? 52.0 : 16.0; // 16(左内边距) + 24(图标) + 12(图标右边距)
+    return item.iconRes != null ? 52.0 : 16.0;
   }
 }
 
-
-// 列表项包装组件（用于添加 Key）
 class _CatalogListItem extends StatelessWidget {
   final CatalogItem item;
   final Color pink40;
@@ -86,24 +74,17 @@ class _CatalogListItem extends StatelessWidget {
       onItemClick: onItemClick,
       icon: item.iconRes != null
           ? Icon(
-        Icons.star,
-        color: pink40,
-        size: 24.0,
-        semanticLabel: "星标",
-      )
+              item.iconRes!,
+              color: pink40,
+              size: 24.0,
+            )
           : null,
     );
   }
 }
 
+// ==================== 预览 ====================
 
-
-
-
-// ==================== 预览功能 ====================
-// 注意：Flutter没有内置的@Preview注解，需要创建独立的Widget来预览
-
-// 预览数据
 final previewItems = [
   const CatalogItem(
     id: "1",
@@ -142,7 +123,6 @@ final previewItems = [
   ),
 ];
 
-// 基础预览：带图标列表
 class CatalogListWithIconsPreview extends StatelessWidget {
   const CatalogListWithIconsPreview({super.key});
 
@@ -177,7 +157,6 @@ class CatalogListWithIconsPreview extends StatelessWidget {
   }
 }
 
-// 简洁列表预览
 class CatalogListSimplePreview extends StatelessWidget {
   const CatalogListSimplePreview({super.key});
 
@@ -203,7 +182,6 @@ class CatalogListSimplePreview extends StatelessWidget {
   }
 }
 
-// 图标列表预览
 class CatalogListIconsOnlyPreview extends StatelessWidget {
   const CatalogListIconsOnlyPreview({super.key});
 
@@ -229,7 +207,6 @@ class CatalogListIconsOnlyPreview extends StatelessWidget {
   }
 }
 
-// 单一项预览
 class CatalogListSinglePreview extends StatelessWidget {
   const CatalogListSinglePreview({super.key});
 
@@ -258,11 +235,6 @@ class CatalogListSinglePreview extends StatelessWidget {
   }
 }
 
-// 预览入口
 void main() {
-  // 运行不同的预览（切换注释即可）
   runApp(const CatalogListWithIconsPreview());
-  // runApp(const CatalogListSimplePreview());
-  // runApp(const CatalogListIconsOnlyPreview());
-  // runApp(const CatalogListSinglePreview());
 }

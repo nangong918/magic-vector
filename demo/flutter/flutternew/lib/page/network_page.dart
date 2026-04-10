@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../viewmodel/NetworkViewModel.dart';
+import '../viewmodel/network_view_model.dart';
 
 class NetworkPage extends StatefulWidget {
   const NetworkPage({super.key});

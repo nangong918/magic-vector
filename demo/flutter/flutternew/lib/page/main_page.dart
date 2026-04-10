@@ -1,9 +1,9 @@
 // lib/screens/main_screen.dart
 import 'package:flutter/material.dart';
-import 'package:flutternew/manager/CatalogManager.dart';
+import 'package:flutternew/manager/catalog_manager.dart';
 
-import '../domain/vo/CatalogItem.dart';
-import '../ui/CatalogItemList.dart';
+import '../domain/vo/catalog_item.dart';
+import '../ui/catalog_item_list.dart';
 import '../l10n/app_localizations.dart';
 import 'package:flutter/services.dart';
 

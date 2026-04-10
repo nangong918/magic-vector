@@ -2,15 +2,12 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutternew/config/app_route.dart';
 
-import '../domain/vo/CatalogItem.dart';
+import '../domain/vo/catalog_item.dart';
 import '../l10n/app_localizations.dart';
-
-
 
 typedef OnClickCatalogItem = void Function(CatalogItem item);
 
 class CatalogManager {
-  // 模拟获取目录数据
   static List<CatalogItem> getCatalogItems(AppLocalizations l10n) {
     return [
       CatalogItem(
@@ -65,19 +62,15 @@ class CatalogManager {
     ];
   }
 
-  // 处理Item点击跳转逻辑
   static void onItemClick(CatalogItem item, BuildContext context) {
     if (item.routeName != null && item.routeName!.isNotEmpty) {
       debugPrint('将要跳转到${item.routeName}');
       Navigator.pushNamed(context, item.routeName!);
     } else {
-      // 如果没有设置路由，显示提示
       _showFeatureComingSoon(context, item.title);
     }
   }
 
-
-  // 显示功能开发中提示
   static void _showFeatureComingSoon(BuildContext context, String title) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -90,5 +83,4 @@ class CatalogManager {
       ),
     );
   }
-
 }

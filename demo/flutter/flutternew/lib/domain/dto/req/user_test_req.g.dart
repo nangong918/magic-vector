@@ -1,16 +1,16 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
 
-part of 'UserTestReq.dart';
+part of 'user_test_req.dart';
 
 // **************************************************************************
 // JsonSerializableGenerator
 // **************************************************************************
 
 UserTestReq _$UserTestReqFromJson(Map<String, dynamic> json) => UserTestReq(
-  account: json['account'] as String,
-  password: json['password'] as String,
-  name: json['name'] as String,
-);
+      account: json['account'] as String,
+      password: json['password'] as String,
+      name: json['name'] as String,
+    );
 
 Map<String, dynamic> _$UserTestReqToJson(UserTestReq instance) =>
     <String, dynamic>{

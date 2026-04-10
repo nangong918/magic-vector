@@ -1,6 +1,6 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
 
-part of 'ApiRequest.dart';
+part of 'api_request.dart';
 
 // dart format off
 
