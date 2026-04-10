@@ -52,7 +52,11 @@ class _StartPageState extends State<StartPage> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const FlutterLogo(size: 120),
+                Image.asset(
+                  'assets/images/ic_launcher_foreground.webp',
+                  width: 120,
+                  height: 120,
+                ),
                 const SizedBox(height: 16),
                 Text(
                   _vm.state.isLoading ? '启动中...' : '即将进入',

@@ -21,7 +21,7 @@
 
 
     <application
-        android:label="flutternew"
+        android:label="VectorDemo"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher"
         android:requestLegacyExternalStorage="true"

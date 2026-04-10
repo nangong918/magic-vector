@@ -1,4 +1,4 @@
 <resources>
-    <string name="app_name">vectorDemo</string>
+    <string name="app_name">VectorDemo</string>
     <string name="title_activity_start">StartActivity</string>
 </resources>

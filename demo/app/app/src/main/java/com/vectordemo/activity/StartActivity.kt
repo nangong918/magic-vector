@@ -88,7 +88,7 @@ private fun StartScreen() {
             Image(
                 painter = painterResource(id = R.drawable.ic_launcher_foreground),
                 contentDescription = "App Logo",
-                modifier = Modifier.size(180.dp).clip(RoundedCornerShape(20.dp))
+                modifier = Modifier.size(300.dp).clip(RoundedCornerShape(20.dp))
             )
         }
     }

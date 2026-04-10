@@ -6,7 +6,8 @@
     <uses-permission
         android:name="android.permission.READ_EXTERNAL_STORAGE"
         android:maxSdkVersion="32" />
-    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
+    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES"
+        tools:ignore="PhotoAndVideoPolicy" />
 
     <application
         android:name=".MainApplication"
@@ -22,7 +23,6 @@
         <activity
             android:name=".activity.StartActivity"
             android:exported="true"
-            android:label="@string/title_activity_start"
             android:theme="@style/Theme.VectorDemo">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />

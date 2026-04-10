@@ -13,8 +13,8 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      onGenerateTitle: (context) =>
-          AppLocalizations.of(context)?.appTitle ?? '功能目录',
+      title: 'VectorDemo',
+      onGenerateTitle: (context) => 'VectorDemo',
       debugShowCheckedModeBanner: false,
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
