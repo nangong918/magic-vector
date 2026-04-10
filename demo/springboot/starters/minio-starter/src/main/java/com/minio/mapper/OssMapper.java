@@ -1,6 +1,6 @@
 package com.minio.mapper;
 
-import com.minio.domain.Do.OssDo;
+import com.minio.domain.entity.OssEntity;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
@@ -13,21 +13,21 @@ import java.util.List;
 @Mapper
 public interface OssMapper {
 
-    Integer insert(OssDo ossDo);
+    Integer insert(OssEntity ossEntity);
 
-    OssDo getById(Long id);
+    OssEntity getById(Long id);
 
-    List<OssDo> getByIds(@Param("list") List<Long> ids);
+    List<OssEntity> getByIds(@Param("list") List<Long> ids);
 
-    OssDo getByIdempotentKey(@Param("idempotentKey") String idempotentKey);
+    OssEntity getByIdempotentKey(@Param("idempotentKey") String idempotentKey);
 
-    List<OssDo> queryByUserIdOrderByCreatedAt(
+    List<OssEntity> queryByUserIdOrderByCreatedAt(
             @Param("userId") Long userId,
             @Param("offset") Integer offset,
             @Param("size") Integer size
     );
 
-    List<OssDo> queryByUserIdOrderByFileSize(
+    List<OssEntity> queryByUserIdOrderByFileSize(
             @Param("userId") Long userId,
             @Param("offset") Integer offset,
             @Param("size") Integer size
