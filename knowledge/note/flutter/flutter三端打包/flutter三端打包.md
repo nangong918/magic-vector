@@ -116,6 +116,9 @@ vim .zshrc
 
 配置完成之后使用flutter命令检查，清除，更新：
 ```shell
+# windows powershell设置中国源（设置这个和flutter版本之后如果傻逼IDEA没反应就用powershell执行）
+$env:PUB_HOSTED_URL="https://pub.flutter-io.cn"
+$env:FLUTTER_STORAGE_BASE_URL="https://storage.flutter-io.cn"
 flutter doctor
 flutter --version
 flutter clean
