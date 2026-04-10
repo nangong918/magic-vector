@@ -33,5 +33,22 @@ public interface OssMapper {
             @Param("size") Integer size
     );
 
+    List<OssEntity> queryByUserIdAll(@Param("userId") Long userId);
+
+    Integer updateOriginFileNameById(
+            @Param("id") Long id,
+            @Param("originFileName") String originFileName,
+            @Param("updatedAt") Long updatedAt
+    );
+
+    Integer updateContentMetaById(
+            @Param("id") Long id,
+            @Param("originFileName") String originFileName,
+            @Param("contentType") String contentType,
+            @Param("fileSize") Long fileSize,
+            @Param("idempotentKey") String idempotentKey,
+            @Param("updatedAt") Long updatedAt
+    );
+
     Integer deleteById(Long id);
 }

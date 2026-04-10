@@ -71,6 +71,34 @@
         limit #{offset}, #{size}
     </select>
 
+    <select id="queryByUserIdAll" resultType="com.minio.domain.entity.OssEntity">
+        select
+        <include refid="columns"/>
+        from
+        <include refid="table"/>
+        where user_id = #{userId}
+        order by id desc
+    </select>
+
+    <update id="updateOriginFileNameById">
+        update
+        <include refid="table"/>
+        set origin_file_name = #{originFileName},
+            updated_at = #{updatedAt}
+        where id = #{id}
+    </update>
+
+    <update id="updateContentMetaById">
+        update
+        <include refid="table"/>
+        set origin_file_name = #{originFileName},
+            content_type = #{contentType},
+            file_size = #{fileSize},
+            idempotent_key = #{idempotentKey},
+            updated_at = #{updatedAt}
+        where id = #{id}
+    </update>
+
     <delete id="deleteById">
         delete from
         <include refid="table"/>

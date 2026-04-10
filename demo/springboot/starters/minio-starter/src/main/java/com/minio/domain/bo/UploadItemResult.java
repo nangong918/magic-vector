@@ -1,4 +1,4 @@
-package com.minio.domain.dto;
+package com.minio.domain.bo;
 
 import lombok.Data;
 

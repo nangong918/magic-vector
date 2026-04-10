@@ -2,8 +2,8 @@ package com.minio.service.impl;
 
 import cn.hutool.core.util.IdUtil;
 import com.minio.domain.entity.OssEntity;
-import com.minio.domain.dto.BatchUploadResult;
-import com.minio.domain.dto.UploadItemResult;
+import com.minio.domain.bo.BatchUploadResult;
+import com.minio.domain.bo.UploadItemResult;
 import com.minio.mapper.OssMapper;
 import com.minio.service.OssService;
 import com.minio.utils.MinioUtils;
@@ -197,6 +197,100 @@ public class OssServiceImpl implements OssService {
             urls.add(getSafeUrl(ossEntity.getBucketName(), ossEntity.getObjectName()));
         }
         return urls;
+    }
+
+    @Override
+    public boolean updateFileNameByFileId(Long fileId, String newFileName) {
+        if (fileId == null || !StringUtils.hasText(newFileName)) {
+            return false;
+        }
+        OssEntity ossEntity = ossMapper.getById(fileId);
+        if (ossEntity == null) {
+            return false;
+        }
+        return ossMapper.updateOriginFileNameById(fileId, newFileName, System.currentTimeMillis()) > 0;
+    }
+
+    @Override
+    public UploadItemResult updateFileContentByFileId(Long fileId, MultipartFile file) {
+        UploadItemResult item = new UploadItemResult();
+        item.setFileId(fileId);
+        item.setOriginFileName(file == null ? null : file.getOriginalFilename());
+        if (fileId == null || file == null || file.isEmpty() || !StringUtils.hasText(file.getOriginalFilename())) {
+            item.setSuccess(false);
+            item.setMessage("file is empty");
+            return item;
+        }
+        OssEntity existed = ossMapper.getById(fileId);
+        if (existed == null) {
+            item.setSuccess(false);
+            item.setMessage("file not found");
+            return item;
+        }
+        try {
+            String originFileName = file.getOriginalFilename();
+            minioUtils.uploadFile(existed.getBucketName(), file, existed.getObjectName(), file.getContentType());
+            String idempotentKey = buildIdempotentKey(existed.getUserId(), originFileName, file.getSize());
+            ossMapper.updateContentMetaById(
+                    fileId,
+                    originFileName,
+                    file.getContentType(),
+                    file.getSize(),
+                    idempotentKey,
+                    System.currentTimeMillis()
+            );
+            item.setSuccess(true);
+            item.setDuplicated(false);
+            item.setUrl(getSafeUrl(existed.getBucketName(), existed.getObjectName()));
+            item.setMessage("ok");
+            return item;
+        } catch (Exception e) {
+            log.warn("[oss] update content failed, fileId={}", fileId, e);
+            item.setSuccess(false);
+            item.setMessage("update failed");
+            return item;
+        }
+    }
+
+    @Override
+    public int deleteFilesByFileIds(List<Long> fileIds) {
+        if (CollectionUtils.isEmpty(fileIds)) {
+            return 0;
+        }
+        int successCount = 0;
+        for (Long fileId : fileIds) {
+            if (deleteFileByFileId(fileId)) {
+                successCount++;
+            }
+        }
+        return successCount;
+    }
+
+    @Override
+    public int deleteAllFilesByUserId(Long userId) {
+        if (userId == null) {
+            return 0;
+        }
+        List<OssEntity> files = ossMapper.queryByUserIdAll(userId);
+        if (CollectionUtils.isEmpty(files)) {
+            return 0;
+        }
+        int successCount = 0;
+        for (OssEntity file : files) {
+            if (file != null && deleteFileByFileId(file.getId())) {
+                successCount++;
+            }
+        }
+        return successCount;
+    }
+
+    @Override
+    public int countFilesByUserId(Long userId) {
+        if (userId == null) {
+            return 0;
+        }
+        List<OssEntity> files = ossMapper.queryByUserIdAll(userId);
+        return files == null ? 0 : files.size();
     }
 
     @Override

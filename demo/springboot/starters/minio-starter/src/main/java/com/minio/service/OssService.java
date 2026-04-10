@@ -1,7 +1,8 @@
 package com.minio.service;
 
 import com.minio.domain.entity.OssEntity;
-import com.minio.domain.dto.BatchUploadResult;
+import com.minio.domain.bo.BatchUploadResult;
+import com.minio.domain.bo.UploadItemResult;
 import lombok.NonNull;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -30,6 +31,16 @@ public interface OssService {
      */
     @NonNull
     List<String> getFileUrlsByFileIds(List<Long> fileIds);
+
+    boolean updateFileNameByFileId(Long fileId, String newFileName);
+
+    UploadItemResult updateFileContentByFileId(Long fileId, MultipartFile file);
+
+    int deleteFilesByFileIds(List<Long> fileIds);
+
+    int deleteAllFilesByUserId(Long userId);
+
+    int countFilesByUserId(Long userId);
 
     // 根据fileId删除
     boolean deleteFileByFileId(Long fileId);

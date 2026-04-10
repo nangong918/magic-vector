@@ -1,0 +1,139 @@
+package com.demo.controller;
+
+import com.demo.domain.constant.error.CommonExceptions;
+import com.demo.domain.dto.BaseResponse;
+import com.demo.domain.dto.http.resonse.OssBatchDeleteResponse;
+import com.demo.domain.dto.http.resonse.OssBatchUploadResponse;
+import com.demo.domain.dto.http.resonse.OssFileContentUpdateResponse;
+import com.demo.domain.dto.http.resonse.OssFileNameUpdateResponse;
+import com.demo.domain.dto.http.resonse.OssUrlListResponse;
+import com.demo.domain.dto.http.resonse.OssUserDeleteAllResponse;
+import com.minio.config.MinioConfig;
+import com.minio.domain.bo.BatchUploadResult;
+import com.minio.domain.bo.UploadItemResult;
+import com.minio.service.OssService;
+import lombok.RequiredArgsConstructor;
+import org.springframework.util.CollectionUtils;
+import org.springframework.util.StringUtils;
+import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.util.ArrayList;
+import java.util.List;
+
+@CrossOrigin(origins = "*")
+@RestController
+@RequiredArgsConstructor
+@RequestMapping("/oss")
+public class OssController {
+
+    private final OssService ossService;
+    private final MinioConfig minioConfig;
+
+    @PostMapping("/upload/batch")
+    public BaseResponse<OssBatchUploadResponse> batchUpload(
+            @RequestParam("userId") Long userId,
+            @RequestParam(value = "bucketName", required = false) String bucketName,
+            @RequestParam("files") List<MultipartFile> files
+    ) {
+        if (userId == null || CollectionUtils.isEmpty(files)) {
+            return BaseResponse.LogBackError(CommonExceptions.PARAM_ERROR);
+        }
+        String targetBucket = StringUtils.hasText(bucketName) ? bucketName : minioConfig.globalOssBucket();
+        BatchUploadResult uploadResult = ossService.uploadFiles(files, userId, targetBucket);
+        OssBatchUploadResponse response = new OssBatchUploadResponse();
+        response.setUserId(userId);
+        response.setBucketName(targetBucket);
+        response.setSuccessCount(uploadResult.getSuccessCount());
+        response.setFailCount(uploadResult.getFailCount());
+        response.setItems(uploadResult.getItems());
+        return BaseResponse.getResponseEntitySuccess(response);
+    }
+
+    @PostMapping("/file/name/update")
+    public BaseResponse<OssFileNameUpdateResponse> updateFileName(
+            @RequestParam("fileId") Long fileId,
+            @RequestParam("newFileName") String newFileName
+    ) {
+        if (fileId == null || !StringUtils.hasText(newFileName)) {
+            return BaseResponse.LogBackError(CommonExceptions.PARAM_ERROR);
+        }
+        boolean updated = ossService.updateFileNameByFileId(fileId, newFileName);
+        OssFileNameUpdateResponse response = new OssFileNameUpdateResponse();
+        response.setFileId(fileId);
+        response.setNewFileName(newFileName);
+        response.setUpdated(updated);
+        response.setMessage(updated ? "ok" : "file not found or update failed");
+        return BaseResponse.getResponseEntitySuccess(response);
+    }
+
+    @PostMapping("/file/content/update")
+    public BaseResponse<OssFileContentUpdateResponse> updateFileContent(
+            @RequestParam("fileId") Long fileId,
+            @RequestParam("file") MultipartFile file
+    ) {
+        if (fileId == null || file == null || file.isEmpty()) {
+            return BaseResponse.LogBackError(CommonExceptions.PARAM_ERROR);
+        }
+        UploadItemResult item = ossService.updateFileContentByFileId(fileId, file);
+        OssFileContentUpdateResponse response = new OssFileContentUpdateResponse();
+        response.setFileId(fileId);
+        response.setOriginFileName(item.getOriginFileName());
+        response.setUrl(item.getUrl());
+        response.setUpdated(item.isSuccess());
+        response.setMessage(item.getMessage());
+        return BaseResponse.getResponseEntitySuccess(response);
+    }
+
+    @PostMapping("/file/url/list")
+    public BaseResponse<OssUrlListResponse> getUrlList(
+            @RequestParam("fileIdList") List<Long> fileIdList
+    ) {
+        if (fileIdList == null) {
+            fileIdList = new ArrayList<>();
+        }
+        List<String> urlList = ossService.getFileUrlsByFileIds(fileIdList);
+        OssUrlListResponse response = new OssUrlListResponse();
+        response.setFileIdList(fileIdList);
+        response.setUrlList(urlList);
+        return BaseResponse.getResponseEntitySuccess(response);
+    }
+
+    @PostMapping("/file/delete/batch")
+    public BaseResponse<OssBatchDeleteResponse> batchDelete(
+            @RequestParam("fileIdList") List<Long> fileIdList
+    ) {
+        if (CollectionUtils.isEmpty(fileIdList)) {
+            return BaseResponse.LogBackError(CommonExceptions.PARAM_ERROR);
+        }
+        int successCount = ossService.deleteFilesByFileIds(fileIdList);
+        OssBatchDeleteResponse response = new OssBatchDeleteResponse();
+        response.setFileIdList(fileIdList);
+        response.setSuccessCount(successCount);
+        response.setFailCount(fileIdList.size() - successCount);
+        response.setMessage(response.getFailCount() == 0 ? "ok" : "partial success");
+        return BaseResponse.getResponseEntitySuccess(response);
+    }
+
+    @PostMapping("/user/delete/all")
+    public BaseResponse<OssUserDeleteAllResponse> deleteAllByUserId(
+            @RequestParam("userId") Long userId
+    ) {
+        if (userId == null) {
+            return BaseResponse.LogBackError(CommonExceptions.PARAM_ERROR);
+        }
+        int totalCount = ossService.countFilesByUserId(userId);
+        int successCount = ossService.deleteAllFilesByUserId(userId);
+        OssUserDeleteAllResponse response = new OssUserDeleteAllResponse();
+        response.setUserId(userId);
+        response.setTotalCount(totalCount);
+        response.setSuccessCount(successCount);
+        response.setFailCount(Math.max(0, totalCount - successCount));
+        response.setMessage(response.getFailCount() == 0 ? "ok" : "partial success");
+        return BaseResponse.getResponseEntitySuccess(response);
+    }
+}
