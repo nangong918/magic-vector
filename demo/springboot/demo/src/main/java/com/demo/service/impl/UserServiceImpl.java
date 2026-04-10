@@ -99,13 +99,13 @@ public class UserServiceImpl implements UserService {
     @Override
     public UserModule getUserModuleById(@NotNull Long id) {
         UserEntity userEntity = userMapper.selectById(id);
-        return userEntity == null ? null : userConverter.doToModule(userEntity);
+        return userEntity == null ? null : userConverter.entityToModule(userEntity);
     }
 
     @Nullable
     @Override
     public UserModule getUserModuleByAccount(@NotNull String account) {
         UserEntity userEntity = userMapper.selectByAccount(account);
-        return userEntity == null ? null : userConverter.doToModule(userEntity);
+        return userEntity == null ? null : userConverter.entityToModule(userEntity);
     }
 }

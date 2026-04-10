@@ -12,7 +12,7 @@ public interface UserConverter {
 
     @Mapping(source = "id", target = "userId")
     @Mapping(source = "ossId", target = "avatarOssId")
-    UserModule doToModule(UserEntity userEntity);
+    UserModule entityToModule(UserEntity userEntity);
 
     @Mapping(target = "avatarUrl", ignore = true)
     @Mapping(target = "accessToken", ignore = true)
