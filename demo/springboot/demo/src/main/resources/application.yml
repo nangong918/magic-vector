@@ -98,6 +98,8 @@ demo:
     include-paths:
       - /agent/**
       - /chat/**
+      - /oss/**
+      - /user/password/**
     exclude-paths:
       - /user/login
       - /user/register
@@ -106,6 +108,11 @@ demo:
       - /error
     user-id-header: user_id
     access-token-header: access_token
+    tourist-user-id: 1
+    tourist-access-token: tourist
+    tourist-forbidden-paths:
+      - /oss/**
+      - /user/password/**
   debug:
     enabled: false
     token-verify-log-enabled: false

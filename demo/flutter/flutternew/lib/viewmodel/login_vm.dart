@@ -30,6 +30,10 @@ class LoginGoRegister extends LoginIntent {
   const LoginGoRegister();
 }
 
+class LoginTouristAccess extends LoginIntent {
+  const LoginTouristAccess();
+}
+
 class LoginState {
   final String account;
   final String password;
@@ -110,6 +114,8 @@ class LoginVm extends ChangeNotifier {
       _submit();
     } else if (intent is LoginGoRegister) {
       _effectController.add(const LoginNavigateToRegister());
+    } else if (intent is LoginTouristAccess) {
+      _touristAccess();
     }
   }
 
@@ -163,6 +169,22 @@ class LoginVm extends ChangeNotifier {
       notifyListeners();
       _loadSavedAccounts();
     }
+  }
+
+  Future<void> _touristAccess() async {
+    final session = UserSessionModel(
+      userId: 1,
+      account: 'tourist',
+      name: '游客',
+      avatarUrl: '',
+      accessToken: 'tourist',
+      password: '',
+      isCurrent: true,
+      lastLoginAt: DateTime.now().millisecondsSinceEpoch,
+    );
+    await _userManager.saveCurrentUser(session);
+    AppSession.instance.updateUserId(session.userId);
+    _effectController.add(const LoginNavigateToMain());
   }
 
   @override

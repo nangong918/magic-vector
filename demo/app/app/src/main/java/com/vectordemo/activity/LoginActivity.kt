@@ -36,7 +36,8 @@ class LoginActivity : BaseComponentActivity() {
                     onPasswordChange = { vm.processIntent(LoginIntent.UpdatePassword(it)) },
                     onSelectSavedAccount = { vm.processIntent(LoginIntent.SelectSavedAccount(it)) },
                     onSubmit = { vm.processIntent(LoginIntent.SubmitLogin) },
-                    onGoRegister = { vm.processIntent(LoginIntent.NavigateToRegister) }
+                    onGoRegister = { vm.processIntent(LoginIntent.NavigateToRegister) },
+                    onTouristAccess = { vm.processIntent(LoginIntent.TouristAccess) }
                 )
             }
         }

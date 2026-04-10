@@ -31,6 +31,7 @@ class LoginVm : ViewModel() {
             is LoginIntent.SelectSavedAccount -> selectSavedAccount(intent.account)
             LoginIntent.SubmitLogin -> submitLogin()
             LoginIntent.NavigateToRegister -> sendEffect(LoginEffect.NavigateToRegister)
+            LoginIntent.TouristAccess -> touristAccess()
         }
     }
 
@@ -78,6 +79,24 @@ class LoginVm : ViewModel() {
         }
     }
 
+    private fun touristAccess() {
+        viewModelScope.launch {
+            MainApplication.getUserManager().saveCurrentUser(
+                UserSessionModel(
+                    userId = 1L,
+                    account = "tourist",
+                    name = "游客",
+                    avatarUrl = "",
+                    accessToken = "tourist",
+                    password = ""
+                )
+            )
+            MainApplication.updateUserId(1L)
+            loadSavedAccounts()
+            sendEffect(LoginEffect.NavigateToMain)
+        }
+    }
+
     private fun sendEffect(effect: LoginEffect) = viewModelScope.launch { _effect.send(effect) }
 }
 
@@ -87,6 +106,7 @@ sealed class LoginIntent {
     data class SelectSavedAccount(val account: String) : LoginIntent()
     data object SubmitLogin : LoginIntent()
     data object NavigateToRegister : LoginIntent()
+    data object TouristAccess : LoginIntent()
 }
 
 data class LoginState(val account: String = "", val password: String = "", val isLoading: Boolean = false) {

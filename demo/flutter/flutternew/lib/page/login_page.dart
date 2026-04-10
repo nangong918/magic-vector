@@ -83,6 +83,10 @@ class _LoginPageState extends State<LoginPage> {
                   onPressed: () => _vm.processIntent(const LoginGoRegister()),
                   child: const Text('没有账号？去注册'),
                 ),
+                TextButton(
+                  onPressed: () => _vm.processIntent(const LoginTouristAccess()),
+                  child: const Text('游客访问'),
+                ),
               ],
             ),
           ),

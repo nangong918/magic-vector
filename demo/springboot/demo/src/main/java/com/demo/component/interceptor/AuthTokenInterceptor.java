@@ -11,12 +11,14 @@ import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.stereotype.Component;
+import org.springframework.util.AntPathMatcher;
 import org.springframework.util.StringUtils;
 import org.springframework.web.servlet.HandlerInterceptor;
 
 @Component
 @RequiredArgsConstructor
 public class AuthTokenInterceptor implements HandlerInterceptor {
+    private final AntPathMatcher pathMatcher = new AntPathMatcher();
 
     private final AuthTokenService authTokenService;
     private final AuthRouteProperties authRouteProperties;
@@ -40,7 +42,23 @@ public class AuthTokenInterceptor implements HandlerInterceptor {
             writeError(response, UserExceptions.ACCESS_TOKEN_INVALID);
             return false;
         }
+        if (isTouristRequest(userId, accessToken) && isTouristForbiddenPath(request.getRequestURI())) {
+            writeError(response, UserExceptions.TOURIST_FORBIDDEN_CALL_API);
+            return false;
+        }
         return true;
+    }
+
+    private boolean isTouristRequest(long userId, String accessToken) {
+        return userId == authRouteProperties.getTouristUserId()
+                && StringUtils.hasText(accessToken)
+                && accessToken.equals(authRouteProperties.getTouristAccessToken());
+    }
+
+    private boolean isTouristForbiddenPath(String path) {
+        return authRouteProperties.getTouristForbiddenPaths()
+                .stream()
+                .anyMatch(pattern -> pathMatcher.match(pattern, path));
     }
 
     private void writeError(HttpServletResponse response, ExceptionEnums exceptionEnums) throws Exception {

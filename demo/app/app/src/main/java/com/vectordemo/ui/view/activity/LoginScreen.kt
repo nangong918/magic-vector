@@ -42,7 +42,8 @@ fun ComposeLoginScreen(
     onPasswordChange: (String) -> Unit,
     onSelectSavedAccount: (String) -> Unit,
     onSubmit: () -> Unit,
-    onGoRegister: () -> Unit
+    onGoRegister: () -> Unit,
+    onTouristAccess: () -> Unit
 ) {
     var accountMenuExpanded by remember { mutableStateOf(false) }
     Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
@@ -109,6 +110,7 @@ fun ComposeLoginScreen(
             }
             Spacer(modifier = Modifier.height(10.dp))
             TextButton(onClick = onGoRegister) { Text("没有账号？去注册") }
+            TextButton(onClick = onTouristAccess) { Text("游客访问") }
         }
     }
 }
@@ -117,6 +119,6 @@ fun ComposeLoginScreen(
 @Composable
 private fun ComposeLoginScreenPreview() {
     VectorDemoTheme {
-        ComposeLoginScreen(LoginState(), emptyList(), {}, {}, {}, {}, {})
+        ComposeLoginScreen(LoginState(), emptyList(), {}, {}, {}, {}, {}, {})
     }
 }

@@ -1,6 +1,7 @@
 package com.demo.service.impl;
 
 import com.demo.config.DebugConfig;
+import com.demo.config.AuthRouteProperties;
 import com.demo.service.AuthTokenService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -20,6 +21,7 @@ public class AuthTokenServiceImpl implements AuthTokenService {
 
     private final Map<String, TokenSession> tokenSessionMap = new ConcurrentHashMap<>();
     private final DebugConfig debugConfig;
+    private final AuthRouteProperties authRouteProperties;
 
     @NotNull
     @Override
@@ -37,6 +39,9 @@ public class AuthTokenServiceImpl implements AuthTokenService {
                 log.debug("[token/verify] invalid request params, userId={}, token={}", userId, maskToken(accessToken));
             }
             return false;
+        }
+        if (isTouristToken(userId, accessToken)) {
+            return true;
         }
         TokenSession session = tokenSessionMap.get(accessToken);
         if (session == null) {
@@ -69,6 +74,13 @@ public class AuthTokenServiceImpl implements AuthTokenService {
             return token;
         }
         return token.substring(0, 4) + "***" + token.substring(token.length() - 4);
+    }
+
+    private boolean isTouristToken(Long userId, String accessToken) {
+        return userId != null
+                && userId.equals(authRouteProperties.getTouristUserId())
+                && StringUtils.hasText(accessToken)
+                && accessToken.equals(authRouteProperties.getTouristAccessToken());
     }
 
     private record TokenSession(Long userId, long expireAt) {
