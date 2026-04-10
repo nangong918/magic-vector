@@ -49,47 +49,69 @@ class _RegisterPageState extends State<RegisterPage> {
         final state = _vm.state;
         return Scaffold(
           appBar: AppBar(title: const Text('注册')),
-          body: Padding(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                TextField(
-                  decoration: const InputDecoration(labelText: '账号'),
-                  onChanged: (v) => _vm.processIntent(RegisterUpdateAccount(v)),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  decoration: const InputDecoration(labelText: '密码'),
-                  obscureText: true,
-                  onChanged: (v) => _vm.processIntent(RegisterUpdatePassword(v)),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  decoration: const InputDecoration(labelText: '确认密码'),
-                  obscureText: true,
-                  onChanged: (v) => _vm.processIntent(RegisterUpdateConfirmPassword(v)),
-                ),
-                const SizedBox(height: 20),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: state.canSubmit ? () => _vm.processIntent(const RegisterSubmit()) : null,
-                    child: state.isLoading
-                        ? const SizedBox(
-                            height: 18,
-                            width: 18,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const Text('注册'),
+          body: SafeArea(
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                return SingleChildScrollView(
+                  keyboardDismissBehavior:
+                      ScrollViewKeyboardDismissBehavior.onDrag,
+                  padding: const EdgeInsets.all(24),
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                    child: IntrinsicHeight(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          TextField(
+                            decoration: const InputDecoration(labelText: '账号'),
+                            onChanged: (v) =>
+                                _vm.processIntent(RegisterUpdateAccount(v)),
+                          ),
+                          const SizedBox(height: 12),
+                          TextField(
+                            decoration: const InputDecoration(labelText: '密码'),
+                            obscureText: true,
+                            onChanged: (v) =>
+                                _vm.processIntent(RegisterUpdatePassword(v)),
+                          ),
+                          const SizedBox(height: 12),
+                          TextField(
+                            decoration: const InputDecoration(labelText: '确认密码'),
+                            obscureText: true,
+                            onChanged: (v) => _vm.processIntent(
+                              RegisterUpdateConfirmPassword(v),
+                            ),
+                          ),
+                          const SizedBox(height: 20),
+                          SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton(
+                              onPressed: state.canSubmit
+                                  ? () => _vm.processIntent(const RegisterSubmit())
+                                  : null,
+                              child: state.isLoading
+                                  ? const SizedBox(
+                                      height: 18,
+                                      width: 18,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                      ),
+                                    )
+                                  : const Text('注册'),
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          TextButton(
+                            onPressed: () =>
+                                _vm.processIntent(const RegisterGoLogin()),
+                            child: const Text('已有账号？去登录'),
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
-                ),
-                const SizedBox(height: 8),
-                TextButton(
-                  onPressed: () => _vm.processIntent(const RegisterGoLogin()),
-                  child: const Text('已有账号？去登录'),
-                ),
-              ],
+                );
+              },
             ),
           ),
         );

@@ -1,7 +1,7 @@
 class NetworkConstant {
   const NetworkConstant._();
 
-  static const String dns = '192.168.3.140';
+  static const String dns = '192.168.1.2';
   static const int port = 48888;
   static const String protocol = 'http';
 
