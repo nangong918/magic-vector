@@ -1,0 +1,943 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "VectorDemo",
+    "description": "User + OSS。登录/注册后置：apt.response.json → environment + globals。OSS/改密前置：setRequestHeader。若 Apipost 导入未识别 x-apipost-* 扩展，请在接口里手动粘贴同名脚本。",
+    "version": "1.0.0"
+  },
+  "servers": [
+    {
+      "url": "http://localhost:48888",
+      "description": "本地环境",
+      "variables": {}
+    },
+    {
+      "url": "",
+      "description": "默认环境",
+      "variables": {}
+    }
+  ],
+  "tags": [
+    {
+      "name": "User",
+      "description": "/user"
+    },
+    {
+      "name": "OSS",
+      "description": "/oss (auth)"
+    }
+  ],
+  "paths": {
+    "http://localhost:48888/user/register": {
+      "post": {
+        "summary": "User register",
+        "description": "注册成功后执行后置脚本，写入 local_access_token / local_user_id（环境+全局）。",
+        "tags": [
+          "User"
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {}
+                },
+                "example": ""
+              }
+            }
+          },
+          "404": {
+            "description": "Fail",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {}
+                },
+                "example": ""
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "account": {
+                    "type": "string",
+                    "example": "demo"
+                  },
+                  "password": {
+                    "type": "string",
+                    "example": "123456"
+                  },
+                  "name": {
+                    "type": "string",
+                    "example": "nick"
+                  },
+                  "avatar": {
+                    "type": "string",
+                    "format": "binary",
+                    "description": "optional"
+                  }
+                },
+                "required": [
+                  "account",
+                  "password"
+                ]
+              }
+            }
+          }
+        },
+        "x-apipost-after-script": "// [后置] 登录/注册成功后：写入环境变量 + 全局变量，供 OSS 等接口使用\nif (apt.response && apt.response.json && apt.response.json.data) {\n  const d = apt.response.json.data;\n  if (d.accessToken != null) {\n    const token = String(d.accessToken);\n    const uid = String(d.userId);\n    apt.environment.set(\"local_access_token\", token);\n    apt.environment.set(\"local_user_id\", uid);\n    apt.globals.set(\"local_access_token\", token);\n    apt.globals.set(\"local_user_id\", uid);\n  }\n}",
+        "event": [
+          {
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "// [后置] 登录/注册成功后：写入环境变量 + 全局变量，供 OSS 等接口使用",
+                "if (apt.response && apt.response.json && apt.response.json.data) {",
+                "  const d = apt.response.json.data;",
+                "  if (d.accessToken != null) {",
+                "    const token = String(d.accessToken);",
+                "    const uid = String(d.userId);",
+                "    apt.environment.set(\"local_access_token\", token);",
+                "    apt.environment.set(\"local_user_id\", uid);",
+                "    apt.globals.set(\"local_access_token\", token);",
+                "    apt.globals.set(\"local_user_id\", uid);",
+                "  }",
+                "}"
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "http://localhost:48888/user/login": {
+      "post": {
+        "summary": "User login",
+        "description": "登录成功后执行后置脚本：apt.response.json.data → 环境变量 + 全局变量，OSS 前置脚本可 apt.setRequestHeader。",
+        "tags": [
+          "User"
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {}
+                },
+                "example": ""
+              }
+            }
+          },
+          "404": {
+            "description": "Fail",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {}
+                },
+                "example": ""
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              },
+              "example": "{\n\t\"account\": \"1322596900\",\n\t\"password\": \"123456\"\n}"
+            }
+          }
+        },
+        "x-apipost-after-script": "// [后置] 登录/注册成功后：写入环境变量 + 全局变量，供 OSS 等接口使用\nif (apt.response && apt.response.json && apt.response.json.data) {\n  const d = apt.response.json.data;\n  if (d.accessToken != null) {\n    const token = String(d.accessToken);\n    const uid = String(d.userId);\n    apt.environment.set(\"local_access_token\", token);\n    apt.environment.set(\"local_user_id\", uid);\n    apt.globals.set(\"local_access_token\", token);\n    apt.globals.set(\"local_user_id\", uid);\n  }\n}",
+        "event": [
+          {
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "// [后置] 登录/注册成功后：写入环境变量 + 全局变量，供 OSS 等接口使用",
+                "if (apt.response && apt.response.json && apt.response.json.data) {",
+                "  const d = apt.response.json.data;",
+                "  if (d.accessToken != null) {",
+                "    const token = String(d.accessToken);",
+                "    const uid = String(d.userId);",
+                "    apt.environment.set(\"local_access_token\", token);",
+                "    apt.environment.set(\"local_user_id\", uid);",
+                "    apt.globals.set(\"local_access_token\", token);",
+                "    apt.globals.set(\"local_user_id\", uid);",
+                "  }",
+                "}"
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "http://localhost:48888/user/token/verify": {
+      "post": {
+        "summary": "User token verify",
+        "description": "",
+        "tags": [
+          "User"
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {}
+                },
+                "example": ""
+              }
+            }
+          },
+          "404": {
+            "description": "Fail",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {}
+                },
+                "example": ""
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              },
+              "example": "{\n\t\"userId\": 1,\n\t\"accessToken\": \"at_xxx\"\n}"
+            }
+          }
+        },
+        "x-apipost-after-script": "// [后置] 可选：校验通过后同步变量（若接口返回了有效信息）\nif (apt.response && apt.response.json && apt.response.json.data) {\n  const d = apt.response.json.data;\n  if (d.valid === true && apt.environment.get(\"local_user_id\")) {\n    apt.globals.set(\"local_user_id\", String(apt.environment.get(\"local_user_id\")));\n    apt.globals.set(\"local_access_token\", String(apt.environment.get(\"local_access_token\") || \"\"));\n  }\n}",
+        "event": [
+          {
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "// [后置] 可选：校验通过后同步变量（若接口返回了有效信息）",
+                "if (apt.response && apt.response.json && apt.response.json.data) {",
+                "  const d = apt.response.json.data;",
+                "  if (d.valid === true && apt.environment.get(\"local_user_id\")) {",
+                "    apt.globals.set(\"local_user_id\", String(apt.environment.get(\"local_user_id\")));",
+                "    apt.globals.set(\"local_access_token\", String(apt.environment.get(\"local_access_token\") || \"\"));",
+                "  }",
+                "}"
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "http://localhost:48888/user/password/update": {
+      "post": {
+        "summary": "User password update (auth)",
+        "description": "需 Header user_id、access_token；前置脚本自动从环境/全局注入。",
+        "tags": [
+          "User"
+        ],
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "header",
+            "description": "标识用户的唯一ID，用于API请求中验证用户身份",
+            "required": true,
+            "example": "{{local_user_id}}",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "access_token",
+            "in": "header",
+            "description": "用于API身份验证的令牌，需有效且未过期",
+            "required": true,
+            "example": "{{local_access_token}}",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {}
+                },
+                "example": ""
+              }
+            }
+          },
+          "404": {
+            "description": "Fail",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {}
+                },
+                "example": ""
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              },
+              "example": "{\n\t\"userId\": \"1\",\n\t\"oldPassword\": \"123456\",\n\t\"newPassword\": \"654321\"\n}"
+            }
+          }
+        },
+        "x-apipost-pre-script": "// [前置] 从环境变量或全局变量读取 token，自动写入请求头（与 AuthTokenInterceptor 一致）\nconst uid = apt.environment.get(\"local_user_id\") || apt.globals.get(\"local_user_id\") || \"\";\nconst tok = apt.environment.get(\"local_access_token\") || apt.globals.get(\"local_access_token\") || \"\";\nif (uid) apt.setRequestHeader(\"user_id\", uid);\nif (tok) apt.setRequestHeader(\"access_token\", tok);\n",
+        "x-apipost-after-script": "// [后置] 改密成功后建议重新登录；此处仅清空 token 避免误用旧 token\nif (apt.response && apt.response.json && apt.response.json.data && apt.response.json.data.updated === true) {\n  apt.environment.unset(\"local_access_token\");\n  apt.globals.unset(\"local_access_token\");\n}",
+        "event": [
+          {
+            "listen": "prerequest",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "// [前置] 从环境变量或全局变量读取 token，自动写入请求头（与 AuthTokenInterceptor 一致）",
+                "const uid = apt.environment.get(\"local_user_id\") || apt.globals.get(\"local_user_id\") || \"\";",
+                "const tok = apt.environment.get(\"local_access_token\") || apt.globals.get(\"local_access_token\") || \"\";",
+                "if (uid) apt.setRequestHeader(\"user_id\", uid);",
+                "if (tok) apt.setRequestHeader(\"access_token\", tok);",
+                ""
+              ]
+            }
+          },
+          {
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "// [后置] 改密成功后建议重新登录；此处仅清空 token 避免误用旧 token",
+                "if (apt.response && apt.response.json && apt.response.json.data && apt.response.json.data.updated === true) {",
+                "  apt.environment.unset(\"local_access_token\");",
+                "  apt.globals.unset(\"local_access_token\");",
+                "}"
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "http://localhost:48888/oss/upload/batch": {
+      "post": {
+        "summary": "OSS batch upload (auth)",
+        "description": "前置脚本从环境/全局读取 token 并 setRequestHeader；多文件字段名均为 files。",
+        "tags": [
+          "OSS"
+        ],
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "header",
+            "description": "标识用户的唯一ID，用于API请求中验证用户身份",
+            "required": true,
+            "example": "{{local_user_id}}",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "access_token",
+            "in": "header",
+            "description": "用于API身份验证的令牌，需有效且未过期",
+            "required": true,
+            "example": "{{local_access_token}}",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {}
+                },
+                "example": ""
+              }
+            }
+          },
+          "404": {
+            "description": "Fail",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {}
+                },
+                "example": ""
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "userId": {
+                    "type": "string",
+                    "example": "1",
+                    "description": "Business user id for OSS row"
+                  },
+                  "bucketName": {
+                    "type": "string",
+                    "example": "global-oss",
+                    "description": "optional"
+                  },
+                  "files": {
+                    "type": "file",
+                    "example": "",
+                    "description": "批量：多个表单项同名 files；单文件也可用 files"
+                  }
+                },
+                "required": [
+                  "userId",
+                  "files"
+                ]
+              }
+            }
+          }
+        },
+        "x-apipost-pre-script": "// [前置] 从环境变量或全局变量读取 token，自动写入请求头（与 AuthTokenInterceptor 一致）\nconst uid = apt.environment.get(\"local_user_id\") || apt.globals.get(\"local_user_id\") || \"\";\nconst tok = apt.environment.get(\"local_access_token\") || apt.globals.get(\"local_access_token\") || \"\";\nif (uid) apt.setRequestHeader(\"user_id\", uid);\nif (tok) apt.setRequestHeader(\"access_token\", tok);\n",
+        "event": [
+          {
+            "listen": "prerequest",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "// [前置] 从环境变量或全局变量读取 token，自动写入请求头（与 AuthTokenInterceptor 一致）",
+                "const uid = apt.environment.get(\"local_user_id\") || apt.globals.get(\"local_user_id\") || \"\";",
+                "const tok = apt.environment.get(\"local_access_token\") || apt.globals.get(\"local_access_token\") || \"\";",
+                "if (uid) apt.setRequestHeader(\"user_id\", uid);",
+                "if (tok) apt.setRequestHeader(\"access_token\", tok);",
+                ""
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "http://localhost:48888/oss/file/name/update": {
+      "post": {
+        "summary": "OSS rename display name (auth)",
+        "description": "",
+        "tags": [
+          "OSS"
+        ],
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "header",
+            "description": "标识用户的唯一ID，用于API请求中验证用户身份",
+            "required": true,
+            "example": "{{local_user_id}}",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "access_token",
+            "in": "header",
+            "description": "用于API身份验证的令牌，需有效且未过期",
+            "required": true,
+            "example": "{{local_access_token}}",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {}
+                },
+                "example": ""
+              }
+            }
+          },
+          "404": {
+            "description": "Fail",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {}
+                },
+                "example": ""
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "fileId": {
+                    "type": "string",
+                    "example": "1234567890123456789"
+                  },
+                  "newFileName": {
+                    "type": "string",
+                    "example": "photo.png"
+                  }
+                },
+                "required": [
+                  "fileId",
+                  "newFileName"
+                ]
+              }
+            }
+          }
+        },
+        "x-apipost-pre-script": "// [前置] 从环境变量或全局变量读取 token，自动写入请求头（与 AuthTokenInterceptor 一致）\nconst uid = apt.environment.get(\"local_user_id\") || apt.globals.get(\"local_user_id\") || \"\";\nconst tok = apt.environment.get(\"local_access_token\") || apt.globals.get(\"local_access_token\") || \"\";\nif (uid) apt.setRequestHeader(\"user_id\", uid);\nif (tok) apt.setRequestHeader(\"access_token\", tok);\n",
+        "event": [
+          {
+            "listen": "prerequest",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "// [前置] 从环境变量或全局变量读取 token，自动写入请求头（与 AuthTokenInterceptor 一致）",
+                "const uid = apt.environment.get(\"local_user_id\") || apt.globals.get(\"local_user_id\") || \"\";",
+                "const tok = apt.environment.get(\"local_access_token\") || apt.globals.get(\"local_access_token\") || \"\";",
+                "if (uid) apt.setRequestHeader(\"user_id\", uid);",
+                "if (tok) apt.setRequestHeader(\"access_token\", tok);",
+                ""
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "http://localhost:48888/oss/file/content/update": {
+      "post": {
+        "summary": "OSS replace file content (auth)",
+        "description": "",
+        "tags": [
+          "OSS"
+        ],
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "header",
+            "description": "标识用户的唯一ID，用于API请求中验证用户身份",
+            "required": true,
+            "example": "{{local_user_id}}",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "access_token",
+            "in": "header",
+            "description": "用于API身份验证的令牌，需有效且未过期",
+            "required": true,
+            "example": "{{local_access_token}}",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {}
+                },
+                "example": ""
+              }
+            }
+          },
+          "404": {
+            "description": "Fail",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {}
+                },
+                "example": ""
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "fileId": {
+                    "type": "string",
+                    "example": "1234567890123456789"
+                  },
+                  "file": {
+                    "type": "string",
+                    "format": "binary"
+                  }
+                },
+                "required": [
+                  "fileId",
+                  "file"
+                ]
+              }
+            }
+          }
+        },
+        "x-apipost-pre-script": "// [前置] 从环境变量或全局变量读取 token，自动写入请求头（与 AuthTokenInterceptor 一致）\nconst uid = apt.environment.get(\"local_user_id\") || apt.globals.get(\"local_user_id\") || \"\";\nconst tok = apt.environment.get(\"local_access_token\") || apt.globals.get(\"local_access_token\") || \"\";\nif (uid) apt.setRequestHeader(\"user_id\", uid);\nif (tok) apt.setRequestHeader(\"access_token\", tok);\n",
+        "event": [
+          {
+            "listen": "prerequest",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "// [前置] 从环境变量或全局变量读取 token，自动写入请求头（与 AuthTokenInterceptor 一致）",
+                "const uid = apt.environment.get(\"local_user_id\") || apt.globals.get(\"local_user_id\") || \"\";",
+                "const tok = apt.environment.get(\"local_access_token\") || apt.globals.get(\"local_access_token\") || \"\";",
+                "if (uid) apt.setRequestHeader(\"user_id\", uid);",
+                "if (tok) apt.setRequestHeader(\"access_token\", tok);",
+                ""
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "http://localhost:48888/oss/file/url/list": {
+      "post": {
+        "summary": "OSS url list by ids (auth)",
+        "description": "",
+        "tags": [
+          "OSS"
+        ],
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "header",
+            "description": "标识用户的唯一ID，用于API请求中验证用户身份",
+            "required": true,
+            "example": "{{local_user_id}}",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "access_token",
+            "in": "header",
+            "description": "用于API身份验证的令牌，需有效且未过期",
+            "required": true,
+            "example": "{{local_access_token}}",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {}
+                },
+                "example": ""
+              }
+            }
+          },
+          "404": {
+            "description": "Fail",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {}
+                },
+                "example": ""
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "fileIdList": {
+                    "type": "string",
+                    "example": "1",
+                    "description": "Repeat form key fileIdList for multiple ids"
+                  }
+                },
+                "required": []
+              }
+            }
+          }
+        },
+        "x-apipost-pre-script": "// [前置] 从环境变量或全局变量读取 token，自动写入请求头（与 AuthTokenInterceptor 一致）\nconst uid = apt.environment.get(\"local_user_id\") || apt.globals.get(\"local_user_id\") || \"\";\nconst tok = apt.environment.get(\"local_access_token\") || apt.globals.get(\"local_access_token\") || \"\";\nif (uid) apt.setRequestHeader(\"user_id\", uid);\nif (tok) apt.setRequestHeader(\"access_token\", tok);\n",
+        "event": [
+          {
+            "listen": "prerequest",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "// [前置] 从环境变量或全局变量读取 token，自动写入请求头（与 AuthTokenInterceptor 一致）",
+                "const uid = apt.environment.get(\"local_user_id\") || apt.globals.get(\"local_user_id\") || \"\";",
+                "const tok = apt.environment.get(\"local_access_token\") || apt.globals.get(\"local_access_token\") || \"\";",
+                "if (uid) apt.setRequestHeader(\"user_id\", uid);",
+                "if (tok) apt.setRequestHeader(\"access_token\", tok);",
+                ""
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "http://localhost:48888/oss/file/delete/batch": {
+      "post": {
+        "summary": "OSS batch delete (auth)",
+        "description": "",
+        "tags": [
+          "OSS"
+        ],
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "header",
+            "description": "标识用户的唯一ID，用于API请求中验证用户身份",
+            "required": true,
+            "example": "{{local_user_id}}",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "access_token",
+            "in": "header",
+            "description": "用于API身份验证的令牌，需有效且未过期",
+            "required": true,
+            "example": "{{local_access_token}}",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {}
+                },
+                "example": ""
+              }
+            }
+          },
+          "404": {
+            "description": "Fail",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {}
+                },
+                "example": ""
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "fileIdList": {
+                    "type": "string",
+                    "example": "1",
+                    "description": "Repeat form key fileIdList"
+                  }
+                },
+                "required": [
+                  "fileIdList"
+                ]
+              }
+            }
+          }
+        },
+        "x-apipost-pre-script": "// [前置] 从环境变量或全局变量读取 token，自动写入请求头（与 AuthTokenInterceptor 一致）\nconst uid = apt.environment.get(\"local_user_id\") || apt.globals.get(\"local_user_id\") || \"\";\nconst tok = apt.environment.get(\"local_access_token\") || apt.globals.get(\"local_access_token\") || \"\";\nif (uid) apt.setRequestHeader(\"user_id\", uid);\nif (tok) apt.setRequestHeader(\"access_token\", tok);\n",
+        "event": [
+          {
+            "listen": "prerequest",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "// [前置] 从环境变量或全局变量读取 token，自动写入请求头（与 AuthTokenInterceptor 一致）",
+                "const uid = apt.environment.get(\"local_user_id\") || apt.globals.get(\"local_user_id\") || \"\";",
+                "const tok = apt.environment.get(\"local_access_token\") || apt.globals.get(\"local_access_token\") || \"\";",
+                "if (uid) apt.setRequestHeader(\"user_id\", uid);",
+                "if (tok) apt.setRequestHeader(\"access_token\", tok);",
+                ""
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "http://localhost:48888/oss/user/delete/all": {
+      "post": {
+        "summary": "OSS delete all by userId (auth)",
+        "description": "",
+        "tags": [
+          "OSS"
+        ],
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "header",
+            "description": "标识用户的唯一ID，用于API请求中验证用户身份",
+            "required": true,
+            "example": "{{local_user_id}}",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "access_token",
+            "in": "header",
+            "description": "用于API身份验证的令牌，需有效且未过期",
+            "required": true,
+            "example": "{{local_access_token}}",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {}
+                },
+                "example": ""
+              }
+            }
+          },
+          "404": {
+            "description": "Fail",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {}
+                },
+                "example": ""
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "userId": {
+                    "type": "string",
+                    "example": "1"
+                  }
+                },
+                "required": [
+                  "userId"
+                ]
+              }
+            }
+          }
+        },
+        "x-apipost-pre-script": "// [前置] 从环境变量或全局变量读取 token，自动写入请求头（与 AuthTokenInterceptor 一致）\nconst uid = apt.environment.get(\"local_user_id\") || apt.globals.get(\"local_user_id\") || \"\";\nconst tok = apt.environment.get(\"local_access_token\") || apt.globals.get(\"local_access_token\") || \"\";\nif (uid) apt.setRequestHeader(\"user_id\", uid);\nif (tok) apt.setRequestHeader(\"access_token\", tok);\n",
+        "event": [
+          {
+            "listen": "prerequest",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "// [前置] 从环境变量或全局变量读取 token，自动写入请求头（与 AuthTokenInterceptor 一致）",
+                "const uid = apt.environment.get(\"local_user_id\") || apt.globals.get(\"local_user_id\") || \"\";",
+                "const tok = apt.environment.get(\"local_access_token\") || apt.globals.get(\"local_access_token\") || \"\";",
+                "if (uid) apt.setRequestHeader(\"user_id\", uid);",
+                "if (tok) apt.setRequestHeader(\"access_token\", tok);",
+                ""
+              ]
+            }
+          }
+        ]
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "UserIdHeader": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "user_id"
+      },
+      "AccessTokenHeader": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "access_token"
+      }
+    }
+  }
+}
