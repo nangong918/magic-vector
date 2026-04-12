@@ -58,9 +58,10 @@ class LoginVm : ViewModel() {
                 val auth = MainApplication.getRemoteApiSource().login(
                     UserLoginRequest(account = state.account.trim(), password = state.password)
                 )
+                val uid = auth.userId?.toLongOrNull() ?: 0L
                 MainApplication.getUserManager().saveCurrentUser(
                     UserSessionModel(
-                        userId = auth.userId ?: 0L,
+                        userId = uid,
                         account = auth.account.orEmpty(),
                         name = auth.name.orEmpty(),
                         avatarUrl = auth.avatarUrl.orEmpty(),
@@ -68,7 +69,7 @@ class LoginVm : ViewModel() {
                         password = state.password
                     )
                 )
-                MainApplication.updateUserId(auth.userId ?: 0L)
+                MainApplication.updateUserId(uid)
                 _uiState.update { it.copy(isLoading = false) }
                 loadSavedAccounts()
                 sendEffect(LoginEffect.NavigateToMain)

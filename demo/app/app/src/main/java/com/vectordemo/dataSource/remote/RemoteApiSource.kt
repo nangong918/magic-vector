@@ -35,7 +35,9 @@ class RemoteApiSource(private val apiRequest: ApiRequest) {
             throw NetworkParamIllegalException("用户不存在")
         }
         return requestData({
-            apiRequest.verifyAccessToken(UserTokenVerifyRequest(localUser.userId, accessToken))
+            apiRequest.verifyAccessToken(
+                UserTokenVerifyRequest(userId = localUser.userId.toString(), accessToken = accessToken)
+            )
         }, "Token验证响应为空")
     }
 

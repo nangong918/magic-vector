@@ -8,7 +8,7 @@ part of 'user_auth_response.dart';
 
 UserAuthResponse _$UserAuthResponseFromJson(Map<String, dynamic> json) =>
     UserAuthResponse(
-      userId: (json['userId'] as num?)?.toInt(),
+      userId: userIdFromWireJson(json['userId']),
       account: json['account'] as String?,
       name: json['name'] as String?,
       avatarUrl: json['avatarUrl'] as String?,

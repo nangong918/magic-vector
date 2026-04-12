@@ -9,13 +9,13 @@ part of 'user_token_verify_request.dart';
 UserTokenVerifyRequest _$UserTokenVerifyRequestFromJson(
   Map<String, dynamic> json,
 ) => UserTokenVerifyRequest(
-  userId: (json['userId'] as num).toInt(),
+  userId: userIdFromWireJsonRequired(json['userId']),
   accessToken: json['accessToken'] as String,
 );
 
 Map<String, dynamic> _$UserTokenVerifyRequestToJson(
   UserTokenVerifyRequest instance,
 ) => <String, dynamic>{
-  'userId': instance.userId,
+  'userId': userIdToWireJson(instance.userId),
   'accessToken': instance.accessToken,
 };

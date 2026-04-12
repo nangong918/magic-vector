@@ -9,7 +9,7 @@ part of 'user_token_verify_response.dart';
 UserTokenVerifyResponse _$UserTokenVerifyResponseFromJson(
   Map<String, dynamic> json,
 ) => UserTokenVerifyResponse(
-  userId: (json['userId'] as num?)?.toInt(),
+  userId: userIdFromWireJson(json['userId']),
   valid: json['valid'] as bool?,
   message: json['message'] as String?,
 );

@@ -1,11 +1,14 @@
 import 'package:json_annotation/json_annotation.dart';
 
+import '../user_id_wire_json.dart';
+
 // flutter pub run build_runner build
 // 和原文件同目录生成 user_token_verify_request.g.dart
 part 'user_token_verify_request.g.dart';
 
 @JsonSerializable()
 class UserTokenVerifyRequest {
+  @JsonKey(fromJson: userIdFromWireJsonRequired, toJson: userIdToWireJson)
   final int userId;
   final String accessToken;
 

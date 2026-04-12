@@ -55,16 +55,17 @@ class RegisterVm : ViewModel() {
                     password = state.password.toRequestBody("text/plain".toMediaTypeOrNull()),
                     name = state.account.trim().toRequestBody("text/plain".toMediaTypeOrNull())
                 )
+                val uid = auth.userId?.toLongOrNull() ?: 0L
                 MainApplication.getUserManager().saveCurrentUser(
                     UserSessionModel(
-                        userId = auth.userId ?: 0L,
+                        userId = uid,
                         account = auth.account.orEmpty(),
                         name = auth.name.orEmpty(),
                         avatarUrl = auth.avatarUrl.orEmpty(),
                         accessToken = auth.accessToken.orEmpty()
                     )
                 )
-                MainApplication.updateUserId(auth.userId ?: 0L)
+                MainApplication.updateUserId(uid)
                 _uiState.update { it.copy(isLoading = false) }
                 sendEffect(RegisterEffect.NavigateToMain)
             } catch (_: Throwable) {
