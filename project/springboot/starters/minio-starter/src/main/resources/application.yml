@@ -7,9 +7,11 @@ minio:
   endpoint: "http://127.0.0.1:9000" # minIO 服务器地址
   access-key: "minioadmin"  # minIO 用户名
   secret-key: "minioadmin"  # minIO 密码
-  #============ minio 代理
+  #============ minio 代理（use-gateway-proxy 与 use-nginx-proxy 二选一；若均为 true 则按 nginx）
+  # nginx：外链 host=本机局域网 IP，port=endpoint 中的端口；gateway-port/minio-url 仅 Spring Cloud Gateway
   use-gateway-proxy: true
-  gateway-port: 8888        # 代理minio的网关端口号
+  use-nginx-proxy: false
+  gateway-port: 8888
   minio-url: "/oss-minio"
 
 

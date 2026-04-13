@@ -9,6 +9,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.stereotype.Component;
 
 import java.net.InetAddress;
+import java.net.URI;
 
 /**
  *@author 13225
@@ -34,15 +35,27 @@ public class MinioConfig {
     private String secretKey;
 
     /**
-     * 是否使用gateway代理；如果不适用则需要使用nginx反向代理。否则会出现前端无法访问后端网域而导致生成的url无法呗访问
+     * 是否使用 Spring Cloud Gateway 等网关代理（预签名 URL 会带 {@link #minioUrl} 前缀，如 /oss-minio）。
+     * 与 {@link #useNginxProxy} 请勿同时为 true；若均为 true，则按 nginx 逻辑生效。
      */
     private boolean useGatewayProxy;
+
     /**
-     * 如果使用gateway代理，则gateway的地址需要配置;eg: 8888则默认就是 -> http://localhost:8888
+     * 是否使用 Nginx 反代 MinIO：预签名 URL 仅把 {@link #endpoint} 里的 <b>host</b> 换成本机局域网 IP，
+     * <b>端口与 endpoint 中一致</b>（不改用 {@link #gatewayPort}），且不带 {@link #minioUrl}。
+     * 与 {@link #useGatewayProxy} 请勿同时为 true；若均为 true，则按本项（nginx）生效。
+     */
+    private boolean useNginxProxy;
+
+    /**
+     * 仅 Spring Cloud Gateway：对外入口端口（与 {@link #minioUrl} 组成 {@code 本机IP:gatewayPort/oss-minio}）。
+     * Nginx 仅换 IP 模式不读此项。
      */
     private String gatewayPort;
+
     /**
-     * 用于替换minio的endpoint的地址。eg：/127.0.0.1:9000 -> /oss-minio
+     * 仅 Spring Cloud Gateway 场景：拼在 host:port 后的路径前缀，如 /oss-minio，供网关路由过滤。
+     * Nginx 直连反代时一般不需要，可留空；{@link #useNginxProxy} 为 true 时不会拼入外链。
      */
     private String minioUrl;
 
@@ -55,39 +68,52 @@ public class MinioConfig {
                 .build();
     }
 
+    private String resolveAgentHostPort() throws Exception {
+        InetAddress inetAddress = InetAddress.getLocalHost();
+        return inetAddress.getHostAddress() + ":" + gatewayPort;
+    }
+
     /**
-     * 获取gateway代理的url
-     * @return  gateway代理的url
-     * @throws Exception 获取本机IP异常/配置异常
+     * 解析 {@link #endpoint} 中的端口（未写端口时 http 为 80、https 为 443）。
+     */
+    private int parseEndpointPort() {
+        try {
+            URI uri = URI.create(endpoint.trim());
+            int port = uri.getPort();
+            if (port > 0) {
+                return port;
+            }
+            String scheme = uri.getScheme();
+            if (scheme != null && scheme.equalsIgnoreCase("https")) {
+                return 443;
+            }
+            return 80;
+        } catch (Exception e) {
+            log.warn("Failed to parse port from minio.endpoint={}, using 9000", endpoint, e);
+            return 9000;
+        }
+    }
+
+    /**
+     * Nginx 外链 host:port：{@code 本机局域网IP} + {@code :} + endpoint 中的端口；不含 {@link #minioUrl}。
+     */
+    public String minioNginxAgentUrl() throws Exception {
+        return InetAddress.getLocalHost().getHostAddress() + ":" + parseEndpointPort();
+    }
+
+    /**
+     * Spring Cloud Gateway 外链前缀：{@code 本机IP:端口} + {@link #minioUrl}。
      */
     @Bean
     public String minioGatewayAgentUrl() throws Exception {
-        // 获取本机IP
-        InetAddress inetAddress = InetAddress.getLocalHost();
-        String ip = inetAddress.getHostAddress();
-
-        // http可能是http或者https
-        return ip + ":" + gatewayPort + minioUrl;
+        String suffix = minioUrl != null ? minioUrl : "";
+        return resolveAgentHostPort() + suffix;
     }
 
     @Bean
     public String globalOssBucket(){
         return "global-oss";
     }
-
-//    @Bean
-//    public MinioClient minioClient() {
-//        // Minio 配置。实际项目中，定义到 application.yml 配置文件中
-//        String endpoint = "http://127.0.0.1:9000";
-//        String accessKey = "minioadmin";
-//        String secretKey = "minioadmin";
-//
-//        // 创建 MinioClient 客户端
-//        return MinioClient.builder()
-//                .endpoint(endpoint)
-//                .credentials(accessKey, secretKey)
-//                .build();
-//    }
 
     @Override
     public String toString() {
@@ -96,6 +122,7 @@ public class MinioConfig {
                 ", accessKey='" + accessKey + '\'' +
                 ", secretKey='" + secretKey + '\'' +
                 ", useGatewayProxy=" + useGatewayProxy +
+                ", useNginxProxy=" + useNginxProxy +
                 ", gatewayPort='" + gatewayPort + '\'' +
                 ", minioUrl='" + minioUrl + '\'' +
                 '}';

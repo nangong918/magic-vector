@@ -469,12 +469,12 @@ public class MinioUtils {
     }
 
     /**
-     * 获得文件外链,失效时间默认是7天
-     * https://127.0.0.1:9000/xxx -> https://ip:8888/oss-mimio/xxx
-     * @param bucketName    存储桶
-     * @param objectName    文件名
-     * @return url
-     * @throws Exception
+     * 获得文件外链,失效时间默认是7天。
+     * <ul>
+     *   <li>{@code use-nginx-proxy=true}：仅把 endpoint 的 host 换成本机局域网 IP，端口与 endpoint 相同，无 {@code minio-url}</li>
+     *   <li>{@code use-gateway-proxy=true} 且未走 nginx：→ {@code http(s)://本机IP:gatewayPort/minio-url/...}</li>
+     *   <li>两者均为 true 时按 nginx</li>
+     * </ul>
      */
     public String getPresignedObjectUrl(String bucketName, String objectName) throws Exception {
         GetPresignedObjectUrlArgs args = GetPresignedObjectUrlArgs.builder()
@@ -484,20 +484,23 @@ public class MinioUtils {
 
         String url = minIOConfig.minioClient().getPresignedObjectUrl(args);
 
-        if (minIOConfig.isUseGatewayProxy()){
-            String httpPrefix = "http://";
-            String httpsPrefix = "https://";
-            String endpoint = minIOConfig.getEndpoint();
-            if (endpoint.contains(httpsPrefix)){
+        String httpPrefix = "http://";
+        String httpsPrefix = "https://";
+        String endpoint = minIOConfig.getEndpoint();
+
+        if (minIOConfig.isUseNginxProxy()) {
+            if (endpoint.contains(httpsPrefix)) {
+                return url.replace(minIOConfig.getEndpoint(), httpsPrefix + minIOConfig.minioNginxAgentUrl());
+            }
+            return url.replace(minIOConfig.getEndpoint(), httpPrefix + minIOConfig.minioNginxAgentUrl());
+        }
+        if (minIOConfig.isUseGatewayProxy()) {
+            if (endpoint.contains(httpsPrefix)) {
                 return url.replace(minIOConfig.getEndpoint(), httpsPrefix + minIOConfig.minioGatewayAgentUrl());
             }
-            else {
-                return url.replace(minIOConfig.getEndpoint(), httpPrefix + minIOConfig.minioGatewayAgentUrl());
-            }
+            return url.replace(minIOConfig.getEndpoint(), httpPrefix + minIOConfig.minioGatewayAgentUrl());
         }
-        else {
-            return url;
-        }
+        return url;
     }
 
     /**
