@@ -98,7 +98,7 @@ public class OssController {
         }
         List<String> urlList = ossService.getFileUrlsByFileIds(fileIdList);
         OssUrlListResponse response = new OssUrlListResponse();
-        response.setFileIdList(fileIdList);
+        response.setFileIdList(fileIdList.stream().map(String::valueOf).toList());
         response.setUrlList(urlList);
         return BaseResponse.getResponseEntitySuccess(response);
     }
@@ -112,7 +112,7 @@ public class OssController {
         }
         int successCount = ossService.deleteFilesByFileIds(fileIdList);
         OssBatchDeleteResponse response = new OssBatchDeleteResponse();
-        response.setFileIdList(fileIdList);
+        response.setFileIdList(fileIdList.stream().map(String::valueOf).toList());
         response.setSuccessCount(successCount);
         response.setFailCount(fileIdList.size() - successCount);
         response.setMessage(response.getFailCount() == 0 ? "ok" : "partial success");

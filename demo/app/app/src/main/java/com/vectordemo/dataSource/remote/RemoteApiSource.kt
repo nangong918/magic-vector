@@ -3,8 +3,10 @@ package com.vectordemo.dataSource.remote
 import com.vectordemo.MainApplication
 import com.vectordemo.domain.constant.BaseConstant
 import com.vectordemo.domain.dto.http.request.UserLoginRequest
+import com.vectordemo.domain.dto.http.request.UserPasswordUpdateRequest
 import com.vectordemo.domain.dto.http.request.UserTokenVerifyRequest
 import com.vectordemo.domain.dto.http.response.UserAuthResponse
+import com.vectordemo.domain.dto.http.response.UserPasswordUpdateResponse
 import com.vectordemo.domain.dto.http.response.UserTokenVerifyResponse
 import com.vectordemo.domain.exception.NetworkBusinessException
 import com.vectordemo.domain.exception.NetworkParamIllegalException
@@ -47,5 +49,20 @@ class RemoteApiSource(private val apiRequest: ApiRequest) {
 
     suspend fun login(request: UserLoginRequest): UserAuthResponse {
         return requestData({ apiRequest.login(request) }, "登录响应为空")
+    }
+
+    suspend fun updatePassword(userId: Long, oldPassword: String, newPassword: String): UserPasswordUpdateResponse {
+        return requestData(
+            {
+                apiRequest.updatePassword(
+                    UserPasswordUpdateRequest(
+                        userId = userId.toString(),
+                        oldPassword = oldPassword,
+                        newPassword = newPassword
+                    )
+                )
+            },
+            "修改密码响应为空"
+        )
     }
 }

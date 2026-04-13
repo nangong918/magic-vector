@@ -6,7 +6,8 @@ import java.util.List;
 
 @Data
 public class OssBatchDeleteResponse {
-    private List<Long> fileIdList;
+    /** Each id as decimal string in JSON. */
+    private List<String> fileIdList;
     private Integer successCount;
     private Integer failCount;
     private String message;

@@ -6,6 +6,7 @@ import java.util.List;
 
 @Data
 public class OssUrlListResponse {
-    private List<Long> fileIdList;
+    /** Each id as decimal string in JSON (same convention as [Long] snowflakes). */
+    private List<String> fileIdList;
     private List<String> urlList;
 }
