@@ -95,9 +95,10 @@ minio:
   access-key: "minioadmin"  # minIO 用户名
   secret-key: "minioadmin"  # minIO 密码
   #============ minio 代理（use-gateway-proxy 与 use-nginx-proxy 二选一；若均为 true 则按 nginx）
-  # nginx：外链 port 与 endpoint 一致；gateway-port/minio-url 仅 Spring Cloud Gateway
+  # nginx：外链 host=本机局域网 IP，port=nginx-public-port（80/443 自动省略）
   use-gateway-proxy: true
   use-nginx-proxy: false
+  nginx-public-port: 80
   gateway-port: 8888
   minio-url: "/oss-minio"
 

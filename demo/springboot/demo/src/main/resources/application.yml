@@ -75,13 +75,14 @@ spring:
 
 #============ oss：minIO
 # use-gateway-proxy 与 use-nginx-proxy 二选一；若均为 true 则按 nginx
-# nginx：外链只把 endpoint 的 IP 换成本机局域网 IP，端口与 endpoint 一致；gateway-port / minio-url 仅网关用
+# nginx：外链 host 用本机局域网 IP，端口使用 nginx-public-port（80/443 自动省略）
 minio:
   endpoint: "http://127.0.0.1:9000"
   access-key: "minioadmin"
   secret-key: "minioadmin"
   use-gateway-proxy: false
   use-nginx-proxy: true
+  nginx-public-port: 80
   gateway-port: 8888
   minio-url: "/oss-minio"
 

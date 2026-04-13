@@ -9,7 +9,6 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.stereotype.Component;
 
 import java.net.InetAddress;
-import java.net.URI;
 
 /**
  *@author 13225
@@ -41,15 +40,19 @@ public class MinioConfig {
     private boolean useGatewayProxy;
 
     /**
-     * 是否使用 Nginx 反代 MinIO：预签名 URL 仅把 {@link #endpoint} 里的 <b>host</b> 换成本机局域网 IP，
-     * <b>端口与 endpoint 中一致</b>（不改用 {@link #gatewayPort}），且不带 {@link #minioUrl}。
+     * 是否使用 Nginx 反代 MinIO（外链 host 使用本机局域网 IP）。
      * 与 {@link #useGatewayProxy} 请勿同时为 true；若均为 true，则按本项（nginx）生效。
      */
     private boolean useNginxProxy;
 
     /**
+     * Nginx 对外端口；默认 80。
+     * 80/443 会在外链中省略端口显示（如 http://192.168.1.2/...）。
+     */
+    private Integer nginxPublicPort = 80;
+
+    /**
      * 仅 Spring Cloud Gateway：对外入口端口（与 {@link #minioUrl} 组成 {@code 本机IP:gatewayPort/oss-minio}）。
-     * Nginx 仅换 IP 模式不读此项。
      */
     private String gatewayPort;
 
@@ -74,31 +77,16 @@ public class MinioConfig {
     }
 
     /**
-     * 解析 {@link #endpoint} 中的端口（未写端口时 http 为 80、https 为 443）。
-     */
-    private int parseEndpointPort() {
-        try {
-            URI uri = URI.create(endpoint.trim());
-            int port = uri.getPort();
-            if (port > 0) {
-                return port;
-            }
-            String scheme = uri.getScheme();
-            if (scheme != null && scheme.equalsIgnoreCase("https")) {
-                return 443;
-            }
-            return 80;
-        } catch (Exception e) {
-            log.warn("Failed to parse port from minio.endpoint={}, using 9000", endpoint, e);
-            return 9000;
-        }
-    }
-
-    /**
-     * Nginx 外链 host:port：{@code 本机局域网IP} + {@code :} + endpoint 中的端口；不含 {@link #minioUrl}。
+     * Nginx 外链 host[:port]：本机局域网 IP + 对外端口。
+     * 端口为 80/443 时省略端口显示，以隐藏内部 9000。
      */
     public String minioNginxAgentUrl() throws Exception {
-        return InetAddress.getLocalHost().getHostAddress() + ":" + parseEndpointPort();
+        String host = InetAddress.getLocalHost().getHostAddress();
+        int port = nginxPublicPort == null ? 80 : nginxPublicPort;
+        if (port == 80 || port == 443) {
+            return host;
+        }
+        return host + ":" + port;
     }
 
     /**
@@ -123,6 +111,7 @@ public class MinioConfig {
                 ", secretKey='" + secretKey + '\'' +
                 ", useGatewayProxy=" + useGatewayProxy +
                 ", useNginxProxy=" + useNginxProxy +
+                ", nginxPublicPort=" + nginxPublicPort +
                 ", gatewayPort='" + gatewayPort + '\'' +
                 ", minioUrl='" + minioUrl + '\'' +
                 '}';

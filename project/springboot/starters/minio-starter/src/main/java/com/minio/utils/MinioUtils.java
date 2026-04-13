@@ -471,7 +471,7 @@ public class MinioUtils {
     /**
      * 获得文件外链,失效时间默认是7天。
      * <ul>
-     *   <li>{@code use-nginx-proxy=true}：仅把 endpoint 的 host 换成本机局域网 IP，端口与 endpoint 相同，无 {@code minio-url}</li>
+     *   <li>{@code use-nginx-proxy=true}：host=本机局域网 IP，端口取 {@code nginx-public-port}（80/443 自动省略）</li>
      *   <li>{@code use-gateway-proxy=true} 且未走 nginx：→ {@code http(s)://本机IP:gatewayPort/minio-url/...}</li>
      *   <li>两者均为 true 时按 nginx</li>
      * </ul>
