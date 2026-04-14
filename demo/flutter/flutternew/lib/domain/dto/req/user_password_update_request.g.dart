@@ -2,20 +2,22 @@
 
 part of 'user_password_update_request.dart';
 
+// **************************************************************************
+// JsonSerializableGenerator
+// **************************************************************************
+
 UserPasswordUpdateRequest _$UserPasswordUpdateRequestFromJson(
   Map<String, dynamic> json,
-) =>
-    UserPasswordUpdateRequest(
-      userId: json['userId'] as String,
-      oldPassword: json['oldPassword'] as String,
-      newPassword: json['newPassword'] as String,
-    );
+) => UserPasswordUpdateRequest(
+  userId: json['userId'] as String,
+  oldPassword: json['oldPassword'] as String,
+  newPassword: json['newPassword'] as String,
+);
 
 Map<String, dynamic> _$UserPasswordUpdateRequestToJson(
   UserPasswordUpdateRequest instance,
-) =>
-    <String, dynamic>{
-      'userId': instance.userId,
-      'oldPassword': instance.oldPassword,
-      'newPassword': instance.newPassword,
-    };
+) => <String, dynamic>{
+  'userId': instance.userId,
+  'oldPassword': instance.oldPassword,
+  'newPassword': instance.newPassword,
+};

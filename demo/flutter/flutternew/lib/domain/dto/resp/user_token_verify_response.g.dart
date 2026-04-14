@@ -17,7 +17,7 @@ UserTokenVerifyResponse _$UserTokenVerifyResponseFromJson(
 Map<String, dynamic> _$UserTokenVerifyResponseToJson(
   UserTokenVerifyResponse instance,
 ) => <String, dynamic>{
-  'userId': nullableUserIdToWireJson(instance.userId),
+  'userId': instance.userId,
   'valid': instance.valid,
   'message': instance.message,
 };

@@ -17,7 +17,7 @@ UserAuthResponse _$UserAuthResponseFromJson(Map<String, dynamic> json) =>
 
 Map<String, dynamic> _$UserAuthResponseToJson(UserAuthResponse instance) =>
     <String, dynamic>{
-      'userId': nullableUserIdToWireJson(instance.userId),
+      'userId': instance.userId,
       'account': instance.account,
       'name': instance.name,
       'avatarUrl': instance.avatarUrl,
