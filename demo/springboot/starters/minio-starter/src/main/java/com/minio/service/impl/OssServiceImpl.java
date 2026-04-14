@@ -1,6 +1,7 @@
 package com.minio.service.impl;
 
 import cn.hutool.core.util.IdUtil;
+import com.minio.domain.bo.OssBucketFileItemBo;
 import com.minio.domain.entity.OssEntity;
 import com.minio.domain.bo.BatchUploadResult;
 import com.minio.domain.bo.UploadItemResult;
@@ -329,6 +330,29 @@ public class OssServiceImpl implements OssService {
             urls.add(getSafeUrl(file.getBucketName(), file.getObjectName()));
         }
         return urls;
+    }
+
+    @Override
+    public List<OssBucketFileItemBo> listFileItemsByUserIdAndBucket(Long userId, String bucketName) {
+        if (userId == null || !StringUtils.hasText(bucketName)) {
+            return new ArrayList<>();
+        }
+        List<OssEntity> files = ossMapper.queryByUserIdAndBucketName(userId, bucketName.trim());
+        if (CollectionUtils.isEmpty(files)) {
+            return new ArrayList<>();
+        }
+        List<OssBucketFileItemBo> out = new ArrayList<>(files.size());
+        for (OssEntity file : files) {
+            if (file == null || file.getId() == null) {
+                continue;
+            }
+            OssBucketFileItemBo row = new OssBucketFileItemBo();
+            row.setFileId(file.getId());
+            row.setOriginFileName(file.getOriginFileName());
+            row.setUrl(getSafeUrl(file.getBucketName(), file.getObjectName()));
+            out.add(row);
+        }
+        return out;
     }
 
     @Override

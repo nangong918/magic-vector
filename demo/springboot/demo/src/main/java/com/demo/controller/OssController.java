@@ -8,10 +8,13 @@ import com.demo.domain.dto.http.resonse.OssFileContentUpdateResponse;
 import com.demo.domain.dto.http.resonse.OssFileNameUpdateResponse;
 import com.demo.domain.dto.http.resonse.OssUrlListResponse;
 import com.demo.domain.dto.http.resonse.OssUserBucketFileIdsResponse;
+import com.demo.domain.dto.http.resonse.OssUserBucketFileItemListResponse;
+import com.demo.domain.dto.http.resonse.OssUserBucketFileItemRow;
 import com.demo.domain.dto.http.resonse.OssUserBucketFileUrlsResponse;
 import com.demo.domain.dto.http.resonse.OssUserBucketListResponse;
 import com.demo.domain.dto.http.resonse.OssUserDeleteAllResponse;
 import com.minio.config.MinioConfig;
+import com.minio.domain.bo.OssBucketFileItemBo;
 import com.minio.domain.bo.BatchUploadResult;
 import com.minio.domain.bo.UploadItemResult;
 import com.minio.service.OssService;
@@ -168,6 +171,29 @@ public class OssController {
         response.setUserId(String.valueOf(userId));
         response.setBucketName(bucketName.trim());
         response.setUrlList(urls);
+        return BaseResponse.getResponseEntitySuccess(response);
+    }
+
+    @PostMapping("/user/bucket/file/item/list")
+    public BaseResponse<OssUserBucketFileItemListResponse> listFileItemsByUserAndBucket(
+            @RequestParam("userId") String userIdStr,
+            @RequestParam("bucketName") String bucketName
+    ) {
+        Long userId = parseUserIdParam(userIdStr);
+        if (userId == null || !StringUtils.hasText(bucketName)) {
+            return BaseResponse.LogBackError(CommonExceptions.PARAM_ERROR);
+        }
+        List<OssBucketFileItemBo> rows = ossService.listFileItemsByUserIdAndBucket(userId, bucketName);
+        OssUserBucketFileItemListResponse response = new OssUserBucketFileItemListResponse();
+        response.setUserId(String.valueOf(userId));
+        response.setBucketName(bucketName.trim());
+        response.setItems(rows.stream().map(bo -> {
+            OssUserBucketFileItemRow row = new OssUserBucketFileItemRow();
+            row.setFileId(String.valueOf(bo.getFileId()));
+            row.setOriginFileName(bo.getOriginFileName());
+            row.setUrl(bo.getUrl());
+            return row;
+        }).toList());
         return BaseResponse.getResponseEntitySuccess(response);
     }
 

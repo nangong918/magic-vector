@@ -1448,3 +1448,22 @@ WS设计文档也设计完毕：[WS重构.md](WS重构.md)
 我记得SpringAI的Agent进行chat的时候会维护一个ChatClient，所以我觉得应该给前端展示两个：
 Agent是否存在就是直接查询SpringBoot的MySQL，第二个是Agent是否在线，这个是通过SpringBoot内部的Map来存储的。我记得现在Android不是打开Agent再建立跟Agent的WS连接了，现在改成了全量WS，Agent只是其中的一个功能。然后我的设计好像不用BindingManager了，现在设计图中还是绑定逻辑，我认为是不对的。
 第三：注意Channel的设计，MessageRouter：确认STT业务逻辑，STT(收发) -> LLM(发) -> TTS(发，并且被INSTRUCTION_LIST替代)
+
+
+
+
+
+### Android和Flutter的OSS
+
+现在需要你分别实现Android和Flutter的Demo，两者的业务逻辑完全一样，具体技术分别为两者选用你选用现在较为成熟的方案。我认为oss这个demo打开页面之后要有如下功能：
+首先是一个page，里面用的是类似viewPager的可以翻页的页面，你分贝用Compose和Flutter的替代方案实现这个viewPager。
+1. 第一个page展示一个剧中的image，点击就是从选择相册的图片，下面有个button是上传。点击上传之后上传成功toast提示。
+2. 第二个page是一个类似recyclerView的list能查询user名下的存储桶列表，这个列表能展开展示图片（item： 上面图片下面图片名称；长按弹窗：【下载到本地、更换图片、删除图片】 的选择），这个图片是从后端接口获取的，直接通过user+存储桶获取fileUrls的那个接口，然后直接展示在list中。
+
+这个demo基本覆盖设计的全部oss接口，如果缺少你可以继续设计。
+
+
+
+
+
+

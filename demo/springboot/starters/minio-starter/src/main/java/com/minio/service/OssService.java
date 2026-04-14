@@ -1,5 +1,6 @@
 package com.minio.service;
 
+import com.minio.domain.bo.OssBucketFileItemBo;
 import com.minio.domain.entity.OssEntity;
 import com.minio.domain.bo.BatchUploadResult;
 import com.minio.domain.bo.UploadItemResult;
@@ -47,6 +48,8 @@ public interface OssService {
     List<Long> listFileIdsByUserIdAndBucket(Long userId, String bucketName);
 
     List<String> listFileUrlsByUserIdAndBucket(Long userId, String bucketName);
+
+    List<OssBucketFileItemBo> listFileItemsByUserIdAndBucket(Long userId, String bucketName);
 
     // 根据fileId删除
     boolean deleteFileByFileId(Long fileId);
