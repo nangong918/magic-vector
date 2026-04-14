@@ -7,6 +7,10 @@ alikey: ${ALI_API_KEY}
 spring:
   application:
     name: demo
+  servlet:
+    multipart:
+      max-file-size: 80MB
+      max-request-size: 85MB
   ai:
     dashscope:
       api-key: ${ALI_API_KEY}
