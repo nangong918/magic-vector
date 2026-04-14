@@ -38,7 +38,9 @@ open class BaseApiRequestProvider {
             interceptors: List<Interceptor>
         ): OkHttpClient {
             val cache = Cache(File(System.getProperty("java.io.tmpdir"), "http-cache"), 50L * 1024 * 1024)
-            val log = HttpLoggingInterceptor().apply { level = HttpLoggingInterceptor.Level.BODY }
+            val log = HttpLoggingInterceptor(SkipMultipartBinaryHttpLogger()).apply {
+                level = HttpLoggingInterceptor.Level.BODY
+            }
             val builder = OkHttpClient.Builder()
                 .retryOnConnectionFailure(false)
                 .connectTimeout(connectTimeOut, TimeUnit.MILLISECONDS)

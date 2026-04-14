@@ -3,7 +3,11 @@ package com.vectordemo.repository.api
 import com.vectordemo.domain.dto.http.request.UserLoginRequest
 import com.vectordemo.domain.dto.http.request.UserPasswordUpdateRequest
 import com.vectordemo.domain.dto.http.request.UserTokenVerifyRequest
+import com.vectordemo.domain.dto.http.response.OssBatchUploadResponse
+import com.vectordemo.domain.dto.http.response.OssBatchDeleteResponse
+import com.vectordemo.domain.dto.http.response.OssFileContentUpdateResponse
 import com.vectordemo.domain.dto.http.response.OssUserBucketFileIdsResponse
+import com.vectordemo.domain.dto.http.response.OssUserBucketFileItemListResponse
 import com.vectordemo.domain.dto.http.response.OssUserBucketFileUrlsResponse
 import com.vectordemo.domain.dto.http.response.OssUserBucketListResponse
 import com.vectordemo.domain.dto.http.response.UserAuthResponse
@@ -55,4 +59,32 @@ interface ApiRequest {
         @Field("userId") userId: String,
         @Field("bucketName") bucketName: String
     ): BaseResponse<OssUserBucketFileUrlsResponse>
+
+    @FormUrlEncoded
+    @POST("/oss/user/bucket/file/item/list")
+    suspend fun ossUserBucketFileItemList(
+        @Field("userId") userId: String,
+        @Field("bucketName") bucketName: String
+    ): BaseResponse<OssUserBucketFileItemListResponse>
+
+    @Multipart
+    @POST("/oss/upload/batch")
+    suspend fun ossBatchUpload(
+        @Part("userId") userId: RequestBody,
+        @Part("bucketName") bucketName: RequestBody?,
+        @Part files: List<MultipartBody.Part>
+    ): BaseResponse<OssBatchUploadResponse>
+
+    @FormUrlEncoded
+    @POST("/oss/file/delete/batch")
+    suspend fun ossBatchDelete(
+        @Field("fileIdList") fileIds: List<String>
+    ): BaseResponse<OssBatchDeleteResponse>
+
+    @Multipart
+    @POST("/oss/file/content/update")
+    suspend fun ossUpdateFileContent(
+        @Part("fileId") fileId: RequestBody,
+        @Part file: MultipartBody.Part
+    ): BaseResponse<OssFileContentUpdateResponse>
 }

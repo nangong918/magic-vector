@@ -21,6 +21,12 @@ class MainVm : ViewModel() {
             title = "Hello Demo",
             subtitle = "Compose + MVI navigation sample",
             route = DemoRoute.HELLO
+        ),
+        DemoCatalogItem(
+            id = "oss",
+            title = "OSS Demo",
+            subtitle = "上传、存储桶列表、图片下载/更换/删除",
+            route = DemoRoute.OSS_DEMO
         )
     )
 
@@ -62,6 +68,7 @@ class MainVm : ViewModel() {
     private fun onClickDemo(route: DemoRoute) {
         when (route) {
             DemoRoute.HELLO -> sendEffect(MainEffect.NavigateToHello)
+            DemoRoute.OSS_DEMO -> sendEffect(MainEffect.NavigateToOssDemo)
         }
     }
 
@@ -107,5 +114,6 @@ data class MainState(
 
 sealed class MainEffect {
     data object NavigateToHello : MainEffect()
+    data object NavigateToOssDemo : MainEffect()
     data object NavigateToLogin : MainEffect()
 }

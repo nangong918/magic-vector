@@ -45,6 +45,9 @@ class MainActivity : BaseComponentActivity() {
                         is MainEffect.NavigateToHello -> {
                             startActivity(Intent(this@MainActivity, HelloActivity::class.java))
                         }
+                        MainEffect.NavigateToOssDemo -> {
+                            startActivity(Intent(this@MainActivity, OssDemoActivity::class.java))
+                        }
                         MainEffect.NavigateToLogin -> {
                             startActivity(Intent(this@MainActivity, LoginActivity::class.java).apply {
                                 flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK

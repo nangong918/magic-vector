@@ -8,5 +8,6 @@ data class DemoCatalogItem(
 )
 
 enum class DemoRoute {
-    HELLO
+    HELLO,
+    OSS_DEMO
 }

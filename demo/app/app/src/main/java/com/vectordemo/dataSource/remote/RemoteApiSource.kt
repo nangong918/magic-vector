@@ -5,7 +5,11 @@ import com.vectordemo.domain.constant.BaseConstant
 import com.vectordemo.domain.dto.http.request.UserLoginRequest
 import com.vectordemo.domain.dto.http.request.UserPasswordUpdateRequest
 import com.vectordemo.domain.dto.http.request.UserTokenVerifyRequest
+import com.vectordemo.domain.dto.http.response.OssBatchDeleteResponse
+import com.vectordemo.domain.dto.http.response.OssBatchUploadResponse
+import com.vectordemo.domain.dto.http.response.OssFileContentUpdateResponse
 import com.vectordemo.domain.dto.http.response.OssUserBucketFileIdsResponse
+import com.vectordemo.domain.dto.http.response.OssUserBucketFileItemListResponse
 import com.vectordemo.domain.dto.http.response.OssUserBucketFileUrlsResponse
 import com.vectordemo.domain.dto.http.response.OssUserBucketListResponse
 import com.vectordemo.domain.dto.http.response.UserAuthResponse
@@ -18,8 +22,12 @@ import com.vectordemo.utils.auth.AuthTokenHandler
 import com.vectordemo.utils.network.BaseResponse
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
 import okhttp3.RequestBody
+import okhttp3.RequestBody.Companion.asRequestBody
+import okhttp3.RequestBody.Companion.toRequestBody
+import java.io.File
 
 class RemoteApiSource(private val apiRequest: ApiRequest) {
     private suspend fun <T> requestData(apiCall: suspend () -> BaseResponse<T>, emptyDataMessage: String = "响应数据为空"): T =
@@ -84,6 +92,51 @@ class RemoteApiSource(private val apiRequest: ApiRequest) {
         return requestData(
             { apiRequest.ossUserBucketFileUrlList(userId, bucketName) },
             "文件 URL 列表响应为空"
+        )
+    }
+
+    suspend fun ossUserBucketFileItemList(userId: String, bucketName: String): OssUserBucketFileItemListResponse {
+        return requestData(
+            { apiRequest.ossUserBucketFileItemList(userId, bucketName) },
+            "文件明细列表响应为空"
+        )
+    }
+
+    suspend fun ossBatchUploadSingle(
+        userId: String,
+        bucketName: String?,
+        file: File,
+        uploadFilename: String,
+        mimeType: String
+    ): OssBatchUploadResponse {
+        val uidBody = userId.toRequestBody("text/plain".toMediaTypeOrNull())
+        val bucketBody = bucketName?.takeIf { it.isNotBlank() }?.toRequestBody("text/plain".toMediaTypeOrNull())
+        val media = (mimeType.ifBlank { "application/octet-stream" }).toMediaTypeOrNull()
+        val body = file.asRequestBody(media)
+        val part = MultipartBody.Part.createFormData("files", uploadFilename, body)
+        return requestData(
+            { apiRequest.ossBatchUpload(uidBody, bucketBody, listOf(part)) },
+            "上传响应为空"
+        )
+    }
+
+    suspend fun ossBatchDelete(fileIds: List<String>): OssBatchDeleteResponse {
+        if (fileIds.isEmpty()) {
+            throw NetworkParamIllegalException("fileIds 为空")
+        }
+        return requestData({ apiRequest.ossBatchDelete(fileIds) }, "删除响应为空")
+    }
+
+    suspend fun ossUpdateFileContent(
+        fileId: String,
+        fileBody: RequestBody,
+        uploadFilename: String
+    ): OssFileContentUpdateResponse {
+        val fidBody = fileId.toRequestBody("text/plain".toMediaTypeOrNull())
+        val part = MultipartBody.Part.createFormData("file", uploadFilename, fileBody)
+        return requestData(
+            { apiRequest.ossUpdateFileContent(fidBody, part) },
+            "更新文件内容响应为空"
         )
     }
 }
