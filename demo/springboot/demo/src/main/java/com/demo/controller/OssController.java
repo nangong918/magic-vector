@@ -7,6 +7,9 @@ import com.demo.domain.dto.http.resonse.OssBatchUploadResponse;
 import com.demo.domain.dto.http.resonse.OssFileContentUpdateResponse;
 import com.demo.domain.dto.http.resonse.OssFileNameUpdateResponse;
 import com.demo.domain.dto.http.resonse.OssUrlListResponse;
+import com.demo.domain.dto.http.resonse.OssUserBucketFileIdsResponse;
+import com.demo.domain.dto.http.resonse.OssUserBucketFileUrlsResponse;
+import com.demo.domain.dto.http.resonse.OssUserBucketListResponse;
 import com.demo.domain.dto.http.resonse.OssUserDeleteAllResponse;
 import com.minio.config.MinioConfig;
 import com.minio.domain.bo.BatchUploadResult;
@@ -119,6 +122,55 @@ public class OssController {
         return BaseResponse.getResponseEntitySuccess(response);
     }
 
+    @PostMapping("/user/bucket/list")
+    public BaseResponse<OssUserBucketListResponse> listBucketsByUserId(
+            @RequestParam("userId") String userIdStr
+    ) {
+        Long userId = parseUserIdParam(userIdStr);
+        if (userId == null) {
+            return BaseResponse.LogBackError(CommonExceptions.PARAM_ERROR);
+        }
+        List<String> buckets = ossService.listBucketNamesByUserId(userId);
+        OssUserBucketListResponse response = new OssUserBucketListResponse();
+        response.setUserId(String.valueOf(userId));
+        response.setBucketNameList(buckets);
+        return BaseResponse.getResponseEntitySuccess(response);
+    }
+
+    @PostMapping("/user/bucket/file/id/list")
+    public BaseResponse<OssUserBucketFileIdsResponse> listFileIdsByUserAndBucket(
+            @RequestParam("userId") String userIdStr,
+            @RequestParam("bucketName") String bucketName
+    ) {
+        Long userId = parseUserIdParam(userIdStr);
+        if (userId == null || !StringUtils.hasText(bucketName)) {
+            return BaseResponse.LogBackError(CommonExceptions.PARAM_ERROR);
+        }
+        List<Long> ids = ossService.listFileIdsByUserIdAndBucket(userId, bucketName);
+        OssUserBucketFileIdsResponse response = new OssUserBucketFileIdsResponse();
+        response.setUserId(String.valueOf(userId));
+        response.setBucketName(bucketName.trim());
+        response.setFileIdList(ids.stream().map(String::valueOf).toList());
+        return BaseResponse.getResponseEntitySuccess(response);
+    }
+
+    @PostMapping("/user/bucket/file/url/list")
+    public BaseResponse<OssUserBucketFileUrlsResponse> listFileUrlsByUserAndBucket(
+            @RequestParam("userId") String userIdStr,
+            @RequestParam("bucketName") String bucketName
+    ) {
+        Long userId = parseUserIdParam(userIdStr);
+        if (userId == null || !StringUtils.hasText(bucketName)) {
+            return BaseResponse.LogBackError(CommonExceptions.PARAM_ERROR);
+        }
+        List<String> urls = ossService.listFileUrlsByUserIdAndBucket(userId, bucketName);
+        OssUserBucketFileUrlsResponse response = new OssUserBucketFileUrlsResponse();
+        response.setUserId(String.valueOf(userId));
+        response.setBucketName(bucketName.trim());
+        response.setUrlList(urls);
+        return BaseResponse.getResponseEntitySuccess(response);
+    }
+
     @PostMapping("/user/delete/all")
     public BaseResponse<OssUserDeleteAllResponse> deleteAllByUserId(
             @RequestParam("userId") Long userId
@@ -135,5 +187,16 @@ public class OssController {
         response.setFailCount(Math.max(0, totalCount - successCount));
         response.setMessage(response.getFailCount() == 0 ? "ok" : "partial success");
         return BaseResponse.getResponseEntitySuccess(response);
+    }
+
+    private static Long parseUserIdParam(String userIdStr) {
+        if (!StringUtils.hasText(userIdStr)) {
+            return null;
+        }
+        try {
+            return Long.parseLong(userIdStr.trim());
+        } catch (NumberFormatException e) {
+            return null;
+        }
     }
 }

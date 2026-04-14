@@ -22,6 +22,9 @@ buildNumber.properties
 # BlueJ files
 *.ctxt
 
+# pid
+*.pid
+
 # Mobile Tools for Java (J2ME)
 .mtj.tmp/
 

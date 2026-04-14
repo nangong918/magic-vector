@@ -294,6 +294,44 @@ public class OssServiceImpl implements OssService {
     }
 
     @Override
+    public List<String> listBucketNamesByUserId(Long userId) {
+        if (userId == null) {
+            return new ArrayList<>();
+        }
+        List<String> names = ossMapper.listDistinctBucketNamesByUserId(userId);
+        return names == null ? new ArrayList<>() : names;
+    }
+
+    @Override
+    public List<Long> listFileIdsByUserIdAndBucket(Long userId, String bucketName) {
+        if (userId == null || !StringUtils.hasText(bucketName)) {
+            return new ArrayList<>();
+        }
+        List<Long> ids = ossMapper.listFileIdsByUserIdAndBucket(userId, bucketName.trim());
+        return ids == null ? new ArrayList<>() : ids;
+    }
+
+    @Override
+    public List<String> listFileUrlsByUserIdAndBucket(Long userId, String bucketName) {
+        if (userId == null || !StringUtils.hasText(bucketName)) {
+            return new ArrayList<>();
+        }
+        List<OssEntity> files = ossMapper.queryByUserIdAndBucketName(userId, bucketName.trim());
+        if (CollectionUtils.isEmpty(files)) {
+            return new ArrayList<>();
+        }
+        List<String> urls = new ArrayList<>(files.size());
+        for (OssEntity file : files) {
+            if (file == null) {
+                urls.add(null);
+                continue;
+            }
+            urls.add(getSafeUrl(file.getBucketName(), file.getObjectName()));
+        }
+        return urls;
+    }
+
+    @Override
     public boolean deleteFileByFileId(Long fileId) {
         if (fileId == null) {
             return false;

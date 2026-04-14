@@ -1,0 +1,329 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "VectorDemo",
+    "description": "v1.1 增量：仅新增 OSS 查询接口。Long / snowflake id 在 HTTP JSON 与表单中一律用十进制字符串；服务端内部为 Long。导入 Apipost 后与 v1.0 并存。",
+    "version": "1.1.0"
+  },
+  "servers": [
+    {
+      "url": "http://localhost:48888",
+      "description": "本地环境",
+      "variables": {}
+    },
+    {
+      "url": "",
+      "description": "默认环境",
+      "variables": {}
+    }
+  ],
+  "tags": [
+    {
+      "name": "OSS",
+      "description": "/oss (auth) v1.1 新增"
+    }
+  ],
+  "paths": {
+    "http://localhost:48888/oss/user/bucket/list": {
+      "post": {
+        "summary": "OSS user bucket list (auth, v1.1)",
+        "description": "按 userId 查询该用户曾使用过的存储桶名称（去重）。请求参数 userId 为字符串。",
+        "tags": [
+          "OSS"
+        ],
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "header",
+            "description": "标识用户的唯一ID，用于API请求中验证用户身份",
+            "required": true,
+            "example": "{{local_user_id}}",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "access_token",
+            "in": "header",
+            "description": "用于API身份验证的令牌，需有效且未过期",
+            "required": true,
+            "example": "{{local_access_token}}",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {}
+                },
+                "example": "{\n  \"code\": \"200\",\n  \"data\": {\n    \"userId\": \"1322596900\",\n    \"bucketNameList\": [\"my-bucket\"]\n  }\n}"
+              }
+            }
+          },
+          "404": {
+            "description": "Fail",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {}
+                },
+                "example": ""
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "userId": {
+                    "type": "string",
+                    "example": "1322596900",
+                    "description": "用户 id，十进制字符串"
+                  }
+                },
+                "required": [
+                  "userId"
+                ]
+              }
+            }
+          }
+        },
+        "x-apipost-pre-script": "// [前置] 从环境变量或全局变量读取 token，自动写入请求头（与 AuthTokenInterceptor 一致）\nconst uid = apt.environment.get(\"local_user_id\") || apt.globals.get(\"local_user_id\") || \"\";\nconst tok = apt.environment.get(\"local_access_token\") || apt.globals.get(\"local_access_token\") || \"\";\nif (uid) apt.setRequestHeader(\"user_id\", uid);\nif (tok) apt.setRequestHeader(\"access_token\", tok);\n",
+        "event": [
+          {
+            "listen": "prerequest",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "// [前置] 从环境变量或全局变量读取 token，自动写入请求头（与 AuthTokenInterceptor 一致）",
+                "const uid = apt.environment.get(\"local_user_id\") || apt.globals.get(\"local_user_id\") || \"\";",
+                "const tok = apt.environment.get(\"local_access_token\") || apt.globals.get(\"local_access_token\") || \"\";",
+                "if (uid) apt.setRequestHeader(\"user_id\", uid);",
+                "if (tok) apt.setRequestHeader(\"access_token\", tok);",
+                ""
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "http://localhost:48888/oss/user/bucket/file/id/list": {
+      "post": {
+        "summary": "OSS file id list by user + bucket (auth, v1.1)",
+        "description": "按 userId + bucketName 查询该桶下全部文件 id。id 在响应 data.fileIdList 中为字符串数组。",
+        "tags": [
+          "OSS"
+        ],
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "header",
+            "description": "标识用户的唯一ID，用于API请求中验证用户身份",
+            "required": true,
+            "example": "{{local_user_id}}",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "access_token",
+            "in": "header",
+            "description": "用于API身份验证的令牌，需有效且未过期",
+            "required": true,
+            "example": "{{local_access_token}}",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {}
+                },
+                "example": "{\n  \"code\": \"200\",\n  \"data\": {\n    \"userId\": \"1322596900\",\n    \"bucketName\": \"my-bucket\",\n    \"fileIdList\": [\"1899123456789012345\"]\n  }\n}"
+              }
+            }
+          },
+          "404": {
+            "description": "Fail",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {}
+                },
+                "example": ""
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "userId": {
+                    "type": "string",
+                    "example": "1322596900"
+                  },
+                  "bucketName": {
+                    "type": "string",
+                    "example": "my-bucket"
+                  }
+                },
+                "required": [
+                  "userId",
+                  "bucketName"
+                ]
+              }
+            }
+          }
+        },
+        "x-apipost-pre-script": "// [前置] 从环境变量或全局变量读取 token，自动写入请求头（与 AuthTokenInterceptor 一致）\nconst uid = apt.environment.get(\"local_user_id\") || apt.globals.get(\"local_user_id\") || \"\";\nconst tok = apt.environment.get(\"local_access_token\") || apt.globals.get(\"local_access_token\") || \"\";\nif (uid) apt.setRequestHeader(\"user_id\", uid);\nif (tok) apt.setRequestHeader(\"access_token\", tok);\n",
+        "event": [
+          {
+            "listen": "prerequest",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "// [前置] 从环境变量或全局变量读取 token，自动写入请求头（与 AuthTokenInterceptor 一致）",
+                "const uid = apt.environment.get(\"local_user_id\") || apt.globals.get(\"local_user_id\") || \"\";",
+                "const tok = apt.environment.get(\"local_access_token\") || apt.globals.get(\"local_access_token\") || \"\";",
+                "if (uid) apt.setRequestHeader(\"user_id\", uid);",
+                "if (tok) apt.setRequestHeader(\"access_token\", tok);",
+                ""
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "http://localhost:48888/oss/user/bucket/file/url/list": {
+      "post": {
+        "summary": "OSS presigned url list by user + bucket (auth, v1.1)",
+        "description": "按 userId + bucketName 查询该桶下全部文件的预签名 URL，顺序与 id 列表一致。",
+        "tags": [
+          "OSS"
+        ],
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "header",
+            "description": "标识用户的唯一ID，用于API请求中验证用户身份",
+            "required": true,
+            "example": "{{local_user_id}}",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "access_token",
+            "in": "header",
+            "description": "用于API身份验证的令牌，需有效且未过期",
+            "required": true,
+            "example": "{{local_access_token}}",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {}
+                },
+                "example": "{\n  \"code\": \"200\",\n  \"data\": {\n    \"userId\": \"1322596900\",\n    \"bucketName\": \"my-bucket\",\n    \"urlList\": [\"https://minio.example/presigned...\"]\n  }\n}"
+              }
+            }
+          },
+          "404": {
+            "description": "Fail",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {}
+                },
+                "example": ""
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "userId": {
+                    "type": "string",
+                    "example": "1322596900"
+                  },
+                  "bucketName": {
+                    "type": "string",
+                    "example": "my-bucket"
+                  }
+                },
+                "required": [
+                  "userId",
+                  "bucketName"
+                ]
+              }
+            }
+          }
+        },
+        "x-apipost-pre-script": "// [前置] 从环境变量或全局变量读取 token，自动写入请求头（与 AuthTokenInterceptor 一致）\nconst uid = apt.environment.get(\"local_user_id\") || apt.globals.get(\"local_user_id\") || \"\";\nconst tok = apt.environment.get(\"local_access_token\") || apt.globals.get(\"local_access_token\") || \"\";\nif (uid) apt.setRequestHeader(\"user_id\", uid);\nif (tok) apt.setRequestHeader(\"access_token\", tok);\n",
+        "event": [
+          {
+            "listen": "prerequest",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "// [前置] 从环境变量或全局变量读取 token，自动写入请求头（与 AuthTokenInterceptor 一致）",
+                "const uid = apt.environment.get(\"local_user_id\") || apt.globals.get(\"local_user_id\") || \"\";",
+                "const tok = apt.environment.get(\"local_access_token\") || apt.globals.get(\"local_access_token\") || \"\";",
+                "if (uid) apt.setRequestHeader(\"user_id\", uid);",
+                "if (tok) apt.setRequestHeader(\"access_token\", tok);",
+                ""
+              ]
+            }
+          }
+        ]
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "UserIdHeader": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "user_id"
+      },
+      "AccessTokenHeader": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "access_token"
+      }
+    }
+  }
+}

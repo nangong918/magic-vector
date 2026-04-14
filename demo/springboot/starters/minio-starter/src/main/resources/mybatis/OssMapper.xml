@@ -80,6 +80,33 @@
         order by id desc
     </select>
 
+    <select id="listDistinctBucketNamesByUserId" resultType="java.lang.String">
+        select distinct bucket_name
+        from
+        <include refid="table"/>
+        where user_id = #{userId}
+        order by bucket_name asc
+    </select>
+
+    <select id="listFileIdsByUserIdAndBucket" resultType="java.lang.Long">
+        select id
+        from
+        <include refid="table"/>
+        where user_id = #{userId}
+          and bucket_name = #{bucketName}
+        order by id desc
+    </select>
+
+    <select id="queryByUserIdAndBucketName" resultType="com.minio.domain.entity.OssEntity">
+        select
+        <include refid="columns"/>
+        from
+        <include refid="table"/>
+        where user_id = #{userId}
+          and bucket_name = #{bucketName}
+        order by id desc
+    </select>
+
     <update id="updateOriginFileNameById">
         update
         <include refid="table"/>

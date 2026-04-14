@@ -35,6 +35,18 @@ public interface OssMapper {
 
     List<OssEntity> queryByUserIdAll(@Param("userId") Long userId);
 
+    List<String> listDistinctBucketNamesByUserId(@Param("userId") Long userId);
+
+    List<Long> listFileIdsByUserIdAndBucket(
+            @Param("userId") Long userId,
+            @Param("bucketName") String bucketName
+    );
+
+    List<OssEntity> queryByUserIdAndBucketName(
+            @Param("userId") Long userId,
+            @Param("bucketName") String bucketName
+    );
+
     Integer updateOriginFileNameById(
             @Param("id") Long id,
             @Param("originFileName") String originFileName,

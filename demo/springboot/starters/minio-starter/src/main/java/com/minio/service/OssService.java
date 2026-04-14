@@ -42,6 +42,12 @@ public interface OssService {
 
     int countFilesByUserId(Long userId);
 
+    List<String> listBucketNamesByUserId(Long userId);
+
+    List<Long> listFileIdsByUserIdAndBucket(Long userId, String bucketName);
+
+    List<String> listFileUrlsByUserIdAndBucket(Long userId, String bucketName);
+
     // 根据fileId删除
     boolean deleteFileByFileId(Long fileId);
 

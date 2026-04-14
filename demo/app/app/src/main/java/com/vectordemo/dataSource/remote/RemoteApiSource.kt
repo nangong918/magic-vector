@@ -5,6 +5,9 @@ import com.vectordemo.domain.constant.BaseConstant
 import com.vectordemo.domain.dto.http.request.UserLoginRequest
 import com.vectordemo.domain.dto.http.request.UserPasswordUpdateRequest
 import com.vectordemo.domain.dto.http.request.UserTokenVerifyRequest
+import com.vectordemo.domain.dto.http.response.OssUserBucketFileIdsResponse
+import com.vectordemo.domain.dto.http.response.OssUserBucketFileUrlsResponse
+import com.vectordemo.domain.dto.http.response.OssUserBucketListResponse
 import com.vectordemo.domain.dto.http.response.UserAuthResponse
 import com.vectordemo.domain.dto.http.response.UserPasswordUpdateResponse
 import com.vectordemo.domain.dto.http.response.UserTokenVerifyResponse
@@ -63,6 +66,24 @@ class RemoteApiSource(private val apiRequest: ApiRequest) {
                 )
             },
             "修改密码响应为空"
+        )
+    }
+
+    suspend fun ossUserBucketList(userId: String): OssUserBucketListResponse {
+        return requestData({ apiRequest.ossUserBucketList(userId) }, "存储桶列表响应为空")
+    }
+
+    suspend fun ossUserBucketFileIdList(userId: String, bucketName: String): OssUserBucketFileIdsResponse {
+        return requestData(
+            { apiRequest.ossUserBucketFileIdList(userId, bucketName) },
+            "文件 id 列表响应为空"
+        )
+    }
+
+    suspend fun ossUserBucketFileUrlList(userId: String, bucketName: String): OssUserBucketFileUrlsResponse {
+        return requestData(
+            { apiRequest.ossUserBucketFileUrlList(userId, bucketName) },
+            "文件 URL 列表响应为空"
         )
     }
 }
