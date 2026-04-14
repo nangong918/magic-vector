@@ -24,6 +24,7 @@ buildNumber.properties
 
 # pid
 *.pid
+/demo/nginx-rtmp-win32-dev/logs/nginx.pid
 
 # Mobile Tools for Java (J2ME)
 .mtj.tmp/

@@ -5,11 +5,7 @@
 
 ## 当前计划
 
-1. 拷贝SpringBoot基本框架过来
-2. 拷贝Android基本框架过来
-3. 拷贝Flutter基本框架过来
-4. 最小链路，编译通过
-5. 重构App为Demo类型App
+1. 编写SpringBoot启动脚本，总是忘记启动Nginx和Minio（可以直接使用docker编排文件）
 
 
 ## 日计划及实际行动

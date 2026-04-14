@@ -25,6 +25,10 @@ dependencies:
   # 网络通信模块（升级web_socket_channel解决冲突）
   dio: ^5.4.3+1            # HTTP请求核心库（支持拦截、上传下载等）
   retrofit: ^4.9.0         # 注解式API定义（对标Android Retrofit）
+  image_picker: ^1.0.7
+  cached_network_image: ^3.4.1
+  path_provider: ^2.1.4
+  gal: ^2.3.1
   web_socket_channel: ^3.0.3 # 升级到兼容web ^1.0.0的版本
 
   # JSON序列化/反序列化

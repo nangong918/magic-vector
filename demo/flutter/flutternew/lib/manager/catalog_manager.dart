@@ -59,6 +59,13 @@ class CatalogManager {
         iconRes: Icons.smart_toy,
         routeName: AppRoutes.voiceAgent,
       ),
+      CatalogItem(
+        id: "8",
+        title: "OSS Demo",
+        subtitle: "上传、存储桶与图片管理",
+        iconRes: Icons.cloud_upload,
+        routeName: AppRoutes.ossDemo,
+      ),
     ];
   }
 

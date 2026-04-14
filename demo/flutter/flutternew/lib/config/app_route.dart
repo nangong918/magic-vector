@@ -11,6 +11,7 @@ import 'package:flutternew/page/login_page.dart';
 
 import '../page/chat_page.dart';
 import '../page/main_page.dart';
+import '../page/oss_demo_page.dart';
 
 class AppRoutes {
   // 路由名称常量（避免字符串硬编码）
@@ -25,6 +26,7 @@ class AppRoutes {
   static const String offlineIvw = '/offline-ivw'; // 离线语音唤醒
   static const String vad = '/vad'; // VAD测试页
   static const String voiceAgent = '/voice-agent'; // 语音助手
+  static const String ossDemo = '/oss-demo';
 }
 
 
@@ -85,6 +87,10 @@ final Map<String, WidgetBuilder> appRoutes = {
   // 语音助手页
   AppRoutes.voiceAgent: (BuildContext context) {
     return const VoiceAgentPage();
+  },
+
+  AppRoutes.ossDemo: (BuildContext context) {
+    return const OssDemoPage();
   },
 };
 

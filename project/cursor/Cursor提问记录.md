@@ -1463,7 +1463,77 @@ Agent是否存在就是直接查询SpringBoot的MySQL，第二个是Agent是否�
 这个demo基本覆盖设计的全部oss接口，如果缺少你可以继续设计。
 
 
+#### 补充
 
+我现在测试Android的功能，上传，预览，删除是成功的。
 
+还有一些需要注意，Android和Flutter都需要：
+1. /oss/upload/batch上传，替换的操作，Android的http拦截器把内容导引出来了，一堆二进制乱码，如果是文件上传更新相关的接口，拦截器要展示文件资源不可读。
+2. 现在需要在存储桶页面新增下拉刷新功能。
+3. 现在上传文件有时候成功有时候失败，失败显示（替换同理，也是有时候成功有时候失败，看上去应该是一个问题吗）：
+```shell
+# Android
+2026-04-14 21:53:04.813 18001-18898 LoggingInterceptor      com.vectordemo                       D  request: POST http://192.168.1.2:48888/oss/upload/batch
+2026-04-14 21:53:04.813 18001-18898 LoggingInterceptor      com.vectordemo                       D  request headers: user_id: 2042227672143728640
+                                                                                                    access_token: at_3b38f812bd0e43ec9d78f624a832b0ec
+2026-04-14 21:53:04.816 18001-18900 TrafficStats            com.vectordemo                       D  tagSocket(76) with statsTag=0xffffffff, statsUid=-1
+2026-04-14 21:53:04.962 18001-18898 LoggingInterceptor      com.vectordemo                       D  response: 413 http://192.168.1.2:48888/oss/upload/batch
+2026-04-14 21:53:04.962 18001-18898 LoggingInterceptor      com.vectordemo                       D  response headers: Content-Length: 0
+                                                                                                    Date: Tue, 14 Apr 2026 13:53:02 GMT
+                                                                                                    Connection: close
+2026-04-14 21:53:04.962 18001-18898 okhttp.OkHttpClient     com.vectordemo                       I  <-- 413 http://192.168.1.2:48888/oss/upload/batch (149ms)
+2026-04-14 21:53:04.962 18001-18898 okhttp.OkHttpClient     com.vectordemo                       I  Content-Length: 0
+2026-04-14 21:53:04.962 18001-18898 okhttp.OkHttpClient     com.vectordemo                       I  Date: Tue, 14 Apr 2026 13:53:02 GMT
+2026-04-14 21:53:04.962 18001-18898 okhttp.OkHttpClient     com.vectordemo                       I  Connection: close
+2026-04-14 21:53:04.963 18001-18898 okhttp.OkHttpClient     com.vectordemo                       I  <-- END HTTP (150ms, 0-byte body)
+# SpringBoot
+2026-04-14T21:53:02.348+08:00  WARN 15932 --- [demo] [io-48888-exec-6] .w.s.m.s.DefaultHandlerExceptionResolver : Resolved [org.springframework.web.multipart.MaxUploadSizeExceededException: Maximum upload size exceeded]
+2026-04-14T21:53:02.350+08:00  WARN 15932 --- [demo] [io-48888-exec-6] .w.s.m.s.DefaultHandlerExceptionResolver : Resolved [org.springframework.web.multipart.MaxUploadSizeExceededException: Maximum upload size exceeded]
+```
+有时候也会成功，是不是因为文件比较小？还是因为格式原因导致的？
+```shell
+# Android
+2026-04-14 21:54:39.866 18001-21884 okhttp.OkHttpClient     com.vectordemo                       I  --> END POST (586427-byte body)
+2026-04-14 21:54:39.868 18001-21884 LoggingInterceptor      com.vectordemo                       D  request: POST http://192.168.1.2:48888/oss/upload/batch
+2026-04-14 21:54:39.868 18001-21884 LoggingInterceptor      com.vectordemo                       D  request headers: user_id: 2042227672143728640
+                                                                                                    access_token: at_3b38f812bd0e43ec9d78f624a832b0ec
+2026-04-14 21:54:39.873 18001-19096 TrafficStats            com.vectordemo                       D  tagSocket(77) with statsTag=0xffffffff, statsUid=-1
+2026-04-14 21:54:39.879 18001-19983 com.vectordemo          com.vectordemo                       I  This is sticky GC, maxfree is 8388608 minfree is 2097152
+2026-04-14 21:54:41.314 18001-21884 LoggingInterceptor      com.vectordemo                       D  response: 200 http://192.168.1.2:48888/oss/upload/batch
+2026-04-14 21:54:41.314 18001-21884 LoggingInterceptor      com.vectordemo                       D  response headers: Vary: Origin
+                                                                                                    Vary: Access-Control-Request-Method
+                                                                                                    Vary: Access-Control-Request-Headers
+                                                                                                    Content-Type: application/json
+                                                                                                    Transfer-Encoding: chunked
+                                                                                                    Date: Tue, 14 Apr 2026 13:54:38 GMT
+                                                                                                    Keep-Alive: timeout=60
+                                                                                                    Connection: keep-alive
+2026-04-14 21:54:41.315 18001-21884 okhttp.OkHttpClient     com.vectordemo                       I  <-- 200 http://192.168.1.2:48888/oss/upload/batch (1448ms)
 
+# SpringBoot
+Creating a new SqlSession
+SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@1701eee8] was not registered for synchronization because synchronization is not active
+2026-04-14T21:54:37.403+08:00  WARN 15932 --- [demo] [io-48888-exec-7] c.a.druid.pool.DruidAbstractDataSource   : discard long time none received connection. , jdbcUrl : jdbc:mysql://localhost:3306/vector_demo?serverTimezone=Asia/Shanghai&useUnicode=true&characterEncoding=utf8&useSSL=false&allowPublicKeyRetrieval=true, version : 1.2.8, lastPacketReceivedIdleMillis : 154690
+JDBC Connection [com.mysql.cj.jdbc.ConnectionImpl@7d07da46] will not be managed by Spring
+==>  Preparing: select id, user_id, bucket_name, object_name, origin_file_name, content_type, file_size, idempotent_key, created_at, updated_at from oss where idempotent_key = ?
+==> Parameters: 6c2283564cb85dad7e7d692b754efcd9323cb36aad737780a845135342df37db(String)
+<==      Total: 0
+Closing non transactional SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@1701eee8]
+Creating a new SqlSession
+SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@2cae0f60] was not registered for synchronization because synchronization is not active
+JDBC Connection [com.mysql.cj.jdbc.ConnectionImpl@7d07da46] will not be managed by Spring
+==>  Preparing: insert into oss ( id, user_id, bucket_name, object_name, origin_file_name, content_type, file_size, idempotent_key, created_at, updated_at ) values( ?, ?, ?, ?, ?, ?, ?, ?, ?, ? )
+==> Parameters: 2044051704333066241(Long), 2042227672143728640(Long), global-oss(String), 2042227672143728640/1776174877411_2044051703481622528_up_1776174879778.jpg(String), up_1776174879778.jpg(String), image/jpeg(String), 586050(Long), 6c2283564cb85dad7e7d692b754efcd9323cb36aad737780a845135342df37db(String), 1776174877614(Long), 1776174877614(Long)
+<==    Updates: 1
+Closing non transactional SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@2cae0f60]
+```
+4. 现在我Android下载图片会展示开始下载，日志是：
+```shell
+2026-04-14 21:57:45.779 18001-19999 OpenGLRenderer          com.vectordemo                       D  endAllActiveAnimators on 0xb40000769b2c4b00 (UnprojectedRipple) with handle 0xb400007694bb80e0
+2026-04-14 21:57:45.889 18001-18001 DecorView[]             com.vectordemo                       D  onWindowFocusChanged hasWindowFocus true
+2026-04-14 21:57:45.889 18001-18001 HandWritingStubImpl     com.vectordemo                       I  refreshLastKeyboardType: 1
+2026-04-14 21:57:45.890 18001-18001 HandWritingStubImpl     com.vectordemo                       I  getCurrentKeyboardType: 1
+```
+但是我等了很久并没有看到Android的系统相册有刚刚下载的图片。
 
+定位并修复这些问题。
