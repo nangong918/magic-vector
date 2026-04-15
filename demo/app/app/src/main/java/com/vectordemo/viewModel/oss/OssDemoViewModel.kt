@@ -7,9 +7,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.vectordemo.MainApplication
-import com.vectordemo.dataSource.remote.RemoteApiSource
+import com.vectordemo.domain.model.oss.OssBucketFileItemModel
+import com.vectordemo.manager.oss.OssManager
 import com.vectordemo.utils.media.GalleryImageDownloader
-import com.vectordemo.domain.dto.http.response.OssUserBucketFileItemRow
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -26,14 +26,14 @@ data class OssDemoUiState(
     val toast: String? = null,
     val buckets: List<String> = emptyList(),
     val expandedBuckets: Set<String> = emptySet(),
-    val filesByBucket: Map<String, List<OssUserBucketFileItemRow>> = emptyMap(),
+    val filesByBucket: Map<String, List<OssBucketFileItemModel>> = emptyMap(),
     val loadingBuckets: Boolean = false,
     val loadingBucket: String? = null
 )
 
 class OssDemoViewModel(application: Application) : AndroidViewModel(application) {
 
-    private val remote: RemoteApiSource = MainApplication.getRemoteApiSource()
+    private val oss: OssManager = MainApplication.getOssManager()
 
     private val _uiState = MutableStateFlow(OssDemoUiState())
     val uiState: StateFlow<OssDemoUiState> = _uiState.asStateFlow()
@@ -68,11 +68,11 @@ class OssDemoViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
-    private suspend fun currentUserIdStr(): String {
+    private suspend fun currentUserId(): Long {
         val u = MainApplication.getUserManager().getCurrentUser()
             ?: throw IllegalStateException("未登录")
         if (u.userId <= 0L) throw IllegalStateException("无效用户")
-        return u.userId.toString()
+        return u.userId
     }
 
     fun refreshBuckets() {
@@ -87,9 +87,9 @@ class OssDemoViewModel(application: Application) : AndroidViewModel(application)
                         loadingBucket = null
                     )
                 }
-                val uid = currentUserIdStr()
-                val res = remote.ossUserBucketList(uid)
-                val newBuckets = res.bucketNameList.orEmpty()
+                val uid = currentUserId()
+                val res = oss.syncUserBucketList(uid)
+                val newBuckets = res.bucketNames
                 _uiState.update {
                     it.copy(
                         loadingBuckets = false,
@@ -124,9 +124,9 @@ class OssDemoViewModel(application: Application) : AndroidViewModel(application)
             if (_uiState.value.touristBlocked) return@launch
             try {
                 _uiState.update { it.copy(loadingBucket = bucket) }
-                val uid = currentUserIdStr()
-                val res = remote.ossUserBucketFileItemList(uid, bucket)
-                val items = res.items.orEmpty()
+                val uid = currentUserId()
+                val res = oss.syncBucketFileItemList(uid, bucket)
+                val items = res.items
                 _uiState.update {
                     val map = it.filesByBucket.toMutableMap()
                     map[bucket] = items
@@ -162,7 +162,7 @@ class OssDemoViewModel(application: Application) : AndroidViewModel(application)
                     cr.openInputStream(uri)?.use { it.readBytes() }
                         ?: throw IllegalStateException("无法读取图片")
                 }
-                val uid = currentUserIdStr()
+                val uid = currentUserId()
                 val dir = File(ctx.cacheDir, "oss_upload")
                 dir.mkdirs()
                 val ext = when {
@@ -172,11 +172,15 @@ class OssDemoViewModel(application: Application) : AndroidViewModel(application)
                 }
                 val tmp = File(dir, "up_${System.currentTimeMillis()}.$ext")
                 tmp.writeBytes(bytes)
-                val res = remote.ossBatchUploadSingle(uid, null, tmp, tmp.name, mime)
-                val ok = res.items?.any { it.success } == true
+                val res = oss.batchUploadSingle(uid, null, tmp, tmp.name, mime)
+                val ok = res.items.any { it.success }
                 _uiState.update {
                     it.copy(
-                        toast = if (ok) "上传成功" else (res.items?.firstOrNull()?.message ?: "上传失败")
+                        toast = if (ok) {
+                            "上传成功"
+                        } else {
+                            res.items.firstOrNull()?.message?.takeIf { m -> m.isNotBlank() } ?: "上传失败"
+                        }
                     )
                 }
                 tmp.delete()
@@ -186,7 +190,7 @@ class OssDemoViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
-    fun replaceFile(fileId: String, bucket: String, uri: Uri) {
+    fun replaceFile(fileId: Long, bucket: String, uri: Uri) {
         viewModelScope.launch {
             try {
                 val ctx = getApplication<Application>()
@@ -202,13 +206,13 @@ class OssDemoViewModel(application: Application) : AndroidViewModel(application)
                     mime.contains("webp", ignoreCase = true) -> "webp"
                     else -> "jpg"
                 }
-                val res = remote.ossUpdateFileContent(fileId, body, "upload.$ext")
-                val ok = res.updated == true
+                val res = oss.updateFileContent(fileId.toString(), body, "upload.$ext")
+                val ok = res.updated
                 if (ok) {
                     invalidateBucket(bucket)
                 }
                 _uiState.update {
-                    it.copy(toast = if (ok) "已更换图片" else (res.message ?: "更换失败"))
+                    it.copy(toast = if (ok) "已更换图片" else res.message.ifBlank { "更换失败" })
                 }
             } catch (e: Exception) {
                 _uiState.update { it.copy(toast = e.message ?: "更换失败") }
@@ -216,10 +220,11 @@ class OssDemoViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
-    fun deleteFile(fileId: String, bucket: String) {
+    fun deleteFile(fileId: Long, bucket: String) {
         viewModelScope.launch {
             try {
-                remote.ossBatchDelete(listOf(fileId))
+                val uid = currentUserId()
+                oss.batchDelete(listOf(fileId), uid, bucket)
                 invalidateBucket(bucket)
                 _uiState.update { it.copy(toast = "已删除") }
             } catch (e: Exception) {

@@ -56,7 +56,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.runtime.collectAsState
 import coil.compose.AsyncImage
-import com.vectordemo.domain.dto.http.response.OssUserBucketFileItemRow
+import com.vectordemo.domain.model.oss.OssBucketFileItemModel
 import com.vectordemo.viewModel.oss.OssDemoViewModel
 import kotlinx.coroutines.launch
 
@@ -111,7 +111,7 @@ fun OssDemoScreen(
     ) { uri ->
         pickedUri = uri
     }
-    var replaceContext by remember { mutableStateOf<Pair<String, String>?>(null) }
+    var replaceContext by remember { mutableStateOf<Pair<Long, String>?>(null) }
     val pickReplace = rememberLauncherForActivityResult(
         ActivityResultContracts.PickVisualMedia()
     ) { uri ->
@@ -243,10 +243,10 @@ private fun OssBucketPage(
     onRefreshBuckets: () -> Unit,
     onToggleBucket: (String) -> Unit,
     onDownload: (String, String) -> Unit,
-    onReplace: (String, String) -> Unit,
-    onDelete: (String, String) -> Unit
+    onReplace: (String, Long) -> Unit,
+    onDelete: (String, Long) -> Unit
 ) {
-    var menuTarget by remember { mutableStateOf<Pair<String, OssUserBucketFileItemRow>?>(null) }
+    var menuTarget by remember { mutableStateOf<Pair<String, OssBucketFileItemModel>?>(null) }
 
     LaunchedEffect(Unit) {
         onRefreshBuckets()
@@ -255,17 +255,17 @@ private fun OssBucketPage(
     if (menuTarget != null) {
         val bucket = menuTarget!!.first
         val row = menuTarget!!.second
-        val fid = row.fileId ?: ""
+        val fid = row.fileId
         AlertDialog(
             onDismissRequest = { menuTarget = null },
-            title = { Text(row.originFileName ?: "文件") },
+            title = { Text(row.originFileName.ifBlank { "文件" }) },
             text = {
                 Column {
                     TextButton(
                         onClick = {
-                            val url = row.url ?: ""
+                            val url = row.url
                             if (url.isNotBlank()) {
-                                onDownload(url, row.originFileName ?: "image.jpg")
+                                onDownload(url, row.originFileName.ifBlank { "image.jpg" })
                             }
                             menuTarget = null
                         }
@@ -328,9 +328,9 @@ private fun BucketSection(
     bucket: String,
     expanded: Boolean,
     loading: Boolean,
-    files: List<OssUserBucketFileItemRow>,
+    files: List<OssBucketFileItemModel>,
     onHeaderClick: () -> Unit,
-    onFileLongPress: (OssUserBucketFileItemRow) -> Unit
+    onFileLongPress: (OssBucketFileItemModel) -> Unit
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -369,7 +369,7 @@ private fun BucketSection(
 
 @Composable
 private fun FileTile(
-    row: OssUserBucketFileItemRow,
+    row: OssBucketFileItemModel,
     onLongPress: () -> Unit
 ) {
     Column(
@@ -382,8 +382,8 @@ private fun FileTile(
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         AsyncImage(
-            model = row.url,
-            contentDescription = row.originFileName,
+            model = row.url.takeIf { it.isNotBlank() },
+            contentDescription = row.originFileName.takeIf { it.isNotBlank() },
             modifier = Modifier
                 .fillMaxWidth()
                 .aspectRatio(1f),
@@ -391,7 +391,9 @@ private fun FileTile(
         )
         Spacer(Modifier.height(6.dp))
         Text(
-            text = row.originFileName ?: row.fileId ?: "",
+            text = row.originFileName.ifBlank {
+                row.fileId.takeIf { it != 0L }?.toString().orEmpty()
+            },
             maxLines = 2,
             overflow = TextOverflow.Ellipsis,
             style = MaterialTheme.typography.bodySmall

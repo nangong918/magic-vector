@@ -10,7 +10,7 @@ Android的RemoteApiSource request层级结构要改成返回需要的数据类�
   [UserEntity.kt](../demo/app/app/src/main/java/com/vectordemo/domain/entity/UserEntity.kt)
   然后OSS也要创建一个Entity存储，我认为这些接口要缓存为Entity：
   /oss/user/bucket/list，/oss/user/bucket/file/id/list，/oss/user/bucket/file/url/list，/oss/user/bucket/file/item/list
-  我认为表应该设计成：OssUserBucket（userId（long）对应bucketName列表，一对多）OSSBucketFile（bucketName和fileId（id）fileName，fileUrl一对多关系）
+  我认为表应该设计成：OssUserBucketFile（userId（long）对应bucketName列表，一对多，bucketName和fileId（id）fileName，fileUrl一对多关系）
 * 然后需要创建Model和Manager，Model是Entity在程序中的业务参考[UserSessionModel.kt](../demo/app/app/src/main/java/com/vectordemo/domain/model/user/UserSessionModel.kt)
 * 然后我的RemoteApiSource期望是返回的是业务层需要的Model，这样业务层就不需要关心Response是怎样的了。
 * 然后Model是跟Entity相关的业务模型，如果跟Entity无关就是叫做BO，目前暂时没有，只是给你介绍。

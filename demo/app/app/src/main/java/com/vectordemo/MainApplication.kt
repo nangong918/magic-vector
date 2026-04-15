@@ -2,6 +2,7 @@ package com.vectordemo
 
 import android.app.Application
 import com.vectordemo.dataSource.remote.RemoteApiSource
+import com.vectordemo.manager.oss.OssManager
 import com.vectordemo.manager.user.UserManager
 import com.vectordemo.repository.api.ApiRequest
 import com.vectordemo.repository.api.config.ApiRequestProvider
@@ -19,6 +20,7 @@ class MainApplication : Application() {
         private var apiRequestInstance: ApiRequest? = null
         private var remoteApiSource: RemoteApiSource? = null
         private var userManager: UserManager? = null
+        private var ossManager: OssManager? = null
         private var imageManager: ImageManager? = null
         @Volatile
         private var cachedUserId: String = ""
@@ -33,6 +35,11 @@ class MainApplication : Application() {
         fun getUserManager(): UserManager {
             if (userManager == null) userManager = UserManager.getInstance(getApp())
             return userManager!!
+        }
+
+        fun getOssManager(): OssManager {
+            if (ossManager == null) ossManager = OssManager.getInstance(getApp())
+            return ossManager!!
         }
 
         fun getImageManager(): ImageManager? {
