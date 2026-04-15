@@ -37,7 +37,6 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -51,27 +50,21 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.vectordemo.domain.model.oss.OssBucketFileItemModel
-import com.vectordemo.viewModel.oss.OssDemoUiState
+import com.vectordemo.viewModel.oss.OssDemoIntent
+import com.vectordemo.viewModel.oss.OssDemoState
 import kotlinx.coroutines.launch
 
 /**
- * 纯 UI（类比 XML）：只依赖 [OssDemoUiState] 与回调，不包含 Toast、不持有 [com.vectordemo.viewModel.oss.OssDemoViewModel]。
+ * 纯 UI（类比 XML）：只依赖 [OssDemoState] 与 [OssDemoIntent] 派发，不持有 ViewModel、不处理 Toast / ActivityResult。
  */
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun OssDemoScreen(
-    ui: OssDemoUiState,
-    pickedUri: Uri?,
-    onBack: () -> Unit,
-    onPickMainImage: () -> Unit,
-    onUploadClick: () -> Unit,
-    onRefreshBuckets: () -> Unit,
-    onToggleBucket: (String) -> Unit,
-    onDownload: (String, String) -> Unit,
-    onRequestReplacePick: (bucket: String, fileId: Long) -> Unit,
-    onDeleteFile: (bucket: String, fileId: Long) -> Unit
+    state: OssDemoState,
+    processIntent: (OssDemoIntent) -> Unit,
+    onBack: () -> Unit
 ) {
-    if (ui.touristBlocked) {
+    if (state.touristBlocked) {
         Scaffold(
             topBar = {
                 TopAppBar(
@@ -136,19 +129,15 @@ fun OssDemoScreen(
             ) { page ->
                 when (page) {
                     0 -> OssUploadPage(
-                        pickedUri = pickedUri,
-                        onPickClick = onPickMainImage,
-                        onUploadClick = onUploadClick
+                        pickedUri = state.pickedUploadUri,
+                        onPickClick = { processIntent(OssDemoIntent.RequestMainImagePick) },
+                        onUploadClick = { processIntent(OssDemoIntent.UploadSubmit) }
                     )
 
                     else -> OssBucketPage(
-                        ui = ui,
-                        isRefreshing = ui.loadingBuckets,
-                        onRefreshBuckets = onRefreshBuckets,
-                        onToggleBucket = onToggleBucket,
-                        onDownload = onDownload,
-                        onReplace = onRequestReplacePick,
-                        onDelete = onDeleteFile
+                        state = state,
+                        isRefreshing = state.loadingBuckets,
+                        processIntent = processIntent
                     )
                 }
             }
@@ -201,19 +190,11 @@ private fun OssUploadPage(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun OssBucketPage(
-    ui: OssDemoUiState,
+    state: OssDemoState,
     isRefreshing: Boolean,
-    onRefreshBuckets: () -> Unit,
-    onToggleBucket: (String) -> Unit,
-    onDownload: (String, String) -> Unit,
-    onReplace: (String, Long) -> Unit,
-    onDelete: (String, Long) -> Unit
+    processIntent: (OssDemoIntent) -> Unit
 ) {
     var menuTarget by remember { mutableStateOf<Pair<String, OssBucketFileItemModel>?>(null) }
-
-    LaunchedEffect(Unit) {
-        onRefreshBuckets()
-    }
 
     if (menuTarget != null) {
         val bucket = menuTarget!!.first
@@ -228,7 +209,12 @@ private fun OssBucketPage(
                         onClick = {
                             val url = row.url
                             if (url.isNotBlank()) {
-                                onDownload(url, row.originFileName.ifBlank { "image.jpg" })
+                                processIntent(
+                                    OssDemoIntent.DownloadImage(
+                                        url,
+                                        row.originFileName.ifBlank { "image.jpg" }
+                                    )
+                                )
                             }
                             menuTarget = null
                         }
@@ -236,12 +222,12 @@ private fun OssBucketPage(
                     TextButton(
                         onClick = {
                             menuTarget = null
-                            onReplace(bucket, fid)
+                            processIntent(OssDemoIntent.RequestReplacePick(bucket, fid))
                         }
                     ) { Text("更换图片") }
                     TextButton(
                         onClick = {
-                            onDelete(bucket, fid)
+                            processIntent(OssDemoIntent.DeleteFile(bucket, fid))
                             menuTarget = null
                         }
                     ) { Text("删除图片") }
@@ -256,10 +242,10 @@ private fun OssBucketPage(
 
     PullToRefreshBox(
         isRefreshing = isRefreshing,
-        onRefresh = onRefreshBuckets,
+        onRefresh = { processIntent(OssDemoIntent.RefreshBuckets) },
         modifier = Modifier.fillMaxSize(),
     ) {
-        if (ui.loadingBuckets && ui.buckets.isEmpty()) {
+        if (state.loadingBuckets && state.buckets.isEmpty()) {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 CircularProgressIndicator()
             }
@@ -269,13 +255,13 @@ private fun OssBucketPage(
                 contentPadding = PaddingValues(16.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                items(ui.buckets, key = { it }) { bucket ->
+                items(state.buckets, key = { it }) { bucket ->
                     BucketSection(
                         bucket = bucket,
-                        expanded = ui.expandedBuckets.contains(bucket),
-                        loading = ui.loadingBucket == bucket,
-                        files = ui.filesByBucket[bucket].orEmpty(),
-                        onHeaderClick = { onToggleBucket(bucket) },
+                        expanded = state.expandedBuckets.contains(bucket),
+                        loading = state.loadingBucket == bucket,
+                        files = state.filesByBucket[bucket].orEmpty(),
+                        onHeaderClick = { processIntent(OssDemoIntent.ToggleBucket(bucket)) },
                         onFileLongPress = { row ->
                             menuTarget = bucket to row
                         }
