@@ -24,8 +24,6 @@ import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.RequestBody.Companion.toRequestBody
 import java.io.File
 
-// ========== MVI：State / Intent / Effect（对齐 magicvector MainVm 风格）==========
-
 data class OssReplacePending(val bucket: String, val fileId: Long)
 
 data class OssDemoState(
@@ -40,7 +38,6 @@ data class OssDemoState(
 )
 
 sealed class OssDemoIntent {
-    data object Initialize : OssDemoIntent()
     data object RefreshBuckets : OssDemoIntent()
     data class ToggleBucket(val bucket: String) : OssDemoIntent()
     data class LoadBucketFiles(val bucket: String, val force: Boolean = false) : OssDemoIntent()
@@ -59,7 +56,7 @@ sealed class OssDemoEffect {
     data object OpenReplaceImagePicker : OssDemoEffect()
 }
 
-class OssDemoViewModel(application: Application) : AndroidViewModel(application) {
+class OssDemoVm(application: Application) : AndroidViewModel(application) {
 
     private val oss: OssManager = MainApplication.getOssManager()
 
@@ -69,9 +66,12 @@ class OssDemoViewModel(application: Application) : AndroidViewModel(application)
     private val _effect = Channel<OssDemoEffect>(Channel.BUFFERED)
     val effect: Flow<OssDemoEffect> = _effect.receiveAsFlow()
 
+    init {
+        initialize()
+    }
+
     fun processIntent(intent: OssDemoIntent) {
         when (intent) {
-            OssDemoIntent.Initialize -> initialize()
             OssDemoIntent.RefreshBuckets -> refreshBuckets()
             is OssDemoIntent.ToggleBucket -> toggleBucket(intent.bucket)
             is OssDemoIntent.LoadBucketFiles -> loadBucketFiles(intent.bucket, intent.force)
@@ -309,7 +309,7 @@ class OssDemoViewModel(application: Application) : AndroidViewModel(application)
         fun factory(): ViewModelProvider.Factory = object : ViewModelProvider.Factory {
             @Suppress("UNCHECKED_CAST")
             override fun <T : ViewModel> create(modelClass: Class<T>): T {
-                return OssDemoViewModel(MainApplication.getApp()) as T
+                return OssDemoVm(MainApplication.getApp()) as T
             }
         }
     }

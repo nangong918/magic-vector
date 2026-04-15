@@ -13,7 +13,6 @@ import com.vectordemo.ui.theme.VectorDemoTheme
 import com.vectordemo.ui.view.activity.MainScreen
 import com.vectordemo.utils.activity.BaseComponentActivity
 import com.vectordemo.viewModel.activity.MainEffect
-import com.vectordemo.viewModel.activity.MainIntent
 import com.vectordemo.viewModel.activity.MainVm
 import kotlinx.coroutines.launch
 
@@ -29,9 +28,7 @@ class MainActivity : BaseComponentActivity() {
                 val state by vm.uiState.collectAsState()
                 MainScreen(
                     state = state,
-                    onQueryChange = { vm.processIntent(MainIntent.UpdateQuery(it)) },
-                    onClickItem = { vm.processIntent(MainIntent.ClickDemo(it.route)) },
-                    onLogout = { vm.processIntent(MainIntent.Logout) }
+                    processIntent = { vm.processIntent(it) }
                 )
             }
         }

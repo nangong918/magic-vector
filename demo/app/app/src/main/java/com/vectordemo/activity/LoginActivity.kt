@@ -14,7 +14,6 @@ import com.vectordemo.ui.theme.VectorDemoTheme
 import com.vectordemo.ui.view.activity.ComposeLoginScreen
 import com.vectordemo.utils.activity.BaseComponentActivity
 import com.vectordemo.viewModel.activity.LoginEffect
-import com.vectordemo.viewModel.activity.LoginIntent
 import com.vectordemo.viewModel.activity.LoginVm
 import kotlinx.coroutines.launch
 
@@ -32,12 +31,7 @@ class LoginActivity : BaseComponentActivity() {
                 ComposeLoginScreen(
                     state = state,
                     savedAccounts = dataState.savedUserSessions,
-                    onAccountChange = { vm.processIntent(LoginIntent.UpdateAccount(it)) },
-                    onPasswordChange = { vm.processIntent(LoginIntent.UpdatePassword(it)) },
-                    onSelectSavedAccount = { vm.processIntent(LoginIntent.SelectSavedAccount(it)) },
-                    onSubmit = { vm.processIntent(LoginIntent.SubmitLogin) },
-                    onGoRegister = { vm.processIntent(LoginIntent.NavigateToRegister) },
-                    onTouristAccess = { vm.processIntent(LoginIntent.TouristAccess) }
+                    processIntent = { vm.processIntent(it) }
                 )
             }
         }

@@ -55,7 +55,7 @@ import com.vectordemo.viewModel.oss.OssDemoState
 import kotlinx.coroutines.launch
 
 /**
- * 纯 UI（类比 XML）：只依赖 [OssDemoState] 与 [OssDemoIntent] 派发，不持有 ViewModel、不处理 Toast / ActivityResult。
+ * 纯 UI：只依赖 [OssDemoState] 与 [OssDemoIntent] 派发（Compose 侧 MVI），不持有 ViewModel、不处理 Toast / ActivityResult。
  */
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable

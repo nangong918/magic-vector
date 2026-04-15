@@ -31,6 +31,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.vectordemo.domain.model.user.UserSessionModel
 import com.vectordemo.ui.theme.VectorDemoTheme
+import com.vectordemo.viewModel.activity.LoginIntent
 import com.vectordemo.viewModel.activity.LoginState
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -38,12 +39,7 @@ import com.vectordemo.viewModel.activity.LoginState
 fun ComposeLoginScreen(
     state: LoginState,
     savedAccounts: List<UserSessionModel>,
-    onAccountChange: (String) -> Unit,
-    onPasswordChange: (String) -> Unit,
-    onSelectSavedAccount: (String) -> Unit,
-    onSubmit: () -> Unit,
-    onGoRegister: () -> Unit,
-    onTouristAccess: () -> Unit
+    processIntent: (LoginIntent) -> Unit
 ) {
     var accountMenuExpanded by remember { mutableStateOf(false) }
     Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
@@ -67,7 +63,7 @@ fun ComposeLoginScreen(
                 OutlinedTextField(
                     value = state.account,
                     onValueChange = {
-                        onAccountChange(it)
+                        processIntent(LoginIntent.UpdateAccount(it))
                         accountMenuExpanded = false
                     },
                     modifier = Modifier.fillMaxWidth().menuAnchor(),
@@ -87,7 +83,7 @@ fun ComposeLoginScreen(
                         DropdownMenuItem(
                             text = { Text(text = option.account) },
                             onClick = {
-                                onSelectSavedAccount(option.account)
+                                processIntent(LoginIntent.SelectSavedAccount(option.account))
                                 accountMenuExpanded = false
                             }
                         )
@@ -98,19 +94,23 @@ fun ComposeLoginScreen(
             Spacer(modifier = Modifier.height(12.dp))
             OutlinedTextField(
                 value = state.password,
-                onValueChange = onPasswordChange,
+                onValueChange = { processIntent(LoginIntent.UpdatePassword(it)) },
                 modifier = Modifier.fillMaxWidth(),
                 label = { Text("密码") },
                 visualTransformation = PasswordVisualTransformation(),
                 singleLine = true
             )
             Spacer(modifier = Modifier.height(20.dp))
-            Button(onClick = onSubmit, enabled = state.canSubmit, modifier = Modifier.fillMaxWidth()) {
+            Button(
+                onClick = { processIntent(LoginIntent.SubmitLogin) },
+                enabled = state.canSubmit,
+                modifier = Modifier.fillMaxWidth()
+            ) {
                 if (state.isLoading) CircularProgressIndicator(modifier = Modifier.height(20.dp)) else Text("登录")
             }
             Spacer(modifier = Modifier.height(10.dp))
-            TextButton(onClick = onGoRegister) { Text("没有账号？去注册") }
-            TextButton(onClick = onTouristAccess) { Text("游客访问") }
+            TextButton(onClick = { processIntent(LoginIntent.NavigateToRegister) }) { Text("没有账号？去注册") }
+            TextButton(onClick = { processIntent(LoginIntent.TouristAccess) }) { Text("游客访问") }
         }
     }
 }
@@ -119,6 +119,6 @@ fun ComposeLoginScreen(
 @Composable
 private fun ComposeLoginScreenPreview() {
     VectorDemoTheme {
-        ComposeLoginScreen(LoginState(), emptyList(), {}, {}, {}, {}, {}, {})
+        ComposeLoginScreen(LoginState(), emptyList(), {})
     }
 }

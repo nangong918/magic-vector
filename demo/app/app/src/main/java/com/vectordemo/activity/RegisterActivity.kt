@@ -41,12 +41,7 @@ class RegisterActivity : BaseComponentActivity() {
                 val state by vm.uiState.collectAsState()
                 ComposeRegisterScreen(
                     state = state,
-                    onAccountChange = { vm.processIntent(RegisterIntent.UpdateAccount(it)) },
-                    onPasswordChange = { vm.processIntent(RegisterIntent.UpdatePassword(it)) },
-                    onConfirmPasswordChange = { vm.processIntent(RegisterIntent.UpdateConfirmPassword(it)) },
-                    onSelectAvatar = { vm.processIntent(RegisterIntent.SelectAvatar) },
-                    onSubmit = { vm.processIntent(RegisterIntent.SubmitRegister) },
-                    onGoLogin = { vm.processIntent(RegisterIntent.NavigateToLogin) }
+                    processIntent = { vm.processIntent(it) }
                 )
             }
         }

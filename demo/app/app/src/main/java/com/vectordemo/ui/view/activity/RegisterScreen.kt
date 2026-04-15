@@ -15,7 +15,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Icon
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -33,17 +32,13 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.vectordemo.ui.theme.VectorDemoTheme
+import com.vectordemo.viewModel.activity.RegisterIntent
 import com.vectordemo.viewModel.activity.RegisterState
 
 @Composable
 fun ComposeRegisterScreen(
     state: RegisterState,
-    onAccountChange: (String) -> Unit,
-    onPasswordChange: (String) -> Unit,
-    onConfirmPasswordChange: (String) -> Unit,
-    onSelectAvatar: () -> Unit,
-    onSubmit: () -> Unit,
-    onGoLogin: () -> Unit
+    processIntent: (RegisterIntent) -> Unit
 ) {
     Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
         Column(
@@ -56,13 +51,19 @@ fun ComposeRegisterScreen(
         ) {
             Text(text = "注册", fontSize = 20.sp)
             Spacer(modifier = Modifier.height(16.dp))
-            AvatarPicker(state.avatarUri, onSelectAvatar)
+            AvatarPicker(state.avatarUri) { processIntent(RegisterIntent.SelectAvatar) }
             Spacer(modifier = Modifier.height(16.dp))
-            OutlinedTextField(state.account, onAccountChange, Modifier.fillMaxWidth(), label = { Text("账号") }, singleLine = true)
+            OutlinedTextField(
+                state.account,
+                { processIntent(RegisterIntent.UpdateAccount(it)) },
+                Modifier.fillMaxWidth(),
+                label = { Text("账号") },
+                singleLine = true
+            )
             Spacer(modifier = Modifier.height(12.dp))
             OutlinedTextField(
                 state.password,
-                onPasswordChange,
+                { processIntent(RegisterIntent.UpdatePassword(it)) },
                 Modifier.fillMaxWidth(),
                 label = { Text("密码") },
                 visualTransformation = PasswordVisualTransformation(),
@@ -71,18 +72,22 @@ fun ComposeRegisterScreen(
             Spacer(modifier = Modifier.height(12.dp))
             OutlinedTextField(
                 state.confirmPassword,
-                onConfirmPasswordChange,
+                { processIntent(RegisterIntent.UpdateConfirmPassword(it)) },
                 Modifier.fillMaxWidth(),
                 label = { Text("确认密码") },
                 visualTransformation = PasswordVisualTransformation(),
                 singleLine = true
             )
             Spacer(modifier = Modifier.height(20.dp))
-            Button(onClick = onSubmit, enabled = state.canSubmit, modifier = Modifier.fillMaxWidth()) {
+            Button(
+                onClick = { processIntent(RegisterIntent.SubmitRegister) },
+                enabled = state.canSubmit,
+                modifier = Modifier.fillMaxWidth()
+            ) {
                 if (state.isLoading) CircularProgressIndicator(modifier = Modifier.height(20.dp)) else Text("注册")
             }
             Spacer(modifier = Modifier.height(10.dp))
-            TextButton(onClick = onGoLogin) { Text("已有账号？去登录") }
+            TextButton(onClick = { processIntent(RegisterIntent.NavigateToLogin) }) { Text("已有账号？去登录") }
         }
     }
 }
@@ -97,7 +102,7 @@ private fun AvatarPicker(avatarUri: Uri?, onSelectAvatar: () -> Unit) {
                 .size(80.dp)
                 .clip(CircleShape)
                 .background(Color(0xFFEFEFEF))
-                .clickable { onSelectAvatar() }
+                .clickable(onClick = onSelectAvatar)
                 .padding(20.dp),
             contentScale = ContentScale.Fit
         )
@@ -105,7 +110,7 @@ private fun AvatarPicker(avatarUri: Uri?, onSelectAvatar: () -> Unit) {
         AsyncImage(
             model = avatarUri,
             contentDescription = "avatar",
-            modifier = Modifier.size(80.dp).clip(CircleShape).clickable { onSelectAvatar() },
+            modifier = Modifier.size(80.dp).clip(CircleShape).clickable(onClick = onSelectAvatar),
             contentScale = ContentScale.Crop
         )
     }
@@ -115,6 +120,6 @@ private fun AvatarPicker(avatarUri: Uri?, onSelectAvatar: () -> Unit) {
 @Composable
 private fun ComposeRegisterScreenPreview() {
     VectorDemoTheme {
-        ComposeRegisterScreen(RegisterState(), {}, {}, {}, {}, {}, {})
+        ComposeRegisterScreen(RegisterState(), {})
     }
 }

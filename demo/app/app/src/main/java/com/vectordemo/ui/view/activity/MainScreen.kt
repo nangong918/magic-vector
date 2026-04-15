@@ -38,15 +38,14 @@ import androidx.compose.runtime.setValue
 import com.vectordemo.domain.model.demo.DemoCatalogItem
 import com.vectordemo.domain.model.demo.DemoRoute
 import com.vectordemo.ui.theme.VectorDemoTheme
+import com.vectordemo.viewModel.activity.MainIntent
 import com.vectordemo.viewModel.activity.MainState
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainScreen(
     state: MainState,
-    onQueryChange: (String) -> Unit,
-    onClickItem: (DemoCatalogItem) -> Unit,
-    onLogout: () -> Unit
+    processIntent: (MainIntent) -> Unit
 ) {
     var showLogoutDialog by remember { mutableStateOf(false) }
     Scaffold(
@@ -77,7 +76,7 @@ fun MainScreen(
             }
             OutlinedTextField(
                 value = state.query,
-                onValueChange = onQueryChange,
+                onValueChange = { processIntent(MainIntent.UpdateQuery(it)) },
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp, vertical = 10.dp),
@@ -94,7 +93,7 @@ fun MainScreen(
                 items(state.items, key = { it.id }) { item ->
                     DemoBar(
                         item = item,
-                        onClick = { onClickItem(item) }
+                        onClick = { processIntent(MainIntent.ClickDemo(item.route)) }
                     )
                 }
             }
@@ -108,7 +107,7 @@ fun MainScreen(
             confirmButton = {
                 TextButton(onClick = {
                     showLogoutDialog = false
-                    onLogout()
+                    processIntent(MainIntent.Logout)
                 }) { Text("登出") }
             },
             dismissButton = {
@@ -167,9 +166,7 @@ private fun MainScreenPreview() {
                     )
                 )
             ),
-            onQueryChange = {},
-            onClickItem = {},
-            onLogout = {}
+            processIntent = {}
         )
     }
 }
