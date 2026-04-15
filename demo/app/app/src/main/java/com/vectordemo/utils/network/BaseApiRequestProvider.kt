@@ -38,8 +38,9 @@ open class BaseApiRequestProvider {
             interceptors: List<Interceptor>
         ): OkHttpClient {
             val cache = Cache(File(System.getProperty("java.io.tmpdir"), "http-cache"), 50L * 1024 * 1024)
-            val log = HttpLoggingInterceptor(SkipMultipartBinaryHttpLogger()).apply {
-                level = HttpLoggingInterceptor.Level.BODY
+            val headerLog = HttpLoggingInterceptor(HttpLoggingInterceptor.Logger.DEFAULT).apply {
+                // 因为这个拦截器会拦截文件资源请求，所以取消掉BODY，只拦截HEADER，然后用JsonOrOmitBodyLoggingInterceptor拦截
+                level = HttpLoggingInterceptor.Level.HEADERS
             }
             val builder = OkHttpClient.Builder()
                 .retryOnConnectionFailure(false)
@@ -48,7 +49,8 @@ open class BaseApiRequestProvider {
                 .writeTimeout(writeTimeOut, TimeUnit.MILLISECONDS)
                 .callTimeout(callTimeOut, TimeUnit.MILLISECONDS)
                 .cache(cache)
-                .addInterceptor(log)
+                .addInterceptor(JsonOrOmitBodyLoggingInterceptor())
+                .addInterceptor(headerLog)
                 .proxy(Proxy.NO_PROXY)
             interceptors.forEach { builder.addInterceptor(it) }
             return builder.build()

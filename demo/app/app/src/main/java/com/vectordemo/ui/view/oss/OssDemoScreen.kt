@@ -1,10 +1,6 @@
 package com.vectordemo.ui.view.oss
 
 import android.net.Uri
-import android.widget.Toast
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.PickVisualMediaRequest
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -51,31 +47,30 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.runtime.collectAsState
 import coil.compose.AsyncImage
 import com.vectordemo.domain.model.oss.OssBucketFileItemModel
-import com.vectordemo.viewModel.oss.OssDemoViewModel
+import com.vectordemo.viewModel.oss.OssDemoUiState
 import kotlinx.coroutines.launch
 
+/**
+ * 纯 UI（类比 XML）：只依赖 [OssDemoUiState] 与回调，不包含 Toast、不持有 [com.vectordemo.viewModel.oss.OssDemoViewModel]。
+ */
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun OssDemoScreen(
-    vm: OssDemoViewModel,
-    onBack: () -> Unit
+    ui: OssDemoUiState,
+    pickedUri: Uri?,
+    onBack: () -> Unit,
+    onPickMainImage: () -> Unit,
+    onUploadClick: () -> Unit,
+    onRefreshBuckets: () -> Unit,
+    onToggleBucket: (String) -> Unit,
+    onDownload: (String, String) -> Unit,
+    onRequestReplacePick: (bucket: String, fileId: Long) -> Unit,
+    onDeleteFile: (bucket: String, fileId: Long) -> Unit
 ) {
-    val ui by vm.uiState.collectAsState()
-    val context = LocalContext.current
-
-    LaunchedEffect(ui.toast) {
-        ui.toast?.let {
-            Toast.makeText(context, it, Toast.LENGTH_SHORT).show()
-            vm.consumeToast()
-        }
-    }
-
     if (ui.touristBlocked) {
         Scaffold(
             topBar = {
@@ -105,22 +100,6 @@ fun OssDemoScreen(
 
     val pagerState = rememberPagerState(pageCount = { 2 })
     val scope = rememberCoroutineScope()
-    var pickedUri by remember { mutableStateOf<Uri?>(null) }
-    val pickMain = rememberLauncherForActivityResult(
-        ActivityResultContracts.PickVisualMedia()
-    ) { uri ->
-        pickedUri = uri
-    }
-    var replaceContext by remember { mutableStateOf<Pair<Long, String>?>(null) }
-    val pickReplace = rememberLauncherForActivityResult(
-        ActivityResultContracts.PickVisualMedia()
-    ) { uri ->
-        val ctx = replaceContext
-        if (uri != null && ctx != null) {
-            vm.replaceFile(ctx.first, ctx.second, uri)
-        }
-        replaceContext = null
-    }
 
     Scaffold(
         topBar = {
@@ -158,34 +137,18 @@ fun OssDemoScreen(
                 when (page) {
                     0 -> OssUploadPage(
                         pickedUri = pickedUri,
-                        onPickClick = {
-                            pickMain.launch(
-                                PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
-                            )
-                        },
-                        onUploadClick = {
-                            val u = pickedUri
-                            if (u == null) {
-                                Toast.makeText(context, "请先选择图片", Toast.LENGTH_SHORT).show()
-                            } else {
-                                vm.uploadImage(u)
-                            }
-                        }
+                        onPickClick = onPickMainImage,
+                        onUploadClick = onUploadClick
                     )
 
                     else -> OssBucketPage(
                         ui = ui,
                         isRefreshing = ui.loadingBuckets,
-                        onRefreshBuckets = { vm.refreshBuckets() },
-                        onToggleBucket = { vm.toggleBucket(it) },
-                        onDownload = { url, name -> vm.saveImageToGallery(url, name) },
-                        onReplace = { bucket, fileId ->
-                            replaceContext = fileId to bucket
-                            pickReplace.launch(
-                                PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
-                            )
-                        },
-                        onDelete = { bucket, fileId -> vm.deleteFile(fileId, bucket) }
+                        onRefreshBuckets = onRefreshBuckets,
+                        onToggleBucket = onToggleBucket,
+                        onDownload = onDownload,
+                        onReplace = onRequestReplacePick,
+                        onDelete = onDeleteFile
                     )
                 }
             }
@@ -238,7 +201,7 @@ private fun OssUploadPage(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun OssBucketPage(
-    ui: com.vectordemo.viewModel.oss.OssDemoUiState,
+    ui: OssDemoUiState,
     isRefreshing: Boolean,
     onRefreshBuckets: () -> Unit,
     onToggleBucket: (String) -> Unit,

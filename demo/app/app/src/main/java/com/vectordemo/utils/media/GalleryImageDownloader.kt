@@ -16,12 +16,13 @@ import java.net.URL
  */
 object GalleryImageDownloader {
 
-    fun downloadToGallery(context: Context, imageUrl: String, rawDisplayName: String) {
+    /** @return 用户可读保存位置说明（含目录路径） */
+    fun downloadToGallery(context: Context, imageUrl: String, rawDisplayName: String): String {
         val safeName = rawDisplayName
             .replace(Regex("[^a-zA-Z0-9._-]"), "_")
             .ifBlank { "download_${System.currentTimeMillis()}.jpg" }
         val mime = guessMime(safeName)
-        URL(imageUrl).openStream().use { input ->
+        return URL(imageUrl).openStream().use { input ->
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 saveWithMediaStore(context, input, safeName, mime)
             } else {
@@ -41,7 +42,7 @@ object GalleryImageDownloader {
         input: java.io.InputStream,
         displayName: String,
         mime: String
-    ) {
+    ): String {
         val resolver = context.contentResolver
         val values = ContentValues().apply {
             put(MediaStore.Images.Media.DISPLAY_NAME, displayName)
@@ -60,6 +61,8 @@ object GalleryImageDownloader {
         values.clear()
         values.put(MediaStore.Images.Media.IS_PENDING, 0)
         resolver.update(uri, values, null, null)
+        val relative = "${Environment.DIRECTORY_PICTURES}/VectorDemo/$displayName"
+        return "$relative（系统相册，MediaStore）"
     }
 
     @Suppress("DEPRECATION")
@@ -68,7 +71,7 @@ object GalleryImageDownloader {
         input: java.io.InputStream,
         displayName: String,
         mime: String
-    ) {
+    ): String {
         val base = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES)
         val dir = File(base, "VectorDemo").apply { mkdirs() }
         val file = File(dir, displayName)
@@ -79,5 +82,6 @@ object GalleryImageDownloader {
             arrayOf(mime),
             null
         )
+        return file.absolutePath
     }
 }

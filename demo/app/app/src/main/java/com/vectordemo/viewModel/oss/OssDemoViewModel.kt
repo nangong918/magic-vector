@@ -54,14 +54,14 @@ class OssDemoViewModel(application: Application) : AndroidViewModel(application)
     fun saveImageToGallery(url: String, rawDisplayName: String) {
         viewModelScope.launch {
             try {
-                withContext(Dispatchers.IO) {
+                val path = withContext(Dispatchers.IO) {
                     GalleryImageDownloader.downloadToGallery(
                         getApplication(),
                         url,
                         rawDisplayName
                     )
                 }
-                _uiState.update { it.copy(toast = "已保存到相册（Pictures/VectorDemo）") }
+                _uiState.update { it.copy(toast = "下载成功\n$path") }
             } catch (e: Exception) {
                 _uiState.update { it.copy(toast = e.message ?: "保存到相册失败") }
             }
@@ -151,9 +151,13 @@ class OssDemoViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
-    fun uploadImage(uri: Uri) {
+    fun uploadImage(uri: Uri?) {
         viewModelScope.launch {
             if (_uiState.value.touristBlocked) return@launch
+            if (uri == null) {
+                _uiState.update { it.copy(toast = "请先选择图片") }
+                return@launch
+            }
             try {
                 val ctx = getApplication<Application>()
                 val cr = ctx.contentResolver
