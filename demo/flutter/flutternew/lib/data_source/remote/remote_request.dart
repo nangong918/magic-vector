@@ -1,7 +1,7 @@
 import '../../domain/dto/base_response.dart';
 import '../../network/remote_api_exception.dart';
 
-/// 对齐 Android [RemoteApiSource.requestData]：统一解包 [BaseResponse]。
+/// 对齐 Android [RemoteRequestData.requestData]：统一解包 [BaseResponse]。
 Future<T> requestData<T>(
   Future<BaseResponse<T>> Function() apiCall, {
   String emptyDataMessage = '响应数据为空',

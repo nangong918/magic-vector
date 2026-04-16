@@ -334,10 +334,8 @@ class OssDemoVm extends ChangeNotifier {
         filePath: path,
         filename: name ?? 'upload.jpg',
       );
-      final ok = res.items?.any((e) => e.success == true) ?? false;
-      final firstMsg = (res.items != null && res.items!.isNotEmpty)
-          ? res.items!.first.message
-          : null;
+      final ok = res.items.any((e) => e.success);
+      final firstMsg = res.items.isNotEmpty ? res.items.first.message : null;
       _effect.add(
         OssShowSnack(ok ? '上传成功' : (firstMsg ?? '上传失败')),
       );
@@ -379,9 +377,9 @@ class OssDemoVm extends ChangeNotifier {
         filePath: path,
         filename: name ?? 'upload.jpg',
       );
-      final ok = res.updated == true;
+      final ok = res.updated;
       _effect.add(
-        OssShowSnack(ok ? '已更换图片' : (res.message ?? '更换失败')),
+        OssShowSnack(ok ? '已更换图片' : (res.message.isEmpty ? '更换失败' : res.message)),
       );
       if (ok) await _invalidateBucket(pending.bucket);
     } catch (e) {

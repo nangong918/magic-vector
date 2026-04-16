@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 
-import '../domain/model/user_session_model.dart';
 import '../manager/app_session.dart';
 import '../manager/user_manager.dart';
 
@@ -131,24 +130,14 @@ class RegisterVm extends ChangeNotifier {
     _state = _state.copyWith(isLoading: true);
     notifyListeners();
     try {
-      final auth = await _userManager.registerRemote(
+      final session = await _userManager.registerRemote(
         account: _state.account.trim(),
         password: _state.password,
         name: _state.account.trim(),
       );
-      if ((auth.userId ?? 0) <= 0) {
+      if (session.userId <= 0) {
         _effectController.add(const RegisterShowToast('注册失败'));
       } else {
-        final session = UserSessionModel(
-          userId: auth.userId ?? 0,
-          account: auth.account ?? '',
-          name: auth.name ?? '',
-          avatarUrl: auth.avatarUrl ?? '',
-          accessToken: auth.accessToken ?? '',
-          password: '',
-          isCurrent: true,
-          lastLoginAt: DateTime.now().millisecondsSinceEpoch,
-        );
         await _userManager.saveCurrentUser(session);
         AppSession.instance.updateUserId(session.userId);
         _effectController.add(const RegisterNavigateToMain());

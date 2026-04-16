@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 
-import '../domain/dto/req/user_login_request.dart';
 import '../domain/model/user_session_model.dart';
 import '../manager/app_session.dart';
 import '../manager/user_manager.dart';
@@ -152,25 +151,13 @@ class LoginVm extends ChangeNotifier {
     _state = _state.copyWith(isLoading: true);
     notifyListeners();
     try {
-      final auth = await _userManager.loginRemote(
-        UserLoginRequest(
-          account: _state.account.trim(),
-          password: _state.password,
-        ),
+      final session = await _userManager.loginRemote(
+        account: _state.account.trim(),
+        password: _state.password,
       );
-      if ((auth.userId ?? 0) <= 0) {
+      if (session.userId <= 0) {
         _effectController.add(const LoginShowToast('登录失败'));
       } else {
-        final session = UserSessionModel(
-          userId: auth.userId ?? 0,
-          account: auth.account ?? '',
-          name: auth.name ?? '',
-          avatarUrl: auth.avatarUrl ?? '',
-          accessToken: auth.accessToken ?? '',
-          password: _state.password,
-          isCurrent: true,
-          lastLoginAt: DateTime.now().millisecondsSinceEpoch,
-        );
         await _userManager.saveCurrentUser(session);
         AppSession.instance.updateUserId(session.userId);
         _effectController.add(const LoginNavigateToMain());

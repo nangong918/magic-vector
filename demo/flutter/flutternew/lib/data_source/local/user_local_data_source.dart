@@ -1,27 +1,27 @@
 import '../../domain/convertor/user_convertor.dart';
-import '../../domain/entity/user_entity.dart';
+import '../../domain/model/user_session_model.dart';
 import 'user_session_db.dart';
 
-/// 对齐 Android [UserLocalSource]：仅暴露 Entity，屏蔽表结构细节。
+/// 对齐 Android [UserLocalSource]：对外仅 [UserSessionModel]，内部用 Entity + [UserConvertor]。
 class UserLocalDataSource {
   UserLocalDataSource({UserSessionDb? db}) : _db = db ?? UserSessionDb.instance;
 
   final UserSessionDb _db;
 
-  Future<void> saveCurrentUser(UserEntity entity) async {
+  Future<void> saveCurrentUser(UserSessionModel session) async {
     await _db.clearCurrentFlag();
-    await _db.upsert(UserConvertor.entityToRow(entity));
+    await _db.upsert(UserConvertor.modelToRow(session));
   }
 
-  Future<UserEntity?> getCurrentUser() async {
+  Future<UserSessionModel?> getCurrentUser() async {
     final row = await _db.getCurrent();
     if (row == null) return null;
-    return UserConvertor.fromRow(row);
+    return UserConvertor.fromRowToModel(row);
   }
 
-  Future<List<UserEntity>> getAllUsers() async {
+  Future<List<UserSessionModel>> getAllUsers() async {
     final rows = await _db.getAll();
-    return rows.map(UserConvertor.fromRow).toList();
+    return rows.map(UserConvertor.fromRowToModel).toList();
   }
 
   Future<void> clearCurrentUser() async {
@@ -29,7 +29,7 @@ class UserLocalDataSource {
     if (current == null) return;
     await _db.clearCurrentFlag();
     await _db.upsert(
-      UserConvertor.entityToRow(
+      UserConvertor.modelToRow(
         current.copyWith(accessToken: '', isCurrent: false),
       ),
     );

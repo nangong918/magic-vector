@@ -1,45 +1,44 @@
-import '../data/local/user_local_data_source.dart';
-import '../data/remote/user_remote_data_source.dart';
-import '../domain/convertor/user_convertor.dart';
-import '../domain/dto/req/user_login_request.dart';
-import '../domain/dto/req/user_token_verify_request.dart';
-import '../domain/dto/resp/user_auth_response.dart';
-import '../domain/dto/resp/user_token_verify_response.dart';
+import '../data_source/local/user_local_data_source.dart';
+import '../data_source/remote/user_remote_api_source.dart';
 import '../domain/model/user_session_model.dart';
 import '../network/app_api.dart';
 
-/// 对齐 Android [UserManager]：持有 Local / Remote [DataSource]，ViewModel 只依赖本类。
+/// 对齐 Android [UserManager]：持有 Local / Remote，ViewModel 只依赖本类。
 class UserManager {
   UserManager._({
     UserLocalDataSource? localDataSource,
-    UserRemoteDataSource? remoteDataSource,
+    UserRemoteApiSource? remoteApiSource,
   })  : _local = localDataSource ?? UserLocalDataSource(),
-        _remote = remoteDataSource ?? UserRemoteDataSource(AppApi.instance);
+        _remote = remoteApiSource ?? UserRemoteApiSource(AppApi.instance);
 
   static final UserManager instance = UserManager._();
 
   final UserLocalDataSource _local;
-  final UserRemoteDataSource _remote;
+  final UserRemoteApiSource _remote;
 
   UserSessionModel? _cachedCurrent;
 
   /// 供 [AuthHeaderInterceptor] 同步读取；依赖 [getCurrentUser] / [saveCurrentUser] 先填充缓存。
   UserSessionModel? get currentSessionSync => _cachedCurrent;
 
-  Future<UserAuthResponse> loginRemote(UserLoginRequest request) =>
-      _remote.login(request);
+  Future<UserSessionModel> loginRemote({
+    required String account,
+    required String password,
+  }) =>
+      _remote.login(account: account, password: password);
 
-  Future<UserAuthResponse> registerRemote({
+  Future<UserSessionModel> registerRemote({
     required String account,
     required String password,
     required String name,
   }) =>
       _remote.register(account: account, password: password, name: name);
 
-  Future<UserTokenVerifyResponse> verifyAccessTokenRemote(
-    UserTokenVerifyRequest request,
-  ) =>
-      _remote.verifyAccessToken(request);
+  Future<bool> verifyAccessTokenRemote({
+    required int userId,
+    required String accessToken,
+  }) =>
+      _remote.verifyAccessToken(userId: userId, accessToken: accessToken);
 
   Future<void> saveCurrentUser(UserSessionModel session) async {
     final isTourist =
@@ -55,24 +54,22 @@ class UserManager {
     }
     final loginAt = DateTime.now().millisecondsSinceEpoch;
     final current = session.copyWith(isCurrent: true, lastLoginAt: loginAt);
-    await _local.saveCurrentUser(UserConvertor.modelToEntity(current));
+    await _local.saveCurrentUser(current);
     _cachedCurrent = current;
   }
 
   Future<UserSessionModel?> getCurrentUser() async {
     final cached = _cachedCurrent;
     if (cached != null && cached.accessToken.isNotEmpty) return cached;
-    final entity = await _local.getCurrentUser();
-    if (entity == null) return null;
-    final model = UserConvertor.entityToModel(entity);
+    final model = await _local.getCurrentUser();
+    if (model == null) return null;
     _cachedCurrent = model;
     return model;
   }
 
   Future<List<UserSessionModel>> getAllUsers() async {
-    final entities = await _local.getAllUsers();
-    return entities
-        .map(UserConvertor.entityToModel)
+    final list = await _local.getAllUsers();
+    return list
         .where(
           (e) => !(e.userId == 1 ||
               e.account == 'tourist' ||

@@ -1,14 +1,13 @@
 import 'package:flutter/material.dart';
 
-import '../domain/dto/base_response.dart';
-import '../domain/dto/req/user_test_req.dart';
-import '../domain/dto/resp/user_test_resp.dart';
-import '../network/api_request_impl.dart';
+import '../data_source/remote/demo_remote_api_source.dart';
+import '../network/app_api.dart';
 
 class NetworkViewModel extends ChangeNotifier {
-  NetworkViewModel({ApiRequestImpl? api}) : _api = api ?? ApiRequestImpl();
+  NetworkViewModel({DemoRemoteApiSource? api})
+      : _api = api ?? DemoRemoteApiSource(AppApi.instance);
 
-  final ApiRequestImpl _api;
+  final DemoRemoteApiSource _api;
 
   bool _isLoggedIn = false;
   bool _isLoading = false;
@@ -30,19 +29,20 @@ class NetworkViewModel extends ChangeNotifier {
   }) async {
     if (_isLoading) return;
     _setLoading(true);
-
-    final req = UserTestReq(
-      account: account,
-      password: password,
-      name: account,
-    );
-
-    await _api.register(
-      req,
-      _handleLoginSuccess,
-      _handleThrowable,
-    );
-
+    try {
+      final data = await _api.registerDemo(
+        account: account,
+        password: password,
+        name: account,
+      );
+      _account = data.account;
+      _loginToken = data.loginToken;
+      _isLoggedIn = true;
+      _statusColor = Colors.green;
+      _statusMessage = _buildSuccessMessage('登录成功');
+    } catch (_) {
+      _setErrorMessage('网络错误，请稍后重试');
+    }
     _setLoading(false);
   }
 
@@ -51,44 +51,17 @@ class NetworkViewModel extends ChangeNotifier {
   }) async {
     if (_isLoading) return;
     _setLoading(true);
-
-    await _api.resetToken(
-      account,
-      _handleRefreshSuccess,
-      _handleThrowable,
-    );
-
-    _setLoading(false);
-  }
-
-  void _handleLoginSuccess(BaseResponse<UserTestResp> response) {
-    if (response.isSuccess && response.data != null) {
-      _account = response.data?.account ?? '';
-      _loginToken = response.data?.loginToken ?? '';
-      _isLoggedIn = true;
-      _statusColor = Colors.green;
-      _statusMessage = _buildSuccessMessage('登录成功');
-    } else {
-      _setErrorMessage(response.message ?? '登录失败');
-    }
-    notifyListeners();
-  }
-
-  void _handleRefreshSuccess(BaseResponse<UserTestResp> response) {
-    if (response.isSuccess && response.data != null) {
-      _account = response.data?.account ?? _account;
-      _loginToken = response.data?.loginToken ?? _loginToken;
+    try {
+      final data = await _api.resetTokenDemo(account);
+      _account = data.account.isNotEmpty ? data.account : _account;
+      _loginToken =
+          data.loginToken.isNotEmpty ? data.loginToken : _loginToken;
       _statusColor = Colors.green;
       _statusMessage = _buildSuccessMessage('Token已刷新');
-    } else {
-      _setErrorMessage(response.message ?? '刷新失败');
+    } catch (_) {
+      _setErrorMessage('网络错误，请稍后重试');
     }
-    notifyListeners();
-  }
-
-  void _handleThrowable(Object error, StackTrace stackTrace) {
-    _setErrorMessage('网络错误，请稍后重试');
-    notifyListeners();
+    _setLoading(false);
   }
 
   void _setLoading(bool loading) {

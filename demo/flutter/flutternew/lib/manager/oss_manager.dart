@@ -1,39 +1,31 @@
-import '../data/remote/oss_remote_data_source.dart';
-import '../domain/convertor/oss_convertor.dart';
-import '../domain/dto/resp/oss_batch_upload_response.dart';
-import '../domain/dto/resp/oss_file_content_update_response.dart';
+import '../data_source/remote/oss_remote_api_source.dart';
+import '../domain/model/oss/oss_batch_upload_model.dart';
 import '../domain/model/oss/oss_bucket_file_item_model.dart';
+import '../domain/model/oss/oss_file_content_update_model.dart';
 import '../domain/model/oss/oss_user_bucket_list_model.dart';
 import '../network/app_api.dart';
 
-/// 对齐 Android [OssManager]：持有 [OssRemoteDataSource]，向上返回 Model（上传/更新等可暂用 DTO）。
+/// 对齐 Android [OssManager]：持有 [OssRemoteApiSource]，向上仅返回 Model。
 class OssManager {
   OssManager._();
 
   static final OssManager instance = OssManager._();
 
-  OssRemoteDataSource? _remote;
+  OssRemoteApiSource? _remote;
 
-  OssRemoteDataSource get _client =>
-      _remote ??= OssRemoteDataSource(AppApi.instance);
+  OssRemoteApiSource get _client =>
+      _remote ??= OssRemoteApiSource(AppApi.instance);
 
-  Future<OssUserBucketListModel> syncUserBucketList(String userId) async {
-    final dto = await _client.ossUserBucketList(userId);
-    return OssConvertor.userBucketList(dto);
-  }
+  Future<OssUserBucketListModel> syncUserBucketList(String userId) =>
+      _client.ossUserBucketList(userId);
 
   Future<List<OssBucketFileItemModel>> syncBucketFileItemList({
     required String userId,
     required String bucketName,
-  }) async {
-    final dto = await _client.ossUserBucketFileItemList(
-      userId: userId,
-      bucketName: bucketName,
-    );
-    return OssConvertor.fileItemList(dto);
-  }
+  }) =>
+      _client.ossUserBucketFileItemList(userId: userId, bucketName: bucketName);
 
-  Future<OssBatchUploadResponse> batchUploadSingle({
+  Future<OssBatchUploadModel> batchUploadSingle({
     required String userId,
     String? bucketName,
     required String filePath,
@@ -47,11 +39,10 @@ class OssManager {
     );
   }
 
-  Future<void> batchDeleteFiles(List<String> fileIds) async {
-    await _client.batchDeleteFiles(fileIds);
-  }
+  Future<void> batchDeleteFiles(List<String> fileIds) =>
+      _client.batchDeleteFiles(fileIds);
 
-  Future<OssFileContentUpdateResponse> updateFileContent({
+  Future<OssFileContentUpdateModel> updateFileContent({
     required String fileId,
     required String filePath,
     required String filename,

@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 
 import '../constant/auth_constant.dart';
-import '../domain/dto/req/user_token_verify_request.dart';
 import '../manager/app_session.dart';
 import '../manager/user_manager.dart';
 
@@ -83,12 +82,10 @@ class StartVm extends ChangeNotifier {
     }
     try {
       final verify = await _userManager.verifyAccessTokenRemote(
-        UserTokenVerifyRequest(
-          userId: local.userId,
-          accessToken: local.accessToken,
-        ),
+        userId: local.userId,
+        accessToken: local.accessToken,
       );
-      if (verify.valid ?? false) {
+      if (verify) {
         AppSession.instance.updateUserId(local.userId);
         return const StartNavigateToMain();
       }
