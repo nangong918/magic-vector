@@ -2,7 +2,6 @@ package com.vectordemo.manager.user
 
 import android.content.Context
 import com.vectordemo.dataSource.local.UserLocalSource
-import com.vectordemo.domain.convertor.UserConvertor
 import com.vectordemo.domain.model.user.UserSessionModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -18,20 +17,18 @@ class UserManager private constructor(context: Context) {
             return@withContext
         }
         val currentSession = session.copy(isCurrent = true, lastLoginAt = System.currentTimeMillis())
-        userLocalSource.saveCurrentUser(UserConvertor.model2Entity(currentSession))
+        userLocalSource.saveCurrentUser(currentSession)
         currentUserSessionCache = currentSession
     }
 
     suspend fun getCurrentUser(): UserSessionModel? = withContext(Dispatchers.IO) {
         val cached = currentUserSessionCache
         if (cached != null && cached.accessToken.isNotBlank()) return@withContext cached
-        userLocalSource.getCurrentUser()?.let { UserConvertor.entity2Model(it) }?.also { currentUserSessionCache = it }
+        userLocalSource.getCurrentUser()?.also { currentUserSessionCache = it }
     }
 
     suspend fun getAllUsers(): List<UserSessionModel> = withContext(Dispatchers.IO) {
-        userLocalSource.getAllUsers()
-            .map { UserConvertor.entity2Model(it) }
-            .filterNot { isTouristSession(it) }
+        userLocalSource.getAllUsers().filterNot { isTouristSession(it) }
     }
 
     private fun isTouristSession(session: UserSessionModel): Boolean {

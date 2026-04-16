@@ -3,7 +3,7 @@ package com.vectordemo.manager.oss
 import android.content.Context
 import com.vectordemo.MainApplication
 import com.vectordemo.dataSource.local.OssLocalSource
-import com.vectordemo.dataSource.remote.RemoteApiSource
+import com.vectordemo.dataSource.remote.OssRemoteApiSource
 import com.vectordemo.domain.convertor.OssConvertor
 import com.vectordemo.domain.model.oss.OssBatchDeleteModel
 import com.vectordemo.domain.model.oss.OssBatchUploadModel
@@ -19,11 +19,11 @@ import okhttp3.RequestBody
 import java.io.File
 
 /**
- * 在 [RemoteApiSource] 返回 Model 后写入 [com.vectordemo.domain.entity.OssUserBucketFileEntity]。
+ * 在 [OssRemoteApiSource] 返回 Model 后写入 [com.vectordemo.domain.entity.OssUserBucketFileEntity]。
  * 「仅 URL 列表」接口响应不含 fileId，无法写入本表主键，故 [syncBucketFileUrlList] 只返回 Model、不落库。
  */
 class OssManager private constructor(context: Context) {
-    private val remote: RemoteApiSource = MainApplication.getRemoteApiSource()
+    private val remote: OssRemoteApiSource = MainApplication.getOssRemoteApiSource()
     private val local: OssLocalSource = OssLocalSource.getInstance(context)
 
     suspend fun syncUserBucketList(userId: Long): OssUserBucketListModel {

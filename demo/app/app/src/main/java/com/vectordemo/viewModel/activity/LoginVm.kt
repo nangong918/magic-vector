@@ -3,7 +3,6 @@ package com.vectordemo.viewModel.activity
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vectordemo.MainApplication
-import com.vectordemo.domain.dto.http.request.UserLoginRequest
 import com.vectordemo.domain.model.user.UserSessionModel
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
@@ -55,21 +54,12 @@ class LoginVm : ViewModel() {
         _uiState.update { it.copy(isLoading = true) }
         viewModelScope.launch {
             try {
-                val auth = MainApplication.getRemoteApiSource().login(
-                    UserLoginRequest(account = state.account.trim(), password = state.password)
+                val session = MainApplication.getUserRemoteApiSource().login(
+                    state.account.trim(),
+                    state.password,
                 )
-                val uid = auth.userId?.toLongOrNull() ?: 0L
-                MainApplication.getUserManager().saveCurrentUser(
-                    UserSessionModel(
-                        userId = uid,
-                        account = auth.account.orEmpty(),
-                        name = auth.name.orEmpty(),
-                        avatarUrl = auth.avatarUrl.orEmpty(),
-                        accessToken = auth.accessToken.orEmpty(),
-                        password = state.password
-                    )
-                )
-                MainApplication.updateUserId(uid)
+                MainApplication.getUserManager().saveCurrentUser(session)
+                MainApplication.updateUserId(session.userId)
                 _uiState.update { it.copy(isLoading = false) }
                 loadSavedAccounts()
                 sendEffect(LoginEffect.NavigateToMain)

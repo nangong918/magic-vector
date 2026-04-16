@@ -7,7 +7,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vectordemo.MainApplication
 import com.vectordemo.domain.constant.BaseConstant
-import com.vectordemo.domain.model.user.UserSessionModel
 import com.vectordemo.utils.file.FileUtil
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
@@ -17,9 +16,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
-import okhttp3.RequestBody.Companion.toRequestBody
 
 class RegisterVm : ViewModel() {
     private val _uiState = MutableStateFlow(RegisterState())
@@ -49,23 +46,14 @@ class RegisterVm : ViewModel() {
         viewModelScope.launch {
             try {
                 val avatarPart = createAvatarPartOrNull(MainApplication.getApp(), state.avatarUri)
-                val auth = MainApplication.getRemoteApiSource().register(
+                val session = MainApplication.getUserRemoteApiSource().register(
                     avatar = avatarPart,
-                    account = state.account.trim().toRequestBody("text/plain".toMediaTypeOrNull()),
-                    password = state.password.toRequestBody("text/plain".toMediaTypeOrNull()),
-                    name = state.account.trim().toRequestBody("text/plain".toMediaTypeOrNull())
+                    account = state.account.trim(),
+                    password = state.password,
+                    name = state.account.trim(),
                 )
-                val uid = auth.userId?.toLongOrNull() ?: 0L
-                MainApplication.getUserManager().saveCurrentUser(
-                    UserSessionModel(
-                        userId = uid,
-                        account = auth.account.orEmpty(),
-                        name = auth.name.orEmpty(),
-                        avatarUrl = auth.avatarUrl.orEmpty(),
-                        accessToken = auth.accessToken.orEmpty()
-                    )
-                )
-                MainApplication.updateUserId(uid)
+                MainApplication.getUserManager().saveCurrentUser(session)
+                MainApplication.updateUserId(session.userId)
                 _uiState.update { it.copy(isLoading = false) }
                 sendEffect(RegisterEffect.NavigateToMain)
             } catch (_: Throwable) {

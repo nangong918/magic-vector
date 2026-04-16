@@ -1,7 +1,8 @@
 package com.vectordemo
 
 import android.app.Application
-import com.vectordemo.dataSource.remote.RemoteApiSource
+import com.vectordemo.dataSource.remote.OssRemoteApiSource
+import com.vectordemo.dataSource.remote.UserRemoteApiSource
 import com.vectordemo.manager.oss.OssManager
 import com.vectordemo.manager.user.UserManager
 import com.vectordemo.repository.api.ApiRequest
@@ -18,7 +19,8 @@ class MainApplication : Application() {
     companion object {
         private lateinit var app: MainApplication
         private var apiRequestInstance: ApiRequest? = null
-        private var remoteApiSource: RemoteApiSource? = null
+        private var userRemoteApiSource: UserRemoteApiSource? = null
+        private var ossRemoteApiSource: OssRemoteApiSource? = null
         private var userManager: UserManager? = null
         private var ossManager: OssManager? = null
         private var imageManager: ImageManager? = null
@@ -27,9 +29,14 @@ class MainApplication : Application() {
 
         fun getApp(): MainApplication = app
 
-        fun getRemoteApiSource(): RemoteApiSource {
-            if (remoteApiSource == null) remoteApiSource = RemoteApiSource(apiRequestInstance!!)
-            return remoteApiSource!!
+        fun getUserRemoteApiSource(): UserRemoteApiSource {
+            if (userRemoteApiSource == null) userRemoteApiSource = UserRemoteApiSource(apiRequestInstance!!)
+            return userRemoteApiSource!!
+        }
+
+        fun getOssRemoteApiSource(): OssRemoteApiSource {
+            if (ossRemoteApiSource == null) ossRemoteApiSource = OssRemoteApiSource(apiRequestInstance!!)
+            return ossRemoteApiSource!!
         }
 
         fun getUserManager(): UserManager {

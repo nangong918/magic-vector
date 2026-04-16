@@ -45,6 +45,21 @@ flutter先不用修改，等下App我审核通过再喊你改
 * OssDemoPage需要创建ViewModel，拆分UI数据流业务更新逻辑。
 
 
+#### 补充
+
+我审核了一下代码，提出以下问题
+1. 你要仿照Android的路径层次结构去完成：
+   dataSource: local/remote
+   当然顺便说一下，你的把RemoteApiSource拆分成UserRemoteApiSource和OSSRemoteApiSource是对的，请保持，并且拆分Android中的RemoteApiSource
+2. 你没有完全参考我的Android的设计理念：
+   LocalDataSource不对外暴露Entity，而是内部用Convertor对外提供调用者希望的Model类型，包括他们下发数据也是给Model而不是Entity。
+   同理RemoteApiSource也不对外暴露Response，而是提供他们直接需要的Model类型，包括他们下发数据也是给Model而不是Request。
+   VM应该不引用任何Entity和Request，Response，这些对他们来说是无感知的，同理Page和Screen也不应该感知。
+
+3. 我发现Flutter跟Android不一样，ApiRequest可以直接生成api_request.g.dart，我看了一下你好像是好好用了的（这条就是检查一下，顺口一提，不是什么任务）
+   意思是不是ApiRequestImpl不需要了，我认为是不需要了，我看里面也就是一些demo的方法，你给它放到demoRemoteApiSource吧。
+
+
 
 
 

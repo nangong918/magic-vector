@@ -32,8 +32,8 @@ class StartVm : ViewModel() {
                 StartEffect.NavigateToLogin
             } else {
                 try {
-                    val verify = MainApplication.getRemoteApiSource().verifyAccessToken(localUser.accessToken)
-                    if (verify.valid == true) {
+                    val verify = MainApplication.getUserRemoteApiSource().verifyAccessToken(localUser.accessToken)
+                    if (verify) {
                         MainApplication.updateUserId(localUser.userId)
                         StartEffect.NavigateToMain
                     } else {
