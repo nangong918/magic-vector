@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 
-import '../data/remote/auth_remote_api_source.dart';
 import '../domain/model/user_session_model.dart';
 import '../manager/app_session.dart';
 import '../manager/user_manager.dart';
@@ -88,12 +87,9 @@ class RegisterShowToast extends RegisterEffect {
 
 class RegisterVm extends ChangeNotifier {
   RegisterVm({
-    AuthRemoteApiSource? remoteApiSource,
     UserManager? userManager,
-  }) : _remoteApiSource = remoteApiSource ?? AuthRemoteApiSource(),
-       _userManager = userManager ?? UserManager.instance;
+  }) : _userManager = userManager ?? UserManager.instance;
 
-  final AuthRemoteApiSource _remoteApiSource;
   final UserManager _userManager;
   final _effectController = StreamController<RegisterEffect>.broadcast();
 
@@ -135,7 +131,7 @@ class RegisterVm extends ChangeNotifier {
     _state = _state.copyWith(isLoading: true);
     notifyListeners();
     try {
-      final auth = await _remoteApiSource.register(
+      final auth = await _userManager.registerRemote(
         account: _state.account.trim(),
         password: _state.password,
         name: _state.account.trim(),

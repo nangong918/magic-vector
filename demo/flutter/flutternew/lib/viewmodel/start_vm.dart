@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 
 import '../constant/auth_constant.dart';
-import '../data/remote/auth_remote_api_source.dart';
 import '../domain/dto/req/user_token_verify_request.dart';
 import '../manager/app_session.dart';
 import '../manager/user_manager.dart';
@@ -44,12 +43,9 @@ class StartShowToast extends StartEffect {
 
 class StartVm extends ChangeNotifier {
   StartVm({
-    AuthRemoteApiSource? remoteApiSource,
     UserManager? userManager,
-  }) : _remoteApiSource = remoteApiSource ?? AuthRemoteApiSource(),
-       _userManager = userManager ?? UserManager.instance;
+  }) : _userManager = userManager ?? UserManager.instance;
 
-  final AuthRemoteApiSource _remoteApiSource;
   final UserManager _userManager;
   final _effectController = StreamController<StartEffect>.broadcast();
 
@@ -86,8 +82,11 @@ class StartVm extends ChangeNotifier {
       return const StartNavigateToLogin();
     }
     try {
-      final verify = await _remoteApiSource.verifyAccessToken(
-        UserTokenVerifyRequest(userId: local.userId, accessToken: local.accessToken),
+      final verify = await _userManager.verifyAccessTokenRemote(
+        UserTokenVerifyRequest(
+          userId: local.userId,
+          accessToken: local.accessToken,
+        ),
       );
       if (verify.valid ?? false) {
         AppSession.instance.updateUserId(local.userId);

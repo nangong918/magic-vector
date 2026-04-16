@@ -1,11 +1,45 @@
-import '../data/local/user_session_db.dart';
+import '../data/local/user_local_data_source.dart';
+import '../data/remote/user_remote_data_source.dart';
+import '../domain/convertor/user_convertor.dart';
+import '../domain/dto/req/user_login_request.dart';
+import '../domain/dto/req/user_token_verify_request.dart';
+import '../domain/dto/resp/user_auth_response.dart';
+import '../domain/dto/resp/user_token_verify_response.dart';
 import '../domain/model/user_session_model.dart';
+import '../network/app_api.dart';
 
+/// 对齐 Android [UserManager]：持有 Local / Remote [DataSource]，ViewModel 只依赖本类。
 class UserManager {
-  UserManager._();
+  UserManager._({
+    UserLocalDataSource? localDataSource,
+    UserRemoteDataSource? remoteDataSource,
+  })  : _local = localDataSource ?? UserLocalDataSource(),
+        _remote = remoteDataSource ?? UserRemoteDataSource(AppApi.instance);
+
   static final UserManager instance = UserManager._();
 
+  final UserLocalDataSource _local;
+  final UserRemoteDataSource _remote;
+
   UserSessionModel? _cachedCurrent;
+
+  /// 供 [AuthHeaderInterceptor] 同步读取；依赖 [getCurrentUser] / [saveCurrentUser] 先填充缓存。
+  UserSessionModel? get currentSessionSync => _cachedCurrent;
+
+  Future<UserAuthResponse> loginRemote(UserLoginRequest request) =>
+      _remote.login(request);
+
+  Future<UserAuthResponse> registerRemote({
+    required String account,
+    required String password,
+    required String name,
+  }) =>
+      _remote.register(account: account, password: password, name: name);
+
+  Future<UserTokenVerifyResponse> verifyAccessTokenRemote(
+    UserTokenVerifyRequest request,
+  ) =>
+      _remote.verifyAccessToken(request);
 
   Future<void> saveCurrentUser(UserSessionModel session) async {
     final isTourist =
@@ -21,62 +55,34 @@ class UserManager {
     }
     final loginAt = DateTime.now().millisecondsSinceEpoch;
     final current = session.copyWith(isCurrent: true, lastLoginAt: loginAt);
-    final db = UserSessionDb.instance;
-    await db.clearCurrentFlag();
-    await db.upsert(_toRow(current));
+    await _local.saveCurrentUser(UserConvertor.modelToEntity(current));
     _cachedCurrent = current;
   }
 
   Future<UserSessionModel?> getCurrentUser() async {
     final cached = _cachedCurrent;
     if (cached != null && cached.accessToken.isNotEmpty) return cached;
-    final row = await UserSessionDb.instance.getCurrent();
-    if (row == null) return null;
-    final model = _fromRow(row);
+    final entity = await _local.getCurrentUser();
+    if (entity == null) return null;
+    final model = UserConvertor.entityToModel(entity);
     _cachedCurrent = model;
     return model;
   }
 
   Future<List<UserSessionModel>> getAllUsers() async {
-    final rows = await UserSessionDb.instance.getAll();
-    return rows
-        .map(_fromRow)
-        .where((e) => !(e.userId == 1 || e.account == 'tourist' || e.accessToken == 'tourist'))
+    final entities = await _local.getAllUsers();
+    return entities
+        .map(UserConvertor.entityToModel)
+        .where(
+          (e) => !(e.userId == 1 ||
+              e.account == 'tourist' ||
+              e.accessToken == 'tourist'),
+        )
         .toList();
   }
 
   Future<void> clearCurrentUser() async {
-    final db = UserSessionDb.instance;
-    final current = await getCurrentUser();
-    if (current == null) return;
-    await db.clearCurrentFlag();
-    await db.upsert(_toRow(current.copyWith(accessToken: '', isCurrent: false)));
+    await _local.clearCurrentUser();
     _cachedCurrent = null;
-  }
-
-  Map<String, Object?> _toRow(UserSessionModel m) {
-    return {
-      'user_id': m.userId,
-      'account': m.account,
-      'name': m.name,
-      'avatar_url': m.avatarUrl,
-      'access_token': m.accessToken,
-      'password': m.password,
-      'is_current': m.isCurrent ? 1 : 0,
-      'last_login_at': m.lastLoginAt,
-    };
-  }
-
-  UserSessionModel _fromRow(Map<String, Object?> row) {
-    return UserSessionModel(
-      userId: (row['user_id'] as num?)?.toInt() ?? 0,
-      account: row['account'] as String? ?? '',
-      name: row['name'] as String? ?? '',
-      avatarUrl: row['avatar_url'] as String? ?? '',
-      accessToken: row['access_token'] as String? ?? '',
-      password: row['password'] as String? ?? '',
-      isCurrent: ((row['is_current'] as num?)?.toInt() ?? 0) == 1,
-      lastLoginAt: (row['last_login_at'] as num?)?.toInt() ?? 0,
-    );
   }
 }

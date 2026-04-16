@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 
-import '../data/remote/auth_remote_api_source.dart';
 import '../domain/dto/req/user_login_request.dart';
 import '../domain/model/user_session_model.dart';
 import '../manager/app_session.dart';
@@ -88,14 +87,11 @@ class LoginShowToast extends LoginEffect {
 
 class LoginVm extends ChangeNotifier {
   LoginVm({
-    AuthRemoteApiSource? remoteApiSource,
     UserManager? userManager,
-  }) : _remoteApiSource = remoteApiSource ?? AuthRemoteApiSource(),
-       _userManager = userManager ?? UserManager.instance {
+  }) : _userManager = userManager ?? UserManager.instance {
     _loadSavedAccounts();
   }
 
-  final AuthRemoteApiSource _remoteApiSource;
   final UserManager _userManager;
   final _effectController = StreamController<LoginEffect>.broadcast();
 
@@ -156,7 +152,7 @@ class LoginVm extends ChangeNotifier {
     _state = _state.copyWith(isLoading: true);
     notifyListeners();
     try {
-      final auth = await _remoteApiSource.login(
+      final auth = await _userManager.loginRemote(
         UserLoginRequest(
           account: _state.account.trim(),
           password: _state.password,

@@ -5,6 +5,7 @@ import '../domain/dto/base_response.dart';
 import '../domain/dto/req/user_test_req.dart';
 import '../domain/dto/resp/user_test_resp.dart';
 import 'api_request.dart';
+import 'app_dio.dart';
 import 'base_api_request_impl.dart';
 
 class ApiRequestImpl extends BaseApiRequestImpl {
@@ -12,16 +13,7 @@ class ApiRequestImpl extends BaseApiRequestImpl {
 
   late final ApiRequest _api;
 
-  ApiRequestImpl({Dio? dio})
-      : _dio = dio ??
-            Dio(
-              BaseOptions(
-                connectTimeout:
-                    Duration(milliseconds: NetworkConstant.connectTimeout),
-                receiveTimeout:
-                    Duration(milliseconds: NetworkConstant.receiveTimeout),
-              ),
-            ) {
+  ApiRequestImpl({Dio? dio}) : _dio = dio ?? AppDio.instance {
     _api = ApiRequest(_dio, baseUrl: NetworkConstant.baseUrl);
   }
 
@@ -31,7 +23,7 @@ class ApiRequestImpl extends BaseApiRequestImpl {
     OnThrowableCallback? throwableCallback,
   ) {
     return sendRequestCallback(
-      apiCall: () => _api.register(req),
+      apiCall: () => _api.registerTest(req),
       successCallback: successCallback,
       throwableCallback: throwableCallback,
     );

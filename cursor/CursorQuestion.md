@@ -29,7 +29,20 @@ flutter先不用修改，等下App我审核通过再喊你改
 * OssDemoPage需要创建ViewModel，拆分UI数据流业务更新逻辑。
 
 
-
+### Flutter修改
+* 这个flutter项目是这个Android项目的flutter化，要遵守这个Android项目的架构。
+  首先介绍一下，这个flutter项目是迁移这个android项目的功能。
+  首先这个flutter的架构应该跟android一样，所有请求都应该走apirequest。
+  首先要要定义数据库的实体类型entity，你可以参考Android那边的userEntity。
+  然后需要Convertor转化为UserSessionModel，然后
+  dataSource是为了对上层屏蔽Response和Entity类型的，内部用Convertor转换，
+  然后ViewModel持有的是各个Manager，Manager持有的是dataSource，
+  相当于ViewModel不持有数据库数据源和网络数据源，这部分是由Manager持有。
+  然后具体业务你都可以分析Android并迁移就行。
+* Flutter的Api应该放在ApiRequest，基本逻辑实现应该参考之前的ApiRequest。解耦AuthRemoteApiSource和OssRemoteApiSource
+* SafeDioLogInterceptor需要检查跟我之前说的【HttpLoggingInterceptor中检查req和resp是不是json类型，不是就不输出】逻辑是否一样。
+* 下拉刷新，数据更新UI存在问题
+* OssDemoPage需要创建ViewModel，拆分UI数据流业务更新逻辑。
 
 
 
