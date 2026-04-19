@@ -26,5 +26,16 @@
       "serviceId": "",
       "resourceId": ""
     }
+  },
+  "stt_ali": {
+    "hostUrl": "wss://dashscope.aliyuncs.com/api-ws/v1/inference/",
+    "apiKey": "sk-d314ba7a3088483eacb1a5ec8b10a6a5",
+    "model": "paraformer-realtime-v2",
+    "format": "pcm",
+    "sampleRate": 16000,
+    "disfluencyRemovalEnabled": false,
+    "languageHints": [
+      "zh"
+    ]
   }
 }

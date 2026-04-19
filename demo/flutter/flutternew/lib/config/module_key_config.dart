@@ -94,6 +94,69 @@ class XfSttKeyConfig {
   }
 }
 
+class AliSttKeyConfig {
+  final String hostUrl;
+  final String apiKey;
+  final String model;
+  final String format;
+  final int sampleRate;
+  final bool disfluencyRemovalEnabled;
+  final List<String> languageHints;
+
+  const AliSttKeyConfig({
+    required this.hostUrl,
+    required this.apiKey,
+    required this.model,
+    required this.format,
+    required this.sampleRate,
+    required this.disfluencyRemovalEnabled,
+    required this.languageHints,
+  });
+
+  factory AliSttKeyConfig.fromJson(Map<String, dynamic> json) {
+    return AliSttKeyConfig(
+      hostUrl: (json['hostUrl'] ?? 'wss://dashscope.aliyuncs.com/api-ws/v1/inference/').toString(),
+      apiKey: (json['apiKey'] ?? '').toString(),
+      model: (json['model'] ?? 'paraformer-realtime-v2').toString(),
+      format: (json['format'] ?? 'pcm').toString(),
+      sampleRate: _toInt(json['sampleRate']) ?? 16000,
+      disfluencyRemovalEnabled: json['disfluencyRemovalEnabled'] == true,
+      languageHints: _toStringList(json['languageHints']),
+    );
+  }
+
+  static int? _toInt(dynamic value) {
+    if (value is int) {
+      return value;
+    }
+    return int.tryParse(value?.toString() ?? '');
+  }
+
+  static List<String> _toStringList(dynamic value) {
+    if (value is! List) {
+      return const <String>[];
+    }
+    return value.map((dynamic item) => item.toString()).toList(growable: false);
+  }
+
+  void validate() {
+    if (apiKey.isEmpty) {
+      throw const ModuleKeyConfigException('module_key.json 缺少 STT_ALI 配置: apiKey');
+    }
+    if (hostUrl.isEmpty) {
+      throw const ModuleKeyConfigException('module_key.json 缺少 STT_ALI 配置: hostUrl');
+    }
+    if (sampleRate <= 0) {
+      throw const ModuleKeyConfigException('module_key.json STT_ALI 配置错误: sampleRate 必须大于 0');
+    }
+    if (model.isEmpty || format.isEmpty) {
+      throw const ModuleKeyConfigException(
+        'module_key.json 缺少 STT_ALI 配置: model/format',
+      );
+    }
+  }
+}
+
 class XfOfflineIvwKeyConfig {
   final String appId;
   final String apiKey;
@@ -145,16 +208,19 @@ class XfOfflineIvwKeyConfig {
 class ModuleKeyConfig {
   final XfLlmKeyConfig llm;
   final XfSttKeyConfig stt;
+  final AliSttKeyConfig sttAli;
   final XfOfflineIvwKeyConfig offlineIvw;
 
   const ModuleKeyConfig({
     required this.llm,
     required this.stt,
+    required this.sttAli,
     required this.offlineIvw,
   });
 
   factory ModuleKeyConfig.fromJson(Map<String, dynamic> json) {
     final xfyun = (json['xfyun'] as Map?)?.cast<String, dynamic>() ?? <String, dynamic>{};
+    final sttAliJson = (json['stt_ali'] as Map?)?.cast<String, dynamic>() ?? <String, dynamic>{};
     return ModuleKeyConfig(
       llm: XfLlmKeyConfig.fromJson(
         (xfyun['llm'] as Map?)?.cast<String, dynamic>() ?? <String, dynamic>{},
@@ -162,6 +228,7 @@ class ModuleKeyConfig {
       stt: XfSttKeyConfig.fromJson(
         (xfyun['stt'] as Map?)?.cast<String, dynamic>() ?? <String, dynamic>{},
       ),
+      sttAli: AliSttKeyConfig.fromJson(sttAliJson),
       offlineIvw: XfOfflineIvwKeyConfig.fromJson(
         (xfyun['offlineIvw'] as Map?)?.cast<String, dynamic>() ?? <String, dynamic>{},
       ),
@@ -171,6 +238,7 @@ class ModuleKeyConfig {
   void validate() {
     llm.validate();
     stt.validate();
+    sttAli.validate();
     offlineIvw.validate();
   }
 }

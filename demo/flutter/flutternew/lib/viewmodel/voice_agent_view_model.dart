@@ -5,8 +5,8 @@ import 'package:flutter/services.dart';
 
 import '../service/offline_ivw_service.dart';
 import '../service/vad_service.dart';
+import '../service/ali_stt_service.dart';
 import '../service/xfyun_chat_service.dart';
-import '../service/xfyun_stt_service.dart';
 
 enum VoiceAgentPhase {
   initializing,
@@ -34,7 +34,7 @@ class VoiceAgentViewModel extends ChangeNotifier {
 
   final OfflineIvwService _ivwService = OfflineIvwService();
   final VadService _vadService = VadService();
-  final XfIatService _sttService = XfIatService();
+  final AliSttService _sttService = AliSttService();
   final XfYunChatService _chatService = XfYunChatService();
 
   final List<String> _logs = <String>[];
@@ -42,7 +42,7 @@ class VoiceAgentViewModel extends ChangeNotifier {
 
   StreamSubscription<OfflineIvwEvent>? _ivwSub;
   StreamSubscription<VadEvent>? _vadSub;
-  StreamSubscription<XfIatEvent>? _sttSub;
+  StreamSubscription<AliSttEvent>? _sttSub;
   Timer? _sttFinalTimeout;
   Timer? _vadDelayedStartTimer;
   Timer? _vadSpeechTimeoutTimer;
@@ -506,22 +506,22 @@ class VoiceAgentViewModel extends ChangeNotifier {
     }
   }
 
-  void _handleSttEvent(XfIatEvent event) {
+  void _handleSttEvent(AliSttEvent event) {
     if (_disposed) {
       return;
     }
     switch (event.type) {
-      case XfIatEventType.started:
+      case AliSttEventType.started:
         _sttRunning = true;
         _setSttSendStatus(SttSendServiceStatus.sending);
         _appendLog('远端STT启动');
         break;
-      case XfIatEventType.partial:
+      case AliSttEventType.partial:
         _latestPartialStt = event.text ?? '';
         _setSttReceiveStatus(SttReceiveServiceStatus.receivingPartial);
         _appendLog('远端STT结果: ${event.text ?? ''}');
         break;
-      case XfIatEventType.finalResult:
+      case AliSttEventType.finalResult:
         _finalSttText = event.text ?? '';
         _sttFinalReceived = true;
         _setSttReceiveStatus(SttReceiveServiceStatus.finalReceived);
@@ -534,12 +534,12 @@ class VoiceAgentViewModel extends ChangeNotifier {
           _tryCallAgentAfterSttCompleted(force: false);
         }
         break;
-      case XfIatEventType.stopped:
+      case AliSttEventType.stopped:
         _sttRunning = false;
         _setSttSendStatus(SttSendServiceStatus.stoppedAfterVadEnd);
         _appendLog('远端STT停止');
         break;
-      case XfIatEventType.error:
+      case AliSttEventType.error:
         _sttRunning = false;
         _enterError('远端STT异常: ${event.error}');
         break;
