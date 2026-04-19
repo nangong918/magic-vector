@@ -94,6 +94,66 @@ class XfSttKeyConfig {
   }
 }
 
+class AliLlmKeyConfig {
+  final String hostUrl;
+  final String apiKey;
+  final String model;
+  final double temperature;
+  final int maxTokens;
+
+  const AliLlmKeyConfig({
+    required this.hostUrl,
+    required this.apiKey,
+    required this.model,
+    required this.temperature,
+    required this.maxTokens,
+  });
+
+  factory AliLlmKeyConfig.fromJson(
+    Map<String, dynamic> json, {
+    required String fallbackApiKey,
+  }) {
+    return AliLlmKeyConfig(
+      hostUrl: (json['hostUrl'] ??
+              'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions')
+          .toString(),
+      apiKey: (json['apiKey'] ?? fallbackApiKey).toString(),
+      model: (json['model'] ?? 'qwen-plus').toString(),
+      temperature: _toDouble(json['temperature']) ?? 0.5,
+      maxTokens: _toInt(json['maxTokens']) ?? 4096,
+    );
+  }
+
+  static int? _toInt(dynamic value) {
+    if (value is int) {
+      return value;
+    }
+    return int.tryParse(value?.toString() ?? '');
+  }
+
+  static double? _toDouble(dynamic value) {
+    if (value is double) {
+      return value;
+    }
+    if (value is int) {
+      return value.toDouble();
+    }
+    return double.tryParse(value?.toString() ?? '');
+  }
+
+  void validate() {
+    if (apiKey.isEmpty) {
+      throw const ModuleKeyConfigException('module_key.json 缺少 LLM_ALI 配置: apiKey');
+    }
+    if (hostUrl.isEmpty || model.isEmpty) {
+      throw const ModuleKeyConfigException('module_key.json 缺少 LLM_ALI 配置: hostUrl/model');
+    }
+    if (maxTokens <= 0) {
+      throw const ModuleKeyConfigException('module_key.json LLM_ALI 配置错误: maxTokens 必须大于 0');
+    }
+  }
+}
+
 class AliSttKeyConfig {
   final String hostUrl;
   final String apiKey;
@@ -208,12 +268,14 @@ class XfOfflineIvwKeyConfig {
 class ModuleKeyConfig {
   final XfLlmKeyConfig llm;
   final XfSttKeyConfig stt;
+  final AliLlmKeyConfig llmAli;
   final AliSttKeyConfig sttAli;
   final XfOfflineIvwKeyConfig offlineIvw;
 
   const ModuleKeyConfig({
     required this.llm,
     required this.stt,
+    required this.llmAli,
     required this.sttAli,
     required this.offlineIvw,
   });
@@ -221,6 +283,8 @@ class ModuleKeyConfig {
   factory ModuleKeyConfig.fromJson(Map<String, dynamic> json) {
     final xfyun = (json['xfyun'] as Map?)?.cast<String, dynamic>() ?? <String, dynamic>{};
     final sttAliJson = (json['stt_ali'] as Map?)?.cast<String, dynamic>() ?? <String, dynamic>{};
+    final llmAliJson = (json['llm_ali'] as Map?)?.cast<String, dynamic>() ?? <String, dynamic>{};
+    final sttAli = AliSttKeyConfig.fromJson(sttAliJson);
     return ModuleKeyConfig(
       llm: XfLlmKeyConfig.fromJson(
         (xfyun['llm'] as Map?)?.cast<String, dynamic>() ?? <String, dynamic>{},
@@ -228,7 +292,11 @@ class ModuleKeyConfig {
       stt: XfSttKeyConfig.fromJson(
         (xfyun['stt'] as Map?)?.cast<String, dynamic>() ?? <String, dynamic>{},
       ),
-      sttAli: AliSttKeyConfig.fromJson(sttAliJson),
+      llmAli: AliLlmKeyConfig.fromJson(
+        llmAliJson,
+        fallbackApiKey: sttAli.apiKey,
+      ),
+      sttAli: sttAli,
       offlineIvw: XfOfflineIvwKeyConfig.fromJson(
         (xfyun['offlineIvw'] as Map?)?.cast<String, dynamic>() ?? <String, dynamic>{},
       ),
@@ -238,6 +306,7 @@ class ModuleKeyConfig {
   void validate() {
     llm.validate();
     stt.validate();
+    llmAli.validate();
     sttAli.validate();
     offlineIvw.validate();
   }

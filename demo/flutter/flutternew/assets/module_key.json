@@ -37,5 +37,12 @@
     "languageHints": [
       "zh"
     ]
+  },
+  "llm_ali": {
+    "hostUrl": "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions",
+    "apiKey": "sk-d314ba7a3088483eacb1a5ec8b10a6a5",
+    "model": "qwen-plus",
+    "temperature": 0.5,
+    "maxTokens": 4096
   }
 }

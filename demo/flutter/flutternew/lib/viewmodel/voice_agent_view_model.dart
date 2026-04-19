@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import '../service/offline_ivw_service.dart';
 import '../service/vad_service.dart';
 import '../service/ali_stt_service.dart';
+import '../service/ali_chat_service.dart';
 import '../service/xfyun_chat_service.dart';
 
 enum VoiceAgentPhase {
@@ -28,6 +29,8 @@ enum SttReceiveServiceStatus { noResult, receivingPartial, finalReceived }
 
 enum AgentReplyServiceStatus { disabled, replying, finished }
 
+enum VoiceAgentLlmProvider { ali, xfyun }
+
 class VoiceAgentViewModel extends ChangeNotifier {
   static const String wakeKeyword = '小卡小卡';
   static const int maxLogs = 300;
@@ -35,7 +38,8 @@ class VoiceAgentViewModel extends ChangeNotifier {
   final OfflineIvwService _ivwService = OfflineIvwService();
   final VadService _vadService = VadService();
   final AliSttService _sttService = AliSttService();
-  final XfYunChatService _chatService = XfYunChatService();
+  final AliChatService _aliChatService = AliChatService();
+  final XfYunChatService _xfYunChatService = XfYunChatService();
 
   final List<String> _logs = <String>[];
   List<String> get logs => List<String>.unmodifiable(_logs);
@@ -70,6 +74,9 @@ class VoiceAgentViewModel extends ChangeNotifier {
   bool _sttStopRequested = false;
   bool _sttFinalReceived = false;
   bool _agentCallTriggered = false;
+  VoiceAgentLlmProvider _llmProvider = VoiceAgentLlmProvider.ali;
+
+  VoiceAgentLlmProvider get llmProvider => _llmProvider;
 
   Future<void> initialize() async {
     _ivwSub = _ivwService.events.listen(_handleIvwEvent);
@@ -343,7 +350,7 @@ class VoiceAgentViewModel extends ChangeNotifier {
     _appendLog('开始调用Agent: $userText');
 
     try {
-      await _chatService.sendChat(
+      await _sendChatBySelectedProvider(
         systemPrompt: _systemPrompt,
         history: const <Map<String, String>>[],
         userMessage: userText,
@@ -366,6 +373,43 @@ class VoiceAgentViewModel extends ChangeNotifier {
     } catch (e) {
       _enterError('Agent调用失败: $e');
     }
+  }
+
+  Future<void> _sendChatBySelectedProvider({
+    required String systemPrompt,
+    required List<Map<String, String>> history,
+    required String userMessage,
+    required void Function(String deltaText) onDelta,
+    required void Function() onDone,
+  }) async {
+    if (_llmProvider == VoiceAgentLlmProvider.ali) {
+      await _aliChatService.sendChat(
+        systemPrompt: systemPrompt,
+        history: history,
+        userMessage: userMessage,
+        onDelta: onDelta,
+        onDone: onDone,
+      );
+      return;
+    }
+
+    await _xfYunChatService.sendChat(
+      systemPrompt: systemPrompt,
+      history: history,
+      userMessage: userMessage,
+      onDelta: onDelta,
+      onDone: onDone,
+    );
+  }
+
+  void setLlmProvider(VoiceAgentLlmProvider provider) {
+    if (_llmProvider == provider || _disposed) {
+      return;
+    }
+    _llmProvider = provider;
+    final selected = provider == VoiceAgentLlmProvider.ali ? '阿里百炼' : '科大讯飞';
+    _appendLog('LLM切换为: $selected');
+    _notify();
   }
 
   Future<void> _stopAllFeatures() async {

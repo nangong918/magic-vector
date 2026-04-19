@@ -116,6 +116,44 @@ class _VoiceAgentPageState extends State<VoiceAgentPage> {
             ),
             Positioned(
               top: 8,
+              left: 12,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                decoration: BoxDecoration(
+                  color: Colors.black.withValues(alpha: 0.65),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: DropdownButtonHideUnderline(
+                  child: DropdownButton<VoiceAgentLlmProvider>(
+                    value: _viewModel.llmProvider,
+                    dropdownColor: Colors.black87,
+                    iconEnabledColor: Colors.white,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 12,
+                    ),
+                    items: const <DropdownMenuItem<VoiceAgentLlmProvider>>[
+                      DropdownMenuItem<VoiceAgentLlmProvider>(
+                        value: VoiceAgentLlmProvider.ali,
+                        child: Text('LLM: 阿里百炼'),
+                      ),
+                      DropdownMenuItem<VoiceAgentLlmProvider>(
+                        value: VoiceAgentLlmProvider.xfyun,
+                        child: Text('LLM: 科大讯飞'),
+                      ),
+                    ],
+                    onChanged: (VoiceAgentLlmProvider? value) {
+                      if (value == null) {
+                        return;
+                      }
+                      _viewModel.setLlmProvider(value);
+                    },
+                  ),
+                ),
+              ),
+            ),
+            Positioned(
+              top: 8,
               right: 12,
               child: Container(
                 constraints: const BoxConstraints(

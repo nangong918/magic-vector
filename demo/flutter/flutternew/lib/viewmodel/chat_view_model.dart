@@ -3,7 +3,7 @@ import 'dart:collection';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
-import '../service/xfyun_chat_service.dart';
+import '../service/ali_chat_service.dart';
 
 enum RealtimeChatStatus {
   notInitialized,
@@ -63,12 +63,12 @@ class ChatMessage {
 }
 
 class ChatViewModel extends ChangeNotifier {
-  ChatViewModel({XfYunChatService? chatService})
-    : _chatService = chatService ?? XfYunChatService();
+  ChatViewModel({AliChatService? chatService})
+    : _chatService = chatService ?? AliChatService();
 
   static const int _historyMaxChars = 12000;
 
-  final XfYunChatService _chatService;
+  final AliChatService _chatService;
   final List<ChatMessage> _messages = <ChatMessage>[];
   final List<Map<String, String>> _history = <Map<String, String>>[];
 
