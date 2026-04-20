@@ -15,8 +15,10 @@ coilCompose = "2.7.0"
 okhttp = "5.1.0"
 gson = "2.13.2"
 multidex = "2.0.1"
+onnxruntimeAndroid = "1.22.0"
 room = "2.8.4"
 converterGson = "3.0.0"
+tensorflowLiteTaskAudio = "0.4.4"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -46,7 +48,9 @@ androidx-room-ktx = { group = "androidx.room", name = "room-ktx", version.ref = 
 androidx-room-compiler = { group = "androidx.room", name = "room-compiler", version.ref = "room" }
 androidx-room-testing = { group = "androidx.room", name = "room-testing", version.ref = "room" }
 converter-gson = { module = "com.squareup.retrofit2:converter-gson", version.ref = "converterGson" }
+onnxruntime-android = { module = "com.microsoft.onnxruntime:onnxruntime-android", version.ref = "onnxruntimeAndroid" }
 retrofit = { module = "com.squareup.retrofit2:retrofit", version.ref = "converterGson" }
+tensorflow-lite-task-audio = { module = "org.tensorflow:tensorflow-lite-task-audio", version.ref = "tensorflowLiteTaskAudio" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

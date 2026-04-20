@@ -9,5 +9,7 @@ data class DemoCatalogItem(
 
 enum class DemoRoute {
     HELLO,
-    OSS_DEMO
+    OSS_DEMO,
+    CHAT_LIST_DEMO,
+    VOICE_AGENT
 }

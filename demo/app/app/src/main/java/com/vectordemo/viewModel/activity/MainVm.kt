@@ -27,6 +27,18 @@ class MainVm : ViewModel() {
             title = "OSS Demo",
             subtitle = "上传、存储桶列表、图片下载/更换/删除",
             route = DemoRoute.OSS_DEMO
+        ),
+        DemoCatalogItem(
+            id = "chat_list",
+            title = "ChatList Demo",
+            subtitle = "流式聊天对话（Flutter ChatPage迁移）",
+            route = DemoRoute.CHAT_LIST_DEMO
+        ),
+        DemoCatalogItem(
+            id = "voice_agent",
+            title = "Voice Agent",
+            subtitle = "离线唤醒 + VAD + STT + LLM",
+            route = DemoRoute.VOICE_AGENT
         )
     )
 
@@ -69,6 +81,8 @@ class MainVm : ViewModel() {
         when (route) {
             DemoRoute.HELLO -> sendEffect(MainEffect.NavigateToHello)
             DemoRoute.OSS_DEMO -> sendEffect(MainEffect.NavigateToOssDemo)
+            DemoRoute.CHAT_LIST_DEMO -> sendEffect(MainEffect.NavigateToChatList)
+            DemoRoute.VOICE_AGENT -> sendEffect(MainEffect.NavigateToVoiceAgent)
         }
     }
 
@@ -115,5 +129,7 @@ data class MainState(
 sealed class MainEffect {
     data object NavigateToHello : MainEffect()
     data object NavigateToOssDemo : MainEffect()
+    data object NavigateToChatList : MainEffect()
+    data object NavigateToVoiceAgent : MainEffect()
     data object NavigateToLogin : MainEffect()
 }

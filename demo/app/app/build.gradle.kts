@@ -50,6 +50,9 @@ android {
         viewBinding = true
         compose = true
     }
+    aaptOptions {
+        noCompress += listOf("onnx", "tflite")
+    }
 }
 
 dependencies {
@@ -105,4 +108,11 @@ dependencies {
     kapt(libs.androidx.room.compiler)
     // 可选：Room测试依赖
     androidTestImplementation(libs.androidx.room.testing)
+
+    // vad模型
+    implementation(libs.onnxruntime.android)
+    implementation(libs.tensorflow.lite.task.audio)
+
+    /// aar lib
+    implementation(fileTree(mapOf("dir" to "../aarlib", "include" to listOf("*.jar", "*.aar"))))
 }
