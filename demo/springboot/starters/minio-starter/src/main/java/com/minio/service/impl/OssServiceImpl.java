@@ -1,6 +1,7 @@
 package com.minio.service.impl;
 
 import cn.hutool.core.util.IdUtil;
+import io.minio.ObjectWriteResponse;
 import com.minio.domain.bo.OssBucketFileItemBo;
 import com.minio.domain.entity.OssEntity;
 import com.minio.domain.bo.BatchUploadResult;
@@ -68,7 +69,8 @@ public class OssServiceImpl implements OssService {
                 }
 
                 String objectName = buildObjectName(userId, originFileName);
-                minioUtils.uploadFile(bucketName, file, objectName, file.getContentType());
+                ObjectWriteResponse uploadResp = minioUtils.uploadFile(bucketName, file, objectName, file.getContentType());
+                ensureUploadSuccess(uploadResp, objectName);
 
                 long now = System.currentTimeMillis();
                 OssEntity ossEntity = new OssEntity();
@@ -133,7 +135,8 @@ public class OssServiceImpl implements OssService {
                 }
 
                 String objectName = buildObjectName(userId, file.getName());
-                minioUtils.uploadLocalFile(bucketName, objectName, file.getAbsolutePath());
+                ObjectWriteResponse uploadResp = minioUtils.uploadLocalFile(bucketName, objectName, file.getAbsolutePath());
+                ensureUploadSuccess(uploadResp, objectName);
 
                 long now = System.currentTimeMillis();
                 OssEntity ossEntity = new OssEntity();
@@ -230,7 +233,13 @@ public class OssServiceImpl implements OssService {
         }
         try {
             String originFileName = file.getOriginalFilename();
-            minioUtils.uploadFile(existed.getBucketName(), file, existed.getObjectName(), file.getContentType());
+            ObjectWriteResponse uploadResp = minioUtils.uploadFile(
+                    existed.getBucketName(),
+                    file,
+                    existed.getObjectName(),
+                    file.getContentType()
+            );
+            ensureUploadSuccess(uploadResp, existed.getObjectName());
             String idempotentKey = buildIdempotentKey(existed.getUserId(), originFileName, file.getSize());
             ossMapper.updateContentMetaById(
                     fileId,
@@ -398,6 +407,12 @@ public class OssServiceImpl implements OssService {
         } catch (Exception e) {
             log.warn("[oss] get url failed, bucket={}, object={}", bucketName, objectName, e);
             return "";
+        }
+    }
+
+    private void ensureUploadSuccess(ObjectWriteResponse response, String objectName) {
+        if (response == null || !StringUtils.hasText(response.etag())) {
+            throw new IllegalStateException("minio upload response invalid, objectName=" + objectName);
         }
     }
 }
