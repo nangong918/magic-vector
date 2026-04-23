@@ -11,11 +11,8 @@ services:
       - --default-authentication-plugin=mysql_native_password
       - --character-set-server=utf8mb4
       - --collation-server=utf8mb4_unicode_ci
-    ports:
-      - "3306:3306"
     volumes:
       - mysql-data:/var/lib/mysql
-      - ../db/create_vector_demo_db.sql:/docker-entrypoint-initdb.d/01-create_vector_demo_db.sql:ro
       - ../db/vector_demo.sql:/docker-entrypoint-initdb.d/02-vector_demo.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p$${MYSQL_ROOT_PASSWORD} --silent"]
@@ -50,7 +47,8 @@ services:
       minio:
         condition: service_started
     environment:
-      ALI_API_KEY: ${ALI_API_KEY:-}
+      ALI_API_KEY: ${ALI_API_KEY:-test-key}
+      APP_DOCKER_ENABLED: "true"
       SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/vector_demo?serverTimezone=Asia/Shanghai&useUnicode=true&characterEncoding=utf8&useSSL=false&allowPublicKeyRetrieval=true
       SPRING_DATASOURCE_USERNAME: root
       SPRING_DATASOURCE_PASSWORD: ${MYSQL_ROOT_PASSWORD:-123456}
@@ -60,22 +58,30 @@ services:
       MINIO_USE_GATEWAY_PROXY: "false"
       MINIO_USE_NGINX_PROXY: "true"
       MINIO_NGINX_PUBLIC_PORT: "80"
+      MINIO_NGINX_PUBLIC_HOST: "${MINIO_NGINX_PUBLIC_HOST:-192.168.3.140}"
       MINIO_MINIO_URL: /oss-minio
     ports:
       - "48888:48888"
 
   nginx:
-    image: nginx:1.27-alpine
+    image: alfg/nginx-rtmp:latest
     container_name: springboot-nginx
     restart: unless-stopped
+    command: ["nginx", "-c", "/etc/nginx/nginx.conf"]
     depends_on:
       - springboot
       - minio
     ports:
       - "80:80"
+      - "8080:8080"
+      - "1935:1935"
     volumes:
-      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ../nginx-docker/conf/nginx.conf:/etc/nginx/nginx.conf
+      - ../nginx-docker/conf/mime.types:/etc/nginx/mime.types:ro
+      - ../nginx-docker/html:/etc/nginx/html:ro
+      - nginx-hls:/tmp/hls
 
 volumes:
   mysql-data:
   minio-data:
+  nginx-hls:

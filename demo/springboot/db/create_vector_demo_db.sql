@@ -1,1 +1,1 @@
-CREATE DATABASE vector_demo;
+CREATE DATABASE IF NOT EXISTS vector_demo;

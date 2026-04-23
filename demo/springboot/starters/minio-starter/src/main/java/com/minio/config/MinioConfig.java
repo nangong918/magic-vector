@@ -4,6 +4,7 @@ import io.minio.MinioClient;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.stereotype.Component;
@@ -50,6 +51,8 @@ public class MinioConfig {
      * 80/443 会在外链中省略端口显示（如 http://192.168.1.2/...）。
      */
     private Integer nginxPublicPort = 80;
+    @Value("${MINIO_NGINX_PUBLIC_HOST:#{null}}")
+    private String configuredPublicHost;
 
     /**
      * 仅 Spring Cloud Gateway：对外入口端口（与 {@link #minioUrl} 组成 {@code 本机IP:gatewayPort/oss-minio}）。
@@ -81,7 +84,10 @@ public class MinioConfig {
      * 端口为 80/443 时省略端口显示，以隐藏内部 9000。
      */
     public String minioNginxAgentUrl() throws Exception {
-        String host = InetAddress.getLocalHost().getHostAddress();
+        String host = configuredPublicHost;
+        if (host == null || host.isEmpty()) {
+            host = InetAddress.getLocalHost().getHostAddress();
+        }
         int port = nginxPublicPort == null ? 80 : nginxPublicPort;
         if (port == 80 || port == 443) {
             return host;

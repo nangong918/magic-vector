@@ -3,6 +3,8 @@ server:
   port: 48888
 
 alikey: ${ALI_API_KEY}
+app:
+  docker-enabled: ${APP_DOCKER_ENABLED:false}
 
 spring:
   application:
