@@ -7,6 +7,7 @@ import android.content.pm.PackageManager
 import android.media.AudioFormat
 import android.media.AudioRecord
 import android.media.MediaRecorder
+import android.util.Log
 import androidx.annotation.RequiresPermission
 import androidx.core.content.ContextCompat
 import com.vectordemo.config.AliSttKeyConfig
@@ -27,6 +28,7 @@ import okhttp3.Response
 import okhttp3.WebSocket
 import okhttp3.WebSocketListener
 import okio.ByteString.Companion.toByteString
+import org.json.JSONArray
 import org.json.JSONObject
 import java.util.UUID
 
@@ -41,6 +43,10 @@ data class AliSttEvent(
 )
 
 class AliSttService(private val context: Context) {
+    private companion object {
+        const val TAG = "AliSttService"
+    }
+
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val client = OkHttpClient.Builder().build()
 
@@ -51,10 +57,18 @@ class AliSttService(private val context: Context) {
     private var taskStarted = false
     private var finalEmitted = false
     private var running = false
+    private var sessionActive = false
+    private var taskFailed = false
+    private var taskFailedError: String? = null
+    private var socketClosed = false
+    private var manualClosing = false
     private var audioJob: Job? = null
     private var record: AudioRecord? = null
     private val sentenceResults = mutableListOf<String>()
     private var latestCombinedText: String = ""
+    private var audioFramesSent = 0
+    private var audioBytesSent = 0
+    private var runTaskAtMs = 0L
 
     fun setListener(listener: ((AliSttEvent) -> Unit)?) {
         this.listener = listener
@@ -75,13 +89,20 @@ class AliSttService(private val context: Context) {
         val config = ModuleKeyConfigStore.load(context).aliStt
         resetSessionState()
         running = true
+        sessionActive = true
+        Log.d(TAG, "start: begin new session")
         emit(AliSttEvent(AliSttEventType.STARTED))
 
         try {
             openAndRunTask(config)
             waitTaskStarted()
+            if (!running || !sessionActive || taskFailed || socketClosed || webSocket == null) {
+                throw IllegalStateException(taskFailedError ?: "STT会话已中断")
+            }
             startRecordingAndSend(config)
+            Log.d(TAG, "start: task started, recording loop running")
         } catch (e: Exception) {
+            Log.e(TAG, "start failed", e)
             emit(AliSttEvent(AliSttEventType.ERROR, error = e.message ?: "STT启动失败"))
             cleanupOnError()
         }
@@ -89,10 +110,12 @@ class AliSttService(private val context: Context) {
 
     suspend fun stop() = withContext(Dispatchers.IO) {
         if (!running) return@withContext
+        Log.d(TAG, "stop: taskStarted=$taskStarted frames=$audioFramesSent bytes=$audioBytesSent")
         running = false
+        sessionActive = false
         emit(AliSttEvent(AliSttEventType.STOPPED))
         stopRecording()
-        if (taskStarted) {
+        if (taskStarted && !socketClosed && webSocket != null) {
             sendFinishTask()
             delay(200)
         } else {
@@ -103,6 +126,7 @@ class AliSttService(private val context: Context) {
     fun release() {
         scope.launch {
             running = false
+            sessionActive = false
             stopRecording()
             closeSocket()
             scope.cancel()
@@ -112,12 +136,14 @@ class AliSttService(private val context: Context) {
     private fun openAndRunTask(config: AliSttKeyConfig) {
         taskId = UUID.randomUUID().toString().replace("-", "")
         wsJob = CompletableDeferred()
+        Log.d(TAG, "openAndRunTask: taskId=$taskId url=${config.hostUrl}")
         val request = Request.Builder()
             .url(config.hostUrl)
             .addHeader("Authorization", "bearer ${config.apiKey}")
             .build()
         webSocket = client.newWebSocket(request, object : WebSocketListener() {
             override fun onOpen(webSocket: WebSocket, response: Response) {
+                Log.d(TAG, "websocket opened, send run-task")
                 sendRunTask(config)
             }
 
@@ -126,11 +152,20 @@ class AliSttService(private val context: Context) {
             }
 
             override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
+                socketClosed = true
+                if (manualClosing) {
+                    Log.d(TAG, "websocket closed manually")
+                    return
+                }
+                Log.e(TAG, "websocket failure", t)
                 wsJob?.completeExceptionally(t)
-                emit(AliSttEvent(AliSttEventType.ERROR, error = t.message ?: "WebSocket失败"))
+                if (running || sessionActive) {
+                    emit(AliSttEvent(AliSttEventType.ERROR, error = t.message ?: "WebSocket失败"))
+                }
             }
 
             override fun onClosed(webSocket: WebSocket, code: Int, reason: String) {
+                socketClosed = true
                 if (wsJob?.isCompleted == false) {
                     wsJob?.complete(Unit)
                 }
@@ -146,13 +181,14 @@ class AliSttService(private val context: Context) {
                     delay(50)
                 }
                 if (!taskStarted) {
-                    throw IllegalStateException("阿里STT任务启动超时")
+                    throw IllegalStateException(taskFailedError ?: "阿里STT任务启动超时")
                 }
             }
         }
         if (job.isCancelled) {
             throw IllegalStateException("阿里STT任务启动失败")
         }
+        Log.d(TAG, "waitTaskStarted: success taskId=$taskId")
     }
 
     @RequiresPermission(Manifest.permission.RECORD_AUDIO)
@@ -175,7 +211,9 @@ class AliSttService(private val context: Context) {
             val buffer = ByteArray(3200)
             while (isActive && running) {
                 val read = audioRecord.read(buffer, 0, buffer.size)
-                if (read > 0 && taskStarted) {
+                if (read > 0 && taskStarted && !taskFailed && !socketClosed) {
+                    audioFramesSent++
+                    audioBytesSent += read
                     webSocket?.send(buffer.copyOf(read).toByteString())
                 }
             }
@@ -200,7 +238,7 @@ class AliSttService(private val context: Context) {
             .put("sample_rate", config.sampleRate)
             .put("disfluency_removal_enabled", config.disfluencyRemovalEnabled)
         if (config.languageHints.isNotEmpty()) {
-            params.put("language_hints", config.languageHints)
+            params.put("language_hints", JSONArray(config.languageHints))
         }
         val body = JSONObject()
             .put(
@@ -221,6 +259,7 @@ class AliSttService(private val context: Context) {
                     .put("input", JSONObject())
             )
         webSocket?.send(body.toString())
+        runTaskAtMs = System.currentTimeMillis()
     }
 
     private fun sendFinishTask() {
@@ -240,24 +279,45 @@ class AliSttService(private val context: Context) {
         val json = runCatching { JSONObject(message) }.getOrNull() ?: return
         val header = json.optJSONObject("header") ?: JSONObject()
         val payload = json.optJSONObject("payload") ?: JSONObject()
-        when (header.optString("event")) {
+        val event = header.optString("event")
+        when (event) {
             "task-started" -> {
                 taskStarted = true
                 wsJob?.complete(Unit)
+                Log.d(TAG, "event task-started: taskId=$taskId, costMs=${System.currentTimeMillis() - runTaskAtMs}")
             }
             "result-generated" -> handleResultGenerated(payload)
             "task-finished" -> {
+                Log.d(TAG, "event task-finished: frames=$audioFramesSent bytes=$audioBytesSent")
                 emitFinalIfNeeded()
                 closeSocket()
             }
             "task-failed" -> {
+                val code = header.opt("error_code")
+                val msg = header.opt("error_message")
+                taskFailed = true
+                running = false
+                sessionActive = false
+                taskFailedError = "task-failed: code=$code msg=$msg"
+                if (wsJob?.isCompleted == false) {
+                    wsJob?.completeExceptionally(IllegalStateException(taskFailedError))
+                }
+                Log.e(
+                    TAG,
+                    "event task-failed: code=$code msg=$msg frames=$audioFramesSent bytes=$audioBytesSent taskStarted=$taskStarted"
+                )
                 emit(
                     AliSttEvent(
                         AliSttEventType.ERROR,
-                        error = "task-failed: code=${header.opt("error_code")} msg=${header.opt("error_message")}"
+                        error = "$taskFailedError frames=$audioFramesSent bytes=$audioBytesSent"
                     )
                 )
                 closeSocket()
+            }
+            else -> {
+                if (event.isNotEmpty()) {
+                    Log.d(TAG, "event $event")
+                }
             }
         }
     }
@@ -296,12 +356,15 @@ class AliSttService(private val context: Context) {
 
     private fun cleanupOnError() {
         running = false
+        sessionActive = false
         stopRecording()
         closeSocket()
     }
 
     private fun closeSocket() {
+        manualClosing = true
         runCatching { webSocket?.close(1000, "close") }
+        socketClosed = true
         webSocket = null
     }
 
@@ -312,6 +375,13 @@ class AliSttService(private val context: Context) {
         sentenceResults.clear()
         latestCombinedText = ""
         wsJob = null
+        taskFailed = false
+        taskFailedError = null
+        socketClosed = false
+        manualClosing = false
+        audioFramesSent = 0
+        audioBytesSent = 0
+        runTaskAtMs = 0L
     }
 
     private fun emit(event: AliSttEvent) {
