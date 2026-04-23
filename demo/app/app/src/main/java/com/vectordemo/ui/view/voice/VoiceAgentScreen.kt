@@ -1,6 +1,8 @@
 package com.vectordemo.ui.view.voice
 
+import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -65,7 +67,14 @@ fun VoiceAgentScreen(
                 .padding(innerPadding)
         ) {
             Column(modifier = Modifier.fillMaxSize()) {
-                val targetSize by animateDpAsState(targetValue = phaseSize(state.phase), label = "ball-size")
+                val targetSize by animateDpAsState(
+                    targetValue = phaseSize(state.phase),
+                    animationSpec = spring(
+                        dampingRatio = Spring.DampingRatioMediumBouncy,
+                        stiffness = Spring.StiffnessLow
+                    ),
+                    label = "ball-size"
+                )
                 Box(
                     modifier = Modifier
                         .weight(1f)

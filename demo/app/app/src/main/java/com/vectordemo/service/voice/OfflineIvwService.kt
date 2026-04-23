@@ -38,19 +38,6 @@ class OfflineIvwService(private val context: Context) {
         VoiceWakeUpBridge.initSdk(context)
     }
 
-    fun buildInitDiagnostics(): String {
-        val cfg = ModuleKeyConfigStore.load(context).offlineIvw
-        val workDir = resolveWritableWorkDir()
-        val keywordAssetExists = runCatching {
-            context.assets.open("ivw/keyword1.txt").use { true }
-        }.getOrDefault(false)
-        val aikitAssetExists = runCatching {
-            context.assets.list("aikit_resources")?.isNotEmpty() == true
-        }.getOrDefault(false)
-        return "IVW诊断: abilityId=${cfg.abilityId}, workDir=$workDir, workDirExists=${File(workDir).exists()}, " +
-            "keywordAsset=$keywordAssetExists, aikitResources=$aikitAssetExists"
-    }
-
     fun startRecordWake(keyword: String) {
         VoiceWakeUpBridge.startRecordWake(context, keyword)
     }

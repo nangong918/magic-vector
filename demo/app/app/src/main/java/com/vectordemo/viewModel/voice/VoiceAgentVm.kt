@@ -89,7 +89,6 @@ class VoiceAgentVm(
         viewModelScope.launch {
             appendLog("初始化中...")
             runCatching {
-                appendLog(ivwService.buildInitDiagnostics())
                 appendLog("系统提示词加载完成")
                 ivwService.init()
                 appendLog("本地能力初始化完成")
@@ -146,9 +145,7 @@ class VoiceAgentVm(
     private fun handleIvwEvent(event: OfflineIvwEvent) {
         when (event.type) {
             OfflineIvwEventType.AUTH -> {
-                val authCode = (event.raw["code"] as? Number)?.toInt()
-                ivwAuthPassed = authCode == 0
-                appendLog("离线唤醒认证回调: code=${authCode ?: "-"}, msg=${event.message}, raw=${event.raw}")
+                ivwAuthPassed = (event.raw["code"] as? Number)?.toInt() == 0
                 if (ivwAuthPassed) {
                     appendLog("离线唤醒认证成功")
                     tryEnterReady()
@@ -163,10 +160,7 @@ class VoiceAgentVm(
                     appendLog("收到唤醒事件，但当前阶段不允许处理: ${_uiState.value.phase}")
                 }
             }
-            OfflineIvwEventType.ERROR -> {
-                val code = (event.raw["code"] as? Number)?.toInt()
-                enterError("离线唤醒异常: code=${code ?: "-"}, msg=${event.message}, raw=${event.raw}")
-            }
+            OfflineIvwEventType.ERROR -> enterError("离线唤醒异常: ${event.message}")
             OfflineIvwEventType.DB -> if (_uiState.value.phase != VoiceAgentPhase.READY) appendLog(event.message)
             OfflineIvwEventType.LOG, OfflineIvwEventType.STATE -> appendLog(event.message)
         }
@@ -304,10 +298,6 @@ class VoiceAgentVm(
             runCatching {
                 stopWakeListeningIfNeeded()
                 sttService.start()
-                if (_uiState.value.phase == VoiceAgentPhase.ERROR || !sttRunning) {
-                    appendLog("STT启动未成功，终止本轮流程")
-                    return@runCatching
-                }
                 sttRunning = true
                 _uiState.update { it.copy(phase = VoiceAgentPhase.WAKE_DETECTED_WAITING_SPEECH) }
                 appendLog("STT已启动，0~2秒不启用VAD检测")
