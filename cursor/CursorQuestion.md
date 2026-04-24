@@ -87,8 +87,23 @@ flutter先不用修改，等下App我审核通过再喊你改
 
 
 
+### Live直播推流
+我之前跑通过一版本的直播推流，现在需要你迁移到App（Android）中。
+首先需要你把推流的功能剥离出来作成SDK，大概功能是RTMP，X264编辑码，FFmpeg编解码。
+本次任务先写SDK，然后再在App中验证。
 
+你先看到这个项目：[flutteraar](../demo/flutter/flutteraar)
+他的介绍在里面：[README.md](../demo/flutter/flutteraar/README.md)我认为你能看懂，
+然后需要你迁移的功能：
+* 录制并推流功能：[LiveActivity.kt](../demo/cpp/app/src/main/java/com/demo/cpp/activity/LiveActivity.kt)
+    要把这个页面的全部功能迁移到SDK，对了比较困难的是你需要自行考虑哪些属于SDK哪些属于app，其实我区分SDK的本质是为了给Flutter使用，
+    因为Flutter使用JNI非常的不方便，然后我就把RTMP，X264编辑码，FFmpeg编解码等这些功能封装成AAR的SDK方便Flutter调用，
+    但是我认为啊Camera和画面显示这些功能Android和Flutter（Android、IOS）都能直接实现，没必要去调用原生接口。所以你在那时把我刚刚说的那三个封装成SDK就行了。
+* FFmpeg推流功能：C:\Github\FFmpegAndroid-master\app\src\main\java\com\frank\ffmpeg\activity\PushActivity.kt
+    这个我没记错的话是基于FFmpeg推流的，然后也是迁移核心到SDK[aarlib](../demo/flutter/flutteraar/aarlib)，其他非核心放在[app](../demo/flutter/flutteraar/app)写一个Demo出来。
 
-
+补充：你顺便搜一搜flutter是否能直接使用官方库实现live推流和live拉流，并给我一个报告，关于Android，IOS适配性以及和FFmpeg和RTMP，X264编解码的性能对比。
+    对了我用FFmpeg和RTMP，X264编解码其实主要是为了以后写系统Android App烧入RK设备。Flutter即便又可替代的Live推拉流也不行，所以这次任务该完成还是要完成，完成之后给我分析Flutter是不是有更好的方法，因为毕竟IOS我没实现Native呢对不对，
+    给出一个“Live功能实现报告”，里面包括我刚刚说的，Flutter跨平台实现，Android原生烧录RK实现，以及不同方案的性能比较。
 
 
