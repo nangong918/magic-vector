@@ -18,10 +18,15 @@ VideoStream *videoStream = nullptr;
 AudioStream *audioStream = nullptr;
 
 std::atomic<bool> isPushing;
+std::atomic<bool> isStarting;
+std::atomic<bool> stopRequested;
 uint32_t start_time;
 
 JavaVM *javaVM;
 jobject jobject_error;
+std::thread pushThread;
+std::mutex callbackMutex;
+std::mutex pushThreadMutex;
 
 /**
  * JNI 加载入口：缓存 JavaVM。
@@ -35,11 +40,23 @@ jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved) {
  * 把 native 错误回调到 Java 层 errorFromNative(int)。
  */
 void throwErrToJava(int error_code) {
+    std::lock_guard<std::mutex> lock(callbackMutex);
+    if (jobject_error == nullptr) {
+        LOGE("throwErrToJava skipped, callback object is null, code=%d", error_code);
+        return;
+    }
     JNIEnv *env;
-    javaVM->AttachCurrentThread(&env, nullptr);
+    if (javaVM->AttachCurrentThread(&env, nullptr) != JNI_OK) {
+        LOGE("AttachCurrentThread failed, code=%d", error_code);
+        return;
+    }
     jclass classErr = env->GetObjectClass(jobject_error);
     jmethodID methodErr = env->GetMethodID(classErr, "errorFromNative", "(I)V");
-    env->CallVoidMethod(jobject_error, methodErr, error_code);
+    if (methodErr != nullptr) {
+        env->CallVoidMethod(jobject_error, methodErr, error_code);
+    } else {
+        LOGE("errorFromNative method not found");
+    }
     javaVM->DetachCurrentThread();
 }
 
@@ -90,13 +107,21 @@ void *start(void *args) {
         ret = RTMP_Connect(rtmp, nullptr);
         if (!ret) {
             LOGE("RTMP_Connect:%s", url);
-            throwErrToJava(ERROR_RTMP_CONNECT);
+            if (!stopRequested) {
+                throwErrToJava(ERROR_RTMP_CONNECT);
+            }
             break;
         }
         ret = RTMP_ConnectStream(rtmp, 0);
         if (!ret) {
             LOGE("RTMP_ConnectStream:%s", url);
-            throwErrToJava(ERROR_RTMP_CONNECT_STREAM);
+            if (!stopRequested) {
+                throwErrToJava(ERROR_RTMP_CONNECT_STREAM);
+            }
+            break;
+        }
+        if (stopRequested) {
+            LOGI("start thread exit early due to stopRequested");
             break;
         }
         start_time = RTMP_GetTime();
@@ -119,7 +144,9 @@ void *start(void *args) {
             releasePackets(packet);
             if (!ret) {
                 LOGE("RTMP_SendPacket fail...");
-                throwErrToJava(ERROR_RTMP_SEND_PACKET);
+                if (!stopRequested) {
+                    throwErrToJava(ERROR_RTMP_SEND_PACKET);
+                }
                 break;
             }
         }
@@ -133,6 +160,13 @@ void *start(void *args) {
         RTMP_Free(rtmp);
     }
     delete (url);
+    isStarting = false;
+    {
+        std::lock_guard<std::mutex> threadLock(pushThreadMutex);
+        if (pushThread.joinable() && pushThread.get_id() == std::this_thread::get_id()) {
+            pushThread.detach();
+        }
+    }
     return nullptr;
 }
 
@@ -144,6 +178,10 @@ LIVE_PUSHER_FUNC(void, native_1init) {
     audioStream = new AudioStream();
     audioStream->setAudioCallback(callback);
     packets.setReleaseCallback(releasePackets);
+    isPushing = false;
+    isStarting = false;
+    stopRequested = false;
+    std::lock_guard<std::mutex> lock(callbackMutex);
     jobject_error = env->NewGlobalRef(instance);
 }
 
@@ -160,15 +198,27 @@ LIVE_PUSHER_FUNC(void, native_1setVideoCodecInfo,
 
 LIVE_PUSHER_FUNC(void, native_1start, jstring path_) {
     LOGI("native start...");
-    if (isPushing) {
+    if (isPushing || isStarting) {
+        LOGI("native start ignored, isPushing=%d, isStarting=%d", (int)isPushing.load(), (int)isStarting.load());
         return;
     }
+    stopRequested = false;
+    isStarting = true;
     const char *path = env->GetStringUTFChars(path_, nullptr);
     char *url = new char[strlen(path) + 1];
     strcpy(url, path);
 
-    std::thread pushThread(start, url);
-    pushThread.detach();
+    {
+        std::lock_guard<std::mutex> threadLock(pushThreadMutex);
+        if (pushThread.joinable()) {
+            LOGI("native start: previous pushThread joinable, skip restart");
+            delete[] url;
+            env->ReleaseStringUTFChars(path_, path);
+            isStarting = false;
+            return;
+        }
+        pushThread = std::thread(start, url);
+    }
     env->ReleaseStringUTFChars(path_, path);
 }
 
@@ -209,13 +259,25 @@ LIVE_PUSHER_FUNC(void, native_1pushAudio, jbyteArray data_) {
 
 LIVE_PUSHER_FUNC(void, native_1stop) {
     LOGI("native stop...");
+    stopRequested = true;
     isPushing = false;
     packets.setRunning(false);
 }
 
 LIVE_PUSHER_FUNC(void, native_1release) {
     LOGI("native release...");
-    env->DeleteGlobalRef(jobject_error);
+    stopRequested = true;
+    isPushing = false;
+    packets.setRunning(false);
+    jobject callbackObj = nullptr;
+    {
+        std::lock_guard<std::mutex> lock(callbackMutex);
+        callbackObj = jobject_error;
+        jobject_error = nullptr;
+    }
+    if (callbackObj != nullptr) {
+        env->DeleteGlobalRef(callbackObj);
+    }
     delete videoStream;
     videoStream = nullptr;
     delete audioStream;
