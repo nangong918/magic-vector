@@ -22,6 +22,8 @@ add_subdirectory(rtmp)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=gnu++11")
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/live)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 
 if(${CMAKE_ANDROID_ARCH_ABI} MATCHES "armeabi-v7a")
     include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include/armeabi-v7a/libavcodec)
@@ -33,11 +35,11 @@ endif()
 
 add_library(aar_live
         SHARED
-        AudioStream.cpp
-        VideoStream.cpp
-        RtmpPusher.cpp
-        ff_rtmp_pusher.cpp
-        ffmpeg_pusher_jni.cpp)
+        live/AudioStream.cpp
+        live/VideoStream.cpp
+        live/RtmpPusher.cpp
+        live/ff_rtmp_pusher.cpp
+        live/ffmpeg_pusher_jni.cpp)
 
 find_library(log-lib log)
 
