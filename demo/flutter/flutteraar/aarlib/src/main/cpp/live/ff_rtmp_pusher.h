@@ -11,6 +11,12 @@ extern "C" {
 }
 #endif
 
+/**
+ * FFmpeg RTMP 推流器：
+ * - 打开输入媒体；
+ * - 初始化 FLV/RTMP 输出；
+ * - 循环转推音视频包。
+ */
 class FFRtmpPusher {
 private:
     AVFormatContext *inFormatCtx = nullptr;
@@ -21,10 +27,19 @@ private:
     int audio_index = -1;
 
 public:
+    /**
+     * 打开输入与输出。
+     */
     int open(const char *inputPath, const char *outputPath);
 
+    /**
+     * 开始转推。
+     */
     int push();
 
+    /**
+     * 关闭并释放资源。
+     */
     void close();
 };
 

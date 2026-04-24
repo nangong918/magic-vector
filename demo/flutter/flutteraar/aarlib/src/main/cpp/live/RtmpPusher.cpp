@@ -5,6 +5,9 @@
 #include "VideoStream.h"
 #include "AudioStream.h"
 
+/**
+ * Java_com_demo_aarlib_live_LivePusherBridge_* JNI 函数映射宏。
+ */
 #define LIVE_PUSHER_FUNC(RETURN_TYPE, FUNC_NAME, ...) \
     extern "C" \
     JNIEXPORT RETURN_TYPE JNICALL Java_com_demo_aarlib_live_LivePusherBridge_ ## FUNC_NAME \
@@ -20,11 +23,17 @@ uint32_t start_time;
 JavaVM *javaVM;
 jobject jobject_error;
 
+/**
+ * JNI 加载入口：缓存 JavaVM。
+ */
 jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved) {
     javaVM = vm;
     return JNI_VERSION_1_6;
 }
 
+/**
+ * 把 native 错误回调到 Java 层 errorFromNative(int)。
+ */
 void throwErrToJava(int error_code) {
     JNIEnv *env;
     javaVM->AttachCurrentThread(&env, nullptr);
@@ -34,6 +43,9 @@ void throwErrToJava(int error_code) {
     javaVM->DetachCurrentThread();
 }
 
+/**
+ * 编码输出回调：给 RTMP 包打时间戳并入队。
+ */
 void callback(RTMPPacket *packet) {
     if (packet) {
         packet->m_nTimeStamp = RTMP_GetTime() - start_time;
@@ -41,6 +53,9 @@ void callback(RTMPPacket *packet) {
     }
 }
 
+/**
+ * RTMPPacket 资源释放函数。
+ */
 void releasePackets(RTMPPacket *&packet) {
     if (packet) {
         RTMPPacket_Free(packet);
@@ -49,6 +64,12 @@ void releasePackets(RTMPPacket *&packet) {
     }
 }
 
+/**
+ * 推流发送线程：
+ * - 建立 RTMP 连接；
+ * - 从队列取包并发送；
+ * - 失败时上报错误并收尾。
+ */
 void *start(void *args) {
     char *url = static_cast<char *>(args);
     RTMP *rtmp = nullptr;
@@ -79,6 +100,7 @@ void *start(void *args) {
             break;
         }
         start_time = RTMP_GetTime();
+        LOGI("RTMP connected, start pushing...");
         isPushing = true;
         packets.setRunning(true);
         callback(audioStream->getAudioTag());
@@ -115,6 +137,7 @@ void *start(void *args) {
 }
 
 LIVE_PUSHER_FUNC(void, native_1init) {
+    // 初始化音视频编码对象与回调。
     LOGI("native init...");
     videoStream = new VideoStream();
     videoStream->setVideoCallback(callback);
@@ -126,6 +149,7 @@ LIVE_PUSHER_FUNC(void, native_1init) {
 
 LIVE_PUSHER_FUNC(void, native_1setVideoCodecInfo,
         jint width, jint height, jint fps, jint bitrate) {
+    LOGI("native_setVideoCodecInfo, width=%d, height=%d, fps=%d, bitrate=%d", width, height, fps, bitrate);
     if (videoStream) {
         int ret = videoStream->setVideoEncInfo(width, height, fps, bitrate);
         if (ret < 0) {
@@ -158,6 +182,7 @@ LIVE_PUSHER_FUNC(void, native_1pushVideo, jbyteArray yuv, jint frame_type) {
 }
 
 LIVE_PUSHER_FUNC(void, native_1setAudioCodecInfo, jint sampleRateInHz, jint channels) {
+    LOGI("native_setAudioCodecInfo, sampleRate=%d, channels=%d", sampleRateInHz, channels);
     if (audioStream) {
         int ret = audioStream->setAudioEncInfo(sampleRateInHz, channels);
         if (ret < 0) {

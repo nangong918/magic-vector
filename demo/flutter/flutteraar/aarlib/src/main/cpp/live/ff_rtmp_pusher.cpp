@@ -7,6 +7,7 @@
 
 int FFRtmpPusher::open(const char *inputPath, const char *outputPath) {
     int ret;
+    FFLOGI("open, input=%s, output=%s", inputPath, outputPath);
 
     avformat_network_init();
     ret = avformat_open_input(&inFormatCtx, inputPath, nullptr, nullptr);
@@ -50,6 +51,7 @@ int FFRtmpPusher::open(const char *inputPath, const char *outputPath) {
     if (ret < 0) {
         FFLOGE("avformat_write_header err=%d", ret);
     }
+    FFLOGI("open finished, ret=%d", ret);
     return ret;
 }
 
@@ -72,6 +74,7 @@ void rescale(AVFormatContext *in_format_ctx, AVFormatContext *out_format_ctx, AV
 int FFRtmpPusher::push() {
     int ret;
     int64_t startTime = av_gettime();
+    FFLOGI("push start");
 
     while (true) {
         ret = av_read_frame(inFormatCtx, &packet);
@@ -103,10 +106,12 @@ int FFRtmpPusher::push() {
         av_packet_unref(&packet);
     }
 
+    FFLOGI("push finish, ret=%d", ret);
     return ret;
 }
 
 void FFRtmpPusher::close() {
+    FFLOGI("close");
     if (outFormatCtx) {
         av_write_trailer(outFormatCtx);
         if (!(outFormatCtx->oformat->flags & AVFMT_NOFILE) && outFormatCtx->pb) {

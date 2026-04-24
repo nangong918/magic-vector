@@ -7,10 +7,11 @@ VideoStream::VideoStream():m_frameLen(0),
                            videoCodec(nullptr),
                            pic_in(nullptr),
                            videoCallback(nullptr) {
-
+    LOGI("VideoStream created");
 }
 
 int VideoStream::setVideoEncInfo(int width, int height, int fps, int bitrate) {
+    LOGI("setVideoEncInfo, width=%d, height=%d, fps=%d, bitrate=%d", width, height, fps, bitrate);
     std::lock_guard<std::mutex> l(m_mutex);
     m_frameLen = width * height;
     if (videoCodec) {
@@ -57,6 +58,7 @@ int VideoStream::setVideoEncInfo(int width, int height, int fps, int bitrate) {
     }
     pic_in = new x264_picture_t();
     x264_picture_alloc(pic_in, X264_CSP_I420, width, height);
+    LOGI("setVideoEncInfo success");
     return ret;
 }
 
@@ -65,6 +67,7 @@ void VideoStream::setVideoCallback(VideoCallback callback) {
 }
 
 void VideoStream::sendSpsPps(uint8_t *sps, uint8_t *pps, int sps_len, int pps_len) {
+    LOGI("sendSpsPps, sps_len=%d, pps_len=%d", sps_len, pps_len);
     int bodySize = 13 + sps_len + 3 + pps_len;
     auto *packet = new RTMPPacket();
     RTMPPacket_Alloc(packet, bodySize);
@@ -165,6 +168,7 @@ void VideoStream::encodeVideo(int8_t *data, int camera_type) {
     int pi_nal;
     x264_picture_t pic_out;
     x264_encoder_encode(videoCodec, &pp_nal, &pi_nal, pic_in, &pic_out);
+    LOGI("encodeVideo, camera_type=%d, pi_nal=%d", camera_type, pi_nal);
     int pps_len, sps_len = 0;
     uint8_t sps[100];
     uint8_t pps[100];
@@ -184,6 +188,7 @@ void VideoStream::encodeVideo(int8_t *data, int camera_type) {
 }
 
 VideoStream::~VideoStream() {
+    LOGI("VideoStream destroy");
     if (videoCodec) {
         x264_encoder_close(videoCodec);
         videoCodec = nullptr;

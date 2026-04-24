@@ -1,9 +1,24 @@
 package com.example.flutteraar.live.util;
 
+/**
+ * YUV 工具类：
+ * 提供推流预处理常用的 I420 旋转能力。
+ */
 public final class YuvUtil {
+    /**
+     * 工具类不允许实例化。
+     */
     private YuvUtil() {
     }
 
+    /**
+     * I420 顺时针旋转 90 度。
+     *
+     * @param dst    输出缓冲
+     * @param src    输入缓冲
+     * @param width  输入宽
+     * @param height 输入高
+     */
     public static void YUV420pRotate90(byte[] dst, byte[] src, int width, int height) {
         int n = 0;
         int wh = width * height;
@@ -26,6 +41,14 @@ public final class YuvUtil {
         }
     }
 
+    /**
+     * I420 旋转 180 度。
+     *
+     * @param dst    输出缓冲
+     * @param src    输入缓冲
+     * @param width  输入宽
+     * @param height 输入高
+     */
     public static void YUV420pRotate180(byte[] dst, byte[] src, int width, int height) {
         int n = 0;
         int halfWidth = width / 2;

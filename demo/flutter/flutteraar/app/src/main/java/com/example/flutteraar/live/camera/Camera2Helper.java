@@ -38,6 +38,12 @@ import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantLock;
 
+/**
+ * Camera2 采集辅助类：
+ * - 负责相机生命周期管理；
+ * - 输出预览到 TextureView；
+ * - 将 YUV_420_888 转换成 I420 并回调给上层推流模块。
+ */
 public class Camera2Helper {
     private static final String TAG = Camera2Helper.class.getSimpleName();
 
@@ -62,6 +68,9 @@ public class Camera2Helper {
     private final Semaphore mCameraOpenCloseLock = new Semaphore(1);
     private int mSensorOrientation;
 
+    /**
+     * 私有构造，使用 Builder 创建。
+     */
     private Camera2Helper(Builder builder) {
         mTextureView = builder.previewDisplayView;
         specificCameraId = builder.specificCameraId;
@@ -72,6 +81,9 @@ public class Camera2Helper {
         context = builder.context;
     }
 
+    /**
+     * 切换前后摄像头并重启预览。
+     */
     public void switchCamera() {
         if (CAMERA_ID_BACK.equals(mCameraId)) {
             specificCameraId = CAMERA_ID_FRONT;
@@ -80,8 +92,12 @@ public class Camera2Helper {
         }
         stop();
         start();
+        Log.i(TAG, "switchCamera, specificCameraId=" + specificCameraId);
     }
 
+    /**
+     * 计算 camera sensor 与屏幕方向综合后的预览旋转角。
+     */
     private int getCameraOrientation(int rotation, String cameraId) {
         int degree = rotation * 90;
         switch (rotation) {
@@ -205,6 +221,9 @@ public class Camera2Helper {
         return defaultSize;
     }
 
+    /**
+     * 启动 Camera2 采集流程。
+     */
     public synchronized void start() {
         if (mCameraDevice != null) {
             return;
@@ -215,27 +234,43 @@ public class Camera2Helper {
         } else {
             mTextureView.setSurfaceTextureListener(mSurfaceTextureListener);
         }
+        Log.i(TAG, "start");
     }
 
+    /**
+     * 更新预览旋转角，用于帧回调前的 YUV 旋转处理。
+     */
     public void updatePreviewDegree(int degree) {
         rotateDegree = degree;
+        Log.i(TAG, "updatePreviewDegree=" + degree);
     }
 
+    /**
+     * 停止 Camera2 采集流程。
+     */
     public synchronized void stop() {
         if (mCameraDevice == null) {
             return;
         }
         closeCamera();
         stopBackgroundThread();
+        Log.i(TAG, "stop");
     }
 
+    /**
+     * 彻底释放资源与引用。
+     */
     public void release() {
         stop();
         mTextureView = null;
         camera2Listener = null;
         context = null;
+        Log.i(TAG, "release");
     }
 
+    /**
+     * 遍历并选择可用相机输出参数。
+     */
     private void setUpCameraOutput(CameraManager cameraManager) {
         try {
             if (configCameraParams(cameraManager, specificCameraId)) {
@@ -253,6 +288,9 @@ public class Camera2Helper {
         }
     }
 
+    /**
+     * 按 cameraId 读取分辨率、ImageReader、方向等关键参数。
+     */
     private boolean configCameraParams(CameraManager manager, String cameraId) throws CameraAccessException {
         CameraCharacteristics characteristics = manager.getCameraCharacteristics(cameraId);
         StreamConfigurationMap map = characteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
@@ -271,6 +309,9 @@ public class Camera2Helper {
         return true;
     }
 
+    /**
+     * 申请并打开 camera 设备。
+     */
     private void openCamera() {
         CameraManager cameraManager = (CameraManager) context.getSystemService(Context.CAMERA_SERVICE);
         setUpCameraOutput(cameraManager);
@@ -290,6 +331,9 @@ public class Camera2Helper {
         }
     }
 
+    /**
+     * 关闭 camera session / device / image reader。
+     */
     private void closeCamera() {
         try {
             mCameraOpenCloseLock.acquire();
@@ -317,12 +361,18 @@ public class Camera2Helper {
         }
     }
 
+    /**
+     * 创建后台线程用于 Camera2 回调处理。
+     */
     private void startBackgroundThread() {
         mBackgroundThread = new HandlerThread("CameraBackground");
         mBackgroundThread.start();
         mBackgroundHandler = new Handler(mBackgroundThread.getLooper());
     }
 
+    /**
+     * 停止并回收后台线程。
+     */
     private void stopBackgroundThread() {
         if (mBackgroundThread == null) {
             return;
@@ -337,6 +387,9 @@ public class Camera2Helper {
         }
     }
 
+    /**
+     * 创建预览会话并把输出绑定到 TextureView + ImageReader。
+     */
     private void createCameraPreviewSession() {
         try {
             SurfaceTexture texture = mTextureView.getSurfaceTexture();
@@ -360,6 +413,9 @@ public class Camera2Helper {
         }
     }
 
+    /**
+     * 计算并设置 TextureView 的显示变换矩阵。
+     */
     private void configureTransform(int viewWidth, int viewHeight) {
         if (mTextureView == null || mPreviewSize == null) {
             return;
@@ -383,6 +439,9 @@ public class Camera2Helper {
         mTextureView.setTransform(matrix);
     }
 
+    /**
+     * Builder：用于创建 Camera2Helper 并注入必要参数。
+     */
     public static final class Builder {
         private TextureView previewDisplayView;
         private String specificCameraId;
@@ -392,41 +451,65 @@ public class Camera2Helper {
         private int rotateDegree;
         private Context context;
 
+        /**
+         * 设置预览输出控件。
+         */
         public Builder previewOn(TextureView val) {
             previewDisplayView = val;
             return this;
         }
 
+        /**
+         * 设置期望的预览尺寸。
+         */
         public Builder previewViewSize(Point val) {
             previewViewSize = val;
             return this;
         }
 
+        /**
+         * 设置显示旋转角。
+         */
         public Builder rotation(int val) {
             rotation = val;
             return this;
         }
 
+        /**
+         * 设置预览帧旋转角。
+         */
         public Builder rotateDegree(int val) {
             rotateDegree = val;
             return this;
         }
 
+        /**
+         * 设置初始摄像头 ID。
+         */
         public Builder specificCameraId(String val) {
             specificCameraId = val;
             return this;
         }
 
+        /**
+         * 设置采集回调监听器。
+         */
         public Builder cameraListener(Camera2Listener val) {
             camera2Listener = val;
             return this;
         }
 
+        /**
+         * 设置上下文。
+         */
         public Builder context(Context val) {
             context = val;
             return this;
         }
 
+        /**
+         * 构建 Camera2Helper。
+         */
         public Camera2Helper build() {
             if (previewDisplayView == null) {
                 throw new NullPointerException("must preview on a textureView");
@@ -441,6 +524,9 @@ public class Camera2Helper {
         private byte[] dstData;
         private final ReentrantLock lock = new ReentrantLock();
 
+        /**
+         * 相机帧回调：YUV_420_888 -> I420，并按 rotateDegree 旋转后输出。
+         */
         @Override
         public void onImageAvailable(ImageReader reader) {
             Image image = reader.acquireNextImage();

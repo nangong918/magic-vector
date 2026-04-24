@@ -1,5 +1,8 @@
 package com.demo.aarlib.live;
 
+/**
+ * Live 推流错误码定义与文案映射。
+ */
 public final class LiveErrorCode {
     public static final int ERROR_VIDEO_ENCODER_OPEN = 0x01;
     public static final int ERROR_VIDEO_ENCODER_ENCODE = 0x02;
@@ -9,9 +12,18 @@ public final class LiveErrorCode {
     public static final int ERROR_RTMP_CONNECT_STREAM = 0x06;
     public static final int ERROR_RTMP_SEND_PACKET = 0x07;
 
+    /**
+     * 工具类不允许实例化。
+     */
     private LiveErrorCode() {
     }
 
+    /**
+     * 将错误码映射为可读文案。
+     *
+     * @param errorCode 错误码
+     * @return 错误描述
+     */
     public static String messageFor(int errorCode) {
         switch (errorCode) {
             case ERROR_VIDEO_ENCODER_OPEN:

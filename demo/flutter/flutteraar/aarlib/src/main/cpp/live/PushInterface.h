@@ -3,6 +3,11 @@
 
 #include <android/log.h>
 
+/**
+ * Live native 公共定义：
+ * - 统一日志宏；
+ * - 统一错误码常量。
+ */
 #define LOGI(...) __android_log_print(ANDROID_LOG_INFO,"LivePushSDK",__VA_ARGS__)
 #define LOGE(...) __android_log_print(ANDROID_LOG_ERROR,"LivePushSDK",__VA_ARGS__)
 

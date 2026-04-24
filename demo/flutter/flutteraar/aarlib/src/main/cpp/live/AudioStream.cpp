@@ -4,6 +4,7 @@
 #include "PushInterface.h"
 
 AudioStream::AudioStream() {
+    LOGI("AudioStream created");
 }
 
 void AudioStream::setAudioCallback(AudioCallback callback) {
@@ -11,6 +12,7 @@ void AudioStream::setAudioCallback(AudioCallback callback) {
 }
 
 int AudioStream::setAudioEncInfo(int samplesInHZ, int channels) {
+    LOGI("setAudioEncInfo, sampleRate=%d, channels=%d", samplesInHZ, channels);
     m_channels = channels;
     m_audioCodec = faacEncOpen(static_cast<unsigned long>(samplesInHZ),
             static_cast<unsigned int>(channels),
@@ -23,7 +25,9 @@ int AudioStream::setAudioEncInfo(int samplesInHZ, int channels) {
     config->aacObjectType = LOW;
     config->inputFormat = FAAC_INPUT_16BIT;
     config->outputFormat = 0;
-    return faacEncSetConfiguration(m_audioCodec, config);
+    int ret = faacEncSetConfiguration(m_audioCodec, config);
+    LOGI("setAudioEncInfo done, ret=%d, inputSamples=%lu, maxOutputBytes=%lu", ret, m_inputSamples, m_maxOutputBytes);
+    return ret;
 }
 
 int AudioStream::getInputSamples() const {
@@ -31,6 +35,7 @@ int AudioStream::getInputSamples() const {
 }
 
 RTMPPacket *AudioStream::getAudioTag() {
+    LOGI("getAudioTag");
     u_char *buf;
     u_long len;
     faacEncGetDecoderSpecificInfo(m_audioCodec, &buf, &len);
@@ -59,6 +64,7 @@ void AudioStream::encodeData(int8_t *data) {
             m_buffer,
             static_cast<unsigned int>(m_maxOutputBytes));
     if (byteLen > 0) {
+        LOGI("encodeData success, byteLen=%d", byteLen);
         int bodySize = 2 + byteLen;
         auto *packet = new RTMPPacket();
         RTMPPacket_Alloc(packet, bodySize);
@@ -80,6 +86,7 @@ void AudioStream::encodeData(int8_t *data) {
 }
 
 AudioStream::~AudioStream() {
+    LOGI("AudioStream destroy");
     delete m_buffer;
     m_buffer = nullptr;
     if (m_audioCodec) {
