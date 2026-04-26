@@ -2,6 +2,28 @@
 
 please set `MINIO_NGINX_PUBLIC_HOST` first!
 
+## Change Docker Engine source
+
+```json
+{
+  "builder": {
+    "gc": {
+      "defaultKeepStorage": "20GB",
+      "enabled": true
+    }
+  },
+  "debug": true,
+  "experimental": false,
+  "registry-mirrors": [
+    "https://docker.1ms.run",
+    "https://docker.m.daocloud.io",
+    "https://lispy.org",
+    "https://docker-0.unsee.tech",
+    "https://docker.xuanyuan.me"
+  ]
+}
+```
+
 ## Start Services
 
 Run from `demo/springboot`:
