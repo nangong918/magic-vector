@@ -107,3 +107,25 @@ flutter先不用修改，等下App我审核通过再喊你改
     给出一个“Live功能实现报告”，里面包括我刚刚说的，Flutter跨平台实现，Android原生烧录RK实现，以及不同方案的性能比较。
 
 
+
+### Live 拉流播放
+
+我现在已经实现了Live推流功能，并且我用VLCPlayer验证过没问题。
+我的Live推流代码在[LivePushDemoActivity.java](../demo/flutter/flutteraar/app/src/main/java/com/example/flutteraar/ui/activity/LivePushDemoActivity.java)
+功能介绍活动图在：[Live功能活动图.md](../demo/flutter/flutteraar/Live功能活动图.md)
+你只需要看RTMP + X264编解码部分，因为我暂时不用ffmpeg去推流。
+然后现在你思考一下怎么接收流比较好？就是我希望接流并播放，关于推流的rtmp链接在代码里面有，你也可以看nginx配置[nginx.conf](../demo/springboot/nginx-docker/conf/nginx.conf)
+[docker-compose.yml](../demo/springboot/docker/docker-compose.yml)
+这些我都是配置好了并且验证通过了的，我现在希望你拉流。
+
+现在你需要做到是：
+1. 阅读我原先的推流活动图，代码理解架构和代码原理。
+2. 上网查询并思考这种编码格式的推流方式应该怎么拉流，解码，播放。包括播放器怎么选择。
+3. 查看C:\Github\FFmpegAndroid-master\app\src\main\java\com\frank\ffmpeg\activity\VideoPreviewActivity.kt这里的代码，
+   这是我本地可运行的app，看看这个能满足需求吗？如果满足可以复用，如果不满足只有你来做了。
+4. 帮我完成拉流播放代码，如果无法完成告诉我原因，写到[Live功能实现报告.md](../demo/flutter/flutteraar/Live功能实现报告.md)，如果可以完成你也要告诉我怎么完成的。
+
+注意，你写的时候要创建Live Pull拉流播放Demo，写在[flutteraar](../demo/flutter/flutteraar)
+关于这个项目怎么写demo你要看：[README.md](../demo/flutter/flutteraar/README.md)
+
+
