@@ -327,3 +327,61 @@ Flutter 不是更好的底层方案。
    - 本次只完成 Android AAR 方向与方案报告。
 
 如果你后续把编译错误、NDK/CMake 错误、so 打包错误、运行时报错发给我，我会继续沿当前结构修到可用。
+
+## 9. 本次新增：Live Pull 拉流播放 Demo（对应 CursorQuestion 任务）
+
+### 9.1 已完成内容
+
+本次已在 `flutteraar` 落地独立拉流页：
+
+- `app/src/main/java/com/example/flutteraar/ui/activity/LivePullDemoActivity.java`
+- `app/src/main/res/layout/activity_live_pull_demo.xml`
+- `MainActivity` 增加 `Live Pull Demo` 入口
+- `AndroidManifest.xml` 增加 Activity 注册
+- `gradle/libs.versions.toml` 与 `app/build.gradle` 增加 Media3 依赖
+
+拉流页支持两种路径：
+
+1. **RTMP 直拉播放**（`rtmp://IP:1935/stream/live`）  
+   - 通过 `androidx.media3:media3-datasource-rtmp` 提供 RTMP DataSource；
+2. **HLS 播放**（`http://IP:8080/hls/live/index.m3u8`）  
+   - 通过 `media3-exoplayer-hls` 播放 nginx 输出的 m3u8。
+
+### 9.2 对 `VideoPreviewActivity.kt` 的复用评估（你要求检查的本地工程）
+
+检查了你给出的：
+
+- `C:/Github/FFmpegAndroid-master/app/src/main/java/com/frank/ffmpeg/activity/VideoPreviewActivity.kt`
+- `C:/Github/FFmpegAndroid-master/app/src/main/java/com/frank/ffmpeg/controller/MediaPlayController.kt`
+
+结论：
+
+- 该实现核心是 Android `MediaPlayer.setDataSource(filePath)` + `SurfaceView`。
+- 更偏向“文件/普通 URL 播放 + 预览条控制”场景。
+- 没有现成 RTMP DataSource 封装，不适合直接复用为当前 `RTMP + x264/AAC` 拉流 Demo。
+- 因此本次采用 `Media3` 重新实现独立 `Live Pull Demo`，与当前 `flutteraar` 架构更一致。
+
+### 9.3 播放器选型与上网核对结论
+
+基于 Android 官方 Media3 文档与 API 说明核对后，本次选择：
+
+- `media3-exoplayer` + `media3-ui` 负责播放和控件；
+- `media3-exoplayer-hls` 负责 HLS；
+- `media3-datasource-rtmp` 负责 RTMP 数据源接入。
+
+原因：
+
+- 对 Android Demo 集成成本最低；
+- 不需要再引入额外 FFmpeg 播放器 SDK；
+- 同时覆盖你当前链路中的 RTMP 和 nginx HLS；
+- 后续如果要接入 iOS，可在 Flutter 插件层保持接口一致，平台侧分别实现。
+
+### 9.4 你本地验证建议
+
+建议按以下顺序验证：
+
+1. 在 `Live Push Demo` 里把流推到：`rtmp://<你的主机IP>:1935/stream/live`；
+2. 打开 `Live Pull Demo`，先试 RTMP 地址直拉；
+3. 点击“一键转 HLS”后，验证 `http://<你的主机IP>:8080/hls/live/index.m3u8`；
+4. 如果 RTMP 不通但 HLS 通，优先检查 1935 端口与局域网访问策略；
+5. 如果 HLS 不通，检查 nginx 容器内 `/tmp/hls/live/index.m3u8` 是否生成。

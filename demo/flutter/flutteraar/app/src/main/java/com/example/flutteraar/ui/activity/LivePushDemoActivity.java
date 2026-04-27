@@ -102,9 +102,9 @@ public class LivePushDemoActivity extends AppCompatActivity implements Camera2Li
         btnPushFile = findViewById(R.id.btnPushFile);
         btnMute = findViewById(R.id.btnMute);
 
-        editLiveUrl.setText("rtmp://192.168.1.3:1935/stream");
+        editLiveUrl.setText("rtmp://192.168.1.3:1935/stream/live");
         editInputPath.setText("http://clips.vorwaerts-gmbh.de/big_buck_bunny.mp4");
-        editFilePushUrl.setText("rtmp://192.168.1.3:1935/stream");
+        editFilePushUrl.setText("rtmp://192.168.1.3:1935/stream/live");
         btnMute.setChecked(false);
         updateStatus("等待权限与相机初始化");
         updateButtons();

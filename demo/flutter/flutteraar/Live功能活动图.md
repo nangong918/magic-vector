@@ -195,3 +195,37 @@ flowchart TD
   - 音视频编码后的 `RTMPPacket` 队列。
 
 
+## 4. Live 拉流播放活动图
+
+```mermaid
+flowchart TD
+    A["打开 LivePullDemoActivity"] --> B["bindViews() 初始化 PlayerView / URL 输入框 / 按钮"]
+    B --> C["默认 URL: rtmp://IP:1935/stream/live"]
+    C --> D["点击开始拉流播放"]
+    D --> E{"URL 是否为空?"}
+    E -->|是| E1["editPullUrl.setError()"]
+    E -->|否| F["ensurePlayer() 初始化 Media3 ExoPlayer"]
+    F --> G["DefaultDataSource.Factory + DefaultMediaSourceFactory"]
+    G --> H["player.setMediaItem(MediaItem.fromUri(url))"]
+    H --> I["player.prepare() + player.play()"]
+    I --> J["Player.Listener.onPlaybackStateChanged()"]
+    J --> J1{"STATE?"}
+    J1 -->|BUFFERING| K["状态: 缓冲中"]
+    J1 -->|READY| L["状态: 播放中(显示 live offset)"]
+    J1 -->|ENDED| M["状态: 流结束 + pullPlaying=false"]
+    J --> N["onPlayerError() -> 状态: 播放失败"]
+    N --> O["用户点击停止播放 / onDestroy()"]
+    M --> O
+    O --> P["player.stop() + clearMediaItems() + release()"]
+```
+
+```mermaid
+flowchart TD
+    A["输入 RTMP 地址"] --> B["点击 RTMP 地址一键转 HLS 预览地址"]
+    B --> C{"是否 rtmp:// 开头且格式合法?"}
+    C -->|否| D["Toast 提示格式不合法"]
+    C -->|是| E["提取 host 与 streamName"]
+    E --> F["拼接 http://host:8080/hls/streamName/index.m3u8"]
+    F --> G["回填输入框并可直接开始播放"]
+```
+

@@ -40,6 +40,9 @@
         <activity
             android:name=".ui.activity.LivePushDemoActivity"
             android:exported="false" />
+        <activity
+            android:name=".ui.activity.LivePullDemoActivity"
+            android:exported="false" />
     </application>
 
 </manifest>
