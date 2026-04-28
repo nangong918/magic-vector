@@ -12,7 +12,13 @@ class LivePullAndroidPage extends StatefulWidget {
 }
 
 class _LivePullAndroidPageState extends State<LivePullAndroidPage> {
-  String _status = '等待启动 Live Pull Demo';
+  String _status = '正在打开 Live Pull Demo (Android)...';
+
+  @override
+  void initState() {
+    super.initState();
+    _openNativeDemo();
+  }
 
   Future<void> _openNativeDemo() async {
     if (!Platform.isAndroid) {
@@ -37,25 +43,7 @@ class _LivePullAndroidPageState extends State<LivePullAndroidPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Live Pull Demo (Android)')),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              '该页面调用 Android 原生 Activity 完成 RTMP/HLS 拉流播放（ExoPlayer）。\n'
-              '你可先启动 Live Push，再来此页验证播放。',
-            ),
-            const SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: _openNativeDemo,
-              child: const Text('打开 Live Pull Demo (Android)'),
-            ),
-            const SizedBox(height: 16),
-            Text('状态: $_status'),
-          ],
-        ),
-      ),
+      body: Center(child: Text('状态: $_status')),
     );
   }
 }

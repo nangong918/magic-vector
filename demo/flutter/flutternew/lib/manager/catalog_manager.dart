@@ -1,6 +1,8 @@
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter/material.dart';
 import 'package:flutternew/config/app_route.dart';
+import 'package:flutternew/service/live_android_service.dart';
 
 import '../domain/vo/catalog_item.dart';
 import '../l10n/app_localizations.dart';
@@ -99,10 +101,39 @@ class CatalogManager {
 
   static void onItemClick(CatalogItem item, BuildContext context) {
     if (item.routeName != null && item.routeName!.isNotEmpty) {
+      if (item.routeName == AppRoutes.livePushAndroid) {
+        _openAndroidLiveDemo(context, isPush: true);
+        return;
+      }
+      if (item.routeName == AppRoutes.livePullAndroid) {
+        _openAndroidLiveDemo(context, isPush: false);
+        return;
+      }
       debugPrint('将要跳转到${item.routeName}');
       Navigator.pushNamed(context, item.routeName!);
     } else {
       _showFeatureComingSoon(context, item.title);
+    }
+  }
+
+  static Future<void> _openAndroidLiveDemo(
+    BuildContext context, {
+    required bool isPush,
+  }) async {
+    try {
+      if (isPush) {
+        await LiveAndroidService.openLivePushDemo();
+      } else {
+        await LiveAndroidService.openLivePullDemo();
+      }
+    } on PlatformException catch (e) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('打开原生页面失败: ${e.message ?? e.code}'),
+          duration: const Duration(seconds: 2),
+        ),
+      );
     }
   }
 

@@ -144,3 +144,8 @@ flutter先不用修改，等下App我审核通过再喊你改
 2. 分别在[app](../demo/app)和[flutternew](../demo/flutter/flutternew)实现直播推流和直播拉流的demo
 3. 关于Flutter的直播推流和直播拉流虽然这已经实现了。但是你要在demo后面标注(Android)因为这其实是调用Android原生实现的，接下来你西药与上网查资料并分析怎么用dart以及依赖库实现并把可执行方案写在[Live功能实现报告.md](../demo/flutter/flutteraar/Live功能实现报告.md)
 4. 如果flutter的dart原生能实现IOS和Android双平台的推流并播放，那么你就再实现两个Demo，这次后面备注是(跨平台)
+
+#### 补充
+
+flutter的live推拉流的（Android）不对把，我的期望是跟Android那边是打开就是相同的功能，而不是再点击按钮跳转，而且你这个跳转点击就报错闪退啊。
+修改成我期望的调用原生android方法实现。

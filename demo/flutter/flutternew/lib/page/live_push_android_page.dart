@@ -12,7 +12,13 @@ class LivePushAndroidPage extends StatefulWidget {
 }
 
 class _LivePushAndroidPageState extends State<LivePushAndroidPage> {
-  String _status = '等待启动 Live Push Demo';
+  String _status = '正在打开 Live Push Demo (Android)...';
+
+  @override
+  void initState() {
+    super.initState();
+    _openNativeDemo();
+  }
 
   Future<void> _openNativeDemo() async {
     if (!Platform.isAndroid) {
@@ -37,25 +43,7 @@ class _LivePushAndroidPageState extends State<LivePushAndroidPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Live Push Demo (Android)')),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              '该页面调用 Android 原生 Activity 完成 RTMP + x264 推流。\n'
-              '请确保先启动推流服务器，再点击下方按钮。',
-            ),
-            const SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: _openNativeDemo,
-              child: const Text('打开 Live Push Demo (Android)'),
-            ),
-            const SizedBox(height: 16),
-            Text('状态: $_status'),
-          ],
-        ),
-      ),
+      body: Center(child: Text('状态: $_status')),
     );
   }
 }
