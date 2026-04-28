@@ -129,3 +129,18 @@ flutter先不用修改，等下App我审核通过再喊你改
 关于这个项目怎么写demo你要看：[README.md](../demo/flutter/flutteraar/README.md)
 
 
+### Live推流与Live拉流播放
+
+我现在已经完成了Live推流和Live拉流播放的Android JavaDemo，源码在：
+* 推流：[LivePushDemoActivity.java](../demo/flutter/flutteraar/app/src/main/java/com/example/flutteraar/ui/activity/LivePushDemoActivity.java)
+* 拉流：[LivePullDemoActivity.java](../demo/flutter/flutteraar/app/src/main/java/com/example/flutteraar/ui/activity/LivePullDemoActivity.java)
+大概介绍一下，推流是基于Cpp源码的RTMP + X264编码推流，传输其实是基于Nginx[nginx.conf](../demo/springboot/nginx-docker/conf/nginx.conf)的RTMP传输，拉流是ExoPlayer拉流.
+然后我这个[flutteraar](../demo/flutter/flutteraar)项目其实就是一个生成aar并测试的项目，具体介绍你可以看[README.md](../demo/flutter/flutteraar/README.md)
+然后上述功能我已经验证过了。
+现在需要你：
+1. 把[flutteraar](../demo/flutter/flutteraar)的生成的新的aar分别拷贝到[app](../demo/app)和[flutternew](../demo/flutter/flutternew)
+   1. 其中[app](../demo/app)就是我的基于Kotlin Jetpack Compose 以MVI为设计模式的Android App这么做的目的是后续可能转为KMP跨平台。
+   2. 第二是[flutternew](../demo/flutter/flutternew)这是我的Flutter项目，这个是直接可以跨平台的项目，你直接按照原来的Demo方式实现迁移就行了。
+2. 分别在[app](../demo/app)和[flutternew](../demo/flutter/flutternew)实现直播推流和直播拉流的demo
+3. 关于Flutter的直播推流和直播拉流虽然这已经实现了。但是你要在demo后面标注(Android)因为这其实是调用Android原生实现的，接下来你西药与上网查资料并分析怎么用dart以及依赖库实现并把可执行方案写在[Live功能实现报告.md](../demo/flutter/flutteraar/Live功能实现报告.md)
+4. 如果flutter的dart原生能实现IOS和Android双平台的推流并播放，那么你就再实现两个Demo，这次后面备注是(跨平台)
