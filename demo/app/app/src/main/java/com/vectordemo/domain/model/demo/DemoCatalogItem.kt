@@ -11,5 +11,7 @@ enum class DemoRoute {
     HELLO,
     OSS_DEMO,
     CHAT_LIST_DEMO,
-    VOICE_AGENT
+    VOICE_AGENT,
+    LIVE_PUSH,
+    LIVE_PULL
 }

@@ -39,6 +39,18 @@ class MainVm : ViewModel() {
             title = "Voice Agent",
             subtitle = "离线唤醒 + VAD + STT + LLM",
             route = DemoRoute.VOICE_AGENT
+        ),
+        DemoCatalogItem(
+            id = "live_push",
+            title = "Live Push Demo",
+            subtitle = "RTMP + X264 实时推流（Android）",
+            route = DemoRoute.LIVE_PUSH
+        ),
+        DemoCatalogItem(
+            id = "live_pull",
+            title = "Live Pull Demo",
+            subtitle = "RTMP/HLS 拉流播放（Android）",
+            route = DemoRoute.LIVE_PULL
         )
     )
 
@@ -83,6 +95,8 @@ class MainVm : ViewModel() {
             DemoRoute.OSS_DEMO -> sendEffect(MainEffect.NavigateToOssDemo)
             DemoRoute.CHAT_LIST_DEMO -> sendEffect(MainEffect.NavigateToChatList)
             DemoRoute.VOICE_AGENT -> sendEffect(MainEffect.NavigateToVoiceAgent)
+            DemoRoute.LIVE_PUSH -> sendEffect(MainEffect.NavigateToLivePush)
+            DemoRoute.LIVE_PULL -> sendEffect(MainEffect.NavigateToLivePull)
         }
     }
 
@@ -131,5 +145,7 @@ sealed class MainEffect {
     data object NavigateToOssDemo : MainEffect()
     data object NavigateToChatList : MainEffect()
     data object NavigateToVoiceAgent : MainEffect()
+    data object NavigateToLivePush : MainEffect()
+    data object NavigateToLivePull : MainEffect()
     data object NavigateToLogin : MainEffect()
 }

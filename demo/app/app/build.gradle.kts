@@ -112,6 +112,10 @@ dependencies {
     // vad模型
     implementation(libs.onnxruntime.android)
     implementation(libs.tensorflow.lite.task.audio)
+    implementation(libs.androidx.media3.exoplayer)
+    implementation(libs.androidx.media3.exoplayer.hls)
+    implementation(libs.androidx.media3.datasource.rtmp)
+    implementation(libs.androidx.media3.ui)
 
     /// aar lib
     implementation(fileTree(mapOf("dir" to "../aarlib", "include" to listOf("*.jar", "*.aar"))))

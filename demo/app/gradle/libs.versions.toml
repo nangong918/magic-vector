@@ -19,6 +19,7 @@ onnxruntimeAndroid = "1.22.0"
 room = "2.8.4"
 converterGson = "3.0.0"
 tensorflowLiteTaskAudio = "0.4.4"
+media3 = "1.10.0"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -51,6 +52,10 @@ converter-gson = { module = "com.squareup.retrofit2:converter-gson", version.ref
 onnxruntime-android = { module = "com.microsoft.onnxruntime:onnxruntime-android", version.ref = "onnxruntimeAndroid" }
 retrofit = { module = "com.squareup.retrofit2:retrofit", version.ref = "converterGson" }
 tensorflow-lite-task-audio = { module = "org.tensorflow:tensorflow-lite-task-audio", version.ref = "tensorflowLiteTaskAudio" }
+androidx-media3-exoplayer = { module = "androidx.media3:media3-exoplayer", version.ref = "media3" }
+androidx-media3-exoplayer-hls = { module = "androidx.media3:media3-exoplayer-hls", version.ref = "media3" }
+androidx-media3-datasource-rtmp = { module = "androidx.media3:media3-datasource-rtmp", version.ref = "media3" }
+androidx-media3-ui = { module = "androidx.media3:media3-ui", version.ref = "media3" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

@@ -51,6 +51,12 @@ class MainActivity : BaseComponentActivity() {
                         MainEffect.NavigateToVoiceAgent -> {
                             startActivity(Intent(this@MainActivity, VoiceAgentActivity::class.java))
                         }
+                        MainEffect.NavigateToLivePush -> {
+                            startActivity(Intent(this@MainActivity, LivePushDemoActivity::class.java))
+                        }
+                        MainEffect.NavigateToLivePull -> {
+                            startActivity(Intent(this@MainActivity, LivePullDemoActivity::class.java))
+                        }
                         MainEffect.NavigateToLogin -> {
                             startActivity(Intent(this@MainActivity, LoginActivity::class.java).apply {
                                 flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
