@@ -1,6 +1,7 @@
 package com.demo.flutternew
 
 import com.demo.flutternew.manager.BatteryBridgeManager
+import com.demo.flutternew.manager.LiveDemoBridgeManager
 import com.demo.flutternew.manager.OfflineVoiceWakeUpManager
 import com.demo.flutternew.manager.VadBridgeManager
 import com.demo.flutternew.manager.WifiBridgeManager
@@ -13,6 +14,7 @@ class MainActivity : FlutterActivity() {
     private lateinit var batteryBridgeManager: BatteryBridgeManager
     private lateinit var offlineVoiceWakeUpManager: OfflineVoiceWakeUpManager
     private lateinit var vadBridgeManager: VadBridgeManager
+    private lateinit var liveDemoBridgeManager: LiveDemoBridgeManager
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
@@ -21,11 +23,13 @@ class MainActivity : FlutterActivity() {
         batteryBridgeManager = BatteryBridgeManager(this)
         offlineVoiceWakeUpManager = OfflineVoiceWakeUpManager(this)
         vadBridgeManager = VadBridgeManager(this)
+        liveDemoBridgeManager = LiveDemoBridgeManager(this)
 
         wifiBridgeManager.registerWith(flutterEngine)
         batteryBridgeManager.registerWith(flutterEngine)
         offlineVoiceWakeUpManager.registerWith(flutterEngine)
         vadBridgeManager.registerWith(flutterEngine)
+        liveDemoBridgeManager.registerWith(flutterEngine)
     }
 
     override fun onStart() {

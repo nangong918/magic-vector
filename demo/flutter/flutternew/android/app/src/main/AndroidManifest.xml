@@ -13,6 +13,7 @@
     <!-- Android 12+ 以上获取精确WiFi信息需要（可选） -->
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-permission android:name="android.permission.CAMERA" />
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
@@ -24,7 +25,9 @@
         android:label="VectorDemo"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher"
+        android:appComponentFactory="androidx.core.app.CoreComponentFactory"
         android:requestLegacyExternalStorage="true"
+        tools:replace="android:appComponentFactory"
         android:usesCleartextTraffic="true">
         <activity
             android:name=".MainActivity"
@@ -48,6 +51,12 @@
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
         </activity>
+        <activity
+            android:name=".live.activity.LivePushDemoActivity"
+            android:exported="false" />
+        <activity
+            android:name=".live.activity.LivePullDemoActivity"
+            android:exported="false" />
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->
         <meta-data

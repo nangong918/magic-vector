@@ -5,6 +5,10 @@ import 'package:flutternew/page/offline_ivw_page.dart';
 import 'package:flutternew/page/register_page.dart';
 import 'package:flutternew/page/start_page.dart';
 import 'package:flutternew/page/vad_page.dart';
+import 'package:flutternew/page/live_push_android_page.dart';
+import 'package:flutternew/page/live_pull_android_page.dart';
+import 'package:flutternew/page/live_push_cross_platform_page.dart';
+import 'package:flutternew/page/live_pull_cross_platform_page.dart';
 import 'package:flutternew/page/voice_agent_page.dart';
 import 'package:flutternew/page/xfyun_stt_page.dart';
 import 'package:flutternew/page/login_page.dart';
@@ -27,6 +31,10 @@ class AppRoutes {
   static const String vad = '/vad'; // VAD测试页
   static const String voiceAgent = '/voice-agent'; // 语音助手
   static const String ossDemo = '/oss-demo';
+  static const String livePushAndroid = '/live-push-android';
+  static const String livePullAndroid = '/live-pull-android';
+  static const String livePushCrossPlatform = '/live-push-cross-platform';
+  static const String livePullCrossPlatform = '/live-pull-cross-platform';
 }
 
 
@@ -91,6 +99,22 @@ final Map<String, WidgetBuilder> appRoutes = {
 
   AppRoutes.ossDemo: (BuildContext context) {
     return const OssDemoPage();
+  },
+
+  AppRoutes.livePushAndroid: (BuildContext context) {
+    return const LivePushAndroidPage();
+  },
+
+  AppRoutes.livePullAndroid: (BuildContext context) {
+    return const LivePullAndroidPage();
+  },
+
+  AppRoutes.livePushCrossPlatform: (BuildContext context) {
+    return const LivePushCrossPlatformPage();
+  },
+
+  AppRoutes.livePullCrossPlatform: (BuildContext context) {
+    return const LivePullCrossPlatformPage();
   },
 };
 

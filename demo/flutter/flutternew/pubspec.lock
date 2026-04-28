@@ -400,6 +400,22 @@ packages:
     description: flutter
     source: sdk
     version: "0.0.0"
+  flutter_vlc_player:
+    dependency: "direct main"
+    description:
+      name: flutter_vlc_player
+      sha256: "32c0109cc191a97246df759a8804a1051c4ca6909597833506f13587cb3bf1be"
+      url: "https://pub.flutter-io.cn"
+    source: hosted
+    version: "7.4.4"
+  flutter_vlc_player_platform_interface:
+    dependency: transitive
+    description:
+      name: flutter_vlc_player_platform_interface
+      sha256: "99fbb806f86ce1c53ba007157c183104a100aa643eda0cec7e71118bf0460578"
+      url: "https://pub.flutter-io.cn"
+    source: hosted
+    version: "2.0.5"
   flutter_web_plugins:
     dependency: transitive
     description: flutter
@@ -957,6 +973,14 @@ packages:
       url: "https://pub.flutter-io.cn"
     source: hosted
     version: "2.6.1"
+  rtmp_broadcaster:
+    dependency: "direct main"
+    description:
+      name: rtmp_broadcaster
+      sha256: cb560637b3d6c03283260684b707a770e24ba711478a04b71b5a7e78bb90d59e
+      url: "https://pub.flutter-io.cn"
+    source: hosted
+    version: "2.3.4"
   rxdart:
     dependency: transitive
     description:

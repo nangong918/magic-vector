@@ -66,6 +66,34 @@ class CatalogManager {
         iconRes: Icons.cloud_upload,
         routeName: AppRoutes.ossDemo,
       ),
+      CatalogItem(
+        id: "9",
+        title: "Live Push Demo (Android)",
+        subtitle: "MethodChannel 调起 Android 原生推流",
+        iconRes: Icons.videocam,
+        routeName: AppRoutes.livePushAndroid,
+      ),
+      CatalogItem(
+        id: "10",
+        title: "Live Pull Demo (Android)",
+        subtitle: "MethodChannel 调起 Android 原生拉流",
+        iconRes: Icons.live_tv,
+        routeName: AppRoutes.livePullAndroid,
+      ),
+      CatalogItem(
+        id: "11",
+        title: "Live Push Demo (跨平台)",
+        subtitle: "Dart + rtmp_broadcaster（Android/iOS）",
+        iconRes: Icons.camera_front,
+        routeName: AppRoutes.livePushCrossPlatform,
+      ),
+      CatalogItem(
+        id: "12",
+        title: "Live Pull Demo (跨平台)",
+        subtitle: "Dart + flutter_vlc_player（Android/iOS）",
+        iconRes: Icons.play_circle_fill,
+        routeName: AppRoutes.livePullCrossPlatform,
+      ),
     ];
   }
 

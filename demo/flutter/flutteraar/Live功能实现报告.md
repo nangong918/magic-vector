@@ -385,3 +385,110 @@ Flutter 不是更好的底层方案。
 3. 点击“一键转 HLS”后，验证 `http://<你的主机IP>:8080/hls/live/index.m3u8`；
 4. 如果 RTMP 不通但 HLS 通，优先检查 1935 端口与局域网访问策略；
 5. 如果 HLS 不通，检查 nginx 容器内 `/tmp/hls/live/index.m3u8` 是否生成。
+
+## 10. 本次迁移：同步到 `app` 与 `flutternew`
+
+### 10.1 AAR 同步说明
+
+按你的要求，本次已把 `aarlib-release.aar` 同步到两端消费工程使用：
+
+- `demo/app/aarlib/aarlib-release.aar`
+- `demo/flutter/flutternew/android/app/libs/aarlib-release.aar`
+
+说明：
+
+- 当前仓库内未包含 `flutteraar/aarlib/build/outputs/aar` 编译产物目录；
+- 因此本次先确保 `app` 与 `flutternew` 使用同一份 `aarlib-release.aar`，避免两端 SDK 版本不一致。
+
+### 10.2 `app`（Kotlin + Compose + MVI）已完成内容
+
+已在 `demo/app` 新增并接入 Live 推拉流 Demo：
+
+- 新增 Activity：
+  - `app/src/main/java/com/vectordemo/activity/LivePushDemoActivity.java`
+  - `app/src/main/java/com/vectordemo/activity/LivePullDemoActivity.java`
+- 新增 Camera2 工具：
+  - `app/src/main/java/com/vectordemo/live/camera/Camera2Helper.java`
+  - `app/src/main/java/com/vectordemo/live/camera/Camera2Listener.java`
+  - `app/src/main/java/com/vectordemo/live/util/YuvUtil.java`
+- 新增布局：
+  - `app/src/main/res/layout/activity_live_push_demo.xml`
+  - `app/src/main/res/layout/activity_live_pull_demo.xml`
+- Main 页导航接入：
+  - `DemoRoute` 增加 `LIVE_PUSH / LIVE_PULL`
+  - `MainVm` 增加入口与 Effect
+  - `MainActivity` 增加跳转分发
+- Manifest 与依赖：
+  - `AndroidManifest.xml` 增加 `CAMERA` 权限和两个 Activity 注册
+  - `gradle/libs.versions.toml` 与 `app/build.gradle.kts` 增加 Media3 播放依赖
+
+### 10.3 `flutternew` 已完成内容
+
+#### 10.3.1 Android 原生 Demo（按你要求标注 `(Android)`）
+
+为保持你原有“Flutter 调 Android Native”的迁移方式，已实现：
+
+- Android 原生页面：
+  - `android/app/src/main/java/com/demo/flutternew/live/activity/LivePushDemoActivity.java`
+  - `android/app/src/main/java/com/demo/flutternew/live/activity/LivePullDemoActivity.java`
+- Android Camera2 工具：
+  - `android/app/src/main/java/com/demo/flutternew/live/camera/Camera2Helper.java`
+  - `android/app/src/main/java/com/demo/flutternew/live/camera/Camera2Listener.java`
+  - `android/app/src/main/java/com/demo/flutternew/live/util/YuvUtil.java`
+- Android 布局：
+  - `android/app/src/main/res/layout/activity_live_push_demo.xml`
+  - `android/app/src/main/res/layout/activity_live_pull_demo.xml`
+- Flutter 通道桥接：
+  - `android/app/src/main/kotlin/com/demo/flutternew/manager/LiveDemoBridgeManager.kt`
+  - `MainActivity.kt` 完成 manager 注册
+- Flutter 页面（明确标注 Android）：
+  - `lib/page/live_push_android_page.dart`
+  - `lib/page/live_pull_android_page.dart`
+- Flutter 路由/目录接入：
+  - `lib/config/app_route.dart`
+  - `lib/manager/catalog_manager.dart`
+
+#### 10.3.2 纯 Dart 方案调研结论（Android+iOS）
+
+按你的要求上网核对后，纯 Dart + 插件路线可行：
+
+- **推流（跨平台）**：`rtmp_broadcaster`
+  - Android 基于 `rtmp-rtsp-stream-client-java`
+  - iOS 基于 `HaishinKit`
+- **拉流（跨平台）**：`flutter_vlc_player`
+  - 支持 RTMP/HLS 在 Android+iOS 播放
+
+因此满足你第 4 点条件（可实现双平台推流与播放）。
+
+#### 10.3.3 已新增 `(跨平台)` 两个 Demo
+
+本次已在 `flutternew` 落地：
+
+- `lib/page/live_push_cross_platform_page.dart`
+  - 基于 `rtmp_broadcaster`，支持摄像头预览、开始/停止推流、切换摄像头
+- `lib/page/live_pull_cross_platform_page.dart`
+  - 基于 `flutter_vlc_player`，支持 RTMP/HLS 地址播放与停止
+
+并已接入路由与目录入口：
+
+- `Live Push Demo (跨平台)`
+- `Live Pull Demo (跨平台)`
+
+同时完成必要依赖与平台配置：
+
+- `pubspec.yaml` 新增：
+  - `rtmp_broadcaster: ^2.3.4`
+  - `flutter_vlc_player: ^7.4.4`
+- `android/app/build.gradle.kts` 增加：
+  - Media3 依赖
+  - `packaging` 兼容配置（`project.clj` 排除、`libc++_shared.so` pickFirst）
+- `android/build.gradle.kts` + `android/settings.gradle.kts` 增加 `jitpack` 仓库
+- `ios/Runner/Info.plist` 增加：
+  - `NSCameraUsageDescription`
+  - `NSMicrophoneUsageDescription`
+  - `NSAppTransportSecurity/NSAllowsArbitraryLoads`
+
+补充：
+
+- 该仓库当前未包含 `flutternew/ios/Podfile` 文件；
+- 若你本地 iOS 编译遇到插件链接问题，请在本地 Podfile 中确认平台版本与插件要求一致（例如 `platform :ios, '9.0'` 及 Flutter 默认 post_install 配置），然后执行 `pod install`。

@@ -2,6 +2,7 @@ allprojects {
     repositories {
         google()
         mavenCentral()
+        maven("https://jitpack.io")
         // 正确写法：flatDir 放在 repositories 内部
         flatDir {
             // 指向 app 模块下的 libs 目录（AIKit.aar 所在位置）
