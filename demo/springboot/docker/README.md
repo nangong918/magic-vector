@@ -51,6 +51,31 @@ docker compose -f docker/docker-compose.yml up -d --build
 docker compose -f docker/docker-compose.yml ps
 ```
 
+## RTSP Service (MediaMTX)
+
+The compose file now includes a dedicated RTSP server:
+
+- service: `mediamtx`
+- host port: `8554`
+- example publish URL: `rtsp://<HOST_IP>:8554/live/stream`
+
+Start or restart with:
+
+```bash
+docker compose -f docker/docker-compose.yml up -d mediamtx
+```
+
+Quick check:
+
+```bash
+docker compose -f docker/docker-compose.yml ps mediamtx
+```
+
+Two-device verification flow:
+
+1. Device A opens `RTSP File Push Demo` and selects a local mp4, then pushes to `rtsp://<HOST_IP>:8554/live/stream`.
+2. Device B opens `Live Pull Demo`, fills `rtsp://<HOST_IP>:8554/live/stream`, and starts playback.
+
 ## Check Database Availability
 
 ```bash

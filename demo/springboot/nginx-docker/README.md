@@ -2,6 +2,8 @@
 
 本目录只在 **Docker Compose** 中使用，对应服务名为 `nginx`，镜像 `alfg/nginx-rtmp:latest`。与仓库根目录下的 `nginx-rtmp-win32-dev`（Windows 本机 RTMP）相互独立。
 
+> 注意：本 nginx 仅用于 RTMP/HLS，不提供 RTSP 服务。RTSP 由 `docker/docker-compose.yml` 中的 `mediamtx` 服务承载（默认 8554）。
+
 ## 目录说明
 
 | 路径 | 作用 |

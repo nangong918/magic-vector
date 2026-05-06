@@ -492,3 +492,170 @@ Flutter 不是更好的底层方案。
 
 - 该仓库当前未包含 `flutternew/ios/Podfile` 文件；
 - 若你本地 iOS 编译遇到插件链接问题，请在本地 Podfile 中确认平台版本与插件要求一致（例如 `platform :ios, '9.0'` 及 Flutter 默认 post_install 配置），然后执行 `pod install`。
+
+## 11. 本次新增：RTSP 文件推流实现结论（flutteraar）
+
+### 11.1 先回答你的关键问题：RTSP 要不要先配 nginx？
+
+结论：**你当前这份 nginx（`nginx-rtmp-module`）不能直接作为 RTSP 服务端**。  
+它支持的是 RTMP/HLS 这条链路，不是 RTSP 的 ANNOUNCE/SETUP/RECORD 会话模型。
+
+所以：
+
+- `nginx.conf` 不需要（也无法）通过简单改配置就变成 RTSP 推流服务；
+- RTSP 需要独立服务端（推荐 `MediaMTX`，也可用 SRS 的 RTSP 能力）。
+
+### 11.2 我这次是否完成了 RTSP 文件推流？
+
+结论：**已完成一个独立 Demo（不改你原 RTMP Demo 行为）**。
+
+已落地改动：
+
+- 新增独立页面：
+  - `app/src/main/java/com/example/flutteraar/ui/activity/LiveRtspFilePushDemoActivity.java`
+  - `app/src/main/res/layout/activity_live_rtsp_file_push_demo.xml`
+- 主页面新增入口：
+  - `app/src/main/java/com/example/flutteraar/MainActivity.java`
+- 注册 Activity：
+  - `app/src/main/AndroidManifest.xml`
+- 底层 FFmpeg 推流从“只支持 RTMP(FLV)”改为“按输出 URL 自动选择 RTMP/RTSP”：
+  - `aarlib/src/main/cpp/live/ff_rtmp_pusher.cpp`
+  - `aarlib/src/main/cpp/live/ff_rtmp_pusher.h`
+  - `aarlib/src/main/java/com/demo/aarlib/live/ffmpeg/FFmpegPushBridge.java`
+
+### 11.3 是否需要新增 C++ 依赖库？
+
+结论：**本次代码层面没有新增第三方 C++ 库**，继续复用你现有 `libffmpeg.so`。  
+但有一个前提：你的 `libffmpeg.so` 必须编译进了 `rtsp` 协议/复用器相关能力。
+
+如果本地运行 RTSP 推流时报 `Protocol not found` / `Could not write header`，说明当前 FFmpeg 裁剪配置不含 RTSP 输出能力，需要重编 `libffmpeg.so`。
+
+可参考下载/源码来源：
+
+- FFmpeg 官方源码：[https://ffmpeg.org/download.html](https://ffmpeg.org/download.html)
+- 你提供的 `FFmpegAndroid-master` 也可作为 Android 交叉编译脚本参考（其 PushActivity 默认仍走 RTMP 逻辑）。
+
+### 11.4 对你给的 `PushActivity.kt` 的判断
+
+`C:\\Github\\FFmpegAndroid-master\\app\\src\\main\\java\\com\\frank\\ffmpeg\\activity\\PushActivity.kt` 只是调用 `FFmpegPusher().pushStream(filePath, liveUrl)`，  
+其 native 侧同样使用 `ff_rtmp_pusher.cpp` 并写死 `flv` 输出格式，因此**它本身不能直接证明 RTSP 已可用**。
+
+### 11.5 你在 Docker(Linux) 上的最小可用建议
+
+推荐新增一个 RTSP 服务容器（如 MediaMTX），例如默认监听 `8554`，然后在新 Demo 填：
+
+- 输入源：`http://clips.vorwaerts-gmbh.de/big_buck_bunny.mp4`（或本地 mp4）
+- 输出：`rtsp://<你的服务器IP>:8554/live/stream`
+
+这条链路与现有 nginx 的 RTMP/HLS 链路可以并行存在，互不冲突。
+
+## 12. 本次补充完成：按你最新要求落地
+
+### 12.1 RTSP 推流页改为“本地 mp4 选择并推流”
+
+已在 `flutteraar` 完成：
+
+- `app/src/main/java/com/example/flutteraar/ui/activity/LiveRtspFilePushDemoActivity.java`
+  - 新增系统文件选择（SAF `OpenDocument`）；
+  - 支持点击按钮选择本地视频文件；
+  - 选中文件后自动复制到 App 缓存目录并回填可用本地路径；
+  - 保留 RTSP 地址校验，直接使用 FFmpeg 推流。
+- `app/src/main/res/layout/activity_live_rtsp_file_push_demo.xml`
+  - 新增按钮：`选择本地 mp4 文件`。
+
+这样你的 RTSP 方向就变成了“文件推流”链路，不影响原先 Camera2 的 RTMP 实时推流链路。
+
+### 12.2 Docker 环境新增 RTSP 服务（支持两机联调）
+
+已在你现有 compose 中新增 `mediamtx` 服务：
+
+- `demo/springboot/docker/docker-compose.yml`
+  - 新增 `mediamtx`（镜像 `bluenviron/mediamtx:latest`）；
+  - 暴露端口 `8554`。
+
+并补充文档：
+
+- `demo/springboot/docker/README.md`
+- `demo/springboot/nginx-docker/README.md`
+
+明确说明：
+
+- nginx 继续负责 RTMP/HLS；
+- RTSP 由 MediaMTX 承担；
+- 两者可并行运行。
+
+### 12.3 RTSP 拉流能力实现（复用原拉流 Demo）
+
+没有新建页面，直接复用并增强原 `Live Pull Demo`：
+
+- `app/src/main/java/com/example/flutteraar/ui/activity/LivePullDemoActivity.java`
+  - 新增 RTSP 播放逻辑；
+  - RTSP 分支使用 `RtspMediaSource.Factory().setForceUseRtpTcp(true)`，优先 TCP，便于局域网/端口场景联调；
+  - 新增“一键填写 RTSP 地址”能力（按当前 URL 主机生成 `rtsp://<host>:8554/live/stream`）。
+- `app/src/main/res/layout/activity_live_pull_demo.xml`
+  - 输入框提示改为 `RTMP/HLS/RTSP`；
+  - 新增按钮：`按当前主机一键填写 RTSP 地址`；
+  - 页面说明补充 RTSP 示例地址。
+- `gradle/libs.versions.toml`
+  - 新增依赖项 `media3-exoplayer-rtsp`。
+- `app/build.gradle`
+  - 新增 `implementation libs.media3.exoplayer.rtsp`。
+
+### 12.4 两台手机同 App 联调步骤（你要的目标流程）
+
+1. 启动服务端（在 `demo/springboot` 目录）：
+   - `docker compose -f docker/docker-compose.yml up -d nginx mediamtx`
+2. 手机 A：
+   - 打开 `RTSP File Push Demo`；
+   - 点击“选择本地 mp4 文件”；
+   - 输出地址填：`rtsp://<服务器IP>:8554/live/stream`；
+   - 点击开始推流。
+3. 手机 B：
+   - 打开 `Live Pull Demo`；
+   - 填同一个地址：`rtsp://<服务器IP>:8554/live/stream`；
+   - 点击开始拉流播放。
+
+### 12.5 不影响原 RTMP 能力的确认
+
+本次所有改动均为“新增与扩展”，未删除或替换你原 RTMP 推拉流链路：
+
+- 原 `LivePushDemoActivity`（Camera2 + AudioRecord + RTMP）保持不变；
+- 原 nginx RTMP/HLS 配置保持可用；
+- 拉流页在保留 RTMP/HLS 的基础上新增 RTSP。
+
+## 13. 实测问题修复记录（RTSP 推/拉流）
+
+### 13.1 现象与根因
+
+你反馈的 `RTSP 推流失败 code=-541478725`，结合 App 日志可定位为：
+
+- `ff_rtmp_pusher` 日志明确出现：`av_read_frame err=-541478725`；
+- 该错误是输入文件读到结尾（EOF），属于“文件推流正常结束”，不应当提示失败。
+
+同时，MediaMTX 日志里的 `i/o timeout` 与拉流端音频解码异常，和推流端时间戳处理有关：
+
+- 原实现直接使用文件原始时间戳做 sleep，同步时可能出现长等待；
+- RTSP 会话在长等待阶段被服务端判定超时；
+- 部分设备会因音频时间戳不连续触发 `AudioSink UnexpectedDiscontinuity`。
+
+### 13.2 本次修复
+
+已修复代码：
+
+- `aarlib/src/main/cpp/live/ff_rtmp_pusher.cpp`
+  - 将 `AVERROR_EOF` 视为正常完成（返回 `0`）；
+  - 对每路流的 `pts/dts` 做“从 0 开始”的归一化；
+  - 限制单次 sleep 上限（200ms），避免长时间无包触发 RTSP 超时；
+  - 输出时间戳做单调修正，降低播放器侧时间戳跳变风险；
+  - 仅在有效时间戳上做 rescale，避免 `AV_NOPTS_VALUE` 引发异常值。
+- `app/src/main/java/com/example/flutteraar/ui/activity/LivePullDemoActivity.java`
+  - RTSP 分支默认禁用音频轨（视频优先，提升设备兼容性，规避部分机型 AAC 解码崩溃）。
+
+### 13.3 修复后联调建议
+
+1. 先启动推流端并确认状态显示“RTSP 推流完成/进行中”；
+2. 在推流进行阶段尽快启动第二台手机拉流；
+3. 使用 `rtsp://<服务器IP>:8554/live/stream`；
+4. 若仍异常，优先采集两段日志：
+   - `ff_rtmp_pusher` 的 `open/push/write_frame` 日志；
+   - `LivePullDemoActivity` 的 `onPlayerError` 栈。

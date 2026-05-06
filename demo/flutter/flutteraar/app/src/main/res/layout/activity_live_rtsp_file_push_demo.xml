@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="16dp">
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="RTSP 文件推流 Demo"
+            android:textSize="20sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/tvRtspPushStatus"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="状态: 初始化中" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:text="输入源（本地路径 / 网络地址）"
+            android:textStyle="bold" />
+
+        <EditText
+            android:id="@+id/editRtspInputPath"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:hint="例如 http://.../demo.mp4 或 /sdcard/demo.mp4"
+            android:inputType="textUri" />
+
+        <Button
+            android:id="@+id/btnPickRtspInputFile"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="选择本地 mp4 文件" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:text="RTSP 输出地址"
+            android:textStyle="bold" />
+
+        <EditText
+            android:id="@+id/editRtspOutputUrl"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:hint="rtsp://ip:8554/live/stream"
+            android:inputType="textUri" />
+
+        <Button
+            android:id="@+id/btnStartRtspPush"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:text="开始 RTSP 文件推流" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:text="提示：Nginx-RTMP 模块不提供 RTSP 服务，请先启动 MediaMTX / SRS 等 RTSP 服务端。"
+            android:textColor="#666666" />
+    </LinearLayout>
+</ScrollView>

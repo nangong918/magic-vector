@@ -12,15 +12,16 @@ extern "C" {
 #endif
 
 /**
- * FFmpeg RTMP 推流器：
+ * FFmpeg 文件转推器：
  * - 打开输入媒体；
- * - 初始化 FLV/RTMP 输出；
+ * - 初始化 RTMP(FLV)/RTSP 输出；
  * - 循环转推音视频包。
  */
 class FFRtmpPusher {
 private:
     AVFormatContext *inFormatCtx = nullptr;
     AVFormatContext *outFormatCtx = nullptr;
+    AVDictionary *muxerOptions = nullptr;
 
     AVPacket packet;
     int video_index = -1;

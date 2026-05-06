@@ -34,7 +34,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="12dp"
-            android:hint="RTMP/HLS 地址"
+            android:hint="RTMP/HLS/RTSP 地址"
             android:inputType="textUri" />
 
         <Button
@@ -43,6 +43,13 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
             android:text="RTMP 地址一键转 HLS 预览地址" />
+
+        <Button
+            android:id="@+id/btnUseRtsp"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="按当前主机一键填写 RTSP 地址" />
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -70,7 +77,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="16dp"
-            android:text="说明：\n1. RTMP 直拉: rtmp://IP:1935/stream/live\n2. HLS 拉流: http://IP:8080/hls/live/index.m3u8\n3. 你可先在 Live Push Demo 推流，再到此页播放。"
+            android:text="说明：\n1. RTMP 直拉: rtmp://IP:1935/stream/live\n2. HLS 拉流: http://IP:8080/hls/live/index.m3u8\n3. RTSP 拉流: rtsp://IP:8554/live/stream\n4. 你可先在推流页推流，再到此页播放。"
             android:textSize="13sp" />
     </LinearLayout>
 </ScrollView>

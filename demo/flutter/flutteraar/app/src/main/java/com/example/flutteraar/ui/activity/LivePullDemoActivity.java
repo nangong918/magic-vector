@@ -16,10 +16,12 @@ import androidx.media3.common.C;
 import androidx.media3.common.MediaItem;
 import androidx.media3.common.PlaybackException;
 import androidx.media3.common.Player;
+import androidx.media3.common.TrackSelectionParameters;
 import androidx.media3.common.util.UnstableApi;
 import androidx.media3.datasource.DefaultDataSource;
 import androidx.media3.exoplayer.ExoPlayer;
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory;
+import androidx.media3.exoplayer.rtsp.RtspMediaSource;
 import androidx.media3.ui.PlayerView;
 
 import com.example.flutteraar.R;
@@ -30,7 +32,8 @@ import java.util.List;
  * Live 拉流播放 Demo：
  * 1) 支持 RTMP 拉流（依赖 media3-datasource-rtmp）；
  * 2) 支持 HLS 拉流（m3u8）；
- * 3) 支持把 RTMP 推流地址快速转换为 nginx HLS 预览地址。
+ * 3) 支持 RTSP 拉流（依赖 media3-exoplayer-rtsp）；
+ * 4) 支持把 RTMP 推流地址快速转换为 nginx HLS 预览地址。
  */
 public class LivePullDemoActivity extends AppCompatActivity {
     private static final String TAG = "LivePullDemoActivity";
@@ -41,6 +44,7 @@ public class LivePullDemoActivity extends AppCompatActivity {
     private Button btnPlayPull;
     private Button btnStopPull;
     private Button btnUseHls;
+    private Button btnUseRtsp;
 
     private ExoPlayer player;
     private boolean pullPlaying;
@@ -61,9 +65,10 @@ public class LivePullDemoActivity extends AppCompatActivity {
         btnPlayPull = findViewById(R.id.btnPlayPull);
         btnStopPull = findViewById(R.id.btnStopPull);
         btnUseHls = findViewById(R.id.btnUseHls);
+        btnUseRtsp = findViewById(R.id.btnUseRtsp);
 
         editPullUrl.setText("rtmp://192.168.1.3:1935/stream/live");
-        updateStatus("请输入 RTMP/HLS 地址并开始播放");
+        updateStatus("请输入 RTMP/HLS/RTSP 地址并开始播放");
         updateButtons();
     }
 
@@ -71,17 +76,29 @@ public class LivePullDemoActivity extends AppCompatActivity {
         btnPlayPull.setOnClickListener(v -> startPullPlay());
         btnStopPull.setOnClickListener(v -> stopPullPlay("已停止拉流播放"));
         btnUseHls.setOnClickListener(v -> fillHlsUrlFromRtmp());
+        btnUseRtsp.setOnClickListener(v -> fillRtspUrlByCurrentHost());
     }
 
+    @OptIn(markerClass = UnstableApi.class)
     private void startPullPlay() {
         String pullUrl = editPullUrl.getText().toString().trim();
         if (TextUtils.isEmpty(pullUrl)) {
-            editPullUrl.setError("请输入 RTMP 或 HLS 地址");
+            editPullUrl.setError("请输入 RTMP / HLS / RTSP 地址");
             return;
         }
         ensurePlayer();
         try {
-            player.setMediaItem(MediaItem.fromUri(Uri.parse(pullUrl)));
+            Uri uri = Uri.parse(pullUrl);
+            if (isRtspUrl(pullUrl)) {
+                applyRtspPlaybackPreference(true);
+                RtspMediaSource mediaSource = new RtspMediaSource.Factory()
+                        .setForceUseRtpTcp(true)
+                        .createMediaSource(MediaItem.fromUri(uri));
+                player.setMediaSource(mediaSource);
+            } else {
+                applyRtspPlaybackPreference(false);
+                player.setMediaItem(MediaItem.fromUri(uri));
+            }
             player.prepare();
             player.play();
             pullPlaying = true;
@@ -178,6 +195,38 @@ public class LivePullDemoActivity extends AppCompatActivity {
         editPullUrl.setText(hlsUrl);
         editPullUrl.setSelection(hlsUrl.length());
         updateStatus("已转换为 HLS 地址");
+    }
+
+    private void fillRtspUrlByCurrentHost() {
+        String pullUrl = editPullUrl.getText().toString().trim();
+        String host = null;
+        if (!TextUtils.isEmpty(pullUrl)) {
+            Uri uri = Uri.parse(pullUrl);
+            host = uri.getHost();
+        }
+        if (TextUtils.isEmpty(host)) {
+            host = "192.168.1.3";
+            Toast.makeText(this, "未识别到主机，已使用默认主机 192.168.1.3", Toast.LENGTH_SHORT).show();
+        }
+        String rtspUrl = "rtsp://" + host + ":8554/live/stream";
+        editPullUrl.setText(rtspUrl);
+        editPullUrl.setSelection(rtspUrl.length());
+        updateStatus("已填写 RTSP 地址（MediaMTX 默认端口 8554）");
+    }
+
+    private boolean isRtspUrl(String url) {
+        return url.startsWith("rtsp://");
+    }
+
+    private void applyRtspPlaybackPreference(boolean rtspMode) {
+        if (player == null) {
+            return;
+        }
+        TrackSelectionParameters params = player.getTrackSelectionParameters()
+                .buildUpon()
+                .setTrackTypeDisabled(C.TRACK_TYPE_AUDIO, rtspMode)
+                .build();
+        player.setTrackSelectionParameters(params);
     }
 
     @SuppressLint("SetTextI18n")

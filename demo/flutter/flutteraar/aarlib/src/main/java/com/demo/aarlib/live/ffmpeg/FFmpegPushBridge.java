@@ -9,7 +9,7 @@ import java.util.concurrent.Executors;
 
 /**
  * FFmpeg 文件推流桥接类：
- * 支持同步和异步两种方式将输入媒体转推到 RTMP。
+ * 支持同步和异步两种方式将输入媒体转推到 RTMP / RTSP。
  */
 public final class FFmpegPushBridge {
     private static final String TAG = "FFmpegPushBridge";
@@ -44,30 +44,30 @@ public final class FFmpegPushBridge {
      * 同步执行 FFmpeg 推流。
      *
      * @param inputPath 输入媒体路径（本地或网络）
-     * @param liveUrl   RTMP 地址
+     * @param outputUrl 推流目标地址（RTMP / RTSP）
      * @return native 推流返回码
      */
-    public static int pushStream(String inputPath, String liveUrl) {
+    public static int pushStream(String inputPath, String outputUrl) {
         if (inputPath == null || inputPath.trim().isEmpty()) {
             throw new IllegalArgumentException("inputPath must not be empty");
         }
-        if (liveUrl == null || liveUrl.trim().isEmpty()) {
-            throw new IllegalArgumentException("liveUrl must not be empty");
+        if (outputUrl == null || outputUrl.trim().isEmpty()) {
+            throw new IllegalArgumentException("outputUrl must not be empty");
         }
-        Log.i(TAG, "pushStream, input=" + inputPath + ", liveUrl=" + liveUrl);
-        return nativePushStream(inputPath.trim(), liveUrl.trim());
+        Log.i(TAG, "pushStream, input=" + inputPath + ", outputUrl=" + outputUrl);
+        return nativePushStream(inputPath.trim(), outputUrl.trim());
     }
 
     /**
      * 异步执行 FFmpeg 推流，并在主线程触发回调。
      *
      * @param inputPath 输入媒体路径
-     * @param liveUrl   RTMP 地址
+     * @param outputUrl 推流目标地址（RTMP / RTSP）
      * @param callback  可选回调
      */
-    public static void pushStreamAsync(String inputPath, String liveUrl, Callback callback) {
+    public static void pushStreamAsync(String inputPath, String outputUrl, Callback callback) {
         EXECUTOR.execute(() -> {
-            int resultCode = pushStream(inputPath, liveUrl);
+            int resultCode = pushStream(inputPath, outputUrl);
             Log.i(TAG, "pushStreamAsync finished, resultCode=" + resultCode);
             if (callback == null) {
                 return;
