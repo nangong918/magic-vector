@@ -149,3 +149,34 @@ flutter先不用修改，等下App我审核通过再喊你改
 
 flutter的live推拉流的（Android）不对把，我的期望是跟Android那边是打开就是相同的功能，而不是再点击按钮跳转，而且你这个跳转点击就报错闪退啊。
 修改成我期望的调用原生android方法实现。
+
+
+### FFmepge + RTSP 文件推流
+
+我现在想要实现RTSP及逆行文件推流，我之前已经实现了RTMP直播推流，我的Nginx配置在：[nginx.conf](../demo/springboot/nginx-docker/conf/nginx.conf)[mime.types](../demo/springboot/nginx-docker/conf/mime.types)
+现在我希望也实现RTSP直播文件推流，首先我认为应该配置nginx实现RTSP支持对不对？
+然后你其实可以参考我的RTMP代码：（原来的RTMP的demo已经实现完成咯，我已经测过没问题了，你不要动。你写文件推流要写心得Demo）
+推流：[LivePushDemoActivity.java](../demo/flutter/flutteraar/app/src/main/java/com/example/flutteraar/ui/activity/LivePushDemoActivity.java)
+拉流：[LivePullDemoActivity.java](../demo/flutter/flutteraar/app/src/main/java/com/example/flutteraar/ui/activity/LivePullDemoActivity.java)
+我不知道你能不能完成RTSP推流，因为其实你也看得到我的底层是有JNI支持的，我是上网去下载的RTMP的。所以我猜测RTSP也需要下载Cpp依赖库导入项目，
+如果需要你可以直接不用完成这个任务了，直接跟我是哦为什么，以及我去哪里下载对应的RTSP资源，写在[Live功能实现报告.md](../demo/flutter/flutteraar/Live功能实现报告.md)
+如果不需要下载，你就直接完成，当然怎么完成的你也直接写在报告里面。
+对了如果RTSP没cpp依赖库你无法完成，你就看下这个：C:\Github\FFmpegAndroid-master\app\src\main\java\com\frank\ffmpeg\activity\PushActivity.kt
+这个是我从github上面拉下来的FFmpeg推流，你看看能不能推流文件？或者说实现RTSP推流，如果可以或者不可以，都写到文档[Live功能实现报告.md](../demo/flutter/flutteraar/Live功能实现报告.md)
+当然如果可以那么你就直接实现一个demo呗：[flutteraar](../demo/flutter/flutteraar)
+实现规则你可以看[README.md](../demo/flutter/flutteraar/README.md)
+如果FFmpeg和RTSP是两个不同的架构的话，那你就要写两个Demo咯，
+顺便一说，我的Nginx是部署在Docker镜像中的，也就是Linux环境。
+
+
+#### 补充
+我有问题：
+1. 这个demo有没有点击选择本地mp4进行推流的功能，就是选择本地媒体进行推流
+2. 这个demo是否需要Nginx修改配置？还是现在的配置就可以直接推RTSP流了？
+3. 需不需要新加一个拉取RTSP的Demo？还是原先的拉取RTMP的Demo就可以复用Media3播放？
+
+#### 完成
+那你现在能帮我完成任务吗？
+1. 因为我觉得实时摄像头这种直播推流是RTMP合适，RTSP是推流文件，所以你的demo改为选择本地的mp4进行推流u。
+2. 你看看能否想办法帮我搭建一个能支持rtsp推流的环境，就是我现在开启两个手机的同一个app，第一个App打开推流demo，推出RTSP文件流，然后第二个手机也是这个App的拉流demo然后播放拉流地址的文件流。
+3. 你看看怎么帮我实现拉RTSP流？复用或者是开新demo都可以。但是不要让之前的RTMP代码失效。
