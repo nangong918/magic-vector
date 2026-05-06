@@ -180,3 +180,12 @@ flutter的live推拉流的（Android）不对把，我的期望是跟Android那�
 1. 因为我觉得实时摄像头这种直播推流是RTMP合适，RTSP是推流文件，所以你的demo改为选择本地的mp4进行推流u。
 2. 你看看能否想办法帮我搭建一个能支持rtsp推流的环境，就是我现在开启两个手机的同一个app，第一个App打开推流demo，推出RTSP文件流，然后第二个手机也是这个App的拉流demo然后播放拉流地址的文件流。
 3. 你看看怎么帮我实现拉RTSP流？复用或者是开新demo都可以。但是不要让之前的RTMP代码失效。
+
+
+#### 补充任务
+你看你写的这个功能：[LiveRtspFilePushDemoActivity.java](../demo/flutter/flutteraar/app/src/main/java/com/example/flutteraar/ui/activity/LiveRtspFilePushDemoActivity.java)
+这个功能我验证过了是完全OK的，
+但是我现在希望新的功能：我现在能推流，但是我发现推流界面我没法看视频播了多少了，也没法回拉进度条，怎么做到上述功能呢？如果可以实现就帮我实现一下。
+
+* 这个可以预览，但是拖拽进度条好像不能真正的干涉播放进度，你看看能不能实现这个业务，通过拖拽进度条同事干涉预览和推流进度？
+
