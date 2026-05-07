@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="12dp">
+
+    <TextView
+        android:id="@+id/tvCloudPlayerStatus"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="状态: 初始化中" />
+
+    <androidx.media3.ui.PlayerView
+        android:id="@+id/playerViewCloud"
+        android:layout_width="match_parent"
+        android:layout_height="240dp"
+        android:layout_marginTop="8dp" />
+
+    <Button
+        android:id="@+id/btnSaveHlsLocal"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:text="保存 HLS 到本地" />
+
+    <Button
+        android:id="@+id/btnPlayLocalHls"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:text="播放本地缓存 HLS" />
+
+    <Button
+        android:id="@+id/btnConvertHlsMp4"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:text="FFmpeg 转 MP4 并下载" />
+
+</LinearLayout>

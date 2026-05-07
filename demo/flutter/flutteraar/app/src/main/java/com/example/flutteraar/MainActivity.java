@@ -13,6 +13,8 @@ import com.example.flutteraar.domain.entity.DemoItem;
 import com.example.flutteraar.ui.activity.LivePullDemoActivity;
 import com.example.flutteraar.ui.activity.LivePushDemoActivity;
 import com.example.flutteraar.ui.activity.LiveRtspFilePushDemoActivity;
+import com.example.flutteraar.ui.activity.LocalMediaDemoActivity;
+import com.example.flutteraar.ui.activity.CloudMediaDemoActivity;
 import com.example.flutteraar.ui.activity.WifiDemoActivity;
 import com.example.flutteraar.ui.activity.BatteryDemoActivity;
 import com.example.flutteraar.ui.activity.IvwDemoActivity;
@@ -43,7 +45,9 @@ public class MainActivity extends AppCompatActivity {
                 new DemoItem("VAD Demo", "Silero/WebRTC/Yamnet 三种VAD切换测试", VADMainActivity.class),
                 new DemoItem("Live Push Demo", "Camera2 + AudioRecord 验证 RTMP/FFmpeg 推流 SDK", LivePushDemoActivity.class),
                 new DemoItem("Live Pull Demo", "Media3 播放 RTMP/HLS 实时流", LivePullDemoActivity.class),
-                new DemoItem("RTSP File Push Demo", "FFmpeg 文件转推到 RTSP（独立页面）", LiveRtspFilePushDemoActivity.class)
+                new DemoItem("RTSP File Push Demo", "FFmpeg 文件转推到 RTSP（独立页面）", LiveRtspFilePushDemoActivity.class),
+                new DemoItem("Local Media Demo", "固定目录本地视频播放 + WorkManager 断点续传上传", LocalMediaDemoActivity.class),
+                new DemoItem("Cloud Media Demo", "云端视频列表 + HLS 播放 + HLS本地缓存 + FFmpeg转MP4", CloudMediaDemoActivity.class)
         );
         DemoListAdapter adapter = new DemoListAdapter(demoItems, item ->
                 startActivity(new Intent(MainActivity.this, item.getTargetActivity())));
