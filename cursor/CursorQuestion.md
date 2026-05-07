@@ -213,3 +213,27 @@ docker相关在[docker](../demo/springboot/docker)，数据库在[db](../demo/sp
   然后list这个view右边有两个按钮一个是播放一个是下载，播放是打开新的activity直接播放m3u8，下载是直接调用后端的下载mp4的功能，不用碎尸万断的视频。
   而如果打开页面之后那么就需要用mu38或者DASH来播放流，然后这个流前端可以下载到本地，可以以m3u8的形式保存，不要求直接转为mp4，但是要有转为mp4的选项，具体怎么转可能要你查询FFmpeg是否能实现。
 
+总的来说你需要创建两个Androiddemo，是：本地media demo（功能：播放本地视频，上传本地视频到云上），云上Media Demo（功能：播放云上碎片流视频，碎片视频用FFmpeg保存本地）
+
+
+#### 补充
+
+我认为你这样修改不妥，我认为上传成功视频是要提取出大小，时长，码率以及封面的，提取的封面保存在minio，你可以参考ossController是怎么保存以及怎么获取url的。
+我认为在Android那边获取视频播放源的时候封面的图片要来自于minio生成的url，逻辑仍然是参考ossController。
+对了我认为只有提取成功封面才视为上传成功，否者报错视频的相关的问题。
+还有我希望Android的list的item要展示视频大小单位MB，时长，码率，封面，以及名称，如果视频没有在数据库存名称，就用存储的视频名称，也就是默认名称。
+也就是说现在需要你修改数据库的表，修改springboot，修改Android。
+
+
+#### 修复SQL
+
+首先啊，我发现我对你以前写SQL都没要求，首先[vector_demo.sql](../demo/springboot/db/vector_demo.sql)这里面只能写创建表啊，你为什么要写那么复杂？
+SET，UPDATE全部取消你搞得好乱啊，
+而且我刚刚执行了：
+```shell
+PS C:\CodeLearning\magic-vector\demo\springboot> docker compose -f docker/docker-compose.yml up -d --build
+```
+但是好像docker中的mysql表并没有更新，你现在检查一下docker-compose的逻辑，是不是检查sql没变化就不清空数据，如果变化了就更新数据库？
+能不能实现每次docker-compose build的时候都不删除原先数据，但是能更新表的结构？如果不行就改成DROP TABLE IF EXISTS
+
+
