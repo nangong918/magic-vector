@@ -13,22 +13,26 @@ import androidx.media3.common.PlaybackException;
 import androidx.media3.common.Player;
 import androidx.media3.exoplayer.ExoPlayer;
 import androidx.media3.ui.PlayerView;
+import androidx.work.Constraints;
+import androidx.work.Data;
+import androidx.work.ExistingWorkPolicy;
+import androidx.work.NetworkType;
+import androidx.work.OneTimeWorkRequest;
+import androidx.work.WorkInfo;
+import androidx.work.WorkManager;
 
 import com.example.flutteraar.R;
 import com.example.flutteraar.media.MediaDemoConfig;
 import com.example.flutteraar.media.SimpleHttpClient;
-
-import org.json.JSONObject;
+import com.example.flutteraar.media.worker.HlsToMp4Worker;
 
 import java.io.File;
 import java.io.FileOutputStream;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
-import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -46,20 +50,29 @@ public class CloudVideoPlayerActivity extends AppCompatActivity {
     private Button btnConvertMp4;
 
     private ExoPlayer player;
+    private WorkManager workManager;
     private String hlsUrl;
     private String fileId;
     private String fileName;
+    private String convertUniqueWorkName;
     private File localPlaylistFile;
+    private ConvertUiState cloudConvertState;
+    private String lastCompletedConvertWorkId = "";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_cloud_video_player);
         setTitle("云上 HLS 播放");
+        workManager = WorkManager.getInstance(this);
         bindViews();
         readExtras();
+        if (isFinishing()) {
+            return;
+        }
         initPlayer();
         initActions();
+        observeConvertState();
     }
 
     private void bindViews() {
@@ -80,6 +93,7 @@ public class CloudVideoPlayerActivity extends AppCompatActivity {
             finish();
             return;
         }
+        convertUniqueWorkName = HlsToMp4Worker.buildUniqueWorkName(fileId);
         updateStatus("准备播放: " + hlsUrl);
     }
 
@@ -113,7 +127,81 @@ public class CloudVideoPlayerActivity extends AppCompatActivity {
                 playUrl(Uri.fromFile(localPlaylistFile).toString());
             }
         });
-        btnConvertMp4.setOnClickListener(v -> convertAndDownloadMp4());
+        btnConvertMp4.setOnClickListener(v -> toggleConvertMp4Task());
+    }
+
+    private void observeConvertState() {
+        workManager.getWorkInfosForUniqueWorkLiveData(convertUniqueWorkName).observe(this, workInfos -> {
+            if (workInfos == null || workInfos.isEmpty()) {
+                if (cloudConvertState == null || !cloudConvertState.isActive()) {
+                    btnConvertMp4.setText("FFmpeg 转 MP4 并下载");
+                }
+                return;
+            }
+            WorkInfo workInfo = workInfos.get(0);
+            cloudConvertState = ConvertUiState.from(workInfo);
+            applyConvertUiState(cloudConvertState);
+            if (cloudConvertState.isSuccess()) {
+                String workId = workInfo.getId().toString();
+                if (!workId.equals(lastCompletedConvertWorkId)) {
+                    lastCompletedConvertWorkId = workId;
+                    String outputPath = cloudConvertState.outputPath;
+                    Toast.makeText(this, "转码完成: " + outputPath, Toast.LENGTH_LONG).show();
+                }
+            }
+        });
+    }
+
+    private void applyConvertUiState(ConvertUiState state) {
+        if (state.isActive()) {
+            btnConvertMp4.setText("停止转码");
+            if (state.total > 0) {
+                int progress = (int) Math.min(100, (state.downloaded * 100 / state.total));
+                updateStatus("FFmpeg 转 MP4 进行中: " + progress + "%  " + state.status);
+            } else {
+                updateStatus("FFmpeg 转 MP4 进行中: " + state.status);
+            }
+            return;
+        }
+        if (state.isSuccess()) {
+            btnConvertMp4.setText("重新转码");
+            updateStatus("FFmpeg 转 MP4完成: " + state.outputPath);
+            return;
+        }
+        if (state.state == WorkInfo.State.CANCELLED) {
+            btnConvertMp4.setText("继续转码");
+            updateStatus("FFmpeg 转 MP4 已停止");
+            return;
+        }
+        if (state.state == WorkInfo.State.FAILED) {
+            btnConvertMp4.setText("重试转码");
+            updateStatus("FFmpeg 转 MP4 失败: " + state.status);
+            return;
+        }
+        btnConvertMp4.setText("FFmpeg 转 MP4 并下载");
+    }
+
+    private void toggleConvertMp4Task() {
+        if (cloudConvertState != null && cloudConvertState.isActive()) {
+            workManager.cancelUniqueWork(convertUniqueWorkName);
+            Toast.makeText(this, "已停止转码任务", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        Data data = new Data.Builder()
+                .putString(HlsToMp4Worker.KEY_FILE_ID, fileId)
+                .putString(HlsToMp4Worker.KEY_FILE_NAME, fileName)
+                .putString(HlsToMp4Worker.KEY_BASE_URL, MediaDemoConfig.SERVER_BASE_URL)
+                .build();
+        Constraints constraints = new Constraints.Builder()
+                .setRequiredNetworkType(NetworkType.CONNECTED)
+                .build();
+        OneTimeWorkRequest request = new OneTimeWorkRequest.Builder(HlsToMp4Worker.class)
+                .setInputData(data)
+                .setConstraints(constraints)
+                .addTag(HlsToMp4Worker.TAG_CONVERT)
+                .build();
+        workManager.enqueueUniqueWork(convertUniqueWorkName, ExistingWorkPolicy.REPLACE, request);
+        updateStatus("已提交 FFmpeg 转 MP4 任务...");
     }
 
     private void playUrl(String url) {
@@ -171,53 +259,6 @@ public class CloudVideoPlayerActivity extends AppCompatActivity {
         });
     }
 
-    private void convertAndDownloadMp4() {
-        btnConvertMp4.setEnabled(false);
-        ioExecutor.execute(() -> {
-            try {
-                Map<String, String> form = new HashMap<>();
-                form.put("fileId", fileId);
-                JSONObject response = SimpleHttpClient.postForm(
-                        MediaDemoConfig.SERVER_BASE_URL + "/video/cloud/hls/to-mp4",
-                        form
-                );
-                JSONObject data = requireResponseData(response);
-                String downloadUrl = data.optString("downloadUrl", "");
-                if (downloadUrl.isEmpty()) {
-                    throw new IllegalStateException("downloadUrl empty");
-                }
-                String safeName = (fileName == null || fileName.trim().isEmpty()) ? "cloud_video" : fileName;
-                safeName = safeName.replaceAll("[\\\\/:*?\"<>|]", "_");
-                File target = new File(MediaDemoConfig.getCloudDownloadDir(this), safeName + "_hls.mp4");
-                SimpleHttpClient.downloadToFile(downloadUrl, target, (downloaded, total) -> runOnUiThread(() ->
-                        updateStatus("FFmpeg 转 MP4 下载中: " + downloaded + "/" + total)));
-                runOnUiThread(() -> {
-                    updateStatus("FFmpeg 转 MP4完成: " + target.getAbsolutePath());
-                    btnConvertMp4.setEnabled(true);
-                    Toast.makeText(this, "已下载: " + target.getAbsolutePath(), Toast.LENGTH_LONG).show();
-                });
-            } catch (Exception e) {
-                runOnUiThread(() -> {
-                    btnConvertMp4.setEnabled(true);
-                    updateStatus("FFmpeg 转 MP4 失败: " + e.getMessage());
-                    Toast.makeText(this, "转换失败: " + e.getMessage(), Toast.LENGTH_LONG).show();
-                });
-            }
-        });
-    }
-
-    private JSONObject requireResponseData(JSONObject response) {
-        String code = response.optString("code", "400");
-        if (!"200".equals(code)) {
-            throw new IllegalStateException(response.optString("message", "request-failed"));
-        }
-        JSONObject data = response.optJSONObject("data");
-        if (data == null) {
-            throw new IllegalStateException("response-data-empty");
-        }
-        return data;
-    }
-
     private List<String> readLines(String text) {
         List<String> lines = new ArrayList<>();
         int start = 0;
@@ -246,5 +287,53 @@ public class CloudVideoPlayerActivity extends AppCompatActivity {
         }
         ioExecutor.shutdownNow();
         super.onDestroy();
+    }
+
+    private static class ConvertUiState {
+        private final WorkInfo.State state;
+        private final long downloaded;
+        private final long total;
+        private final String status;
+        private final String outputPath;
+
+        private ConvertUiState(WorkInfo.State state, long downloaded, long total, String status, String outputPath) {
+            this.state = state;
+            this.downloaded = downloaded;
+            this.total = total;
+            this.status = status;
+            this.outputPath = outputPath;
+        }
+
+        private static ConvertUiState from(WorkInfo workInfo) {
+            Data progress = workInfo.getProgress();
+            Data output = workInfo.getOutputData();
+            long downloaded = progress.getLong(HlsToMp4Worker.KEY_DOWNLOADED,
+                    output.getLong(HlsToMp4Worker.KEY_DOWNLOADED, 0L));
+            long total = progress.getLong(HlsToMp4Worker.KEY_TOTAL,
+                    output.getLong(HlsToMp4Worker.KEY_TOTAL, 0L));
+            String status = progress.getString(HlsToMp4Worker.KEY_STATUS);
+            if (status == null) {
+                status = output.getString(HlsToMp4Worker.KEY_STATUS);
+            }
+            String outputPath = progress.getString(HlsToMp4Worker.KEY_OUTPUT_PATH);
+            if (outputPath == null) {
+                outputPath = output.getString(HlsToMp4Worker.KEY_OUTPUT_PATH);
+            }
+            return new ConvertUiState(
+                    workInfo.getState(),
+                    downloaded,
+                    total,
+                    status == null ? "" : status,
+                    outputPath == null ? "" : outputPath
+            );
+        }
+
+        private boolean isActive() {
+            return state == WorkInfo.State.RUNNING || state == WorkInfo.State.ENQUEUED;
+        }
+
+        private boolean isSuccess() {
+            return state == WorkInfo.State.SUCCEEDED;
+        }
     }
 }

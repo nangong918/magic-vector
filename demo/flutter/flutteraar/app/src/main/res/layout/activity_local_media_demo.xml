@@ -8,51 +8,205 @@
     <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="本地 Media Demo（固定目录扫描 + 断点续传上传）"
+        android:text="本地 Media Demo（向下滚动查看云下载视频）"
         android:textSize="18sp"
         android:textStyle="bold" />
 
     <TextView
-        android:id="@+id/tvLocalVideoFolder"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
+        android:layout_marginTop="4dp"
+        android:text="第一页：本地离线目录  第二页：cloud-download  第三页：HLS缓存  第四页：HLS转MP4"
         android:textSize="12sp" />
 
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
-        android:orientation="horizontal">
-
-        <Button
-            android:id="@+id/btnRefreshLocalVideoList"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="刷新本地视频列表" />
-
-        <Button
-            android:id="@+id/btnImportOfflineVideo"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="8dp"
-            android:layout_weight="1"
-            android:text="导入离线视频" />
-    </LinearLayout>
-
-    <TextView
-        android:id="@+id/tvLocalHint"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
-        android:textSize="13sp" />
-
-    <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/recyclerLocalVideoList"
+    <androidx.core.widget.NestedScrollView
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_marginTop="8dp"
-        android:layout_weight="1" />
+        android:layout_weight="1"
+        android:fillViewport="true">
 
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="第1页：离线本地视频（可上传云端）"
+                android:textSize="16sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/tvLocalVideoFolder"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:textSize="12sp" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:orientation="horizontal">
+
+                <Button
+                    android:id="@+id/btnRefreshLocalVideoList"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="刷新本地视频列表" />
+
+                <Button
+                    android:id="@+id/btnImportOfflineVideo"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="8dp"
+                    android:layout_weight="1"
+                    android:text="导入离线视频" />
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/tvLocalHint"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:textSize="13sp" />
+
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/recyclerLocalVideoList"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:nestedScrollingEnabled="false" />
+
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:layout_marginTop="16dp"
+                android:background="#22000000" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:text="第2页：云端下载到本地的视频（cloud-download）"
+                android:textSize="16sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/tvCloudDownloadFolder"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:textSize="12sp" />
+
+            <Button
+                android:id="@+id/btnRefreshCloudDownloadVideoList"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:text="刷新云下载视频列表" />
+
+            <TextView
+                android:id="@+id/tvCloudDownloadHint"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:textSize="13sp" />
+
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/recyclerCloudDownloadVideoList"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:nestedScrollingEnabled="false" />
+
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:layout_marginTop="16dp"
+                android:background="#22000000" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:text="第3页：HLS 缓存（hls-cache）"
+                android:textSize="16sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/tvHlsCacheFolder"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:textSize="12sp" />
+
+            <Button
+                android:id="@+id/btnRefreshHlsCacheList"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:text="刷新 HLS 缓存列表" />
+
+            <TextView
+                android:id="@+id/tvHlsCacheHint"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:textSize="13sp" />
+
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/recyclerHlsCacheList"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:nestedScrollingEnabled="false" />
+
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:layout_marginTop="16dp"
+                android:background="#22000000" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:text="第4页：HLS 转码后的 MP4（hls-mp4）"
+                android:textSize="16sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/tvHlsMp4Folder"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:textSize="12sp" />
+
+            <Button
+                android:id="@+id/btnRefreshHlsMp4List"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:text="刷新 HLS MP4 列表" />
+
+            <TextView
+                android:id="@+id/tvHlsMp4Hint"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:textSize="13sp" />
+
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/recyclerHlsMp4List"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:layout_marginBottom="16dp"
+                android:nestedScrollingEnabled="false" />
+        </LinearLayout>
+    </androidx.core.widget.NestedScrollView>
 </LinearLayout>

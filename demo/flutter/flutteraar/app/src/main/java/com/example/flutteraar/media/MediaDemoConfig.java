@@ -49,4 +49,12 @@ public final class MediaDemoConfig {
         }
         return dir;
     }
+
+    public static File getHlsMp4Dir(Context context) {
+        File dir = new File(getMediaRootDir(context), "hls-mp4");
+        if (!dir.exists()) {
+            dir.mkdirs();
+        }
+        return dir;
+    }
 }
