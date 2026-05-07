@@ -2,6 +2,7 @@ package com.minio.utils;
 
 import com.minio.config.MinioConfig;
 import io.minio.*;
+import io.minio.errors.ErrorResponseException;
 import io.minio.http.Method;
 import io.minio.messages.Bucket;
 import io.minio.messages.DeleteError;
@@ -156,7 +157,12 @@ public class MinioUtils {
                     .object(objectName)
                     .build());
         } catch (Exception e) {
-            log.error("[Minio工具类]>>>> 判断文件是否存在, 异常：", e);
+            if (e instanceof ErrorResponseException errorResponseException
+                    && "NoSuchKey".equalsIgnoreCase(errorResponseException.errorResponse().code())) {
+                log.debug("[Minio工具类]>>>> 文件不存在, bucketName={}, objectName={}", bucketName, objectName);
+            } else {
+                log.warn("[Minio工具类]>>>> 判断文件是否存在异常, bucketName={}, objectName={}", bucketName, objectName, e);
+            }
             exist = false;
         }
         return exist;

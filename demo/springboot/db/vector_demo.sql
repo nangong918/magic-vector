@@ -20,8 +20,7 @@ SET FOREIGN_KEY_CHECKS = 0;
 -- ----------------------------
 -- Table structure for agent
 -- ----------------------------
-DROP TABLE IF EXISTS `agent`;
-CREATE TABLE `agent`  (
+CREATE TABLE IF NOT EXISTS `agent` (
   `id` bigint NOT NULL,
   `name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL,
   `description` text CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL,
@@ -35,8 +34,7 @@ CREATE TABLE `agent`  (
 -- ----------------------------
 -- Table structure for chat_message
 -- ----------------------------
-DROP TABLE IF EXISTS `chat_message`;
-CREATE TABLE `chat_message`  (
+CREATE TABLE IF NOT EXISTS `chat_message` (
   `id` bigint NOT NULL,
   `agent_id` bigint NOT NULL,
   `user_id` bigint NOT NULL,
@@ -55,8 +53,7 @@ CREATE TABLE `chat_message`  (
 -- ----------------------------
 -- Table structure for agent_log
 -- ----------------------------
-DROP TABLE IF EXISTS `agent_log`;
-CREATE TABLE `agent_log`  (
+CREATE TABLE IF NOT EXISTS `agent_log` (
   `id` bigint NOT NULL,
   `user_id` bigint NOT NULL,
   `agent_id` bigint NOT NULL,
@@ -69,13 +66,19 @@ CREATE TABLE `agent_log`  (
 -- ----------------------------
 -- Table structure for video_record
 -- ----------------------------
-DROP TABLE IF EXISTS `video_record`;
-CREATE TABLE `video_record`  (
+CREATE TABLE IF NOT EXISTS `video_record` (
   `id` bigint NOT NULL,
   `user_id` bigint NOT NULL,
+  `file_id` bigint NULL DEFAULT NULL,
+  `video_name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL,
+  `file_size_bytes` bigint NULL DEFAULT NULL,
+  `duration_sec` double NULL DEFAULT NULL,
+  `bitrate_kbps` bigint NULL DEFAULT NULL,
   `object_name` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL,
+  `cover_object_name` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL,
   `hls_object_name` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL,
   `status` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL,
+  `error_message` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL,
   `created_at` bigint NOT NULL,
   `updated_at` bigint NOT NULL,
   PRIMARY KEY (`id`) USING BTREE,
@@ -85,8 +88,7 @@ CREATE TABLE `video_record`  (
 -- ----------------------------
 -- Table structure for oss
 -- ----------------------------
-DROP TABLE IF EXISTS `oss`;
-CREATE TABLE `oss`  (
+CREATE TABLE IF NOT EXISTS `oss` (
   `id` bigint NOT NULL,
   `user_id` bigint NOT NULL,
   `bucket_name` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL,
@@ -106,8 +108,7 @@ CREATE TABLE `oss`  (
 -- ----------------------------
 -- Table structure for user
 -- ----------------------------
-DROP TABLE IF EXISTS `user`;
-CREATE TABLE `user`  (
+CREATE TABLE IF NOT EXISTS `user` (
   `id` bigint NOT NULL,
   `name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL,
   `account` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL,
