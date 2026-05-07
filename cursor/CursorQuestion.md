@@ -189,3 +189,27 @@ flutter的live推拉流的（Android）不对把，我的期望是跟Android那�
 
 * 这个可以预览，但是拖拽进度条好像不能真正的干涉播放进度，你看看能不能实现这个业务，通过拖拽进度条同事干涉预览和推流进度？
 
+
+### 播放本地视频、上传本地视频到云上、播放云上碎片流视频、碎片视频用FFmpeg保存本地
+我现在有几个需求需要实现：
+1. 播放本地视频
+2. 上传本地视频到云上
+3. 播放云上碎片流视频
+4. 碎片视频用FFmpeg保存本地
+
+首先介绍一下，看到[flutteraar](../demo/flutter/flutteraar)这是我的Android程序demo，介绍在[README.md](../demo/flutter/flutteraar/README.md)
+然后我的springboot代码在：[demo](../demo/springboot/demo)
+docker相关在[docker](../demo/springboot/docker)，数据库在[db](../demo/springboot/db)，部分api在[api](../demo/springboot/api)
+* 首先来说第一个，这个明显只需要在Android完成，跟服务器无关，也就是你直选写一个新的demo，我要求这个page打开之后能用list展示本地的某个路径下有多少视频，
+  为什么不用Android本身的选择视频的系统intent呢？因为我下载云上的视频会将视频下载到指定某个路径下，这个路径也是你订，等下的碎片视频下载到本地的功能也是用这个路径。
+* 上传本地视频到云上：这个跟刚刚的Android本地播放demo在一起，这个list的view右边有个上传云端按钮，点击之后要么开一个kotlin的worker来上传，
+  因为我觉得开线程的话会出现一个问题就是activity切换的话生命周期死了，这个任务就取消了。或者如果Java代码没有worker就用intentService对不对？
+  然后服务器那边是用minio接收的，需要实现流式上传，传输需要告诉Android进度，Android也会显示进度条。要求实现Android和SpringBoot断点上传，断点续传。Android的UI也要支持相关的断点上传和断点续传。
+* 播放云上碎片流视频：这个我不是很确定，需要你去查询方案，写在：[云上视频播放.md](../demo/flutter/flutteraar/云上视频播放.md)
+  因为我知道云上视频播放肯定是要给碎片流给然后给Android播放，你看下哔哩哔哩或者其他的大型网站方案是什么？m3u8?HLS?DASH?方案我其实并不清楚，播放器是不是就可以用我之前用的media3或者exoplayer？
+  然后还有一个问题是SpringBoot怎么把minio中的mp4转为碎尸万断的m3u8流？DASH流？用FFmpeg吗？写道方案里面。然后实现播放。
+* 碎片视频用FFmpeg保存本地：这个应该是Android播放缓存完成m3u8之后如果返回页面这个就丢失了，但是想要下载到本地就得将m3u8下载到本地，然后转为mp4。路径就用刚刚的播放本地。
+  关于页面设计，是一个list，可以获取到云上的视频列表，视频列表要展示预览的图片，这个可能要SpringBoot用FFmpeg来抽帧，然后还要抽出视频时长用于展示。
+  然后list这个view右边有两个按钮一个是播放一个是下载，播放是打开新的activity直接播放m3u8，下载是直接调用后端的下载mp4的功能，不用碎尸万断的视频。
+  而如果打开页面之后那么就需要用mu38或者DASH来播放流，然后这个流前端可以下载到本地，可以以m3u8的形式保存，不要求直接转为mp4，但是要有转为mp4的选项，具体怎么转可能要你查询FFmpeg是否能实现。
+
