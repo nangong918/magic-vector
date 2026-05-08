@@ -38,7 +38,7 @@ RTMP推流用的是Nginx[nginx.conf](../demo/springboot/nginx-docker/conf/nginx.
 - 线程池是怎样设计的？是否能让推流预览编解码最优？（操作系统）
 等等还有好多问题，你也可以提出很多然后解答，我希望你多提出一些以便我学习408
 
-回复的内容都写在[CursorMedia.md](CursorMedia.md)
+回复的内容都写在[CursorMedia.md](media/CursorMedia.md)
 
 
 
