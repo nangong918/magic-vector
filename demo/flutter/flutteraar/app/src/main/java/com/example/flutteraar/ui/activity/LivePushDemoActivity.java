@@ -219,16 +219,17 @@ public class LivePushDemoActivity extends AppCompatActivity implements Camera2Li
         if (camera2Helper != null) {
             return;
         }
+        // 获取当前的手机旋转情况
         int rotation = getWindowManager().getDefaultDisplay().getRotation();
         camera2Helper = new Camera2Helper.Builder()
-                .context(getApplicationContext())
-                .cameraListener(this)
-                .previewOn(texturePreview)
-                .previewViewSize(new Point(640, 480))
-                .specificCameraId(Camera2Helper.CAMERA_ID_BACK)
-                .rotation(rotation)
-                .rotateDegree(getPreviewDegree(rotation))
-                .build();
+                .context(getApplicationContext())                // 绑定上下文
+                .cameraListener(this)                        // 相机数据回调（接收预览/图像数据）
+                .previewOn(texturePreview)                       // 指定用于预览显示的 TextureView
+                .previewViewSize(new Point(640, 480))      // 设置相机预览分辨率 640x480
+                .specificCameraId(Camera2Helper.CAMERA_ID_BACK)  // 指定使用后置摄像头
+                .rotation(rotation)                              // 传入屏幕旋转方向，用于画面校正
+                .rotateDegree(getPreviewDegree(rotation))        // 计算并设置相机最终需要旋转的角度
+                .build();                                        // 创建并启动相机
         Log.i(TAG, "initCameraPreview, rotation=" + rotation);
         camera2Helper.start();
         updateStatus("相机初始化中");
@@ -516,6 +517,7 @@ public class LivePushDemoActivity extends AppCompatActivity implements Camera2Li
     private final class AudioCaptureTask implements Runnable {
         private final LivePusherBridge bridge;
         private final AudioRecord audioRecord;
+        // 音频一帧的字节大小
         private final int frameBytes;
         private volatile boolean running;
         private Thread worker;
