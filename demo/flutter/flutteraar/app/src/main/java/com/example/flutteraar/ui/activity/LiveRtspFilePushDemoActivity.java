@@ -164,6 +164,10 @@ public class LiveRtspFilePushDemoActivity extends AppCompatActivity {
         return targetFile.getAbsolutePath();
     }
 
+    /**
+     * 绑定预览源
+     * @param path  源文件路径
+     */
     private void attachPreviewSource(String path) {
         previewSourcePath = path;
         previewDurationMs = 0;

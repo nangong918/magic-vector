@@ -72,6 +72,7 @@ public final class FFmpegPushBridge {
             if (callback == null) {
                 return;
             }
+            // 此处使用main线程主要是因为UI更新需要在主线程
             MAIN_HANDLER.post(() -> callback.onCompleted(resultCode, buildMessage(resultCode)));
         });
     }
