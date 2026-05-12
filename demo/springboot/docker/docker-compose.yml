@@ -88,6 +88,25 @@ services:
     ports:
       - "8554:8554"
 
+  coturn:
+    image: instrumentisto/coturn:latest
+    container_name: springboot-coturn
+    restart: unless-stopped
+    command:
+      - -n
+      - --log-file=stdout
+      - --realm=${TURN_REALM:-magic-vector.local}
+      - --lt-cred-mech
+      - --user=${TURN_USER:-webrtc}:${TURN_PASSWORD:-webrtc123}
+      - --fingerprint
+      - --listening-port=3478
+      - --min-port=49160
+      - --max-port=49200
+    ports:
+      - "3478:3478/tcp"
+      - "3478:3478/udp"
+      - "49160-49200:49160-49200/udp"
+
 volumes:
   mysql-data:
   minio-data:

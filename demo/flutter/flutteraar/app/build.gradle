@@ -66,6 +66,8 @@ dependencies {
     implementation libs.media3.datasource.rtmp
     implementation libs.media3.ui
     implementation libs.work.runtime
+    implementation libs.okhttp
+    implementation libs.webrtc.android
     implementation project(':aarlib')
 
     testImplementation libs.junit

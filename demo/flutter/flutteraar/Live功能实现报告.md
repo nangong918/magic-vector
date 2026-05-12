@@ -659,3 +659,159 @@ Flutter 不是更好的底层方案。
 4. 若仍异常，优先采集两段日志：
    - `ff_rtmp_pusher` 的 `open/push/write_frame` 日志；
    - `LivePullDemoActivity` 的 `onPlayerError` 栈。
+
+## 14. 本次新增：WebRTC 视频通话 Demo（可行性调研 + 已落地实现）
+
+### 14.1 可行性结论（先回答你“能不能做”）
+
+可以实现，并且已按你当前工程结构落地到仓库：
+
+- Android 端：新增 WebRTC Demo（绑定 ID -> 呼叫 -> 接听 -> 通话页）；
+- 后端：在 `springboot` 增加 WebSocket 信令中转；
+- 网络穿透：新增 `coturn`（TURN）服务，弱网/跨网段时作为中继；
+- 文档：本节给出依赖选型、信令流转、后端部署与联调步骤。
+
+### 14.2 上网调研后的依赖选型结论
+
+#### Android WebRTC 依赖
+
+本次选型：`io.github.webrtc-sdk:android:125.6422.07`
+
+原因：
+
+- 该版本可直接从 Maven Central 获取（避免依赖历史上的 JCenter 分发）；
+- API 兼容 `org.webrtc.*`（`PeerConnection`、`SurfaceViewRenderer`、`VideoTrack` 等）；
+- 版本更新较新，适合新项目 demo 验证。
+
+#### Android 信令通信依赖
+
+- `com.squareup.okhttp3:okhttp:4.12.0`
+  - 用于 WebSocket 连接 SpringBoot 信令服务；
+  - 连接稳定、集成简单，适合 Demo。
+
+#### STUN/TURN 结论
+
+- STUN 只负责“探测公网地址”，不能保证所有网络都能打洞成功；
+- TURN 用于打洞失败时中继媒体流；
+- 因此 Demo 保留两层：
+  - STUN：`stun:stun.l.google.com:19302`
+  - TURN：本地 docker 的 `coturn`（`turn:<host>:3478`）。
+
+### 14.3 数据流转设计（你关心的“Call 怎么让对方收到”）
+
+#### 角色拆分
+
+- **SpringBoot 信令层**：只中转消息，不处理音视频编码；
+- **Android WebRTC 层**：负责采集摄像头/麦克风、SDP 协商、ICE 打洞、媒体传输；
+- **TURN 层（coturn）**：在 P2P 不通时中继媒体。
+
+#### 呼叫流程
+
+1. 用户进入 `WebRTC Demo`，弹窗绑定本机 ID；不绑定直接返回。
+2. 绑定后，客户端建立：
+   - `ws://<host>:48888/ws/webrtc?uid=<selfId>`
+3. A 输入 B 的 ID，点击 Call：
+   - 发 `call_invite` 给 B。
+4. B 收到来电弹窗，点击接听：
+   - 发 `call_accept` 给 A；
+   - A/B 同时进入 `WebRtcCallActivity`。
+5. 双方进入通话页后：
+   - 先发 `call_joined`；
+   - Caller 在收到对方 `call_joined` 后发 `offer`；
+   - Callee 回 `answer`；
+   - 双向持续交换 `ice_candidate`。
+6. 建链成功后开始音视频传输：
+   - 上方本地画面，下方远端画面。
+7. 任意一方挂断：
+   - 发 `hangup`，双方关闭连接并退出通话页。
+
+### 14.4 后端是否需要？
+
+需要，至少需要“信令后端”。
+
+说明：
+
+- WebRTC 本身不规定信令协议；
+- 要实现“输入对方 ID 后对方收到来电”，就必须有一个中心中转消息；
+- 你现有 `springboot` 非常适合承担这层。
+
+本次后端新增：
+
+- WebSocket 注册：`/ws/webrtc`
+- 信令处理：按 `uid` 路由以下消息：
+  - `call_invite`
+  - `call_accept`
+  - `call_reject`
+  - `call_joined`
+  - `offer`
+  - `answer`
+  - `ice_candidate`
+  - `hangup`
+
+### 14.5 本次代码落地清单
+
+#### `flutteraar/app` 新增
+
+- `ui/activity/WebRtcDemoActivity.java`
+  - 绑定本机 ID、输入对方 ID、发起呼叫、接听来电。
+- `ui/activity/WebRtcCallActivity.java`
+  - 通话页（本地/远端画面 + 静音 + 摄像头开关 + 挂断）。
+- `webrtc/signaling/WebRtcSignalingClient.java`
+  - Android WebSocket 信令客户端。
+- `webrtc/signaling/WebRtcSignalTypes.java`
+  - 信令消息类型常量。
+- `res/layout/activity_webrtc_demo.xml`
+- `res/layout/activity_webrtc_call.xml`
+
+#### `flutteraar/app` 修改
+
+- `MainActivity.java`
+  - 增加 `WebRTC Demo` 入口。
+- `AndroidManifest.xml`
+  - 注册 `WebRtcDemoActivity`、`WebRtcCallActivity`。
+- `app/build.gradle`
+  - 增加 `okhttp` 与 `webrtc` 依赖。
+- `gradle/libs.versions.toml`
+  - 增加 `okhttp`、`webrtc` 版本与库声明。
+
+#### `springboot/demo` 新增
+
+- `config/WebRtcSignalingConfig.java`
+  - 注册 WebSocket 路由 `/ws/webrtc`。
+- `webrtc/WebRtcSignalingHandler.java`
+  - 信令会话管理、按 uid 点对点转发、离线错误回执。
+
+#### `springboot/docker` 修改
+
+- `docker-compose.yml`
+  - 新增 `coturn` 服务（`3478` + 中继端口段）。
+- `nginx-docker/conf/nginx.conf`
+  - 新增 `/ws/` 到 SpringBoot 的 WebSocket 透传。
+- `docker/nginx/nginx.conf`
+  - 兼容补充 WebSocket Upgrade 头。
+- `docker/README.md`
+  - 补充 WebRTC 信令 + TURN 启动与排障说明。
+
+### 14.6 联调步骤（两台手机）
+
+1. 启动后端：
+   - `docker compose -f demo/springboot/docker/docker-compose.yml up -d springboot nginx coturn`
+2. 两台手机安装同一版 `flutteraar app`。
+3. A 进入 `WebRTC Demo`：
+   - 绑定 `deviceA`
+   - 对方 ID 填 `deviceB`
+   - 点 `Call`
+4. B 进入 `WebRTC Demo`：
+   - 绑定 `deviceB`
+   - 收到来电弹窗后点“接听”。
+5. 双方进入通话页验证：
+   - 上方是否显示本地画面；
+   - 下方是否显示对方画面；
+   - 验证静音、关摄像头、挂断按钮行为。
+
+### 14.7 当前实现边界（如实说明）
+
+- 当前 ID 绑定为“内存会话态”，服务重启后在线状态清空（Demo 设计）；
+- TURN 使用静态账号（`webrtc/webrtc123`），适合内网或开发验证；
+- 若公网部署，建议把 TURN 改为短时动态凭证（`use-auth-secret` + 服务端签发）；
+- 当前优先实现 1v1 呼叫，不含群组房间与通话记录持久化。

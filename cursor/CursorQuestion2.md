@@ -141,3 +141,23 @@ Android是不是应该启动Service后台持续编解码? 还是只启动一次�
 最后你再看看流媒体有没有数据结构及算法分析相关的知识,如果有就整理到: [数据结构与算法分析.md](../../../GoBackPlan/Knowledge/408/数据结构与算法分析.md)
 
 我的任务比较多,我希望你一个一个完成我全部的问题, 你一个一个完成再往我的文本里面写, 不要漏问题.
+
+
+
+#### WebRTC
+你看这个代码[flutteraar](../demo/flutter/flutteraar)
+这个项目的介绍在[README.md](../demo/flutter/flutteraar/README.md)
+我现在已经实现了RTMP、RTSP推拉流，HLS在线播放。现在想要再实现一个新的demo：
+WebRTC视频通话，点开Demo之后会弹窗要求先绑定本机Id，如果不绑定就返回。
+绑定成功之后显示本机ID，然后输入对方Id，然后可以点击Call。
+Call之后如果另一个手机已经绑定了Id就会收到打给字节的视频通话。接听之后双方跳转新的Activity。
+简单一点就上面展示自己的摄像头，下方展示对方的摄像头。
+然后下方有开关静音，开关摄像头，挂断电话三个按钮。
+现在我并不知道是否能实现，现在需要你先去查询方案，就比如Android端的依赖怎么选择，数据流怎么流转，是否需要后端以及后端怎么搭建。
+对了，后端再[springboot](../demo/springboot)，docker在[docker-compose.yml](../demo/springboot/docker/docker-compose.yml)[Dockerfile](../demo/springboot/docker/Dockerfile)
+nginx配置在：[nginx.conf](../demo/springboot/docker/nginx/nginx.conf)
+后端代码在[demo](../demo/springboot/demo)（可能不用？还是要让对方收到Call消息需要用？我不清楚你来设计）
+然后实现方案要写在[Live功能实现报告.md](../demo/flutter/flutteraar/Live功能实现报告.md)
+我以前是没有接触过WebRTC的，我希望你先去上网查询可行方案，然后独立实现。
+
+

@@ -76,6 +76,32 @@ Two-device verification flow:
 1. Device A opens `RTSP File Push Demo` and selects a local mp4, then pushes to `rtsp://<HOST_IP>:8554/live/stream`.
 2. Device B opens `Live Pull Demo`, fills `rtsp://<HOST_IP>:8554/live/stream`, and starts playback.
 
+## WebRTC Signaling + TURN
+
+This compose file now includes WebRTC required backend parts:
+
+- SpringBoot signaling endpoint: `ws://<HOST_IP>:48888/ws/webrtc?uid=<your_id>`
+- Optional nginx passthrough: `ws://<HOST_IP>/ws/webrtc?uid=<your_id>`
+- TURN server (coturn): `<HOST_IP>:3478` (`user=webrtc`, `password=webrtc123`)
+
+Start only WebRTC related services:
+
+```bash
+docker compose -f docker/docker-compose.yml up -d springboot nginx coturn
+```
+
+Quick check:
+
+```bash
+docker compose -f docker/docker-compose.yml ps springboot nginx coturn
+```
+
+If clients are not in the same LAN or direct P2P fails often, expose and route these ports on your router/firewall:
+
+- `3478/udp`
+- `3478/tcp`
+- `49160-49200/udp`
+
 ## Check Database Availability
 
 ```bash
