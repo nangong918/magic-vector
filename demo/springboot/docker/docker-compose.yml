@@ -64,21 +64,25 @@ services:
       - "48888:48888"
 
   nginx:
-    image: alfg/nginx-rtmp:latest
-    container_name: springboot-nginx
-    restart: unless-stopped
-    command: ["nginx", "-c", "/etc/nginx/nginx.conf"]
+    image: alfg/nginx-rtmp:latest       # 自带 RTMP 模块 + FFmpeg 的官方流媒体镜像
+    container_name: springboot-nginx    # 容器名称
+    restart: unless-stopped              # 异常自动重启
+    command: ["nginx", "-c", "/etc/nginx/nginx.conf"]  # 使用自定义配置启动
     depends_on:
-      - springboot
-      - minio
+      - springboot       # 依赖后端服务（WebSocket 代理需要）
+      - minio            # 依赖文件存储服务
     ports:
-      - "80:80"
-      - "8080:8080"
-      - "1935:1935"
+      - "80:80"          # HTTP 主端口：MinIO 代理 + WebSocket 代理
+      - "8080:8080"      # 直播专用端口：HLS 播放 + 监控页面
+      - "1935:1935"      # RTMP 推流端口（主播端推流地址）
     volumes:
+      # 自定义 Nginx 主配置（RTMP + HLS + 代理）
       - ../nginx-docker/conf/nginx.conf:/etc/nginx/nginx.conf
+      # MIME 类型配置
       - ../nginx-docker/conf/mime.types:/etc/nginx/mime.types:ro
+      # 前端静态资源、stat 监控页面
       - ../nginx-docker/html:/etc/nginx/html:ro
+      # HLS 切片文件持久化存储（.ts + .m3u8）
       - nginx-hls:/tmp/hls
 
   mediamtx:
