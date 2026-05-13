@@ -358,37 +358,66 @@ public class VideoMediaServiceImpl implements VideoMediaService {
         }
     }
 
+    /**
+     * 将 HLS 切片（m3u8）合并转换为 MP4 文件
+     * 功能：读取已生成的 HLS 索引文件，通过 FFmpeg 直接合并封装为完整 MP4，不重新编码
+     *
+     * @param fileId   视频文件ID
+     * @param baseUrl  前端下载地址基础URL
+     * @return 封装后的MP4下载响应对象
+     */
     @Override
     public VideoHlsToMp4Response convertHlsToMp4(Long fileId, String baseUrl) {
+        // 获取视频源文件的OSS存储信息
         OssEntity source = getSourceOss(fileId);
+
+        // 确保视频已完成封面生成 + HLS切片（必须先执行）
         ensureVideoArtifacts(source);
+
+        // 构建合并后MP4在OSS中的存储路径
         String targetObject = buildHlsMp4ObjectName(source.getObjectName());
+
+        // 检查OSS中是否已存在合并好的MP4，避免重复转换
         boolean alreadyExists = minioUtils.isObjectExist(source.getBucketName(), targetObject);
+
+        // 如果不存在，则执行FFmpeg合并
         if (!alreadyExists) {
+            // 获取HLS切片所在本地目录
             Path hlsDir = getHlsDir(fileId);
+            // 本地HLS索引文件路径（index.m3u8）
             Path localM3u8 = hlsDir.resolve("index.m3u8");
+            // 合并输出的MP4本地临时路径
             Path outputMp4 = getFileWorkDir(fileId).resolve("hls_merged.mp4");
+
+            // ===================== FFmpeg 执行 HLS → MP4 合并 =====================
             runCommand(List.of(
-                    ffmpegBin,
-                    "-y",
-                    "-allowed_extensions",
+                    ffmpegBin,              // FFmpeg 可执行程序
+                    "-y",                   // 覆盖已存在的输出文件
+                    "-allowed_extensions",   // 允许加载所有文件扩展名（解决m3u8读取限制）
                     "ALL",
-                    "-i",
+                    "-i",                   // 输入文件：本地HLS索引
                     localM3u8.toString(),
-                    "-c",
+                    "-c",                   // 音视频编码模式：copy（直接复制流，不重新编码）
                     "copy",
-                    outputMp4.toString()
+                    outputMp4.toString()    // 输出完整MP4文件
             ), getFileWorkDir(fileId));
+
+            // 合并完成后，上传MP4到MinIO对象存储
             try {
                 minioUtils.uploadLocalFile(source.getBucketName(), targetObject, outputMp4.toString());
             } catch (Exception e) {
                 throw new IllegalStateException("upload hls mp4 failed", e);
             }
         }
+
+        // 构建响应结果
         VideoHlsToMp4Response response = new VideoHlsToMp4Response();
         response.setFileId(String.valueOf(fileId));
+        // 设置前端下载地址
         response.setDownloadUrl(baseUrl + "/video/cloud/download/hls-mp4?fileId=" + fileId);
+        // 返回提示信息：已存在 / 转换完成
         response.setMessage(alreadyExists ? "exists" : "ok");
+
         return response;
     }
 
@@ -438,52 +467,82 @@ public class VideoMediaServiceImpl implements VideoMediaService {
                 && record.getBitrateKbps() != null;
     }
 
+    /**
+     * 使用 ffprobe 提取视频元信息（时长、码率）
+     * 调用 ffprobe 命令行解析视频文件，获取视频总时长和比特率
+     *
+     * @param sourcePath 视频文件路径
+     * @return 封装好的视频元信息（时长、码率）
+     */
     private VideoMeta extractVideoMeta(Path sourcePath) {
+        // 执行 ffprobe 命令，仅提取视频总时长、码率，输出纯数值格式
         String output = runCommand(List.of(
-                ffprobeBin,
-                "-v",
-                "error",
-                "-show_entries",
-                "format=duration,bit_rate",
-                "-of",
+                ffprobeBin,                    // ffprobe 可执行文件（FFmpeg 自带解析工具）
+                "-v",                          // 设置日志级别
+                "error",                      // 只输出错误信息，不输出冗余日志
+                "-show_entries",              // 指定需要提取的媒体信息项
+                "format=duration,bit_rate",   // 提取：总时长(duration)、总码率(bit_rate)
+                "-of",                        // 指定输出格式
+                // 输出格式：不打印包装器、不显示key名称，只输出纯数值
                 "default=noprint_wrappers=1:nokey=1",
-                sourcePath.toString()
+                sourcePath.toString()         // 待解析的视频文件路径
         ), sourcePath.getParent());
+
+        // 按行分割输出结果，去除空格、空行
         List<String> lines = output.lines()
                 .map(String::trim)
                 .filter(StringUtils::hasText)
                 .toList();
-        double duration = 0D;
-        long bitrate = 0L;
+
+        // 初始化默认值
+        double duration = 0D;  // 视频时长（秒）
+        long bitrate = 0L;    // 视频码率（kbps）
+
+        // 第一行输出：视频时长
         if (!lines.isEmpty()) {
             duration = Double.parseDouble(lines.get(0));
         }
+
+        // 第二行输出：码率（单位 bps → 转为 kbps）
         if (lines.size() > 1) {
             long bitRatePerSec = Long.parseLong(lines.get(1));
             bitrate = Math.max(0L, bitRatePerSec / 1000L);
         }
+
+        // 封装并返回视频元信息
         return new VideoMeta(duration, bitrate);
     }
 
+    /**
+     * 生成视频封面图
+     * 上传 MP4 完成后，调用 FFmpeg 从视频中抽取一帧图片作为封面
+     * 优先抽取第 1 秒的画面，失败则回退到第 0 秒（首帧）
+     *
+     * @param sourcePath 源视频路径（MP4）
+     * @param coverPath  生成的封面图保存路径
+     * @param workDir    FFmpeg 执行工作目录
+     */
     private void generateCover(Path sourcePath, Path coverPath, Path workDir) {
         try {
+            // 第一次尝试：截取视频第 1 秒作为封面（避免第 0 秒全黑）
             runCommand(List.of(
-                    ffmpegBin,
-                    "-y",
-                    "-ss",
-                    "00:00:01",
-                    "-i",
+                    ffmpegBin,        // FFmpeg 可执行文件路径
+                    "-y",             // 覆盖已存在的输出文件，不询问
+                    "-ss",            // 指定截取时间点
+                    "00:00:01",       // 截取第 1 秒的画面
+                    "-i",             // 指定输入文件
                     sourcePath.toString(),
-                    "-frames:v",
-                    "1",
-                    coverPath.toString()
+                    "-frames:v",      // 指定抽取的视频帧数
+                    "1",              // 只抽取 1 帧
+                    coverPath.toString()  // 输出封面图片路径
             ), workDir);
         } catch (Exception first) {
+            // 第 1 秒截取失败（如视频过短），回退到截取第 0 秒（首帧）
             runCommand(List.of(
                     ffmpegBin,
                     "-y",
                     "-ss",
-                    "00:00:00",
+                    "00:00:00",      // 回退到视频起始帧
                     "-i",
                     sourcePath.toString(),
                     "-frames:v",
@@ -491,6 +550,8 @@ public class VideoMediaServiceImpl implements VideoMediaService {
                     coverPath.toString()
             ), workDir);
         }
+
+        // 校验：如果封面文件没有生成，直接抛出异常
         if (!Files.exists(coverPath)) {
             throw new IllegalStateException("cover file not generated");
         }
@@ -507,60 +568,99 @@ public class VideoMediaServiceImpl implements VideoMediaService {
         return source;
     }
 
+    /**
+     * 确保视频所需的所有产物已生成（封面图 + HLS 切片）
+     * 逻辑：本地不存在则下载 → 封面不存在则生成并上传 → HLS 不存在则切片并上传
+     *
+     * @param source 视频源信息（OSS 中的文件信息）
+     */
     private void ensureVideoArtifacts(OssEntity source) {
+        // 获取当前视频的工作目录（用于存放临时文件、切片、封面）
         Path fileWorkDir = getFileWorkDir(source.getId());
+        // 获取视频在本地的存储路径
         Path sourcePath = getSourceLocalPath(source.getId(), source.getOriginFileName());
+
         try {
+            // 创建工作目录（不存在则自动创建）
             Files.createDirectories(fileWorkDir);
+
+            // 如果本地没有视频文件，则从 MinIO（OSS）下载到本地
             if (!Files.exists(sourcePath)) {
                 try (InputStream inputStream = minioUtils.getObject(source.getBucketName(), source.getObjectName())) {
+                    // 将 OSS 流复制到本地文件，覆盖已存在文件
                     Files.copy(inputStream, sourcePath, StandardCopyOption.REPLACE_EXISTING);
                 }
             }
 
+            // ======================== 1. 生成并上传视频封面 ========================
+            // 构建封面在 OSS 中的存储路径
             String thumbnailObject = buildThumbnailObjectName(source.getObjectName());
+            // 如果 OSS 中不存在封面，则生成并上传
             if (!minioUtils.isObjectExist(source.getBucketName(), thumbnailObject)) {
+                // 封面本地临时路径
                 Path thumbnailPath = fileWorkDir.resolve("thumb.jpg");
+                // 调用 FFmpeg 抽取视频封面（第1秒 → 失败则第0秒）
                 generateCover(sourcePath, thumbnailPath, fileWorkDir);
+                // 上传封面到 MinIO
                 minioUtils.uploadLocalFile(source.getBucketName(), thumbnailObject, thumbnailPath.toString());
             }
 
+            // ======================== 2. 生成并上传 HLS 切片（m3u8 + ts） ========================
+            // 构建 HLS 索引文件在 OSS 中的路径
             String hlsIndexObject = buildHlsIndexObjectName(source.getObjectName());
+            // HLS 切片本地存储目录
             Path hlsDir = getHlsDir(source.getId());
+            // 本地 HLS 索引文件路径
             Path localHlsIndex = hlsDir.resolve("index.m3u8");
+
+            // 如果本地没有 HLS 索引文件，才需要处理
             if (!Files.exists(localHlsIndex)) {
+                // 如果 OSS 中也没有 HLS 索引，则需要执行 FFmpeg 切片
                 if (!minioUtils.isObjectExist(source.getBucketName(), hlsIndexObject)) {
+                    // 创建 HLS 切片目录
                     Files.createDirectories(hlsDir);
+                    // 切片文件名格式：seg_00001.ts、seg_00002.ts ...
                     Path segmentPattern = hlsDir.resolve("seg_%05d.ts");
+
+                    // ===================== FFmpeg 执行 HLS 切片 =====================
                     runCommand(List.of(
-                            ffmpegBin,
-                            "-y",
-                            "-i",
+                            ffmpegBin,           // FFmpeg 执行程序
+                            "-y",                // 覆盖输出文件
+                            "-i",                // 输入文件
                             sourcePath.toString(),
-                            "-c:v",
-                            "libx264",
-                            "-c:a",
-                            "aac",
-                            "-hls_time",
-                            "6",
-                            "-hls_list_size",
-                            "0",
-                            "-hls_segment_filename",
+                            "-c:v",              // 视频编码
+                            "libx264",           // 使用 H.264 编码
+                            "-c:a",              // 音频编码
+                            "aac",               // 使用 AAC 编码
+                            "-hls_time",         // 每个切片的时长
+                            "6",                 // 6 秒一个切片
+                            "-hls_list_size",    // m3u8 列表长度
+                            "0",                 // 0 = 保留所有切片
+                            "-hls_segment_filename", // 切片命名规则
                             segmentPattern.toString(),
-                            localHlsIndex.toString()
+                            localHlsIndex.toString() // 输出 m3u8 索引文件
                     ), fileWorkDir);
+
+                    // 切片完成后，遍历所有切片文件（index.m3u8 + seg_xxx.ts）
                     try (Stream<Path> stream = Files.list(hlsDir)) {
                         for (Path path : stream.toList()) {
+                            // 构建切片在 OSS 中的路径
                             String objectName = buildHlsSegmentObjectName(source.getObjectName(), path.getFileName().toString());
+                            // 逐个上传切片到 MinIO
                             minioUtils.uploadLocalFile(source.getBucketName(), objectName, path.toString());
                         }
                     }
                 } else {
+                    // OSS 已有 HLS 切片 → 直接从 MinIO 下载到本地缓存
                     downloadHlsCacheFromMinio(source, hlsDir, localHlsIndex);
                 }
             }
+
+            // 所有视频产物处理完成 → 更新视频记录状态为 READY（就绪）
             upsertVideoRecord(source, thumbnailObject, hlsIndexObject, null, null, STATUS_READY, null);
+
         } catch (Exception e) {
+            // 任一环节失败，抛出异常，标记视频处理失败
             throw new IllegalStateException("ensure video artifacts failed", e);
         }
     }
@@ -694,26 +794,54 @@ public class VideoMediaServiceImpl implements VideoMediaService {
         }
     }
 
+    /**
+     * 服务器执行系统命令工具方法
+     * 用于在后端通过命令行调用 FFmpeg 执行视频处理操作（切片、转码、抽封面、推流等）
+     *
+     * @param command   要执行的命令与参数列表（如 ffmpeg -i xxx.mp4 ...）
+     * @param workingDir 命令执行的工作目录，可为 null
+     * @return 命令执行的正常输出日志
+     * @throws IllegalStateException 命令执行失败/中断
+     * @throws UncheckedIOException IO异常
+     */
     private String runCommand(List<String> command, Path workingDir) {
+        // 创建进程构建器，传入命令参数
         ProcessBuilder processBuilder = new ProcessBuilder(command);
+
+        // 如果指定了工作目录，则设置命令执行路径
         if (workingDir != null) {
             processBuilder.directory(workingDir.toFile());
         }
+
+        // 将错误流合并到标准输出流，方便统一读取 FFmpeg 的日志
         processBuilder.redirectErrorStream(true);
+
         try {
+            // 启动子进程执行命令
             Process process = processBuilder.start();
+
+            // 读取命令执行的所有输出（FFmpeg日志）
             String output;
             try (InputStream inputStream = process.getInputStream()) {
                 output = new String(inputStream.readAllBytes(), StandardCharsets.UTF_8);
             }
+
+            // 等待命令执行完成，并获取退出码
             int code = process.waitFor();
+
+            // 退出码 != 0 表示命令执行失败（FFmpeg执行出错）
             if (code != 0) {
                 throw new IllegalStateException("command failed(" + code + "): " + String.join(" ", command) + "\n" + output);
             }
+
+            // 执行成功，返回输出日志
             return output;
+
         } catch (IOException e) {
+            // 命令启动/IO异常
             throw new UncheckedIOException("command io failed: " + String.join(" ", command), e);
         } catch (InterruptedException e) {
+            // 命令被中断，恢复中断状态
             Thread.currentThread().interrupt();
             throw new IllegalStateException("command interrupted", e);
         }
