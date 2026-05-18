@@ -10,6 +10,7 @@ import com.vectordemo.domain.config.ModuleKeyConfigStore
 import com.vectordemo.manager.OssManager
 import com.vectordemo.manager.UserManager
 import com.vectordemo.repository.api.ApiClient
+import com.vectordemo.repository.api.createExternalAiHttpClient
 import com.vectordemo.repository.api.createPlatformHttpClient
 import com.vectordemo.service.ai.AliChatService
 import com.vectordemo.service.ai.ChatService
@@ -22,6 +23,7 @@ object AppContainer {
     private var cachedToken: String? = null
 
     private val httpClient = createPlatformHttpClient { cachedToken }
+    private val aiHttpClient = createExternalAiHttpClient()
     private val apiClient = ApiClient(httpClient)
 
     private val userLocal = UserLocalSource()
@@ -63,7 +65,7 @@ object AppContainer {
     private fun createAliChatService(): AliChatService {
         return AliChatService(
             configProvider = { requireModuleConfig().llmAli },
-            httpClient = httpClient,
+            httpClient = aiHttpClient,
         )
     }
 

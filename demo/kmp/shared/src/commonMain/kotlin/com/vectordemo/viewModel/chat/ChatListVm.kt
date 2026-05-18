@@ -7,6 +7,7 @@ import com.vectordemo.viewModel.BaseVm
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlin.random.Random
@@ -79,26 +80,39 @@ class ChatListVm(
                 )
             }
 
+            val assistantText = StringBuilder()
             runCatching {
+                println("[ChatListVm] sendChat start userMessage=$message historySize=${history.size}")
                 aliChatServiceProvider().sendChat(
                     systemPrompt = systemPrompt,
                     history = history.toList(),
                     userMessage = message,
                     onDelta = { delta ->
                         if (delta.isBlank()) return@sendChat
-                        _uiState.update { st ->
-                            st.copy(messages = st.messages.map {
-                                if (it.id == assistantId) it.copy(text = it.text + delta) else it
-                            })
+                        assistantText.append(delta)
+                        println("[ChatListVm] onDelta len=${delta.length} totalLen=${assistantText.length} preview=${delta.take(80)}")
+                        vmScope.launch(Dispatchers.Main) {
+                            val textSnapshot = assistantText.toString()
+                            _uiState.update { st ->
+                                st.copy(
+                                    messages = st.messages.map {
+                                        if (it.id == assistantId) it.copy(text = textSnapshot) else it
+                                    },
+                                )
+                            }
                         }
                     },
                     onDone = {
-                        val finalText = _uiState.value.messages.firstOrNull { it.id == assistantId }?.text.orEmpty()
+                        val finalText = assistantText.toString()
+                        println("[ChatListVm] onDone finalTextLen=${finalText.length} preview=${finalText.take(120)}")
                         history.add(mapOf("role" to "assistant", "content" to finalText))
                         trimHistory()
                     },
                 )
+                println("[ChatListVm] sendChat completed")
             }.onFailure {
+                println("[ChatListVm] sendChat failed: ${it.message}")
+                it.printStackTrace()
                 _uiState.update { st ->
                     st.copy(status = RealtimeChatStatus.ERROR, errorMessage = "消息发送失败: ${it.message}")
                 }

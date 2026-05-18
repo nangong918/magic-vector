@@ -4,20 +4,21 @@ import com.vectordemo.domain.config.AliLlmKeyConfig
 import com.vectordemo.domain.config.XfLlmKeyConfig
 import io.ktor.client.HttpClient
 import io.ktor.client.request.header
-import io.ktor.client.request.post
+import io.ktor.client.request.preparePost
 import io.ktor.client.request.setBody
+import io.ktor.client.statement.bodyAsChannel
 import io.ktor.client.statement.bodyAsText
 import io.ktor.http.ContentType
 import io.ktor.http.HttpHeaders
+import io.ktor.http.content.TextContent
 import io.ktor.http.contentType
+import io.ktor.utils.io.readUTF8Line
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.buildJsonObject
-import kotlinx.serialization.json.double
-import kotlinx.serialization.json.int
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -53,23 +54,94 @@ class AliChatService(
             "llm_ali.apiKey 未配置，请检查 module_key.json"
         }
         val payload = buildAliPayload(cfg, systemPrompt, history, userMessage)
-        val text = httpClient.post(cfg.hostUrl) {
+        println("[AliChatService] POST ${cfg.hostUrl} model=${cfg.model} stream=true")
+
+        httpClient.preparePost(cfg.hostUrl) {
             contentType(ContentType.Application.Json)
             header(HttpHeaders.Authorization, "Bearer ${cfg.apiKey}")
-            setBody(payload.toString())
-        }.bodyAsText()
-        val root = json.parseToJsonElement(text).jsonObject
+            setBody(TextContent(payload.toString(), ContentType.Application.Json))
+        }.execute { response ->
+            if (response.status.value !in 200..299) {
+                val errBody = response.bodyAsText()
+                println("[AliChatService] HTTP ${response.status.value} body=$errBody")
+                throw IllegalStateException("Ali LLM请求失败: ${response.status.value} $errBody")
+            }
+
+            val channel = response.bodyAsChannel()
+            var done = false
+            var lineCount = 0
+            println("[AliChatService] SSE stream opened")
+
+            while (!channel.isClosedForRead) {
+                val line = channel.readUTF8Line() ?: break
+                val trimmed = line.trim()
+                if (trimmed.isEmpty()) continue
+
+                lineCount++
+                if (!trimmed.startsWith("data:")) {
+                    if (trimmed.startsWith("{")) {
+                        println("[AliChatService] non-SSE JSON line#$lineCount len=${trimmed.length}")
+                        emitFromPayload(trimmed, onDelta)?.let { finished ->
+                            if (finished) {
+                                done = true
+                                onDone()
+                                break
+                            }
+                        }
+                    }
+                    continue
+                }
+
+                val payloadLine = trimmed.removePrefix("data:").trim()
+                if (payloadLine.isEmpty()) continue
+                if (payloadLine == "[DONE]") {
+                    println("[AliChatService] SSE [DONE]")
+                    done = true
+                    onDone()
+                    break
+                }
+
+                val finished = emitFromPayload(payloadLine, onDelta)
+                if (finished == true) {
+                    println("[AliChatService] SSE finish_reason received")
+                    done = true
+                    onDone()
+                    break
+                }
+            }
+
+            if (!done) {
+                println("[AliChatService] SSE stream ended without [DONE], lines=$lineCount")
+                onDone()
+            }
+        }
+    }
+
+    /**
+     * @return true 表示流已结束（finish_reason）
+     */
+    private fun emitFromPayload(payload: String, onDelta: (String) -> Unit): Boolean? {
+        val root = runCatching { json.parseToJsonElement(payload).jsonObject }.getOrElse {
+            println("[AliChatService] JSON parse failed: ${it.message} payload=${payload.take(200)}")
+            return null
+        }
+        root["error"]?.let { error ->
+            throw IllegalStateException("Ali LLM返回错误: $error")
+        }
         val choices = root["choices"]?.jsonArray ?: JsonArray(emptyList())
-        val content = choices.firstOrNull()
-            ?.jsonObject
-            ?.get("message")
-            ?.jsonObject
-            ?.get("content")
-            ?.jsonPrimitive
-            ?.content
-            .orEmpty()
-        if (content.isNotBlank()) onDelta(content)
-        onDone()
+        if (choices.isEmpty()) return null
+
+        val choice = choices.firstOrNull()?.jsonObject ?: return null
+        val deltaText = choice["delta"]?.jsonObject?.get("content")?.jsonPrimitive?.content.orEmpty()
+        val messageText = choice["message"]?.jsonObject?.get("content")?.jsonPrimitive?.content.orEmpty()
+        val text = deltaText.ifBlank { messageText }
+        if (text.isNotEmpty()) {
+            println("[AliChatService] onDelta chunk len=${text.length} preview=${text.take(80)}")
+            onDelta(text)
+        }
+
+        val finishReason = choice["finish_reason"]?.jsonPrimitive?.content.orEmpty()
+        return finishReason.isNotEmpty() && finishReason != "null"
     }
 
     private fun buildAliPayload(
@@ -82,7 +154,7 @@ class AliChatService(
             put("model", JsonPrimitive(cfg.model))
             put("temperature", JsonPrimitive(cfg.temperature))
             put("max_tokens", JsonPrimitive(cfg.maxTokens))
-            put("stream", JsonPrimitive(false))
+            put("stream", JsonPrimitive(true))
             put(
                 "messages",
                 buildJsonArray {
