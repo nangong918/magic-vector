@@ -34,7 +34,6 @@ fun App() {
         var route by remember { mutableStateOf(AppRoute.START) }
         var toastMessage by remember { mutableStateOf("") }
 
-        val startState by AppVmStore.startVm.uiState.collectAsState()
         val loginState by AppVmStore.loginVm.uiState.collectAsState()
         val loginDataState by AppVmStore.loginVm.dataState.collectAsState()
         val registerState by AppVmStore.registerVm.uiState.collectAsState()
@@ -130,7 +129,7 @@ fun App() {
         }
 
         when (route) {
-            AppRoute.START -> StartScreen(startState)
+            AppRoute.START -> StartScreen()
             AppRoute.LOGIN -> ComposeLoginScreen(
                 state = loginState,
                 savedAccounts = loginDataState.savedUserSessions,
