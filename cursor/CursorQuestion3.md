@@ -26,3 +26,32 @@
 否则就就只把代码迁移到commonMain。还有关于Java代码，你尽量想办法转化成kotlin吧。
 
 最后我需要审核你怎么做的，你要写一个文档向我汇报[KMP重构.md](kmp/KMP重构.md)，需要包括原生接口怎么处理的，通用怎么迁移的，架构是否沿用我的架构，gradle依赖有没有做到ios和Android公用等。
+
+
+
+#### 问题补充
+[kmp](../demo/kmp)是一个kmp项目，我是将[app](../demo/app)迁移过来的，
+现在有些问题需要你帮我改一下：
+1. 第一就是我不知道为什么我的app只要一点返回就会直接返回手机主页而不是返回上一页。是不是因为activity的栈模式没配置对？
+2. 网络访问权限好像没有开，我去调用聊天demo，但是发现：ERROR 消息发送失败： CLEARTEXT communication to localhost not permitted by network security policy
+   看报错也可能是配置的url不对？因为他说的是localhost？还是说http被禁用了？这个需要解除禁用，要允许http访问，不用强制https
+3. 我以前是做过flutter的项目的，就比如说jni的这种功能，我就会在/android里面写一个接口，给/lib里面的dart调用，那我也是要迁移cpp代码的啊。
+   但是我在这个迁移项目里面是完全没有看到cpp代码的迁移，我在想cpp的代码是不是要迁移到androidMain里面，因为我理解的是commonMain就是跨平台代码相当于lib，
+   androidMain相当于/android，里面可以放jni（kni）和cpp吧，但是我没看到这个项目引入，cpp代码，看看能不能帮我实现一下，代码在C:\CodeLearning\magic-vector\demo\app\app\src\main\cpp
+4. 还有一些功能其实是在aar里面的，我看这个项目也没有，aar是专门给Android的，同样ios不支持，aar的libs在C:\CodeLearning\magic-vector\demo\app\aarlib，也需要你复制然后迁移并实现功能的调用。
+5. 我现在明明是用Android测试，但是大部分功能却检测我是IOS设备，跟我说功能不支持。首先你要上网查一下KMP怎么判断设备是Android还是IOS设备，然后根据不同类型去判断做逻辑。帮我完成我的需求
+
+你解决问题的方案需要写在[KMP重构.md](kmp/KMP重构.md)
+
+
+
+
+
+
+
+
+
+
+
+
+
