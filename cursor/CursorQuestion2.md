@@ -175,3 +175,14 @@ Android的代码在[flutteraar](../demo/flutter/flutteraar), 里面有webRTC的d
 然后再在下面绘制推流拉流的逻辑活动图和数据流通信图
 
 
+### Cpp迁移
+你看到[app](../demo/app)，这是我的目标项目，
+然后看到[cpp](../demo/cpp)的[STLActivity.kt](../demo/cpp/app/src/main/java/com/demo/cpp/STLActivity.kt)
+这里面有一些STL的相关知识，现在需要你迁移到我的[app](../demo/app)
+里面的内容包括C++的STL；Java调用JNI；C++（JNI）调用Java；当时好像还缺少一个Cpp主动给Java抛异常，这个你加一下，
+你实现一个按钮，然后点击之后cpp主动抛假异常，然后Java接收展示在text上。
+对了还有一点，就是我的[app](../demo/app)是kotlin项目，我允许你把所有JNI替换成KNI，也就是说要抛弃Java使用kotlin。
+对了注解不要删除，尤其是我写的jni映射比如(IIIIBBBB)V这种映射的注解，我是用来数数的。
+
+
+
