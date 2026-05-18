@@ -4,6 +4,7 @@ import com.vectordemo.di.AppContainer
 import com.vectordemo.domain.model.DemoCatalogItem
 import com.vectordemo.domain.model.DemoRoute
 import com.vectordemo.domain.platform.PlatformFeatures
+import com.vectordemo.domain.platform.PlatformType
 import com.vectordemo.viewModel.BaseVm
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
@@ -103,14 +104,18 @@ class MainVm : BaseVm() {
     }
 
     private fun buildDemoItems(): List<DemoCatalogItem> {
+        val platformTag = when (PlatformFeatures.platformType) {
+            PlatformType.ANDROID -> "Android"
+            PlatformType.IOS -> "iOS"
+        }
         return listOf(
-            DemoCatalogItem("hello", "Hello Demo", "Compose + MVI navigation sample", DemoRoute.HELLO),
+            DemoCatalogItem("hello", "Hello Demo", "Compose + MVI navigation sample ($platformTag)", DemoRoute.HELLO),
             DemoCatalogItem("oss", "OSS Demo", "上传、存储桶列表、图片下载/更换/删除", DemoRoute.OSS_DEMO),
             DemoCatalogItem("chat_list", "ChatList Demo", "流式聊天对话（Flutter ChatPage迁移）", DemoRoute.CHAT_LIST_DEMO),
-            DemoCatalogItem("voice_agent", "Voice Agent", "离线唤醒 + VAD + STT + LLM", DemoRoute.VOICE_AGENT),
+            DemoCatalogItem("voice_agent", "Voice Agent", "离线唤醒 + VAD + STT + LLM（$platformTag）", DemoRoute.VOICE_AGENT),
             DemoCatalogItem("live_push", "Live Push Demo", "RTMP + X264 实时推流（Android）", DemoRoute.LIVE_PUSH),
             DemoCatalogItem("live_pull", "Live Pull Demo", "RTMP/HLS 拉流播放（Android）", DemoRoute.LIVE_PULL),
-            DemoCatalogItem("stl_cpp", "C++ STL / KNI", "STL 容器、KNI 互调、C++ 推消息与抛异常", DemoRoute.STL_CPP),
+            DemoCatalogItem("stl_cpp", "C++ STL / KNI", "STL 容器、KNI 互调、C++ 推消息与抛异常（Android）", DemoRoute.STL_CPP),
         )
     }
 }

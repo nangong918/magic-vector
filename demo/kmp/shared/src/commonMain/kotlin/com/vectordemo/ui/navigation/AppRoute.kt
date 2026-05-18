@@ -9,5 +9,8 @@ enum class AppRoute {
     CHAT,
     OSS,
     VOICE,
+    LIVE_PUSH,
+    LIVE_PULL,
+    STL_CPP,
     UNSUPPORTED,
 }

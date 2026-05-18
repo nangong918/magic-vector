@@ -7,12 +7,15 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import com.vectordemo.ui.navigation.AppNavigator
 import com.vectordemo.ui.navigation.AppRoute
+import com.vectordemo.ui.navigation.NativeFeatureBridge
 import com.vectordemo.ui.theme.VectorDemoTheme
 import com.vectordemo.ui.view.activity.ComposeLoginScreen
 import com.vectordemo.ui.view.activity.ComposeRegisterScreen
 import com.vectordemo.ui.view.activity.HelloScreen
 import com.vectordemo.ui.view.activity.MainScreen
+import com.vectordemo.ui.view.activity.NativeFeatureScreen
 import com.vectordemo.ui.view.activity.StartScreen
 import com.vectordemo.ui.view.chat.ChatListScreen
 import com.vectordemo.ui.view.common.UnsupportedScreen
@@ -31,8 +34,9 @@ import com.vectordemo.viewModel.voice.VoiceAgentEffect
 @Composable
 fun App() {
     VectorDemoTheme {
-        var route by remember { mutableStateOf(AppRoute.START) }
         var toastMessage by remember { mutableStateOf("") }
+        val routes by AppNavigator.routes.collectAsState()
+        val route = routes.lastOrNull() ?: AppRoute.START
 
         val loginState by AppVmStore.loginVm.uiState.collectAsState()
         val loginDataState by AppVmStore.loginVm.dataState.collectAsState()
@@ -50,12 +54,11 @@ fun App() {
 
         LaunchedEffect(Unit) {
             AppVmStore.startVm.effect.collect { effect ->
-                route = when (effect) {
-                    StartEffect.NavigateToMain -> AppRoute.MAIN
-                    StartEffect.NavigateToLogin -> AppRoute.LOGIN
+                when (effect) {
+                    StartEffect.NavigateToMain -> AppNavigator.resetTo(AppRoute.MAIN)
+                    StartEffect.NavigateToLogin -> AppNavigator.resetTo(AppRoute.LOGIN)
                     is StartEffect.ShowToast -> {
                         toastMessage = effect.message
-                        route
                     }
                 }
             }
@@ -63,12 +66,11 @@ fun App() {
 
         LaunchedEffect(Unit) {
             AppVmStore.loginVm.effect.collect { effect ->
-                route = when (effect) {
-                    LoginEffect.NavigateToMain -> AppRoute.MAIN
-                    LoginEffect.NavigateToRegister -> AppRoute.REGISTER
+                when (effect) {
+                    LoginEffect.NavigateToMain -> AppNavigator.resetTo(AppRoute.MAIN)
+                    LoginEffect.NavigateToRegister -> AppNavigator.navigate(AppRoute.REGISTER)
                     is LoginEffect.ShowToast -> {
                         toastMessage = effect.message
-                        route
                     }
                 }
             }
@@ -76,16 +78,14 @@ fun App() {
 
         LaunchedEffect(Unit) {
             AppVmStore.registerVm.effect.collect { effect ->
-                route = when (effect) {
-                    RegisterEffect.NavigateToMain -> AppRoute.MAIN
-                    RegisterEffect.NavigateToLogin -> AppRoute.LOGIN
+                when (effect) {
+                    RegisterEffect.NavigateToMain -> AppNavigator.resetTo(AppRoute.MAIN)
+                    RegisterEffect.NavigateToLogin -> AppNavigator.resetTo(AppRoute.LOGIN)
                     RegisterEffect.RequestStoragePermission -> {
                         toastMessage = "当前平台尚未接入统一相册选择器"
-                        route
                     }
                     is RegisterEffect.ShowToast -> {
                         toastMessage = effect.message
-                        route
                     }
                 }
             }
@@ -93,18 +93,29 @@ fun App() {
 
         LaunchedEffect(Unit) {
             AppVmStore.mainVm.effect.collect { effect ->
-                route = when (effect) {
-                    MainEffect.NavigateToHello -> AppRoute.HELLO
-                    MainEffect.NavigateToOssDemo -> AppRoute.OSS
-                    MainEffect.NavigateToChatList -> AppRoute.CHAT
-                    MainEffect.NavigateToVoiceAgent -> AppRoute.VOICE
-                    MainEffect.NavigateToLivePush,
-                    MainEffect.NavigateToLivePull,
-                    MainEffect.NavigateToStlCpp -> AppRoute.UNSUPPORTED
-                    MainEffect.NavigateToLogin -> AppRoute.LOGIN
+                when (effect) {
+                    MainEffect.NavigateToHello -> AppNavigator.navigate(AppRoute.HELLO)
+                    MainEffect.NavigateToOssDemo -> AppNavigator.navigate(AppRoute.OSS)
+                    MainEffect.NavigateToChatList -> AppNavigator.navigate(AppRoute.CHAT)
+                    MainEffect.NavigateToVoiceAgent -> AppNavigator.navigate(AppRoute.VOICE)
+                    MainEffect.NavigateToLivePush -> {
+                        if (!NativeFeatureBridge.openLivePush()) {
+                            AppNavigator.navigate(AppRoute.LIVE_PUSH)
+                        }
+                    }
+                    MainEffect.NavigateToLivePull -> {
+                        if (!NativeFeatureBridge.openLivePull()) {
+                            AppNavigator.navigate(AppRoute.LIVE_PULL)
+                        }
+                    }
+                    MainEffect.NavigateToStlCpp -> {
+                        if (!NativeFeatureBridge.openStlCpp()) {
+                            AppNavigator.navigate(AppRoute.STL_CPP)
+                        }
+                    }
+                    MainEffect.NavigateToLogin -> AppNavigator.resetTo(AppRoute.LOGIN)
                     is MainEffect.ShowToast -> {
                         toastMessage = effect.message
-                        route
                     }
                 }
             }
@@ -123,7 +134,7 @@ fun App() {
         LaunchedEffect(Unit) {
             AppVmStore.voiceAgentVm.effect.collect { effect ->
                 when (effect) {
-                    VoiceAgentEffect.FinishActivity -> route = AppRoute.MAIN
+                    VoiceAgentEffect.FinishActivity -> AppNavigator.resetTo(AppRoute.MAIN)
                 }
             }
         }
@@ -146,23 +157,38 @@ fun App() {
             AppRoute.HELLO -> HelloScreen()
             AppRoute.CHAT -> ChatListScreen(
                 state = chatState,
-                onBack = { route = AppRoute.MAIN },
+                onBack = { AppNavigator.goBack() },
                 onSend = { AppVmStore.chatListVm.sendMessage(it) },
             )
             AppRoute.OSS -> OssDemoScreen(
                 state = ossState,
                 processIntent = { AppVmStore.ossDemoVm.processIntent(it) },
-                onBack = { route = AppRoute.MAIN },
+                onBack = { AppNavigator.goBack() },
             )
             AppRoute.VOICE -> VoiceAgentScreen(
                 state = voiceState,
                 serviceStatusText = AppVmStore.voiceAgentVm.buildServiceStatusText(voiceState),
-                onBack = { route = AppRoute.MAIN },
+                onBack = { AppNavigator.goBack() },
                 onSelectLlm = { AppVmStore.voiceAgentVm.setLlmProvider(it) },
+            )
+            AppRoute.LIVE_PUSH -> NativeFeatureScreen(
+                title = "Live Push Demo",
+                description = "该功能为 Android 原生 AAR 能力，当前由 Android Host 承载。",
+                onBack = { AppNavigator.goBack() },
+            )
+            AppRoute.LIVE_PULL -> NativeFeatureScreen(
+                title = "Live Pull Demo",
+                description = "该功能为 Android 原生 AAR 能力，当前由 Android Host 承载。",
+                onBack = { AppNavigator.goBack() },
+            )
+            AppRoute.STL_CPP -> NativeFeatureScreen(
+                title = "STL / JNI Demo",
+                description = "该功能为 Android JNI + C++ 能力，当前由 Android Host 承载。",
+                onBack = { AppNavigator.goBack() },
             )
             AppRoute.UNSUPPORTED -> UnsupportedScreen(
                 message = "该功能当前仅支持 Android 平台。",
-                onBack = { route = AppRoute.MAIN },
+                onBack = { AppNavigator.goBack() },
             )
         }
     }
