@@ -161,3 +161,17 @@ nginx配置在：[nginx.conf](../demo/springboot/docker/nginx/nginx.conf)
 我以前是没有接触过WebRTC的，我希望你先去上网查询可行方案，然后独立实现。
 
 
+
+### WebRTC总结
+现在我需要你整理项目中的WebRTC是怎么实现的？我需要你分析核心的代码，
+首先看到C:\GoBackPlan\Knowledge\Media\Media.md 的 ### WebRTC
+我已经基本完成, 现在只差集成和代码需要你完成.
+首先集成:
+springBoot在:[springboot](../demo/springboot)其实跟springboot都没关系,其实集成就是用docker的方法:[docker-compose.yml](../demo/springboot/docker/docker-compose.yml)
+你看到user=${TURN_USER:-webrtc}:${TURN_PASSWORD:-webrtc123}这附近,大概是这里实现的,需要整理到文档,然后nginx[nginx.conf](../demo/springboot/docker/nginx/nginx.conf)也有配置
+你大概看一下这些实现然后整理,这些代码你不要光超过去,你要分析为什么这么写.
+Android的代码在[flutteraar](../demo/flutter/flutteraar), 里面有webRTC的demo, 首先你要看gradle集成了什么怎么实现的webrtc
+然后分析代码, 整理代码是怎么实现采集, 编码, 推流, 拉流, 播放的最好摘录代码.
+然后再在下面绘制推流拉流的逻辑活动图和数据流通信图
+
+
