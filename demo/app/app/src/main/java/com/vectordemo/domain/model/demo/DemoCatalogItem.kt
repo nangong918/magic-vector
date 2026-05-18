@@ -13,5 +13,6 @@ enum class DemoRoute {
     CHAT_LIST_DEMO,
     VOICE_AGENT,
     LIVE_PUSH,
-    LIVE_PULL
+    LIVE_PULL,
+    STL_CPP
 }

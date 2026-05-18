@@ -24,14 +24,20 @@ project("vectordemo")
 # System.loadLibrary() and pass the name of the library defined here;
 # for GameActivity/NativeActivity derived applications, the same library name must be
 # used in the AndroidManifest.xml file.
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+find_library(log-lib log)
+
 add_library(${CMAKE_PROJECT_NAME} SHARED
         # List C/C++ source files with relative paths to this CMakeLists.txt.
-        native-lib.cpp)
+        native-lib.cpp
+        stl_demo.cpp
+        invoke_demo.cpp
+        update/update_demo.cpp)
 
-# Specifies libraries CMake should link to your target library. You
-# can link libraries from various origins, such as libraries defined in this
-# build script, prebuilt third-party libraries, or Android system libraries.
 target_link_libraries(${CMAKE_PROJECT_NAME}
         # List libraries link to the target library
         android
-        log)
+        ${log-lib}
+        c++_shared)

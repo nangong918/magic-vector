@@ -55,6 +55,9 @@
         <activity
             android:name=".activity.LivePullDemoActivity"
             android:exported="false" />
+        <activity
+            android:name=".activity.STLActivity"
+            android:exported="false" />
     </application>
 
 </manifest>

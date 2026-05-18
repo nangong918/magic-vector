@@ -51,6 +51,12 @@ class MainVm : ViewModel() {
             title = "Live Pull Demo",
             subtitle = "RTMP/HLS 拉流播放（Android）",
             route = DemoRoute.LIVE_PULL
+        ),
+        DemoCatalogItem(
+            id = "stl_cpp",
+            title = "C++ STL / KNI",
+            subtitle = "STL 容器、KNI 互调、C++ 推消息与抛异常",
+            route = DemoRoute.STL_CPP
         )
     )
 
@@ -97,6 +103,7 @@ class MainVm : ViewModel() {
             DemoRoute.VOICE_AGENT -> sendEffect(MainEffect.NavigateToVoiceAgent)
             DemoRoute.LIVE_PUSH -> sendEffect(MainEffect.NavigateToLivePush)
             DemoRoute.LIVE_PULL -> sendEffect(MainEffect.NavigateToLivePull)
+            DemoRoute.STL_CPP -> sendEffect(MainEffect.NavigateToStlCpp)
         }
     }
 
@@ -147,5 +154,6 @@ sealed class MainEffect {
     data object NavigateToVoiceAgent : MainEffect()
     data object NavigateToLivePush : MainEffect()
     data object NavigateToLivePull : MainEffect()
+    data object NavigateToStlCpp : MainEffect()
     data object NavigateToLogin : MainEffect()
 }

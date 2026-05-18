@@ -20,6 +20,8 @@ android {
         externalNativeBuild {
             cmake {
                 cppFlags += "-std=c++17"
+                // 与 CMake c++_shared 配套，将 libc++_shared.so 打入 APK
+                arguments += "-DANDROID_STL=c++_shared"
             }
         }
     }
