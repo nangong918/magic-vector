@@ -34,7 +34,7 @@ data class ChatListUiState(
 )
 
 class ChatListVm(
-    private val aliChatService: ChatService = AppContainer.aliChatService,
+    private val aliChatServiceProvider: () -> ChatService = { AppContainer.aliChatService },
 ) : BaseVm() {
     private val _uiState = MutableStateFlow(ChatListUiState())
     val uiState: StateFlow<ChatListUiState> = _uiState.asStateFlow()
@@ -53,6 +53,15 @@ class ChatListVm(
     fun sendMessage(input: String) {
         val message = input.trim()
         if (message.isBlank() || _uiState.value.status != RealtimeChatStatus.CONNECTED) return
+        if (!AppContainer.isInitialized) {
+            _uiState.update {
+                it.copy(
+                    status = RealtimeChatStatus.ERROR,
+                    errorMessage = "配置尚未加载完成，请稍后重试",
+                )
+            }
+            return
+        }
 
         vmScope.launch {
             val userMsg = ChatListMessage(newId(), "user", message, now())
@@ -71,7 +80,7 @@ class ChatListVm(
             }
 
             runCatching {
-                aliChatService.sendChat(
+                aliChatServiceProvider().sendChat(
                     systemPrompt = systemPrompt,
                     history = history.toList(),
                     userMessage = message,

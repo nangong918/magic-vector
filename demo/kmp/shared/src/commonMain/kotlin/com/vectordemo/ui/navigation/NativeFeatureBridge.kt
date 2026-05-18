@@ -1,7 +1,6 @@
 package com.vectordemo.ui.navigation
 
 object NativeFeatureBridge {
-    @Volatile
     private var actions: NativeFeatureActions = NativeFeatureActions()
 
     fun setActions(value: NativeFeatureActions) {

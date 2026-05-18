@@ -7,6 +7,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import com.vectordemo.di.AppContainer
 import com.vectordemo.ui.navigation.AppNavigator
 import com.vectordemo.ui.navigation.AppRoute
 import com.vectordemo.ui.navigation.NativeFeatureBridge
@@ -47,6 +48,9 @@ fun App() {
         val voiceState by AppVmStore.voiceAgentVm.uiState.collectAsState()
 
         LaunchedEffect(Unit) {
+            if (!AppContainer.isInitialized) {
+                AppContainer.initialize()
+            }
             AppVmStore.startVm.processIntent(StartIntent.Initialize)
             AppVmStore.voiceAgentVm.initialize()
             AppVmStore.chatListVm.initialize()

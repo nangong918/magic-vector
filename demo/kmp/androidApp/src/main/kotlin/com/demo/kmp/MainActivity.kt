@@ -9,13 +9,18 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.tooling.preview.Preview
 import com.vectordemo.activity.clearNativeFeatureRouter
 import com.vectordemo.activity.installNativeFeatureRouter
+import com.vectordemo.di.AppContainer
+import com.vectordemo.domain.config.initModuleKeyConfigContext
 import com.vectordemo.ui.navigation.AppNavigator
 import com.vectordemo.ui.navigation.AppRoute
+import kotlinx.coroutines.runBlocking
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
+        initModuleKeyConfigContext(applicationContext)
+        runBlocking { AppContainer.initialize() }
         AppNavigator.resetTo(AppRoute.START)
         installNativeFeatureRouter(this)
         onBackPressedDispatcher.addCallback(

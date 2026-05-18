@@ -46,6 +46,12 @@ class AliChatService(
         onDone: () -> Unit,
     ) {
         val cfg = configProvider()
+        require(cfg.hostUrl.isNotBlank()) {
+            "llm_ali.hostUrl 未配置，请检查 module_key.json"
+        }
+        require(cfg.apiKey.isNotBlank()) {
+            "llm_ali.apiKey 未配置，请检查 module_key.json"
+        }
         val payload = buildAliPayload(cfg, systemPrompt, history, userMessage)
         val text = httpClient.post(cfg.hostUrl) {
             contentType(ContentType.Application.Json)

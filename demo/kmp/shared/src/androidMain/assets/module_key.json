@@ -1,0 +1,48 @@
+{
+  "xfyun": {
+    "llm": {
+      "hostUrl": "wss://maas-api.cn-huabei-1.xf-yun.com/v1.1/chat",
+      "appId": "4aa58263",
+      "apiKey": "fd775746ce819ec90bc6ec2df697dbe5",
+      "apiSecret": "Y2U0OWUyYjcyOTRiYWEwMjk0YWNlMzdh",
+      "domain": "xop3qwen1b7",
+      "patchId": "",
+      "serviceId": "",
+      "resourceId": ""
+    },
+    "stt": {
+      "hostUrl": "https://iat.xf-yun.com/v1",
+      "appId": "4aa58263",
+      "apiKey": "fd775746ce819ec90bc6ec2df697dbe5",
+      "apiSecret": "Y2U0OWUyYjcyOTRiYWEwMjk0YWNlMzdh",
+      "serviceId": "",
+      "resourceId": ""
+    },
+    "offlineIvw": {
+      "appId": "4aa58263",
+      "apiKey": "fd775746ce819ec90bc6ec2df697dbe5",
+      "apiSecret": "Y2U0OWUyYjcyOTRiYWEwMjk0YWNlMzdh",
+      "abilityId": "e867a88f2",
+      "serviceId": "",
+      "resourceId": ""
+    }
+  },
+  "stt_ali": {
+    "hostUrl": "wss://dashscope.aliyuncs.com/api-ws/v1/inference/",
+    "apiKey": "sk-d314ba7a3088483eacb1a5ec8b10a6a5",
+    "model": "paraformer-realtime-v2",
+    "format": "pcm",
+    "sampleRate": 16000,
+    "disfluencyRemovalEnabled": false,
+    "languageHints": [
+      "zh"
+    ]
+  },
+  "llm_ali": {
+    "hostUrl": "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions",
+    "apiKey": "sk-d314ba7a3088483eacb1a5ec8b10a6a5",
+    "model": "qwen-plus",
+    "temperature": 0.5,
+    "maxTokens": 4096
+  }
+}

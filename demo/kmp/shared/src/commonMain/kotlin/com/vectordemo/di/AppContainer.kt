@@ -4,6 +4,8 @@ import com.vectordemo.dataSource.local.OssLocalSource
 import com.vectordemo.dataSource.local.UserLocalSource
 import com.vectordemo.dataSource.remote.OssRemoteApiSource
 import com.vectordemo.dataSource.remote.UserRemoteApiSource
+import com.vectordemo.domain.config.ModuleKeyConfig
+import com.vectordemo.domain.config.ModuleKeyConfigLoader
 import com.vectordemo.domain.config.ModuleKeyConfigStore
 import com.vectordemo.manager.OssManager
 import com.vectordemo.manager.UserManager
@@ -30,16 +32,47 @@ object AppContainer {
     val userManager = UserManager(userLocal)
     val ossManager = OssManager(ossRemote, ossLocal)
 
-    private val moduleConfig = ModuleKeyConfigStore.loadFromJson()
-    private val aliChatServiceImpl = AliChatService(
-        configProvider = { moduleConfig.llmAli },
-        httpClient = httpClient,
-    )
-    val aliChatService: ChatService = aliChatServiceImpl
-    val xfYunChatService: ChatService = XfYunChatService(
-        configProvider = { moduleConfig.xfyun.llm },
-        aliFallback = aliChatServiceImpl,
-    )
+    private var moduleConfig: ModuleKeyConfig? = null
+    private var aliChatServiceImpl: AliChatService? = null
+    private var xfYunChatServiceImpl: XfYunChatService? = null
+
+    val aliChatService: ChatService
+        get() = aliChatServiceImpl ?: error("AppContainer 未初始化，请先调用 initialize()")
+    val xfYunChatService: ChatService
+        get() = xfYunChatServiceImpl ?: error("AppContainer 未初始化，请先调用 initialize()")
+
+    val isInitialized: Boolean
+        get() = moduleConfig != null
+
+    suspend fun initialize() {
+        if (isInitialized) return
+        val content = ModuleKeyConfigLoader.loadContent()
+        configureFromJson(content)
+    }
+
+    fun configureFromJson(content: String) {
+        moduleConfig = ModuleKeyConfigStore.loadFromJson(content)
+        aliChatServiceImpl = createAliChatService()
+        xfYunChatServiceImpl = createXfYunChatService()
+    }
+
+    private fun requireModuleConfig(): ModuleKeyConfig {
+        return moduleConfig ?: error("AppContainer 未初始化，请先调用 initialize()")
+    }
+
+    private fun createAliChatService(): AliChatService {
+        return AliChatService(
+            configProvider = { requireModuleConfig().llmAli },
+            httpClient = httpClient,
+        )
+    }
+
+    private fun createXfYunChatService(): XfYunChatService {
+        return XfYunChatService(
+            configProvider = { requireModuleConfig().xfyun.llm },
+            aliFallback = aliChatServiceImpl ?: createAliChatService(),
+        )
+    }
 
     val currentUserId = userIdFlow.asStateFlow()
 
