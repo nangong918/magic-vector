@@ -1,30 +1,29 @@
 package com.vectordemo.dataSource.remote
 
-import com.vectordemo.domain.convertor.OssConvertor
+import com.vectordemo.domain.dto.http.request.MultipartPartPayload
 import com.vectordemo.domain.exception.NetworkParamIllegalException
 import com.vectordemo.domain.model.oss.OssBatchDeleteModel
 import com.vectordemo.domain.model.oss.OssBatchUploadModel
 import com.vectordemo.domain.model.oss.OssBucketFileItemListModel
 import com.vectordemo.domain.model.oss.OssFileContentUpdateModel
 import com.vectordemo.domain.model.oss.OssUserBucketListModel
-import com.vectordemo.repository.api.ApiClient
-import com.vectordemo.repository.api.MultipartPartPayload
+import com.vectordemo.repository.api.ApiRequest
 
-class OssRemoteApiSource(private val apiClient: ApiClient) {
+class OssRemoteApiSource(private val apiRequest: ApiRequest) {
     suspend fun ossUserBucketList(userId: String): OssUserBucketListModel {
         val data = RemoteRequestData.requestData(
-            { apiClient.ossUserBucketList(userId) },
+            { apiRequest.ossUserBucketList(userId) },
             "存储桶列表响应为空",
         )
-        return OssConvertor.bucketListResponseToModel(data)
+        return OssUserBucketListModel.fromResponse(data)
     }
 
     suspend fun ossUserBucketFileItemList(userId: String, bucketName: String): OssBucketFileItemListModel {
         val data = RemoteRequestData.requestData(
-            { apiClient.ossUserBucketFileItemList(userId, bucketName) },
+            { apiRequest.ossUserBucketFileItemList(userId, bucketName) },
             "文件明细列表响应为空",
         )
-        return OssConvertor.fileItemListResponseToModel(data)
+        return OssBucketFileItemListModel.fromResponse(data)
     }
 
     suspend fun ossBatchUploadSingle(
@@ -33,26 +32,26 @@ class OssRemoteApiSource(private val apiClient: ApiClient) {
         file: MultipartPartPayload,
     ): OssBatchUploadModel {
         val data = RemoteRequestData.requestData(
-            { apiClient.ossBatchUpload(userId, bucketName, listOf(file)) },
+            { apiRequest.ossBatchUpload(userId, bucketName, listOf(file)) },
             "上传响应为空",
         )
-        return OssConvertor.batchUploadResponseToModel(data)
+        return OssBatchUploadModel.fromResponse(data)
     }
 
     suspend fun ossBatchDelete(fileIds: List<String>): OssBatchDeleteModel {
         if (fileIds.isEmpty()) throw NetworkParamIllegalException("fileIds 为空")
         val data = RemoteRequestData.requestData(
-            { apiClient.ossBatchDelete(fileIds) },
+            { apiRequest.ossBatchDelete(fileIds) },
             "删除响应为空",
         )
-        return OssConvertor.batchDeleteResponseToModel(data)
+        return OssBatchDeleteModel.fromResponse(data)
     }
 
     suspend fun ossUpdateFileContent(fileId: String, file: MultipartPartPayload): OssFileContentUpdateModel {
         val data = RemoteRequestData.requestData(
-            { apiClient.ossUpdateFileContent(fileId, file) },
+            { apiRequest.ossUpdateFileContent(fileId, file) },
             "更新文件内容响应为空",
         )
-        return OssConvertor.fileContentUpdateResponseToModel(data)
+        return OssFileContentUpdateModel.fromResponse(data)
     }
 }

@@ -4,7 +4,7 @@ import androidx.lifecycle.viewModelScope
 import com.vectordemo.dataSource.remote.UserRemoteApiSource
 import com.vectordemo.di.AppContainer
 import com.vectordemo.manager.user.UserManager
-import com.vectordemo.repository.api.MultipartPartPayload
+import com.vectordemo.domain.dto.http.request.MultipartPartPayload
 import com.vectordemo.viewModel.BaseVm
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow

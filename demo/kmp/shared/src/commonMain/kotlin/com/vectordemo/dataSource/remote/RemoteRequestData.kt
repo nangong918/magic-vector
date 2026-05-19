@@ -1,8 +1,8 @@
 package com.vectordemo.dataSource.remote
 
 import com.vectordemo.domain.constant.BaseConstant
+import com.vectordemo.domain.dto.http.response.BaseResponse
 import com.vectordemo.domain.exception.NetworkBusinessException
-import com.vectordemo.repository.api.BaseResponse
 
 internal object RemoteRequestData {
     suspend fun <T> requestData(

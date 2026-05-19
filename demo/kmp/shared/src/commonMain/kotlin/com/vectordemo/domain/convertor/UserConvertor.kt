@@ -2,8 +2,6 @@ package com.vectordemo.domain.convertor
 
 import com.vectordemo.domain.entity.UserEntity
 import com.vectordemo.domain.model.user.UserSessionModel
-import com.vectordemo.domain.platform.currentTimeMillis
-import com.vectordemo.repository.api.UserAuthResponse
 
 object UserConvertor {
     fun model2Entity(session: UserSessionModel): UserEntity = UserEntity(
@@ -27,18 +25,4 @@ object UserConvertor {
         isCurrent = entity.isCurrent,
         lastLoginAt = entity.lastLoginAt,
     )
-
-    fun authResponseToSessionModel(auth: UserAuthResponse, password: String): UserSessionModel {
-        val uid = auth.userId?.toLongOrNull() ?: 0L
-        return UserSessionModel(
-            userId = uid,
-            account = auth.account.orEmpty(),
-            name = auth.name.orEmpty(),
-            avatarUrl = auth.avatarUrl.orEmpty(),
-            accessToken = auth.accessToken.orEmpty(),
-            password = password,
-            isCurrent = true,
-            lastLoginAt = currentTimeMillis(),
-        )
-    }
 }

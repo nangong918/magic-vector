@@ -1,21 +1,17 @@
 package com.vectordemo.dataSource.remote
 
-import com.vectordemo.domain.convertor.UserConvertor
+import com.vectordemo.domain.dto.http.request.MultipartPartPayload
 import com.vectordemo.domain.exception.NetworkParamIllegalException
 import com.vectordemo.domain.model.user.UserSessionModel
-import com.vectordemo.repository.api.ApiClient
-import com.vectordemo.repository.api.MultipartPartPayload
-import com.vectordemo.repository.api.UserLoginRequest
-import com.vectordemo.repository.api.UserPasswordUpdateRequest
-import com.vectordemo.repository.api.UserTokenVerifyRequest
+import com.vectordemo.repository.api.ApiRequest
 
-class UserRemoteApiSource(private val apiClient: ApiClient) {
+class UserRemoteApiSource(private val apiRequest: ApiRequest) {
     suspend fun login(account: String, password: String): UserSessionModel {
         val auth = RemoteRequestData.requestData(
-            { apiClient.login(UserLoginRequest(account = account, password = password)) },
+            { apiRequest.login(UserSessionModel.loginRequest(account, password)) },
             "登录响应为空",
         )
-        return UserConvertor.authResponseToSessionModel(auth, password)
+        return UserSessionModel.fromAuthResponse(auth, password)
     }
 
     suspend fun register(
@@ -25,34 +21,26 @@ class UserRemoteApiSource(private val apiClient: ApiClient) {
         name: String,
     ): UserSessionModel {
         val auth = RemoteRequestData.requestData(
-            { apiClient.register(avatar = avatar, account = account, password = password, name = name) },
+            { apiRequest.register(avatar, account, password, name) },
             "注册响应为空",
         )
-        return UserConvertor.authResponseToSessionModel(auth, password)
+        return UserSessionModel.fromAuthResponse(auth, password)
     }
 
     suspend fun verifyAccessToken(userId: Long, accessToken: String): Boolean {
         if (userId <= 0L || accessToken.isBlank()) throw NetworkParamIllegalException("用户不存在")
         val verify = RemoteRequestData.requestData(
-            {
-                apiClient.verifyAccessToken(
-                    UserTokenVerifyRequest(userId = userId.toString(), accessToken = accessToken),
-                )
-            },
+            { apiRequest.verifyAccessToken(UserSessionModel.TokenVerify.request(userId, accessToken)) },
             "Token验证响应为空",
         )
-        return verify.valid == true
+        return UserSessionModel.TokenVerify.parseValid(verify)
     }
 
     suspend fun updatePassword(userId: Long, oldPassword: String, newPassword: String) {
         RemoteRequestData.requestData(
             {
-                apiClient.updatePassword(
-                    UserPasswordUpdateRequest(
-                        userId = userId.toString(),
-                        oldPassword = oldPassword,
-                        newPassword = newPassword,
-                    ),
+                apiRequest.updatePassword(
+                    UserSessionModel.PasswordUpdate.request(userId, oldPassword, newPassword),
                 )
             },
             "修改密码响应为空",

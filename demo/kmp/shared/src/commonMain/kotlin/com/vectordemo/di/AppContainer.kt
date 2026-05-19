@@ -10,7 +10,8 @@ import com.vectordemo.domain.config.ModuleKeyConfigLoader
 import com.vectordemo.domain.config.ModuleKeyConfigStore
 import com.vectordemo.manager.oss.OssManager
 import com.vectordemo.manager.user.UserManager
-import com.vectordemo.repository.api.ApiClient
+import com.vectordemo.repository.api.ApiRequest
+import com.vectordemo.repository.api.createApiRequest
 import com.vectordemo.repository.api.createExternalAiHttpClient
 import com.vectordemo.repository.api.createPlatformHttpClient
 import com.vectordemo.service.ai.AliChatService
@@ -25,14 +26,14 @@ object AppContainer {
 
     private val httpClient = createPlatformHttpClient { cachedToken }
     private val aiHttpClient = createExternalAiHttpClient()
-    private val apiClient = ApiClient(httpClient)
+    private val apiRequest: ApiRequest = createApiRequest(httpClient)
 
     private val database by lazy { createVectorDatabase() }
     private val userLocal = UserLocalSource(database)
     private val ossLocal = OssLocalSource(database)
 
-    val userRemote = UserRemoteApiSource(apiClient)
-    val ossRemote = OssRemoteApiSource(apiClient)
+    val userRemote = UserRemoteApiSource(apiRequest)
+    val ossRemote = OssRemoteApiSource(apiRequest)
 
     val userManager = UserManager(userLocal)
     val ossManager = OssManager(ossRemote, ossLocal)

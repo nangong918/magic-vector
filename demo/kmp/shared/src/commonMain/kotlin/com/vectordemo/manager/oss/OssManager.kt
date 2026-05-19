@@ -10,7 +10,7 @@ import com.vectordemo.domain.model.oss.OssBucketFileItemModel
 import com.vectordemo.domain.model.oss.OssFileContentUpdateModel
 import com.vectordemo.domain.model.oss.OssUserBucketListModel
 import com.vectordemo.domain.platform.currentTimeMillis
-import com.vectordemo.repository.api.MultipartPartPayload
+import com.vectordemo.domain.dto.http.request.MultipartPartPayload
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.withContext

@@ -2,7 +2,7 @@ package com.vectordemo.viewModel.oss
 
 import com.vectordemo.di.AppContainer
 import com.vectordemo.domain.model.oss.OssBucketFileItemModel
-import com.vectordemo.repository.api.MultipartPartPayload
+import com.vectordemo.domain.dto.http.request.MultipartPartPayload
 import androidx.lifecycle.viewModelScope
 import com.vectordemo.viewModel.BaseVm
 import kotlinx.coroutines.channels.Channel
