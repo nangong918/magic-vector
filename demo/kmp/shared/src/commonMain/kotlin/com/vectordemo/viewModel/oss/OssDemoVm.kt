@@ -28,6 +28,8 @@ data class OssDemoState(
 )
 
 sealed class OssDemoIntent {
+    /** 进入 OSS 页时调用（单 Activity 导航下 ViewModel 复用，需对齐 demo/app 每次新建 OssDemoActivity） */
+    data object Initialize : OssDemoIntent()
     data object RefreshBuckets : OssDemoIntent()
     data class ToggleBucket(val bucket: String) : OssDemoIntent()
     data class LoadBucketFiles(val bucket: String, val force: Boolean = false) : OssDemoIntent()
@@ -53,10 +55,9 @@ class OssDemoVm : BaseVm() {
     private val _effect = Channel<OssDemoEffect>(Channel.BUFFERED)
     val effect: Flow<OssDemoEffect> = _effect.receiveAsFlow()
 
-    init { initialize() }
-
     fun processIntent(intent: OssDemoIntent) {
         when (intent) {
+            OssDemoIntent.Initialize -> initialize()
             OssDemoIntent.RefreshBuckets -> refreshBuckets()
             is OssDemoIntent.ToggleBucket -> toggleBucket(intent.bucket)
             is OssDemoIntent.LoadBucketFiles -> loadBucketFiles(intent.bucket, intent.force)
@@ -76,11 +77,20 @@ class OssDemoVm : BaseVm() {
 
     private fun initialize() {
         viewModelScope.launch {
-            val u = AppContainer.userManager.getCurrentUser()
-            val blocked = u == null || u.userId <= 0L || u.userId == 1L ||
-                u.accessToken.isBlank() || u.accessToken == "tourist" || u.account == "tourist"
-            _uiState.update { it.copy(touristBlocked = blocked) }
-            if (!blocked) doRefreshBuckets()
+            try {
+                val u = AppContainer.userManager.getCurrentUser()
+                val blocked = u == null || u.userId <= 0L || u.userId == 1L ||
+                    u.accessToken.isBlank() || u.accessToken == "tourist" || u.account == "tourist"
+                _uiState.update { it.copy(touristBlocked = blocked) }
+                if (!blocked) {
+                    AppContainer.updateUserId(u.userId)
+                    AppContainer.updateToken(u.accessToken)
+                    doRefreshBuckets()
+                }
+            } catch (e: Throwable) {
+                _uiState.update { it.copy(touristBlocked = true) }
+                sendEffect(OssDemoEffect.ShowToast(e.message ?: "初始化 OSS 失败"))
+            }
         }
     }
 
@@ -100,7 +110,7 @@ class OssDemoVm : BaseVm() {
             val newBuckets = res.bucketNames
             _uiState.update { it.copy(loadingBuckets = false, buckets = newBuckets) }
             expandedBefore.intersect(newBuckets.toSet()).forEach { b -> doLoadBucketFiles(b, force = true) }
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             _uiState.update { it.copy(loadingBuckets = false) }
             sendEffect(OssDemoEffect.ShowToast(e.message ?: "加载存储桶失败"))
         }
@@ -132,7 +142,7 @@ class OssDemoVm : BaseVm() {
                 map[bucket] = res.items
                 it.copy(loadingBucket = null, filesByBucket = map)
             }
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             _uiState.update { it.copy(loadingBucket = null) }
             sendEffect(OssDemoEffect.ShowToast(e.message ?: "加载文件失败"))
         }
@@ -160,7 +170,7 @@ class OssDemoVm : BaseVm() {
                 val res = AppContainer.ossManager.batchUploadSingle(uid, null, file)
                 val ok = res.items.any { it.success }
                 sendEffect(OssDemoEffect.ShowToast(if (ok) "上传成功" else res.items.firstOrNull()?.message ?: "上传失败"))
-            } catch (e: Exception) {
+            } catch (e: Throwable) {
                 sendEffect(OssDemoEffect.ShowToast(e.message ?: "上传失败"))
             }
         }
@@ -180,7 +190,7 @@ class OssDemoVm : BaseVm() {
                 val res = AppContainer.ossManager.updateFileContent(pending.fileId.toString(), file)
                 if (res.updated) invalidateBucket(pending.bucket)
                 sendEffect(OssDemoEffect.ShowToast(if (res.updated) "已更换图片" else res.message.ifBlank { "更换失败" }))
-            } catch (e: Exception) {
+            } catch (e: Throwable) {
                 sendEffect(OssDemoEffect.ShowToast(e.message ?: "更换失败"))
             }
         }
@@ -193,7 +203,7 @@ class OssDemoVm : BaseVm() {
                 AppContainer.ossManager.batchDelete(listOf(fileId), uid, bucket)
                 invalidateBucket(bucket)
                 sendEffect(OssDemoEffect.ShowToast("已删除"))
-            } catch (e: Exception) {
+            } catch (e: Throwable) {
                 sendEffect(OssDemoEffect.ShowToast(e.message ?: "删除失败"))
             }
         }

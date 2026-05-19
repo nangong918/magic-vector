@@ -11,6 +11,7 @@ import com.vectordemo.domain.config.ModuleKeyConfigStore
 import com.vectordemo.manager.oss.OssManager
 import com.vectordemo.manager.user.UserManager
 import com.vectordemo.repository.api.ApiRequest
+import com.vectordemo.repository.api.ApiAuthHeaders
 import com.vectordemo.repository.api.createApiRequest
 import com.vectordemo.repository.api.createExternalAiHttpClient
 import com.vectordemo.repository.api.createPlatformHttpClient
@@ -24,7 +25,7 @@ object AppContainer {
     private val userIdFlow = MutableStateFlow("")
     private var cachedToken: String? = null
 
-    private val httpClient = createPlatformHttpClient { cachedToken }
+    private val httpClient = createPlatformHttpClient { resolveApiAuthHeaders() }
     private val aiHttpClient = createExternalAiHttpClient()
     private val apiRequest: ApiRequest = createApiRequest(httpClient)
 
@@ -92,5 +93,16 @@ object AppContainer {
 
     fun updateToken(token: String?) {
         cachedToken = token?.takeIf { it.isNotBlank() }
+    }
+
+    private fun resolveApiAuthHeaders(): ApiAuthHeaders? {
+        val session = userManager.peekCurrentUser()
+        if (session != null && session.userId > 0L && session.accessToken.isNotBlank()) {
+            return ApiAuthHeaders(session.userId, session.accessToken)
+        }
+        val userId = userIdFlow.value.toLongOrNull() ?: return null
+        val token = cachedToken ?: return null
+        if (userId <= 0L || token.isBlank()) return null
+        return ApiAuthHeaders(userId, token)
     }
 }

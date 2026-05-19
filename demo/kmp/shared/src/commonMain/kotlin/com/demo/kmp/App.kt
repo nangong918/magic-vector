@@ -28,10 +28,12 @@ import com.vectordemo.viewModel.AppViewModelFactory
 import com.vectordemo.viewModel.activity.LoginEffect
 import com.vectordemo.viewModel.activity.LoginIntent
 import com.vectordemo.viewModel.activity.MainEffect
+import com.vectordemo.viewModel.activity.MainIntent
 import com.vectordemo.viewModel.activity.RegisterEffect
 import com.vectordemo.viewModel.activity.StartEffect
 import com.vectordemo.viewModel.activity.StartIntent
 import com.vectordemo.viewModel.oss.OssDemoEffect
+import com.vectordemo.viewModel.oss.OssDemoIntent
 import com.vectordemo.viewModel.voice.VoiceAgentEffect
 
 @Composable
@@ -63,13 +65,16 @@ fun App() {
             if (!AppContainer.isInitialized) {
                 AppContainer.initialize()
             }
-            voiceAgentVm.initialize()
-            chatListVm.initialize()
         }
 
         LaunchedEffect(route) {
-            if (route == AppRoute.START) {
-                startVm.processIntent(StartIntent.Initialize)
+            when (route) {
+                AppRoute.START -> startVm.processIntent(StartIntent.Initialize)
+                AppRoute.MAIN -> mainVm.processIntent(MainIntent.RefreshUserDisplay)
+                AppRoute.OSS -> ossDemoVm.processIntent(OssDemoIntent.Initialize)
+                AppRoute.CHAT -> chatListVm.initialize()
+                AppRoute.VOICE -> voiceAgentVm.initialize()
+                else -> Unit
             }
         }
 

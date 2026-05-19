@@ -22,6 +22,9 @@ class UserManager(
         currentUserSessionCache = currentSession
     }
 
+    /** 同步读取内存缓存（供 HTTP 鉴权头注入，对齐 demo/app AuthInterceptor 读当前用户）。 */
+    fun peekCurrentUser(): UserSessionModel? = currentUserSessionCache
+
     suspend fun getCurrentUser(): UserSessionModel? = withContext(Dispatchers.IO) {
         val cached = currentUserSessionCache
         if (cached != null && cached.accessToken.isNotBlank()) return@withContext cached

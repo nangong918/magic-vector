@@ -41,6 +41,7 @@ class MainVm(
         when (intent) {
             is MainIntent.UpdateQuery -> updateQuery(intent.query)
             is MainIntent.ClickDemo -> onClickDemo(intent.route)
+            MainIntent.RefreshUserDisplay -> loadCurrentUserDisplayName()
             MainIntent.Logout -> logout()
         }
     }
@@ -127,6 +128,8 @@ class MainVm(
 sealed class MainIntent {
     data class UpdateQuery(val query: String) : MainIntent()
     data class ClickDemo(val route: DemoRoute) : MainIntent()
+    /** 进入主页面时刷新（单 Activity 导航下 MainVm 会复用，需对齐 demo/app 每次新建 MainActivity 的行为） */
+    data object RefreshUserDisplay : MainIntent()
     data object Logout : MainIntent()
 }
 
