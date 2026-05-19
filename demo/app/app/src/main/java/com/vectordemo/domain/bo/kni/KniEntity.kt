@@ -1,4 +1,4 @@
-package com.vectordemo.domain.entity.kni
+package com.vectordemo.domain.bo.kni
 
 class KniEntity {
     @JvmField

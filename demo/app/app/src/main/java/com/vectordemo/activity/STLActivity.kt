@@ -21,7 +21,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import com.vectordemo.domain.entity.kni.KniEntity
+import com.vectordemo.domain.bo.kni.KniEntity
 import com.vectordemo.manager.KniManager
 import com.vectordemo.manager.OnReceiveCppMessage
 import com.vectordemo.ui.theme.VectorDemoTheme

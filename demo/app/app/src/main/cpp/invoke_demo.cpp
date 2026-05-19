@@ -46,7 +46,7 @@ JNIEXPORT jint JNICALL Java_com_vectordemo_manager_KniManager_changeKotlinValue
     jmethodID changeValueMethod = env->GetStaticMethodID(
             jniManagerClass,
             "changeValue",
-            "(Lcom/vectordemo/domain/entity/kni/KniEntity;Ljava/lang/String;IFDZBSJC[B[I[F[D[ZLjava/util/List;)V"
+            "(Lcom/vectordemo/domain/bo/kni/KniEntity;Ljava/lang/String;IFDZBSJC[B[I[F[D[ZLjava/util/List;)V"
     );
 
     if (changeValueMethod == nullptr) {
@@ -173,7 +173,7 @@ JNIEXPORT void JNICALL Java_com_vectordemo_manager_KniManager_initIntMsgCallback
     JavaVM* jvm = nullptr;
     env->GetJavaVM(&jvm);
     // 2. 获取IntMsg类
-    jclass msg_cls = env->FindClass("com/vectordemo/domain/entity/kni/IntMsg");
+    jclass msg_cls = env->FindClass("com/vectordemo/domain/bo/kni/IntMsg");
     // 3. 初始化C++的update_demo
     update_demo::get_instance().init_jni_env(jvm, thiz, msg_cls);
 }

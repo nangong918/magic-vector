@@ -1,7 +1,7 @@
 package com.vectordemo.manager
 
-import com.vectordemo.domain.entity.kni.IntMsg
-import com.vectordemo.domain.entity.kni.KniEntity
+import com.vectordemo.domain.bo.kni.IntMsg
+import com.vectordemo.domain.bo.kni.KniEntity
 
 class KniManager private constructor() {
 
