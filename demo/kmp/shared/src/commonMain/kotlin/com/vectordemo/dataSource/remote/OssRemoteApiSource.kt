@@ -8,6 +8,8 @@ import com.vectordemo.domain.model.oss.OssBucketFileItemListModel
 import com.vectordemo.domain.model.oss.OssFileContentUpdateModel
 import com.vectordemo.domain.model.oss.OssUserBucketListModel
 import com.vectordemo.repository.api.ApiRequest
+import com.vectordemo.repository.api.ossBatchUpload
+import com.vectordemo.repository.api.ossUpdateFileContent
 
 class OssRemoteApiSource(private val apiRequest: ApiRequest) {
     suspend fun ossUserBucketList(userId: String): OssUserBucketListModel {

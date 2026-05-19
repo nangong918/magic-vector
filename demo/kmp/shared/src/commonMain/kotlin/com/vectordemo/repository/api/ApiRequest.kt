@@ -1,6 +1,5 @@
 package com.vectordemo.repository.api
 
-import com.vectordemo.domain.dto.http.request.MultipartPartPayload
 import com.vectordemo.domain.dto.http.request.UserLoginRequest
 import com.vectordemo.domain.dto.http.request.UserPasswordUpdateRequest
 import com.vectordemo.domain.dto.http.request.UserTokenVerifyRequest
@@ -15,68 +14,60 @@ import com.vectordemo.domain.dto.http.response.OssUserBucketListResponse
 import com.vectordemo.domain.dto.http.response.UserAuthResponse
 import com.vectordemo.domain.dto.http.response.UserPasswordUpdateResponse
 import com.vectordemo.domain.dto.http.response.UserTokenVerifyResponse
+import de.jensklingenberg.ktorfit.http.Body
+import de.jensklingenberg.ktorfit.http.Field
+import de.jensklingenberg.ktorfit.http.FormUrlEncoded
+import de.jensklingenberg.ktorfit.http.POST
+import io.ktor.client.request.forms.MultiPartFormDataContent
 
 /**
- * 业务 HTTP 契约，与 demo/app 的 `ApiRequest` 方法签名对齐。
- *
- * - **Android 单端**：可用 Retrofit + OkHttp 生成实现（见 demo/app）。
- * - **KMP commonMain**：Retrofit 不支持多平台；使用 [ApiRequestImpl]（Ktor）或后续引入 **Ktorfit**（Retrofit 风格注解 + Ktor）。
+ * KSP（Ktorfit）在编译期生成实现类，对齐 demo/app Retrofit [ApiRequest] 写法。
  */
 interface ApiRequest {
-    suspend fun register(
-        avatar: MultipartPartPayload?,
-        account: String,
-        password: String,
-        name: String,
-    ): BaseResponse<UserAuthResponse>
+    @POST("user/register")
+    suspend fun register(@Body body: MultiPartFormDataContent): BaseResponse<UserAuthResponse>
 
-    suspend fun login(request: UserLoginRequest): BaseResponse<UserAuthResponse>
+    @POST("user/login")
+    suspend fun login(@Body request: UserLoginRequest): BaseResponse<UserAuthResponse>
 
-    suspend fun verifyAccessToken(request: UserTokenVerifyRequest): BaseResponse<UserTokenVerifyResponse>
+    @POST("user/token/verify")
+    suspend fun verifyAccessToken(@Body request: UserTokenVerifyRequest): BaseResponse<UserTokenVerifyResponse>
 
-    suspend fun updatePassword(request: UserPasswordUpdateRequest): BaseResponse<UserPasswordUpdateResponse>
+    @POST("user/password/update")
+    suspend fun updatePassword(@Body request: UserPasswordUpdateRequest): BaseResponse<UserPasswordUpdateResponse>
 
-    suspend fun ossUserBucketList(userId: String): BaseResponse<OssUserBucketListResponse>
+    @FormUrlEncoded
+    @POST("oss/user/bucket/list")
+    suspend fun ossUserBucketList(@Field("userId") userId: String): BaseResponse<OssUserBucketListResponse>
 
+    @FormUrlEncoded
+    @POST("oss/user/bucket/file/id/list")
     suspend fun ossUserBucketFileIdList(
-        userId: String,
-        bucketName: String,
+        @Field("userId") userId: String,
+        @Field("bucketName") bucketName: String,
     ): BaseResponse<OssUserBucketFileIdsResponse>
 
+    @FormUrlEncoded
+    @POST("oss/user/bucket/file/url/list")
     suspend fun ossUserBucketFileUrlList(
-        userId: String,
-        bucketName: String,
+        @Field("userId") userId: String,
+        @Field("bucketName") bucketName: String,
     ): BaseResponse<OssUserBucketFileUrlsResponse>
 
+    @FormUrlEncoded
+    @POST("oss/user/bucket/file/item/list")
     suspend fun ossUserBucketFileItemList(
-        userId: String,
-        bucketName: String,
+        @Field("userId") userId: String,
+        @Field("bucketName") bucketName: String,
     ): BaseResponse<OssUserBucketFileItemListResponse>
 
-    suspend fun ossBatchUpload(
-        userId: String,
-        bucketName: String?,
-        files: List<MultipartPartPayload>,
-    ): BaseResponse<OssBatchUploadResponse>
+    @POST("oss/upload/batch")
+    suspend fun ossBatchUpload(@Body body: MultiPartFormDataContent): BaseResponse<OssBatchUploadResponse>
 
-    suspend fun ossBatchDelete(fileIds: List<String>): BaseResponse<OssBatchDeleteResponse>
+    @FormUrlEncoded
+    @POST("oss/file/delete/batch")
+    suspend fun ossBatchDelete(@Field("fileIdList") fileIds: List<String>): BaseResponse<OssBatchDeleteResponse>
 
-    suspend fun ossUpdateFileContent(
-        fileId: String,
-        file: MultipartPartPayload,
-    ): BaseResponse<OssFileContentUpdateResponse>
-
-    companion object {
-        const val PATH_USER_REGISTER = "/user/register"
-        const val PATH_USER_LOGIN = "/user/login"
-        const val PATH_USER_TOKEN_VERIFY = "/user/token/verify"
-        const val PATH_USER_PASSWORD_UPDATE = "/user/password/update"
-        const val PATH_OSS_USER_BUCKET_LIST = "/oss/user/bucket/list"
-        const val PATH_OSS_USER_BUCKET_FILE_ID_LIST = "/oss/user/bucket/file/id/list"
-        const val PATH_OSS_USER_BUCKET_FILE_URL_LIST = "/oss/user/bucket/file/url/list"
-        const val PATH_OSS_USER_BUCKET_FILE_ITEM_LIST = "/oss/user/bucket/file/item/list"
-        const val PATH_OSS_UPLOAD_BATCH = "/oss/upload/batch"
-        const val PATH_OSS_FILE_DELETE_BATCH = "/oss/file/delete/batch"
-        const val PATH_OSS_FILE_CONTENT_UPDATE = "/oss/file/content/update"
-    }
+    @POST("oss/file/content/update")
+    suspend fun ossUpdateFileContent(@Body body: MultiPartFormDataContent): BaseResponse<OssFileContentUpdateResponse>
 }

@@ -4,6 +4,7 @@ import com.vectordemo.domain.dto.http.request.MultipartPartPayload
 import com.vectordemo.domain.exception.NetworkParamIllegalException
 import com.vectordemo.domain.model.user.UserSessionModel
 import com.vectordemo.repository.api.ApiRequest
+import com.vectordemo.repository.api.register
 
 class UserRemoteApiSource(private val apiRequest: ApiRequest) {
     suspend fun login(account: String, password: String): UserSessionModel {

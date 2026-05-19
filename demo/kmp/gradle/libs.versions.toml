@@ -13,10 +13,13 @@ media3 = "1.8.0"
 composeMultiplatform = "1.11.0"
 junit = "4.13.2"
 kotlin = "2.3.21"
+# KSP 2.3+ 与 Kotlin 版本解耦；2.3.4 与 Ktorfit 2.7.2 对齐（见 Ktorfit CHANGELOG）
+ksp = "2.3.4"
+ktorfit = "2.7.2"
 material3 = "1.11.0-alpha07"
 coroutines = "1.10.2"
 serializationJson = "1.9.0"
-ktor = "3.2.3"
+ktor = "3.3.3"
 sqldelight = "2.1.0"
 
 [libraries]
@@ -51,8 +54,11 @@ ktor-client-darwin = { module = "io.ktor:ktor-client-darwin", version.ref = "kto
 sqldelight-android-driver = { module = "app.cash.sqldelight:android-driver", version.ref = "sqldelight" }
 sqldelight-native-driver = { module = "app.cash.sqldelight:native-driver", version.ref = "sqldelight" }
 sqldelight-coroutines = { module = "app.cash.sqldelight:coroutines-extensions", version.ref = "sqldelight" }
+ktorfit-lib-light = { module = "de.jensklingenberg.ktorfit:ktorfit-lib-light", version.ref = "ktorfit" }
 
 [plugins]
+ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
+ktorfit = { id = "de.jensklingenberg.ktorfit", version.ref = "ktorfit" }
 sqldelight = { id = "app.cash.sqldelight", version.ref = "sqldelight" }
 kotlinSerialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
 androidApplication = { id = "com.android.application", version.ref = "agp" }
