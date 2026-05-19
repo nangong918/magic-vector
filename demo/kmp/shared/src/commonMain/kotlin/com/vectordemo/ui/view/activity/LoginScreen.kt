@@ -15,7 +15,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.vectordemo.domain.model.UserSessionModel
+import com.vectordemo.domain.model.user.UserSessionModel
 import com.vectordemo.viewModel.activity.LoginIntent
 import com.vectordemo.viewModel.activity.LoginState
 

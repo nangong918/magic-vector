@@ -9,23 +9,36 @@ object AppNavigator {
     private val routeStack = MutableStateFlow(listOf(AppRoute.START))
     val routes: StateFlow<List<AppRoute>> = routeStack.asStateFlow()
 
+    var stackListener: ((List<AppRoute>) -> Unit)? = null
+
     val currentRoute: AppRoute
         get() = routeStack.value.lastOrNull() ?: AppRoute.START
 
+    fun restore(stack: List<AppRoute>) {
+        if (stack.isNotEmpty()) {
+            publishStack(stack)
+        }
+    }
+
     fun resetTo(route: AppRoute) {
-        routeStack.value = listOf(route)
+        publishStack(listOf(route))
     }
 
     fun navigate(route: AppRoute) {
-        routeStack.update { stack ->
-            if (stack.lastOrNull() == route) stack else stack + route
-        }
+        val stack = routeStack.value
+        val next = if (stack.lastOrNull() == route) stack else stack + route
+        publishStack(next)
     }
 
     fun goBack(): Boolean {
         val stack = routeStack.value
         if (stack.size <= 1) return false
-        routeStack.value = stack.dropLast(1)
+        publishStack(stack.dropLast(1))
         return true
+    }
+
+    private fun publishStack(stack: List<AppRoute>) {
+        routeStack.value = stack
+        stackListener?.invoke(stack)
     }
 }

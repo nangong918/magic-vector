@@ -7,10 +7,12 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vectordemo.di.AppContainer
 import com.vectordemo.ui.navigation.AppNavigator
 import com.vectordemo.ui.navigation.AppRoute
 import com.vectordemo.ui.navigation.NativeFeatureBridge
+import com.vectordemo.ui.navigation.rememberSyncedAppRoutes
 import com.vectordemo.ui.theme.VectorDemoTheme
 import com.vectordemo.ui.view.activity.ComposeLoginScreen
 import com.vectordemo.ui.view.activity.ComposeRegisterScreen
@@ -22,7 +24,7 @@ import com.vectordemo.ui.view.chat.ChatListScreen
 import com.vectordemo.ui.view.common.UnsupportedScreen
 import com.vectordemo.ui.view.oss.OssDemoScreen
 import com.vectordemo.ui.view.voice.VoiceAgentScreen
-import com.vectordemo.viewModel.AppVmStore
+import com.vectordemo.viewModel.AppViewModelFactory
 import com.vectordemo.viewModel.activity.LoginEffect
 import com.vectordemo.viewModel.activity.LoginIntent
 import com.vectordemo.viewModel.activity.MainEffect
@@ -35,68 +37,77 @@ import com.vectordemo.viewModel.voice.VoiceAgentEffect
 @Composable
 fun App() {
     VectorDemoTheme {
+        rememberSyncedAppRoutes()
+
         var toastMessage by remember { mutableStateOf("") }
         val routes by AppNavigator.routes.collectAsState()
         val route = routes.lastOrNull() ?: AppRoute.START
 
-        val loginState by AppVmStore.loginVm.uiState.collectAsState()
-        val loginDataState by AppVmStore.loginVm.dataState.collectAsState()
-        val registerState by AppVmStore.registerVm.uiState.collectAsState()
-        val mainState by AppVmStore.mainVm.uiState.collectAsState()
-        val chatState by AppVmStore.chatListVm.uiState.collectAsState()
-        val ossState by AppVmStore.ossDemoVm.uiState.collectAsState()
-        val voiceState by AppVmStore.voiceAgentVm.uiState.collectAsState()
+        val startVm = viewModel { AppViewModelFactory.startVm() }
+        val loginVm = viewModel { AppViewModelFactory.loginVm() }
+        val registerVm = viewModel { AppViewModelFactory.registerVm() }
+        val mainVm = viewModel { AppViewModelFactory.mainVm() }
+        val chatListVm = viewModel { AppViewModelFactory.chatListVm() }
+        val ossDemoVm = viewModel { AppViewModelFactory.ossDemoVm() }
+        val voiceAgentVm = viewModel { AppViewModelFactory.voiceAgentVm() }
+
+        val loginState by loginVm.uiState.collectAsState()
+        val loginDataState by loginVm.dataState.collectAsState()
+        val registerState by registerVm.uiState.collectAsState()
+        val mainState by mainVm.uiState.collectAsState()
+        val chatState by chatListVm.uiState.collectAsState()
+        val ossState by ossDemoVm.uiState.collectAsState()
+        val voiceState by voiceAgentVm.uiState.collectAsState()
 
         LaunchedEffect(Unit) {
             if (!AppContainer.isInitialized) {
                 AppContainer.initialize()
             }
-            AppVmStore.startVm.processIntent(StartIntent.Initialize)
-            AppVmStore.voiceAgentVm.initialize()
-            AppVmStore.chatListVm.initialize()
+            voiceAgentVm.initialize()
+            chatListVm.initialize()
         }
 
-        LaunchedEffect(Unit) {
-            AppVmStore.startVm.effect.collect { effect ->
+        LaunchedEffect(route) {
+            if (route == AppRoute.START) {
+                startVm.processIntent(StartIntent.Initialize)
+            }
+        }
+
+        LaunchedEffect(startVm) {
+            startVm.effect.collect { effect ->
                 when (effect) {
                     StartEffect.NavigateToMain -> AppNavigator.resetTo(AppRoute.MAIN)
                     StartEffect.NavigateToLogin -> AppNavigator.resetTo(AppRoute.LOGIN)
-                    is StartEffect.ShowToast -> {
-                        toastMessage = effect.message
-                    }
+                    is StartEffect.ShowToast -> toastMessage = effect.message
                 }
             }
         }
 
-        LaunchedEffect(Unit) {
-            AppVmStore.loginVm.effect.collect { effect ->
+        LaunchedEffect(loginVm) {
+            loginVm.effect.collect { effect ->
                 when (effect) {
                     LoginEffect.NavigateToMain -> AppNavigator.resetTo(AppRoute.MAIN)
                     LoginEffect.NavigateToRegister -> AppNavigator.navigate(AppRoute.REGISTER)
-                    is LoginEffect.ShowToast -> {
-                        toastMessage = effect.message
-                    }
+                    is LoginEffect.ShowToast -> toastMessage = effect.message
                 }
             }
         }
 
-        LaunchedEffect(Unit) {
-            AppVmStore.registerVm.effect.collect { effect ->
+        LaunchedEffect(registerVm) {
+            registerVm.effect.collect { effect ->
                 when (effect) {
                     RegisterEffect.NavigateToMain -> AppNavigator.resetTo(AppRoute.MAIN)
                     RegisterEffect.NavigateToLogin -> AppNavigator.resetTo(AppRoute.LOGIN)
                     RegisterEffect.RequestStoragePermission -> {
                         toastMessage = "当前平台尚未接入统一相册选择器"
                     }
-                    is RegisterEffect.ShowToast -> {
-                        toastMessage = effect.message
-                    }
+                    is RegisterEffect.ShowToast -> toastMessage = effect.message
                 }
             }
         }
 
-        LaunchedEffect(Unit) {
-            AppVmStore.mainVm.effect.collect { effect ->
+        LaunchedEffect(mainVm) {
+            mainVm.effect.collect { effect ->
                 when (effect) {
                     MainEffect.NavigateToHello -> AppNavigator.navigate(AppRoute.HELLO)
                     MainEffect.NavigateToOssDemo -> AppNavigator.navigate(AppRoute.OSS)
@@ -118,15 +129,13 @@ fun App() {
                         }
                     }
                     MainEffect.NavigateToLogin -> AppNavigator.resetTo(AppRoute.LOGIN)
-                    is MainEffect.ShowToast -> {
-                        toastMessage = effect.message
-                    }
+                    is MainEffect.ShowToast -> toastMessage = effect.message
                 }
             }
         }
 
-        LaunchedEffect(Unit) {
-            AppVmStore.ossDemoVm.effect.collect { effect ->
+        LaunchedEffect(ossDemoVm) {
+            ossDemoVm.effect.collect { effect ->
                 when (effect) {
                     is OssDemoEffect.ShowToast -> toastMessage = effect.message
                     OssDemoEffect.OpenMainImagePicker,
@@ -135,8 +144,8 @@ fun App() {
             }
         }
 
-        LaunchedEffect(Unit) {
-            AppVmStore.voiceAgentVm.effect.collect { effect ->
+        LaunchedEffect(voiceAgentVm) {
+            voiceAgentVm.effect.collect { effect ->
                 when (effect) {
                     VoiceAgentEffect.FinishActivity -> AppNavigator.resetTo(AppRoute.MAIN)
                 }
@@ -148,32 +157,32 @@ fun App() {
             AppRoute.LOGIN -> ComposeLoginScreen(
                 state = loginState,
                 savedAccounts = loginDataState.savedUserSessions,
-                processIntent = { AppVmStore.loginVm.processIntent(it) },
+                processIntent = { loginVm.processIntent(it) },
             )
             AppRoute.REGISTER -> ComposeRegisterScreen(
                 state = registerState,
-                processIntent = { AppVmStore.registerVm.processIntent(it) },
+                processIntent = { registerVm.processIntent(it) },
             )
             AppRoute.MAIN -> MainScreen(
                 state = mainState,
-                processIntent = { AppVmStore.mainVm.processIntent(it) },
+                processIntent = { mainVm.processIntent(it) },
             )
             AppRoute.HELLO -> HelloScreen()
             AppRoute.CHAT -> ChatListScreen(
                 state = chatState,
                 onBack = { AppNavigator.goBack() },
-                onSend = { AppVmStore.chatListVm.sendMessage(it) },
+                onSend = { chatListVm.sendMessage(it) },
             )
             AppRoute.OSS -> OssDemoScreen(
                 state = ossState,
-                processIntent = { AppVmStore.ossDemoVm.processIntent(it) },
+                processIntent = { ossDemoVm.processIntent(it) },
                 onBack = { AppNavigator.goBack() },
             )
             AppRoute.VOICE -> VoiceAgentScreen(
                 state = voiceState,
-                serviceStatusText = AppVmStore.voiceAgentVm.buildServiceStatusText(voiceState),
+                serviceStatusText = voiceAgentVm.buildServiceStatusText(voiceState),
                 onBack = { AppNavigator.goBack() },
-                onSelectLlm = { AppVmStore.voiceAgentVm.setLlmProvider(it) },
+                onSelectLlm = { voiceAgentVm.setLlmProvider(it) },
             )
             AppRoute.LIVE_PUSH -> NativeFeatureScreen(
                 title = "Live Push Demo",

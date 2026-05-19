@@ -1,7 +1,10 @@
 package com.vectordemo.viewModel.activity
 
+import androidx.lifecycle.viewModelScope
+import com.vectordemo.dataSource.remote.UserRemoteApiSource
 import com.vectordemo.di.AppContainer
 import com.vectordemo.domain.constant.BaseConstant
+import com.vectordemo.manager.user.UserManager
 import com.vectordemo.viewModel.BaseVm
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
@@ -13,7 +16,10 @@ import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-class StartVm : BaseVm() {
+class StartVm(
+    private val userManager: UserManager,
+    private val userRemote: UserRemoteApiSource,
+) : BaseVm() {
     private val _uiState = MutableStateFlow(StartState())
     val uiState: StateFlow<StartState> = _uiState.asStateFlow()
 
@@ -26,22 +32,23 @@ class StartVm : BaseVm() {
 
     private fun initialize() {
         _uiState.update { it.copy(isLoading = true) }
-        vmScope.launch {
-            val localUser = AppContainer.userManager.getCurrentUser()
+        viewModelScope.launch {
+            val localUser = userManager.getCurrentUser()
             val target = if (localUser == null || localUser.accessToken.isBlank()) {
                 StartEffect.NavigateToLogin
             } else {
                 try {
-                    val verify = AppContainer.userRemote.verifyAccessToken(
+                    val verify = userRemote.verifyAccessToken(
                         userId = localUser.userId,
                         accessToken = localUser.accessToken,
                     )
                     if (verify) {
+                        userManager.saveCurrentUser(localUser)
                         AppContainer.updateUserId(localUser.userId)
                         AppContainer.updateToken(localUser.accessToken)
                         StartEffect.NavigateToMain
                     } else {
-                        AppContainer.userManager.clearCurrentUser()
+                        userManager.clearCurrentUser()
                         AppContainer.clearUserId()
                         AppContainer.updateToken(null)
                         StartEffect.NavigateToLogin

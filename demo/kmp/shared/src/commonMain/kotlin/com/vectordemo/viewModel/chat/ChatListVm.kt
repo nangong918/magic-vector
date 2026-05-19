@@ -3,6 +3,7 @@ package com.vectordemo.viewModel.chat
 import com.vectordemo.di.AppContainer
 import com.vectordemo.domain.platform.currentTimeMillis
 import com.vectordemo.service.ai.ChatService
+import androidx.lifecycle.viewModelScope
 import com.vectordemo.viewModel.BaseVm
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -45,7 +46,7 @@ class ChatListVm(
 
     fun initialize() {
         if (_uiState.value.status != RealtimeChatStatus.NOT_INITIALIZED) return
-        vmScope.launch {
+        viewModelScope.launch {
             _uiState.update { it.copy(status = RealtimeChatStatus.INITIALIZING) }
             _uiState.update { it.copy(status = RealtimeChatStatus.CONNECTED, errorMessage = "") }
         }
@@ -64,7 +65,7 @@ class ChatListVm(
             return
         }
 
-        vmScope.launch {
+        viewModelScope.launch {
             val userMsg = ChatListMessage(newId(), "user", message, now())
             _uiState.update { st ->
                 st.copy(status = RealtimeChatStatus.SENDING, messages = st.messages + userMsg, errorMessage = "")
@@ -91,7 +92,7 @@ class ChatListVm(
                         if (delta.isBlank()) return@sendChat
                         assistantText.append(delta)
                         println("[ChatListVm] onDelta len=${delta.length} totalLen=${assistantText.length} preview=${delta.take(80)}")
-                        vmScope.launch(Dispatchers.Main) {
+                        viewModelScope.launch(Dispatchers.Main) {
                             val textSnapshot = assistantText.toString()
                             _uiState.update { st ->
                                 st.copy(

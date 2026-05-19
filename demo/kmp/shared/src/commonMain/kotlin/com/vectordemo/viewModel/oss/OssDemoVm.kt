@@ -1,8 +1,9 @@
 package com.vectordemo.viewModel.oss
 
 import com.vectordemo.di.AppContainer
-import com.vectordemo.domain.model.OssBucketFileItemModel
+import com.vectordemo.domain.model.oss.OssBucketFileItemModel
 import com.vectordemo.repository.api.MultipartPartPayload
+import androidx.lifecycle.viewModelScope
 import com.vectordemo.viewModel.BaseVm
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
@@ -70,11 +71,11 @@ class OssDemoVm : BaseVm() {
     }
 
     private fun sendEffect(effect: OssDemoEffect) {
-        vmScope.launch { _effect.send(effect) }
+        viewModelScope.launch { _effect.send(effect) }
     }
 
     private fun initialize() {
-        vmScope.launch {
+        viewModelScope.launch {
             val u = AppContainer.userManager.getCurrentUser()
             val blocked = u == null || u.userId <= 0L || u.userId == 1L ||
                 u.accessToken.isBlank() || u.accessToken == "tourist" || u.account == "tourist"
@@ -84,7 +85,7 @@ class OssDemoVm : BaseVm() {
     }
 
     private fun refreshBuckets() {
-        vmScope.launch {
+        viewModelScope.launch {
             if (_uiState.value.touristBlocked) return@launch
             doRefreshBuckets()
         }
@@ -114,7 +115,7 @@ class OssDemoVm : BaseVm() {
 
     private fun loadBucketFiles(bucket: String, force: Boolean) {
         if (!force && _uiState.value.filesByBucket.containsKey(bucket)) return
-        vmScope.launch {
+        viewModelScope.launch {
             if (_uiState.value.touristBlocked) return@launch
             doLoadBucketFiles(bucket, force)
         }
@@ -147,7 +148,7 @@ class OssDemoVm : BaseVm() {
     }
 
     private fun uploadImage() {
-        vmScope.launch {
+        viewModelScope.launch {
             if (_uiState.value.touristBlocked) return@launch
             val file = _uiState.value.pickedUploadFile
             if (file == null) {
@@ -174,7 +175,7 @@ class OssDemoVm : BaseVm() {
         val pending = _uiState.value.replacePending ?: return
         _uiState.update { it.copy(replacePending = null) }
         if (file == null) return
-        vmScope.launch {
+        viewModelScope.launch {
             try {
                 val res = AppContainer.ossManager.updateFileContent(pending.fileId.toString(), file)
                 if (res.updated) invalidateBucket(pending.bucket)
@@ -186,7 +187,7 @@ class OssDemoVm : BaseVm() {
     }
 
     private fun deleteFile(bucket: String, fileId: Long) {
-        vmScope.launch {
+        viewModelScope.launch {
             try {
                 val uid = currentUserId()
                 AppContainer.ossManager.batchDelete(listOf(fileId), uid, bucket)

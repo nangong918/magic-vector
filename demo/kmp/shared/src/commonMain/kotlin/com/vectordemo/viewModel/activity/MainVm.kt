@@ -1,8 +1,10 @@
 package com.vectordemo.viewModel.activity
 
+import androidx.lifecycle.viewModelScope
 import com.vectordemo.di.AppContainer
-import com.vectordemo.domain.model.DemoCatalogItem
-import com.vectordemo.domain.model.DemoRoute
+import com.vectordemo.domain.model.demo.DemoCatalogItem
+import com.vectordemo.domain.model.demo.DemoRoute
+import com.vectordemo.manager.user.UserManager
 import com.vectordemo.domain.platform.PlatformFeatures
 import com.vectordemo.domain.platform.PlatformType
 import com.vectordemo.viewModel.BaseVm
@@ -15,7 +17,9 @@ import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-class MainVm : BaseVm() {
+class MainVm(
+    private val userManager: UserManager,
+) : BaseVm() {
     private val allItems: List<DemoCatalogItem> = buildDemoItems()
 
     private val _uiState = MutableStateFlow(
@@ -78,8 +82,8 @@ class MainVm : BaseVm() {
     }
 
     private fun logout() {
-        vmScope.launch {
-            AppContainer.userManager.clearCurrentUser()
+        viewModelScope.launch {
+            userManager.clearCurrentUser()
             AppContainer.clearUserId()
             AppContainer.updateToken(null)
             sendEffect(MainEffect.NavigateToLogin)
@@ -87,8 +91,8 @@ class MainVm : BaseVm() {
     }
 
     private fun loadCurrentUserDisplayName() {
-        vmScope.launch {
-            val currentUser = AppContainer.userManager.getCurrentUser()
+        viewModelScope.launch {
+            val currentUser = userManager.getCurrentUser()
             val displayName = when {
                 currentUser == null -> "游客"
                 currentUser.accessToken == "tourist" || currentUser.account == "tourist" || currentUser.userId == 1L -> "游客"
@@ -100,7 +104,7 @@ class MainVm : BaseVm() {
     }
 
     private fun sendEffect(effect: MainEffect) {
-        vmScope.launch { _effect.send(effect) }
+        viewModelScope.launch { _effect.send(effect) }
     }
 
     private fun buildDemoItems(): List<DemoCatalogItem> {

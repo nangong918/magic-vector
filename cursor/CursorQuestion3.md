@@ -44,6 +44,20 @@
 你解决问题的方案需要写在[KMP重构.md](kmp/KMP重构.md)
 
 
+### KMP
+1. 集成ViewModel
+2. 修复语音唤醒Demo
+3. 修复KNI原生调用
+4. 整理KMP
+5. 新增UI demo，要同时同步给Android原生，Flutter
+6. 修复旋转之后生命周期丢失（旋转屏幕就得重新代开app了）
+
+
+你查询一下KMP是否支持ViewModel，然后集成，[kmp](../demo/kmp)这个项目其实是对[app](../demo/app)的迁移，
+关于ViewModel的使用方式你可以参考[app](../demo/app)[viewModel](../demo/app/app/src/main/java/com/vectordemo/viewModel)内部的viewmodel是怎么做的
+然后如果KMP是支持Viewmodel的，我希望你能将其集成进我的项目。
+你看看这个是否可以：org.jetbrains.androidx.lifecycle:lifecycle-viewmodel-ktx
+我希望你在commonMain公用，而不是只给androidMain
 
 
 

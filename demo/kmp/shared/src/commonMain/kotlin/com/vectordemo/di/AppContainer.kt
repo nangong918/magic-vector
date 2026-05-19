@@ -2,13 +2,14 @@ package com.vectordemo.di
 
 import com.vectordemo.dataSource.local.OssLocalSource
 import com.vectordemo.dataSource.local.UserLocalSource
+import com.vectordemo.dataSource.local.db.createVectorDatabase
 import com.vectordemo.dataSource.remote.OssRemoteApiSource
 import com.vectordemo.dataSource.remote.UserRemoteApiSource
 import com.vectordemo.domain.config.ModuleKeyConfig
 import com.vectordemo.domain.config.ModuleKeyConfigLoader
 import com.vectordemo.domain.config.ModuleKeyConfigStore
-import com.vectordemo.manager.OssManager
-import com.vectordemo.manager.UserManager
+import com.vectordemo.manager.oss.OssManager
+import com.vectordemo.manager.user.UserManager
 import com.vectordemo.repository.api.ApiClient
 import com.vectordemo.repository.api.createExternalAiHttpClient
 import com.vectordemo.repository.api.createPlatformHttpClient
@@ -26,8 +27,10 @@ object AppContainer {
     private val aiHttpClient = createExternalAiHttpClient()
     private val apiClient = ApiClient(httpClient)
 
-    private val userLocal = UserLocalSource()
-    private val ossLocal = OssLocalSource()
+    private val database by lazy { createVectorDatabase() }
+    private val userLocal = UserLocalSource(database)
+    private val ossLocal = OssLocalSource(database)
+
     val userRemote = UserRemoteApiSource(apiClient)
     val ossRemote = OssRemoteApiSource(apiClient)
 

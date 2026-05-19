@@ -1,0 +1,38 @@
+CREATE TABLE user_session (
+  id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER NOT NULL,
+  account TEXT NOT NULL,
+  name TEXT NOT NULL,
+  avatar_url TEXT NOT NULL,
+  access_token TEXT NOT NULL,
+  password TEXT NOT NULL,
+  is_current INTEGER NOT NULL,
+  last_login_at INTEGER NOT NULL
+);
+
+CREATE UNIQUE INDEX idx_user_session_account ON user_session(account);
+
+upsertUserSession:
+INSERT OR REPLACE INTO user_session(
+  user_id,
+  account,
+  name,
+  avatar_url,
+  access_token,
+  password,
+  is_current,
+  last_login_at
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?);
+
+getCurrentUser:
+SELECT * FROM user_session
+WHERE is_current = 1
+ORDER BY last_login_at DESC
+LIMIT 1;
+
+getAllUsers:
+SELECT * FROM user_session
+ORDER BY is_current DESC, last_login_at DESC, id DESC;
+
+clearCurrentFlag:
+UPDATE user_session SET is_current = 0;

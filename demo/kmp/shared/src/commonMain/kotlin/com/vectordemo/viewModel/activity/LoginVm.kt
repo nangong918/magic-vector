@@ -1,7 +1,10 @@
 package com.vectordemo.viewModel.activity
 
+import androidx.lifecycle.viewModelScope
+import com.vectordemo.dataSource.remote.UserRemoteApiSource
 import com.vectordemo.di.AppContainer
-import com.vectordemo.domain.model.UserSessionModel
+import com.vectordemo.domain.model.user.UserSessionModel
+import com.vectordemo.manager.user.UserManager
 import com.vectordemo.viewModel.BaseVm
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
@@ -12,7 +15,10 @@ import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-class LoginVm : BaseVm() {
+class LoginVm(
+    private val userManager: UserManager,
+    private val userRemote: UserRemoteApiSource,
+) : BaseVm() {
     private val _uiState = MutableStateFlow(LoginState())
     val uiState: StateFlow<LoginState> = _uiState.asStateFlow()
 
@@ -37,8 +43,8 @@ class LoginVm : BaseVm() {
         }
     }
 
-    private fun loadSavedAccounts() = vmScope.launch {
-        val sessions = AppContainer.userManager.getAllUsers()
+    private fun loadSavedAccounts() = viewModelScope.launch {
+        val sessions = userManager.getAllUsers()
         _dataState.update { it.copy(savedUserSessions = sessions) }
     }
 
@@ -56,10 +62,10 @@ class LoginVm : BaseVm() {
         }
 
         _uiState.update { it.copy(isLoading = true) }
-        vmScope.launch {
+        viewModelScope.launch {
             try {
-                val session = AppContainer.userRemote.login(state.account.trim(), state.password)
-                AppContainer.userManager.saveCurrentUser(session)
+                val session = userRemote.login(state.account.trim(), state.password)
+                userManager.saveCurrentUser(session)
                 AppContainer.updateUserId(session.userId)
                 AppContainer.updateToken(session.accessToken)
                 _uiState.update { it.copy(isLoading = false) }
@@ -73,7 +79,7 @@ class LoginVm : BaseVm() {
     }
 
     private fun touristAccess() {
-        vmScope.launch {
+        viewModelScope.launch {
             val tourist = UserSessionModel(
                 userId = 1L,
                 account = "tourist",
@@ -82,15 +88,15 @@ class LoginVm : BaseVm() {
                 accessToken = "tourist",
                 password = "",
             )
-            AppContainer.userManager.saveCurrentUser(tourist)
-            AppContainer.updateUserId(1L)
-            AppContainer.updateToken("tourist")
+            userManager.saveCurrentUser(tourist)
+            AppContainer.updateUserId(tourist.userId)
+            AppContainer.updateToken(tourist.accessToken)
             loadSavedAccounts()
             sendEffect(LoginEffect.NavigateToMain)
         }
     }
 
-    private fun sendEffect(effect: LoginEffect) = vmScope.launch { _effect.send(effect) }
+    private fun sendEffect(effect: LoginEffect) = viewModelScope.launch { _effect.send(effect) }
 }
 
 sealed class LoginIntent {

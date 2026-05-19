@@ -1,6 +1,7 @@
 package com.vectordemo.viewModel.voice
 
 import com.vectordemo.domain.platform.PlatformFeatures
+import androidx.lifecycle.viewModelScope
 import com.vectordemo.viewModel.BaseVm
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
@@ -61,6 +62,6 @@ class VoiceAgentVm : BaseVm() {
     }
 
     private fun sendEffect(effect: VoiceAgentEffect) {
-        vmScope.launch { _effect.send(effect) }
+        viewModelScope.launch { _effect.send(effect) }
     }
 }

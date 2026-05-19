@@ -1,10 +1,13 @@
 package com.vectordemo.domain.convertor
 
-import com.vectordemo.domain.model.OssBucketFileItemListModel
-import com.vectordemo.domain.model.OssBucketFileItemModel
-import com.vectordemo.domain.model.OssUserBucketListModel
-import com.vectordemo.domain.model.UserSessionModel
-import com.vectordemo.domain.platform.currentTimeMillis
+import com.vectordemo.domain.entity.OssUserBucketFileEntity
+import com.vectordemo.domain.model.oss.OssBatchDeleteModel
+import com.vectordemo.domain.model.oss.OssBatchUploadModel
+import com.vectordemo.domain.model.oss.OssBucketFileItemListModel
+import com.vectordemo.domain.model.oss.OssBucketFileItemModel
+import com.vectordemo.domain.model.oss.OssFileContentUpdateModel
+import com.vectordemo.domain.model.oss.OssUploadItemModel
+import com.vectordemo.domain.model.oss.OssUserBucketListModel
 import com.vectordemo.repository.api.OssBatchDeleteResponse
 import com.vectordemo.repository.api.OssBatchUploadResponse
 import com.vectordemo.repository.api.OssFileContentUpdateResponse
@@ -12,55 +15,6 @@ import com.vectordemo.repository.api.OssUploadItemResult
 import com.vectordemo.repository.api.OssUserBucketFileItemListResponse
 import com.vectordemo.repository.api.OssUserBucketFileItemRow
 import com.vectordemo.repository.api.OssUserBucketListResponse
-import com.vectordemo.repository.api.UserAuthResponse
-
-object UserConvertor {
-    fun authResponseToSessionModel(auth: UserAuthResponse, password: String): UserSessionModel {
-        val uid = auth.userId?.toLongOrNull() ?: 0L
-        return UserSessionModel(
-            userId = uid,
-            account = auth.account.orEmpty(),
-            name = auth.name.orEmpty(),
-            avatarUrl = auth.avatarUrl.orEmpty(),
-            accessToken = auth.accessToken.orEmpty(),
-            password = password,
-            isCurrent = true,
-            lastLoginAt = currentTimeMillis(),
-        )
-    }
-}
-
-data class OssUploadItemModel(
-    val originFileName: String,
-    val success: Boolean,
-    val duplicated: Boolean,
-    val fileId: String,
-    val url: String,
-    val message: String,
-)
-
-data class OssBatchUploadModel(
-    val userId: Long,
-    val bucketName: String,
-    val successCount: Int,
-    val failCount: Int,
-    val items: List<OssUploadItemModel>,
-)
-
-data class OssBatchDeleteModel(
-    val fileIds: List<Long>,
-    val successCount: Int,
-    val failCount: Int,
-    val message: String,
-)
-
-data class OssFileContentUpdateModel(
-    val fileId: String,
-    val originFileName: String,
-    val url: String,
-    val updated: Boolean,
-    val message: String,
-)
 
 object OssConvertor {
     private fun wireFileIdToLong(raw: String?): Long =
@@ -83,6 +37,29 @@ object OssConvertor {
         url = row.url.orEmpty(),
     )
 
+    fun itemModelToEntity(
+        model: OssBucketFileItemModel,
+        userId: Long,
+        bucketName: String,
+        syncedAt: Long,
+    ): OssUserBucketFileEntity = OssUserBucketFileEntity(
+        userId = userId,
+        bucketName = bucketName,
+        fileId = model.fileId.toString(),
+        fileName = model.originFileName,
+        fileUrl = model.url,
+        syncedAt = syncedAt,
+    )
+
+    fun itemListModelToEntities(model: OssBucketFileItemListModel, syncedAt: Long): List<OssUserBucketFileEntity> =
+        model.items.map { itemModelToEntity(it, model.userId, model.bucketName, syncedAt) }
+
+    fun entityToItemModel(entity: OssUserBucketFileEntity): OssBucketFileItemModel = OssBucketFileItemModel(
+        fileId = wireFileIdToLong(entity.fileId),
+        originFileName = entity.fileName,
+        url = entity.fileUrl,
+    )
+
     fun batchUploadResponseToModel(r: OssBatchUploadResponse): OssBatchUploadModel {
         val uid = r.userId?.toLongOrNull() ?: 0L
         val items = r.items.orEmpty().map { itemToModel(it) }
@@ -95,16 +72,14 @@ object OssConvertor {
         )
     }
 
-    private fun itemToModel(it: OssUploadItemResult): OssUploadItemModel {
-        return OssUploadItemModel(
-            originFileName = it.originFileName.orEmpty(),
-            success = it.success,
-            duplicated = it.duplicated,
-            fileId = it.fileId.orEmpty(),
-            url = it.url.orEmpty(),
-            message = it.message.orEmpty(),
-        )
-    }
+    private fun itemToModel(it: OssUploadItemResult): OssUploadItemModel = OssUploadItemModel(
+        originFileName = it.originFileName.orEmpty(),
+        success = it.success,
+        duplicated = it.duplicated,
+        fileId = it.fileId.orEmpty(),
+        url = it.url.orEmpty(),
+        message = it.message.orEmpty(),
+    )
 
     fun batchDeleteResponseToModel(r: OssBatchDeleteResponse): OssBatchDeleteModel = OssBatchDeleteModel(
         fileIds = r.fileIdList.orEmpty().map { wireFileIdToLong(it) },
@@ -113,13 +88,12 @@ object OssConvertor {
         message = r.message.orEmpty(),
     )
 
-    fun fileContentUpdateResponseToModel(r: OssFileContentUpdateResponse): OssFileContentUpdateModel {
-        return OssFileContentUpdateModel(
+    fun fileContentUpdateResponseToModel(r: OssFileContentUpdateResponse): OssFileContentUpdateModel =
+        OssFileContentUpdateModel(
             fileId = r.fileId.orEmpty(),
             originFileName = r.originFileName.orEmpty(),
             url = r.url.orEmpty(),
             updated = r.updated == true,
             message = r.message.orEmpty(),
         )
-    }
 }

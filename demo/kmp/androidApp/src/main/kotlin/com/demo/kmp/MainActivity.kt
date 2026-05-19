@@ -21,7 +21,10 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         initModuleKeyConfigContext(applicationContext)
         runBlocking { AppContainer.initialize() }
-        AppNavigator.resetTo(AppRoute.START)
+        // 避免每次旋转之后重启activity导致每次都要重新start，重新登录
+        if (savedInstanceState == null) {
+            AppNavigator.resetTo(AppRoute.START)
+        }
         installNativeFeatureRouter(this)
         onBackPressedDispatcher.addCallback(
             this,
