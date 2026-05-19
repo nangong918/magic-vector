@@ -2,7 +2,8 @@ package com.vectordemo.viewModel.oss
 
 import com.vectordemo.di.AppContainer
 import com.vectordemo.domain.model.oss.OssBucketFileItemModel
-import com.vectordemo.domain.dto.http.request.MultipartPartPayload
+import com.vectordemo.domain.model.oss.OssPickedImage
+import com.vectordemo.ui.oss.OssMediaBridge
 import androidx.lifecycle.viewModelScope
 import com.vectordemo.viewModel.BaseVm
 import kotlinx.coroutines.channels.Channel
@@ -23,7 +24,7 @@ data class OssDemoState(
     val filesByBucket: Map<String, List<OssBucketFileItemModel>> = emptyMap(),
     val loadingBuckets: Boolean = false,
     val loadingBucket: String? = null,
-    val pickedUploadFile: MultipartPartPayload? = null,
+    val pickedUploadImage: OssPickedImage? = null,
     val replacePending: OssReplacePending? = null,
 )
 
@@ -34,11 +35,11 @@ sealed class OssDemoIntent {
     data class ToggleBucket(val bucket: String) : OssDemoIntent()
     data class LoadBucketFiles(val bucket: String, val force: Boolean = false) : OssDemoIntent()
     data object RequestMainImagePick : OssDemoIntent()
-    data class MainImagePicked(val file: MultipartPartPayload?) : OssDemoIntent()
+    data class MainImagePicked(val image: OssPickedImage?) : OssDemoIntent()
     data object UploadSubmit : OssDemoIntent()
     data class DownloadImage(val url: String, val displayName: String) : OssDemoIntent()
     data class RequestReplacePick(val bucket: String, val fileId: Long) : OssDemoIntent()
-    data class ReplaceImagePicked(val file: MultipartPartPayload?) : OssDemoIntent()
+    data class ReplaceImagePicked(val image: OssPickedImage?) : OssDemoIntent()
     data class DeleteFile(val bucket: String, val fileId: Long) : OssDemoIntent()
 }
 
@@ -62,11 +63,11 @@ class OssDemoVm : BaseVm() {
             is OssDemoIntent.ToggleBucket -> toggleBucket(intent.bucket)
             is OssDemoIntent.LoadBucketFiles -> loadBucketFiles(intent.bucket, intent.force)
             OssDemoIntent.RequestMainImagePick -> sendEffect(OssDemoEffect.OpenMainImagePicker)
-            is OssDemoIntent.MainImagePicked -> _uiState.update { it.copy(pickedUploadFile = intent.file) }
+            is OssDemoIntent.MainImagePicked -> _uiState.update { it.copy(pickedUploadImage = intent.image) }
             OssDemoIntent.UploadSubmit -> uploadImage()
-            is OssDemoIntent.DownloadImage -> sendEffect(OssDemoEffect.ShowToast("KMP 版本暂未实现下载：${intent.displayName}"))
+            is OssDemoIntent.DownloadImage -> saveImageToGallery(intent.url, intent.displayName)
             is OssDemoIntent.RequestReplacePick -> requestReplacePick(intent.bucket, intent.fileId)
-            is OssDemoIntent.ReplaceImagePicked -> replaceImagePicked(intent.file)
+            is OssDemoIntent.ReplaceImagePicked -> replaceImagePicked(intent.image)
             is OssDemoIntent.DeleteFile -> deleteFile(intent.bucket, intent.fileId)
         }
     }
@@ -104,12 +105,25 @@ class OssDemoVm : BaseVm() {
     private suspend fun doRefreshBuckets() {
         val expandedBefore = _uiState.value.expandedBuckets.toSet()
         try {
-            _uiState.update { it.copy(loadingBuckets = true, filesByBucket = emptyMap(), loadingBucket = null) }
+            _uiState.update {
+                it.copy(
+                    loadingBuckets = true,
+                    filesByBucket = emptyMap(),
+                    loadingBucket = null,
+                )
+            }
             val uid = currentUserId()
             val res = AppContainer.ossManager.syncUserBucketList(uid)
             val newBuckets = res.bucketNames
-            _uiState.update { it.copy(loadingBuckets = false, buckets = newBuckets) }
-            expandedBefore.intersect(newBuckets.toSet()).forEach { b -> doLoadBucketFiles(b, force = true) }
+            _uiState.update {
+                it.copy(
+                    loadingBuckets = false,
+                    buckets = newBuckets,
+                )
+            }
+            expandedBefore.intersect(newBuckets.toSet()).forEach { b ->
+                doLoadBucketFiles(b, force = true)
+            }
         } catch (e: Throwable) {
             _uiState.update { it.copy(loadingBuckets = false) }
             sendEffect(OssDemoEffect.ShowToast(e.message ?: "加载存储桶失败"))
@@ -118,9 +132,13 @@ class OssDemoVm : BaseVm() {
 
     private fun toggleBucket(bucket: String) {
         val expanded = _uiState.value.expandedBuckets.toMutableSet()
-        if (!expanded.add(bucket)) expanded.remove(bucket)
+        if (!expanded.add(bucket)) {
+            expanded.remove(bucket)
+        }
         _uiState.update { it.copy(expandedBuckets = expanded) }
-        if (expanded.contains(bucket)) loadBucketFiles(bucket, force = false)
+        if (expanded.contains(bucket)) {
+            loadBucketFiles(bucket, force = false)
+        }
     }
 
     private fun loadBucketFiles(bucket: String, force: Boolean) {
@@ -154,24 +172,45 @@ class OssDemoVm : BaseVm() {
             m.remove(bucket)
             it.copy(filesByBucket = m)
         }
-        if (_uiState.value.expandedBuckets.contains(bucket)) loadBucketFiles(bucket, force = true)
+        if (_uiState.value.expandedBuckets.contains(bucket)) {
+            loadBucketFiles(bucket, force = true)
+        }
     }
 
     private fun uploadImage() {
         viewModelScope.launch {
             if (_uiState.value.touristBlocked) return@launch
-            val file = _uiState.value.pickedUploadFile
-            if (file == null) {
+            val picked = _uiState.value.pickedUploadImage
+            if (picked == null) {
                 sendEffect(OssDemoEffect.ShowToast("请先选择图片"))
                 return@launch
             }
             try {
                 val uid = currentUserId()
-                val res = AppContainer.ossManager.batchUploadSingle(uid, null, file)
+                val res = AppContainer.ossManager.batchUploadSingle(uid, null, picked.uploadPayload)
                 val ok = res.items.any { it.success }
-                sendEffect(OssDemoEffect.ShowToast(if (ok) "上传成功" else res.items.firstOrNull()?.message ?: "上传失败"))
+                sendEffect(
+                    OssDemoEffect.ShowToast(
+                        if (ok) {
+                            "上传成功"
+                        } else {
+                            res.items.firstOrNull()?.message?.takeIf { m -> m.isNotBlank() } ?: "上传失败"
+                        },
+                    ),
+                )
             } catch (e: Throwable) {
                 sendEffect(OssDemoEffect.ShowToast(e.message ?: "上传失败"))
+            }
+        }
+    }
+
+    private fun saveImageToGallery(url: String, rawDisplayName: String) {
+        viewModelScope.launch {
+            try {
+                val path = OssMediaBridge.downloadToGallery(url, rawDisplayName)
+                sendEffect(OssDemoEffect.ShowToast("下载成功\n$path"))
+            } catch (e: Throwable) {
+                sendEffect(OssDemoEffect.ShowToast(e.message ?: "保存到相册失败"))
             }
         }
     }
@@ -181,15 +220,21 @@ class OssDemoVm : BaseVm() {
         sendEffect(OssDemoEffect.OpenReplaceImagePicker)
     }
 
-    private fun replaceImagePicked(file: MultipartPartPayload?) {
+    private fun replaceImagePicked(image: OssPickedImage?) {
         val pending = _uiState.value.replacePending ?: return
         _uiState.update { it.copy(replacePending = null) }
-        if (file == null) return
+        if (image == null) return
         viewModelScope.launch {
             try {
-                val res = AppContainer.ossManager.updateFileContent(pending.fileId.toString(), file)
-                if (res.updated) invalidateBucket(pending.bucket)
-                sendEffect(OssDemoEffect.ShowToast(if (res.updated) "已更换图片" else res.message.ifBlank { "更换失败" }))
+                val res = AppContainer.ossManager.updateFileContent(pending.fileId.toString(), image.uploadPayload)
+                if (res.updated) {
+                    invalidateBucket(pending.bucket)
+                }
+                sendEffect(
+                    OssDemoEffect.ShowToast(
+                        if (res.updated) "已更换图片" else res.message.ifBlank { "更换失败" },
+                    ),
+                )
             } catch (e: Throwable) {
                 sendEffect(OssDemoEffect.ShowToast(e.message ?: "更换失败"))
             }

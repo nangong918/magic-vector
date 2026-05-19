@@ -8,7 +8,10 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.tooling.preview.Preview
 import com.vectordemo.activity.clearNativeFeatureRouter
+import com.vectordemo.activity.clearOssMediaRouter
 import com.vectordemo.activity.installNativeFeatureRouter
+import com.vectordemo.activity.installOssMediaRouter
+import com.vectordemo.ui.image.initCoilPlatform
 import com.vectordemo.di.AppContainer
 import com.vectordemo.domain.config.initModuleKeyConfigContext
 import com.vectordemo.ui.navigation.AppNavigator
@@ -25,7 +28,9 @@ class MainActivity : ComponentActivity() {
         if (savedInstanceState == null) {
             AppNavigator.resetTo(AppRoute.START)
         }
+        initCoilPlatform(applicationContext)
         installNativeFeatureRouter(this)
+        installOssMediaRouter(this)
         onBackPressedDispatcher.addCallback(
             this,
             object : OnBackPressedCallback(true) {
@@ -44,6 +49,7 @@ class MainActivity : ComponentActivity() {
     }
 
     override fun onDestroy() {
+        clearOssMediaRouter()
         clearNativeFeatureRouter()
         super.onDestroy()
     }

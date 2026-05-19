@@ -12,6 +12,7 @@ import com.vectordemo.di.AppContainer
 import com.vectordemo.ui.navigation.AppNavigator
 import com.vectordemo.ui.navigation.AppRoute
 import com.vectordemo.ui.navigation.NativeFeatureBridge
+import com.vectordemo.ui.oss.OssMediaBridge
 import com.vectordemo.ui.navigation.rememberSyncedAppRoutes
 import com.vectordemo.ui.theme.VectorDemoTheme
 import com.vectordemo.ui.view.activity.ComposeLoginScreen
@@ -143,8 +144,16 @@ fun App() {
             ossDemoVm.effect.collect { effect ->
                 when (effect) {
                     is OssDemoEffect.ShowToast -> toastMessage = effect.message
-                    OssDemoEffect.OpenMainImagePicker,
-                    OssDemoEffect.OpenReplaceImagePicker -> toastMessage = "当前平台尚未接入统一相册选择器"
+                    OssDemoEffect.OpenMainImagePicker -> {
+                        OssMediaBridge.pickMainImage { picked ->
+                            ossDemoVm.processIntent(OssDemoIntent.MainImagePicked(picked))
+                        }
+                    }
+                    OssDemoEffect.OpenReplaceImagePicker -> {
+                        OssMediaBridge.pickReplaceImage { picked ->
+                            ossDemoVm.processIntent(OssDemoIntent.ReplaceImagePicked(picked))
+                        }
+                    }
                 }
             }
         }
