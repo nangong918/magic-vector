@@ -8,6 +8,7 @@ import com.vectordemo.viewModel.activity.StartVm
 import com.vectordemo.viewModel.chat.ChatListVm
 import com.vectordemo.viewModel.oss.OssDemoVm
 import com.vectordemo.viewModel.voice.VoiceAgentVm
+import com.vectordemo.viewModel.wechat.WeChatDemoVm
 
 object AppViewModelFactory {
     fun startVm(): StartVm = StartVm(AppContainer.userManager, AppContainer.userRemote)
@@ -15,6 +16,7 @@ object AppViewModelFactory {
     fun registerVm(): RegisterVm = RegisterVm(AppContainer.userManager, AppContainer.userRemote)
     fun mainVm(): MainVm = MainVm(AppContainer.userManager)
     fun chatListVm(): ChatListVm = ChatListVm()
+    fun weChatDemoVm(): WeChatDemoVm = WeChatDemoVm()
     fun ossDemoVm(): OssDemoVm = OssDemoVm()
     fun voiceAgentVm(): VoiceAgentVm = VoiceAgentVm()
 }

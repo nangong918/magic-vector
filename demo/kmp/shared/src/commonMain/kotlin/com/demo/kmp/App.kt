@@ -25,6 +25,7 @@ import com.vectordemo.ui.view.chat.ChatListScreen
 import com.vectordemo.ui.view.common.UnsupportedScreen
 import com.vectordemo.ui.view.oss.OssDemoScreen
 import com.vectordemo.ui.view.voice.VoiceAgentScreen
+import com.vectordemo.ui.view.wechat.WeChatDemoScreen
 import com.vectordemo.viewModel.AppViewModelFactory
 import com.vectordemo.viewModel.activity.LoginEffect
 import com.vectordemo.viewModel.activity.LoginIntent
@@ -36,6 +37,8 @@ import com.vectordemo.viewModel.activity.StartIntent
 import com.vectordemo.viewModel.oss.OssDemoEffect
 import com.vectordemo.viewModel.oss.OssDemoIntent
 import com.vectordemo.viewModel.voice.VoiceAgentEffect
+import com.vectordemo.viewModel.wechat.WeChatEffect
+import com.vectordemo.viewModel.wechat.WeChatIntent
 
 @Composable
 fun App() {
@@ -51,6 +54,7 @@ fun App() {
         val registerVm = viewModel { AppViewModelFactory.registerVm() }
         val mainVm = viewModel { AppViewModelFactory.mainVm() }
         val chatListVm = viewModel { AppViewModelFactory.chatListVm() }
+        val weChatDemoVm = viewModel { AppViewModelFactory.weChatDemoVm() }
         val ossDemoVm = viewModel { AppViewModelFactory.ossDemoVm() }
         val voiceAgentVm = viewModel { AppViewModelFactory.voiceAgentVm() }
 
@@ -59,6 +63,7 @@ fun App() {
         val registerState by registerVm.uiState.collectAsState()
         val mainState by mainVm.uiState.collectAsState()
         val chatState by chatListVm.uiState.collectAsState()
+        val weChatState by weChatDemoVm.uiState.collectAsState()
         val ossState by ossDemoVm.uiState.collectAsState()
         val voiceState by voiceAgentVm.uiState.collectAsState()
 
@@ -74,6 +79,7 @@ fun App() {
                 AppRoute.MAIN -> mainVm.processIntent(MainIntent.RefreshUserDisplay)
                 AppRoute.OSS -> ossDemoVm.processIntent(OssDemoIntent.Initialize)
                 AppRoute.CHAT -> chatListVm.initialize()
+                AppRoute.WECHAT -> weChatDemoVm.processIntent(WeChatIntent.Initialize)
                 AppRoute.VOICE -> voiceAgentVm.initialize()
                 else -> Unit
             }
@@ -118,6 +124,7 @@ fun App() {
                     MainEffect.NavigateToHello -> AppNavigator.navigate(AppRoute.HELLO)
                     MainEffect.NavigateToOssDemo -> AppNavigator.navigate(AppRoute.OSS)
                     MainEffect.NavigateToChatList -> AppNavigator.navigate(AppRoute.CHAT)
+                    MainEffect.NavigateToWeChatDemo -> AppNavigator.navigate(AppRoute.WECHAT)
                     MainEffect.NavigateToVoiceAgent -> AppNavigator.navigate(AppRoute.VOICE)
                     MainEffect.NavigateToLivePush -> {
                         if (!NativeFeatureBridge.openLivePush()) {
@@ -166,6 +173,14 @@ fun App() {
             }
         }
 
+        LaunchedEffect(weChatDemoVm) {
+            weChatDemoVm.effect.collect { effect ->
+                when (effect) {
+                    is WeChatEffect.ShowToast -> toastMessage = effect.message
+                }
+            }
+        }
+
         when (route) {
             AppRoute.START -> StartScreen()
             AppRoute.LOGIN -> ComposeLoginScreen(
@@ -186,6 +201,11 @@ fun App() {
                 state = chatState,
                 onBack = { AppNavigator.goBack() },
                 onSend = { chatListVm.sendMessage(it) },
+            )
+            AppRoute.WECHAT -> WeChatDemoScreen(
+                state = weChatState,
+                processIntent = { weChatDemoVm.processIntent(it) },
+                onBackToCatalog = { AppNavigator.goBack() },
             )
             AppRoute.OSS -> OssDemoScreen(
                 state = ossState,

@@ -7,6 +7,7 @@ enum class AppRoute {
     MAIN,
     HELLO,
     CHAT,
+    WECHAT,
     OSS,
     VOICE,
     LIVE_PUSH,

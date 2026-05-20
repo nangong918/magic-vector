@@ -63,6 +63,7 @@ class MainVm(
             DemoRoute.HELLO -> sendEffect(MainEffect.NavigateToHello)
             DemoRoute.OSS_DEMO -> sendEffect(MainEffect.NavigateToOssDemo)
             DemoRoute.CHAT_LIST_DEMO -> sendEffect(MainEffect.NavigateToChatList)
+            DemoRoute.WECHAT_UI_DEMO -> sendEffect(MainEffect.NavigateToWeChatDemo)
             DemoRoute.VOICE_AGENT -> sendEffect(
                 if (PlatformFeatures.supportsVoiceAgent) MainEffect.NavigateToVoiceAgent
                 else MainEffect.ShowToast("iOS 暂不支持语音链路（Android Service/Native SDK）"),
@@ -117,6 +118,7 @@ class MainVm(
             DemoCatalogItem("hello", "Hello Demo", "Compose + MVI navigation sample ($platformTag)", DemoRoute.HELLO),
             DemoCatalogItem("oss", "OSS Demo", "上传、存储桶列表、图片下载/更换/删除", DemoRoute.OSS_DEMO),
             DemoCatalogItem("chat_list", "ChatList Demo", "流式聊天对话（Flutter ChatPage迁移）", DemoRoute.CHAT_LIST_DEMO),
+            DemoCatalogItem("wechat_ui", "WeChat UI Demo", "微信风格 UI 练习：消息/通讯录/聊天/详情/通话", DemoRoute.WECHAT_UI_DEMO),
             DemoCatalogItem("voice_agent", "Voice Agent", "离线唤醒 + VAD + STT + LLM（$platformTag）", DemoRoute.VOICE_AGENT),
             DemoCatalogItem("live_push", "Live Push Demo", "RTMP + X264 实时推流（Android）", DemoRoute.LIVE_PUSH),
             DemoCatalogItem("live_pull", "Live Pull Demo", "RTMP/HLS 拉流播放（Android）", DemoRoute.LIVE_PULL),
@@ -143,6 +145,7 @@ sealed class MainEffect {
     data object NavigateToHello : MainEffect()
     data object NavigateToOssDemo : MainEffect()
     data object NavigateToChatList : MainEffect()
+    data object NavigateToWeChatDemo : MainEffect()
     data object NavigateToVoiceAgent : MainEffect()
     data object NavigateToLivePush : MainEffect()
     data object NavigateToLivePull : MainEffect()
